@@ -1,0 +1,8 @@
+{
+    "FidelityFX Parallel Sort": {
+
+        "RenderModules": [
+            "ParallelSortRenderModule"
+        ]
+    }
+}

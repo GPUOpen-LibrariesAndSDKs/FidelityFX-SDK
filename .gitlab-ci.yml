@@ -1,0 +1,181 @@
+variables:
+  PARALLEL_BUILDS: 4
+  MAX_LOGICAL_PROCESSORS: 8
+  CMAKE_BUILD_DRIVER: "--parallel %PARALLEL_BUILDS% -- /p:CL_MPcount=%MAX_LOGICAL_PROCESSORS%"
+  GIT_SUBMODULE_STRATEGY: normal
+  FF_USE_FASTZIP: "true"
+  ARTIFACT_COMPRESSION_LEVEL: "fast"
+
+default:
+  tags:
+  - windows
+  - amd64
+
+stages:
+  - format-check
+  - build
+  - package
+
+format_check:
+  stage: format-check
+  needs: []
+  script:
+  - echo Coming soon!
+
+build_release_cauldron:
+  stage: build
+  needs: []
+  script:
+  - 'mkdir build'
+  - 'cd build'
+  - 'cmake -A x64 .. -DBUILD_TYPE=CAULDRON'
+  - 'cmake --build . --config ReleaseDX12 %CMAKE_BUILD_DRIVER%'
+  - 'cmake --build . --config ReleaseVK %CMAKE_BUILD_DRIVER%'
+  artifacts:
+    paths:
+    - ./bin
+
+build_debug_cauldron:
+  stage: build
+  needs: []
+  script:
+  - 'mkdir build'
+  - 'cd build'
+  - 'cmake -A x64 .. -DBUILD_TYPE=CAULDRON'
+  - 'cmake --build . --config DebugDX12 %CMAKE_BUILD_DRIVER%'
+  - 'cmake --build . --config DebugVK %CMAKE_BUILD_DRIVER%'
+  artifacts:
+    paths:
+    - ./bin
+    
+build_release_sdk:
+  stage: build
+  needs: []
+  script:
+  - 'cd sdk/'
+  - 'mkdir build'
+  - 'cd build'
+  - 'cmake -A x64 .. -DFFX_API_CUSTOM=OFF -DFFX_ALL=ON -DFFX_AUTO_COMPILE_SHADERS=1'
+  - 'cmake --build ./ --config Release %CMAKE_BUILD_DRIVER%'
+  artifacts:
+    paths:
+    - ./sdk/bin
+
+build_debug_sdk:
+  stage: build
+  needs: []
+  script:
+  - 'cd sdk/'
+  - 'mkdir build'
+  - 'cd build'
+  - 'cmake -A x64 .. -DFFX_API_CUSTOM=OFF -DFFX_ALL=ON -DFFX_AUTO_COMPILE_SHADERS=1'
+  - 'cmake --build ./ --config Debug %CMAKE_BUILD_DRIVER%'
+  artifacts:
+    paths:
+    - ./sdk/bin
+
+build_release_samples_dx12:
+  stage: build
+  needs:
+  - job: build_release_sdk
+  script:
+  - 'mkdir build'
+  - 'cd build'
+  - 'cmake -A x64 .. -DBUILD_TYPE=ALL_SAMPLES -DFFX_API=CAULDRON'
+  - 'cmake --build . --config ReleaseDX12 %CMAKE_BUILD_DRIVER%'
+  - 'cmake -A x64 .. -DBUILD_TYPE=ALL_SAMPLES -DFFX_API=NATIVE'
+  - 'cmake --build . --config ReleaseDX12 %CMAKE_BUILD_DRIVER%'
+  artifacts:
+    paths:
+    - ./bin
+
+build_release_samples_vk:
+  stage: build
+  needs:
+  - job: build_release_sdk
+  script:
+  - 'mkdir build'
+  - 'cd build'
+  - 'cmake -A x64 .. -DBUILD_TYPE=ALL_SAMPLES -DFFX_API=CAULDRON'
+  - 'cmake --build . --config ReleaseVK %CMAKE_BUILD_DRIVER%'
+  - 'cmake -A x64 .. -DBUILD_TYPE=ALL_SAMPLES -DFFX_API=NATIVE'
+  - 'cmake --build . --config ReleaseVK %CMAKE_BUILD_DRIVER%'
+  artifacts:
+    paths:
+    - ./bin
+
+build_debug_samples_dx12:
+  stage: build
+  needs:
+  - job: build_debug_sdk
+  script:
+  - 'mkdir build'
+  - 'cd build'
+  - 'cmake -A x64 .. -DBUILD_TYPE=ALL_SAMPLES -DFFX_API=CAULDRON'
+  - 'cmake --build . --config DebugDX12 %CMAKE_BUILD_DRIVER%'
+  - 'cmake -A x64 .. -DBUILD_TYPE=ALL_SAMPLES -DFFX_API=NATIVE'
+  - 'cmake --build . --config DebugDX12 %CMAKE_BUILD_DRIVER%'
+  artifacts:
+    paths:
+    - ./bin
+
+build_debug_samples_vk:
+  stage: build
+  needs:
+  - job: build_debug_sdk
+  script:
+  - 'mkdir build'
+  - 'cd build'
+  - 'cmake -A x64 .. -DBUILD_TYPE=ALL_SAMPLES -DFFX_API=CAULDRON'
+  - 'cmake --build . --config DebugVK %CMAKE_BUILD_DRIVER%'
+  - 'cmake -A x64 .. -DBUILD_TYPE=ALL_SAMPLES -DFFX_API=NATIVE'
+  - 'cmake --build . --config DebugVK %CMAKE_BUILD_DRIVER%'
+  artifacts:
+    paths:
+    - ./bin
+
+package_release_samples:
+  stage: package
+  needs:
+  - job: build_release_samples_dx12
+  - job: build_release_samples_vk 
+  script:
+  - echo "Packaging FidelityFX SDK Samples"
+  - 'copy %VULKAN_SDK%\Bin\glslc.exe .\bin'
+  artifacts:
+    name: "FIDELITYFX-SDK-SAMPLES-%CI_COMMIT_TAG%-%CI_COMMIT_REF_NAME%-%CI_COMMIT_SHORT_SHA%"
+    paths:
+    - ./bin
+    - ./docs
+    - ./framework
+    - ./samples
+    - ./sdk
+    - ./*.bat
+    - ./CMakeLists.txt
+    - ./common.cmake
+    - ./LICENSE.txt
+    - ./readme.md
+    - ./sample.cmake
+
+package_debug_samples:
+  stage: package
+  needs:
+  - job: build_debug_samples_dx12
+  - job: build_debug_samples_vk
+  script:
+  - echo "Packaging FidelityFX SDK Samples"
+  - 'copy %VULKAN_SDK%\Bin\glslc.exe .\bin'
+  artifacts:
+    name: "FIDELITYFX-SDK-SAMPLES-%CI_COMMIT_TAG%-%CI_COMMIT_REF_NAME%-%CI_COMMIT_SHORT_SHA%"
+    paths:
+    - ./bin
+    - ./docs
+    - ./framework
+    - ./samples
+    - ./sdk
+    - ./*.bat
+    - ./CMakeLists.txt
+    - ./common.cmake
+    - ./LICENSE.txt
+    - ./readme.md
+    - ./sample.cmake

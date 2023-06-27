@@ -1,0 +1,10 @@
+{
+    "FidelityFX SPD": {
+
+        "RenderModules": [
+            "SkyDomeRenderModule",
+            "SPDRenderModule",
+            "ToneMappingRenderModule"
+        ]
+    }
+}

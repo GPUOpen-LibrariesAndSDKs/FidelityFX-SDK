@@ -1,0 +1,18 @@
+{
+    "FidelityFX LPM": {
+
+        "Presentation": {
+            "Mode": "DISPLAYMODE_FSHDR_2084"
+        },
+
+        "AGSEnabled": true,
+
+        "RenderModules": [
+            "LPMRenderModule"
+        ],
+
+        "Content": {
+            "SceneExposure": 10.0
+        }
+    }
+}

@@ -1,0 +1,23 @@
+{
+    "FidelityFX DoF": {
+        "RenderModules": [
+            "SkyDomeRenderModule",
+            "RasterShadowRenderModule",
+            "GBufferRenderModule",
+            "LightingRenderModule",
+            "TranslucencyRenderModule",
+            "DoFRenderModule",
+            "ToneMappingRenderModule"
+        ],
+
+        "Content": {
+            "Scenes": [
+                "../media/MiniatureTable/Table.gltf"
+            ],
+            "Camera": "Camera_1",
+            "DiffuseIBL": "../media/IBL/snow_field_puresky_Diffuse.dds",
+            "SpecularIBL": "../media/IBL/snow_field_puresky_Specular.dds",
+            "SceneExposure": 1.355
+        }
+    }
+}

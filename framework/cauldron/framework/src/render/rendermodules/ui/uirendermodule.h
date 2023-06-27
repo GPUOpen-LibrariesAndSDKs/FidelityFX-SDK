@@ -1,0 +1,80 @@
+// AMD Cauldron code
+//
+// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sub-license, and / or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions :
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+#pragma once
+
+#include "render/rendermodule.h"
+#include "shaders/shadercommon.h"
+#include "shaders/uicommon.h"
+
+namespace cauldron
+{
+    class RootSignature;
+    class RenderTarget;
+    class RasterView;
+    class PipelineObject;
+    class ParameterSet;
+    class Texture;
+
+    class UIRenderModule : public RenderModule
+    {
+    public:
+        UIRenderModule() : RenderModule(L"UIRenderModule") {}
+        virtual ~UIRenderModule();
+
+        void Init(const json& initData) override;
+        void Execute(double deltaTime, CommandList* pCmdList) override;
+
+        void SetFontResourceTexture(const Texture* pFontTexture);
+
+    private:
+        // No copy, No move
+        NO_COPY(UIRenderModule)
+        NO_MOVE(UIRenderModule)
+
+    void UpdateMagnifierParams();
+
+    private:
+
+        struct UIVertexBufferConstants
+        {
+            Mat4 ProjectionMatrix;
+        };
+
+        HDRCBData           m_HDRCBData = {};
+        MagnifierCBData     m_MagnifierCBData = {};
+        bool                m_MagnifierEnabled = false;
+        bool                m_LockMagnifierPosition = false;
+        int32_t             m_LockedMagnifierPositionX = 0;
+        int32_t             m_LockedMagnifierPositionY = 0;
+
+        RootSignature*      m_pUIRootSignature = nullptr;
+        RootSignature*      m_pMagnifierRootSignature = nullptr;
+
+        const Texture*      m_pRenderTarget = nullptr;
+        const Texture*      m_pRenderTargetTemp = nullptr;
+        const RasterView*   m_pUIRasterView = nullptr;
+
+        PipelineObject*     m_pUIPipelineObj        = nullptr;
+        PipelineObject*     m_pMagnifierPipelineObj = nullptr;
+
+        ParameterSet*       m_pUIParameters         = nullptr;
+        ParameterSet*       m_pMagnifierParameters  = nullptr;
+    };
+
+} // namespace cauldron
