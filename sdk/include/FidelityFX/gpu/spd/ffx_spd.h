@@ -155,11 +155,10 @@ FfxFloat32x4 SpdReduceQuad(FfxFloat32x4 v)
 #elif defined(FFX_HLSL) && !defined(FFX_SPD_NO_WAVE_OPERATIONS)
 
     // requires SM6.0
-    FfxUInt32 quad = WaveGetLaneIndex() & (~0x3);
-    FfxFloat32x4     v0   = v;
-    FfxFloat32x4     v1   = WaveReadLaneAt(v, quad | 1);
-    FfxFloat32x4     v2   = WaveReadLaneAt(v, quad | 2);
-    FfxFloat32x4     v3   = WaveReadLaneAt(v, quad | 3);
+    FfxFloat32x4 v0 = v;
+    FfxFloat32x4 v1 = QuadReadAcrossX(v);
+    FfxFloat32x4 v2 = QuadReadAcrossY(v);
+    FfxFloat32x4 v3 = QuadReadAcrossDiagonal(v);
     return SpdReduce4(v0, v1, v2, v3);
 /*
     // if SM6.0 is not available, you can use the AMD shader intrinsics
