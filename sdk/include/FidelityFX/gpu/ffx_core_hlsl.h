@@ -292,9 +292,9 @@ FfxInt32x2 ffxBroadcast2(FfxInt32 value)
 /// A 3-dimensional signed integer vector with <c><i>value</i></c> in each component.
 ///
 /// @ingroup HLSLCore
-FfxUInt32x3 ffxBroadcast3(FfxInt32 value)
+FfxInt32x3 ffxBroadcast3(FfxInt32 value)
 {
-    return FfxUInt32x3(value, value, value);
+    return FfxInt32x3(value, value, value);
 }
 
 /// Broadcast a scalar value to a 4-dimensional signed integer vector.
