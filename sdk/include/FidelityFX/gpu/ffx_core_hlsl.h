@@ -1194,7 +1194,7 @@ FFX_MIN16_U4 ffxUint32x2ToUint16x4(FfxUInt32x2 x)
 /// @param v Value to invert.
 /// @return If v = 0 returns 0. If v != 0 returns 1/v.
 FfxFloat32 ffxInvertSafe(FfxFloat32 v){
-    FfxFloat32 s = sign(v);
+    FfxFloat32 s = FfxFloat32(sign(v));
     FfxFloat32 s2 = s*s;
     return s2/(v + s2 - 1.0);
 }
@@ -1203,7 +1203,7 @@ FfxFloat32 ffxInvertSafe(FfxFloat32 v){
 /// @param v Value to invert.
 /// @return If v = 0 returns 0. If v != 0 returns 1/v.
 FfxFloat32x2 ffxInvertSafe(FfxFloat32x2 v){
-    FfxFloat32x2 s = sign(v);
+    FfxFloat32x2 s = FfxFloat32x2(sign(v));
     FfxFloat32x2 s2 = s*s;
     return s2/(v + s2 - FfxFloat32x2(1.0, 1.0));
 }
@@ -1212,7 +1212,7 @@ FfxFloat32x2 ffxInvertSafe(FfxFloat32x2 v){
 /// @param v Value to invert.
 /// @return If v = 0 returns 0. If v != 0 returns 1/v.
 FfxFloat32x3 ffxInvertSafe(FfxFloat32x3 v){
-    FfxFloat32x3 s = sign(v);
+    FfxFloat32x3 s = FfxFloat32x3(sign(v));
     FfxFloat32x3 s2 = s*s;
     return s2/(v + s2 - FfxFloat32x3(1.0, 1.0, 1.0));
 }
@@ -1221,7 +1221,7 @@ FfxFloat32x3 ffxInvertSafe(FfxFloat32x3 v){
 /// @param v Value to invert.
 /// @return If v = 0 returns 0. If v != 0 returns 1/v.
 FfxFloat32x4 ffxInvertSafe(FfxFloat32x4 v){
-    FfxFloat32x4 s = sign(v);
+    FfxFloat32x4 s = FfxFloat32x4(sign(v));
     FfxFloat32x4 s2 = s*s;
     return s2/(v + s2 - FfxFloat32x4(1.0, 1.0, 1.0, 1.0));
 }
