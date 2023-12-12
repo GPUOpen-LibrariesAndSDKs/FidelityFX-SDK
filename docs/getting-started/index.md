@@ -2,7 +2,7 @@
 
 <h1>Introduction to the AMD FidelityFX SDK</h1>
 
-The FidelityFX SDK is a collection of heavily optimized, open source effects (shader and runtime code) that can be used by developers to improve their DirectX®12 or Vulkan® applications. The FidelityFX SDK includes a number of effects:
+The FidelityFX SDK is a collection of heavily optimized, open source technologies (shader and runtime code) that can be used by developers to improve their DirectX®12 or Vulkan® applications. The FidelityFX SDK includes a number of effects:
 
 - [Combined Adaptive Compute Ambient Occlusion 1.3](../techniques/combined-adaptive-compute-ambient-occlusion.md)
 - [Contrast Adaptive Sharpening 1.1](../techniques/contrast-adaptive-sharpening.md)
@@ -14,6 +14,8 @@ The FidelityFX SDK is a collection of heavily optimized, open source effects (sh
 - [Stochastic Screen-Space Reflections 1.4](../techniques/stochastic-screen-space-reflections.md)
 - [Super Resolution 1.1](../techniques/super-resolution-spatial.md)
 - [Super Resolution 2.2](../techniques/super-resolution-temporal.md)
+- [Super Resolution 3.0](../techniques/super-resolution-interpolation.md)
+- [Super Resolution 3.0 Upscaler](../techniques/super-resolution-upscaler.md)
 - [Variable Shading 1.1](../techniques/variable-shading.md)
 - [Blur 1.0](../techniques/blur.md)
 - [Depth of Field 1.0](../techniques/depth-of-field.md)

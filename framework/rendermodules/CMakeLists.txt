@@ -39,6 +39,16 @@ file(GLOB gbuffer_shaders
 set_source_files_properties(${gbuffer_shaders} PROPERTIES VS_TOOL_OVERRIDE "Text")
 copyCommand("${gbuffer_shaders}" ${SHADER_OUTPUT})
 
+# Animated textures
+file(GLOB animatedtextures_src
+    ${CMAKE_CURRENT_SOURCE_DIR}/animatedtextures/*.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/animatedtextures/*.cpp)
+file(GLOB animatedtextures_shaders
+    ${CMAKE_CURRENT_SOURCE_DIR}/animatedtextures/shaders/*.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/animatedtextures/shaders/*.hlsl)
+set_source_files_properties(${animatedtextures_shaders} PROPERTIES VS_TOOL_OVERRIDE "Text")
+copyCommand("${animatedtextures_shaders}" ${SHADER_OUTPUT})
+
 # Translucency
 file(GLOB translucency_src
     ${CMAKE_CURRENT_SOURCE_DIR}/translucency/*.h
@@ -139,6 +149,7 @@ add_library (RenderModules STATIC
                         ${registry_src}
 						# Cauldron rendermodules
                         ${gbuffer_src} ${gbuffer_config} ${gbuffer_shaders}
+			${animatedtextures_src} ${animatedtextures_config} ${animatedtextures_shaders}
                         ${translucency_src} ${translucency_config} ${translucency_shaders}
                         ${lighting_src} ${lighting_shaders}
                         ${limiter_src} ${limiter_shaders}
@@ -164,6 +175,8 @@ source_group("GPUParticle\\Shaders\\ParallelSort"	FILES ${parallelsort_shaders} 
 source_group("Translucency"			FILES ${translucency_src})
 source_group("Translucency\\Config"	FILES ${translucency_config})
 source_group("Translucency\\Shaders"	FILES ${translucency_shaders})
+source_group("Animated Textures"		FILES ${animatedtextures_src})
+source_group("Animated Textures\\Shaders"	FILES ${animatedtextures_shaders})
 source_group("Lighting"				FILES ${lighting_src})
 source_group("Lighting\\Shaders"		FILES ${lighting_shaders})
 source_group("FPSLimiter"				FILES ${limiter_src})

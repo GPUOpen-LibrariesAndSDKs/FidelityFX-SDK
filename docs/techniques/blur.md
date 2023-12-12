@@ -27,7 +27,7 @@ Example C++:
 ```cpp
 // Initialize the FFX backend and blur context (do this once)
 size_t scratchBufferSize = ffxGetScratchMemorySize(FFX_BLUR_CONTEXT_COUNT);
-void* scratchBuffer = malloc(scratchBufferSize);
+void* scratchBuffer = calloc(scratchBufferSize, 1);
 FfxInterface backendInterface;
 ffxGetInterface(&backendInterface, GetDevice(), scratchBuffer, scratchBufferSize, FFX_BLUR_CONTEXT_COUNT);
 

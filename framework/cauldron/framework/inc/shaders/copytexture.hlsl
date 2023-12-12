@@ -20,35 +20,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#include "shadercommon.h"
-#include "transferFunction.h"
 #include "fullscreen.hlsl"
-
-cbuffer CBSwapchain : register(b0)
-{
-    SwapchainCBData swapchainCBData;
-}
 
 Texture2D<float4> TextureImg : register(t0);
 
 float4 CopyTextureToSwapChainPS(VertexOut VertexIn) : SV_Target
 {
     float4 color = TextureImg[VertexIn.PosOut.xy];
-
-    switch (swapchainCBData.displayMode)
-    {
-        case DisplayMode::DISPLAYMODE_LDR:
-        case DisplayMode::DISPLAYMODE_HDR10_SCRGB:
-        case DisplayMode::DISPLAYMODE_FSHDR_SCRGB:
-            break;
-
-        case DisplayMode::DISPLAYMODE_HDR10_2084:
-        case DisplayMode::DISPLAYMODE_FSHDR_2084:
-            // Apply ST2084 curve
-            color.xyz = ApplyPQ(color.xyz);
-            break;
-    }
-
     return color;
 }
 

@@ -19,6 +19,7 @@
 
 #include "tonemappers.hlsl"
 #include "tonemappercommon.h"
+#include "transferFunction.h"
 
 //--------------------------------------------------------------------------------------
 // Texture definitions
@@ -43,8 +44,12 @@ void MainCS(uint3 dtID : SV_DispatchThreadID)
     switch (MonitorDisplayMode)
     {
         case DisplayMode::DISPLAYMODE_LDR:
+            color.xyz = ApplyGamma(color.xyz);
+            break;
+
         case DisplayMode::DISPLAYMODE_HDR10_SCRGB:
         case DisplayMode::DISPLAYMODE_FSHDR_SCRGB:
+            color.xyz = ApplyscRGBScale(color.xyz, 0.0f, DisplayMaxLuminance / 80.0f);
             break;
 
         case DisplayMode::DISPLAYMODE_HDR10_2084:
@@ -61,6 +66,7 @@ void MainCS(uint3 dtID : SV_DispatchThreadID)
             // 1 * ((1000 / 80) * (80 / 10000)) = 1 / 10 = 0.1
             // For simplcity we are getting rid of conversion to per 80 nit division factor and directly dividing max luminance set by 10000 nits
             color.xyz *= (DisplayMaxLuminance / 10000.0f);
+            color.xyz = ApplyPQ(color.xyz);
             break;
     }
 

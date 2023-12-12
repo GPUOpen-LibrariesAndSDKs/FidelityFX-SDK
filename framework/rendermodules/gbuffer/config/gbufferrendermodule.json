@@ -4,19 +4,19 @@
         "RenderResources": {
             "MotionVectorTarget": {
                 "Format": "RG16_FLOAT",
-                "RenderResolution": true
+                "RenderResolution": false
             },
             "GBufferAlbedoTarget": {
                 "Format": "RGBA8_UNORM",
-                "RenderResolution": true
+                "RenderResolution": false
             },
             "GBufferNormalTarget": {
                 "Format": "RGBA16_FLOAT",
-                "RenderResolution": true
+                "RenderResolution": false
             },
             "GBufferAoRoughnessMetallicTarget": {
                 "Format": "RGBA8_UNORM",
-                "RenderResolution": true,
+                "RenderResolution": false,
                 "AllowUAV": true
             },
 

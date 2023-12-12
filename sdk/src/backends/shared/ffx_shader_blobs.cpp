@@ -1,30 +1,33 @@
 // This file is part of the FidelityFX SDK.
-//
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// 
+// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this softwareand associated documentation files(the “Software”), to deal
+// of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions :
-//
-// The above copyright noticeand this permission notice shall be included in
+// furnished to do so, subject to the following conditions:
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+
 #include "ffx_shader_blobs.h"
 
 #if defined(FFX_FSR) || defined(FFX_ALL)
+#include "blob_accessors/ffx_fsr3upscaler_shaderblobs.h"
 #include "blob_accessors/ffx_fsr2_shaderblobs.h"
 #include "blob_accessors/ffx_fsr1_shaderblobs.h"
+#include "blob_accessors/ffx_frameinterpolation_shaderblobs.h"
+#include "blob_accessors/ffx_opticalflow_shaderblobs.h"
 #endif // #if defined(FFX_FSR) || defined(FFX_ALL)
 
 #if defined(FFX_SPD) || defined(FFX_ALL)
@@ -79,7 +82,8 @@
 
 FfxErrorCode ffxGetPermutationBlobByIndex(
     FfxEffect effectId,
-    FfxPass passId,
+    FfxPass passId, 
+    FfxBindStage stageId,
     uint32_t permutationOptions,
     FfxShaderBlob* outBlob)
 {
@@ -89,9 +93,16 @@ FfxErrorCode ffxGetPermutationBlobByIndex(
 #if defined(FFX_FSR) || defined(FFX_ALL)
     case FFX_EFFECT_FSR2:
         return fsr2GetPermutationBlobByIndex((FfxFsr2Pass)passId, permutationOptions, outBlob);
-
     case FFX_EFFECT_FSR1:
         return fsr1GetPermutationBlobByIndex((FfxFsr1Pass)passId, permutationOptions, outBlob);
+    #if defined(FFX_FSR3)
+        case FFX_EFFECT_FSR3UPSCALER:
+            return fsr3UpscalerGetPermutationBlobByIndex((FfxFsr3UpscalerPass)passId, permutationOptions, outBlob);
+        case FFX_EFFECT_FRAMEINTERPOLATION:
+            return frameInterpolationGetPermutationBlobByIndex((FfxFrameInterpolationPass)passId, stageId, permutationOptions, outBlob);
+        case FFX_EFFECT_OPTICALFLOW:
+            return opticalflowGetPermutationBlobByIndex((FfxOpticalflowPass)passId, permutationOptions, outBlob);
+    #endif
 #endif // #if defined(FFX_FSR) || defined(FFX_ALL)
 
 #if defined(FFX_SPD) || defined(FFX_ALL)
@@ -159,7 +170,7 @@ FfxErrorCode ffxGetPermutationBlobByIndex(
     }
 
     // return an empty blob
-    memset(&outBlob, 0, sizeof(FfxShaderBlob));
+    memset(outBlob, 0, sizeof(FfxShaderBlob));
     return FFX_OK;
 }
 

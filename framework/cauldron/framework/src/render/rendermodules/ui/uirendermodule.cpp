@@ -33,8 +33,6 @@
 #include "render/texture.h"
 #include "shaders/shadercommon.h"
 
-#include "imgui/imgui.h"
-
 namespace cauldron
 {
     constexpr uint32_t g_NumThreadX = 8;
@@ -42,6 +40,8 @@ namespace cauldron
 
     void UIRenderModule::Init(const json& initData)
     {
+        // TODO: UI render module should not have its own buffer pool. This is only created for the FSR3 interpolation thread to not race with the main thread, which should ideally be handled by Cauldron itself.
+        m_pDynamicBufferPool = DynamicBufferPool::CreateDynamicBufferPool();
         //////////////////////////////////////////////////////////////////////////
         // Register UI elements for magnifier
         static constexpr float s_MAGNIFICATION_AMOUNT_MIN = 1.0f;
@@ -59,10 +59,66 @@ namespace cauldron
 
         //////////////////////////////////////////////////////////////////////////
         // Render Target
-
-        m_pRenderTarget = GetFramework()->GetColorTargetForCallback(GetName());
-        CauldronAssert(ASSERT_CRITICAL, m_pRenderTarget, L"Couldn't get the swapchain render target when initializing UIRenderModule.");
+        // Get the proper UI color target
+        switch (GetFramework()->GetSwapChain()->GetSwapChainDisplayMode())
+        {
+            case DisplayMode::DISPLAYMODE_LDR:
+                m_pRenderTarget = GetFramework()->GetRenderTexture(L"LDR8Color");
+                m_pUiOnlyRenderTarget[0] = GetFramework()->GetRenderTexture(L"UiTarget0_LDR8");
+                m_pUiOnlyRenderTarget[1] = GetFramework()->GetRenderTexture(L"UiTarget1_LDR8");
+                break;
+            case DisplayMode::DISPLAYMODE_HDR10_2084:
+            case DisplayMode::DISPLAYMODE_FSHDR_2084:
+                m_pRenderTarget = GetFramework()->GetRenderTexture(L"HDR10Color");
+                m_pUiOnlyRenderTarget[0] = GetFramework()->GetRenderTexture(L"UiTarget0_HDR10");
+                m_pUiOnlyRenderTarget[1] = GetFramework()->GetRenderTexture(L"UiTarget1_HDR10");
+                break;
+            case DisplayMode::DISPLAYMODE_HDR10_SCRGB:
+            case DisplayMode::DISPLAYMODE_FSHDR_SCRGB:
+                m_pRenderTarget = GetFramework()->GetRenderTexture(L"HDR16Color");
+                m_pUiOnlyRenderTarget[0] = GetFramework()->GetRenderTexture(L"UiTarget0_HDR16");
+                m_pUiOnlyRenderTarget[1] = GetFramework()->GetRenderTexture(L"UiTarget1_HDR16");
+                break;
+        }
+        CauldronAssert(ASSERT_CRITICAL, m_pRenderTarget, L"Couldn't find the render target for UIRenderModule.");
         m_pUIRasterView = GetRasterViewAllocator()->RequestRasterView(m_pRenderTarget, ViewDimension::Texture2D);
+
+        if (GetFramework()->GetRenderTexture(L"FSR3_HudLessTexture0"))
+        {
+            m_pHudLessRenderTarget[0] = GetFramework()->GetRenderTexture(L"FSR3_HudLessTexture0");
+            m_pHudLessRenderTarget[1] = GetFramework()->GetRenderTexture(L"FSR3_HudLessTexture1");
+
+            m_pHudLessRasterView[0] = GetRasterViewAllocator()->RequestRasterView(m_pHudLessRenderTarget[0], ViewDimension::Texture2D);
+            m_pHudLessRasterView[1] = GetRasterViewAllocator()->RequestRasterView(m_pHudLessRenderTarget[1], ViewDimension::Texture2D);
+
+            RootSignatureDesc signatureDesc;
+            signatureDesc.AddConstantBufferView(0, ShaderBindStage::Pixel, 1);
+            signatureDesc.AddTextureSRVSet(0, ShaderBindStage::Pixel, 1);
+
+            m_pHudLessRootSignature = RootSignature::CreateRootSignature(L"HudLessBlit_RootSignature", signatureDesc);
+
+            m_pHudLessParameters = ParameterSet::CreateParameterSet(m_pHudLessRootSignature);
+            m_pHudLessParameters->SetTextureSRV(m_pHudLessRenderTarget[0], ViewDimension::Texture2D, 0);
+
+            // Setup the pipeline object
+            PipelineDesc psoDesc;
+            psoDesc.SetRootSignature(m_pHudLessRootSignature);
+
+            // Setup the shaders to build on the pipeline object
+            psoDesc.AddShaderDesc(ShaderBuildDesc::Vertex(L"fullscreen.hlsl", L"FullscreenVS", ShaderModel::SM6_0, nullptr));
+            psoDesc.AddShaderDesc(ShaderBuildDesc::Pixel(L"HudLessBlit.hlsl", L"BlitPS", ShaderModel::SM6_0, nullptr));
+
+            // Setup remaining information and build
+            psoDesc.AddPrimitiveTopology(PrimitiveTopologyType::Triangle);
+            psoDesc.AddRasterFormats(m_pHudLessRenderTarget[0]->GetFormat());
+
+            m_pHudLessPipelineObj = PipelineObject::CreatePipelineObject(L"HudLessBlit_PipelineObj", psoDesc);
+        }
+
+        if (m_pUiOnlyRenderTarget[0])
+            m_pUiOnlyRasterView[0] = GetRasterViewAllocator()->RequestRasterView(m_pUiOnlyRenderTarget[0], ViewDimension::Texture2D);
+        if (m_pUiOnlyRenderTarget[1])
+            m_pUiOnlyRasterView[1] = GetRasterViewAllocator()->RequestRasterView(m_pUiOnlyRenderTarget[1], ViewDimension::Texture2D);
 
         // Temp intermediate RT for magnifier render pass
         TextureDesc           desc    = m_pRenderTarget->GetDesc();
@@ -119,33 +175,85 @@ namespace cauldron
         DefineList defineList;
         defineList.insert(std::make_pair(L"NUM_THREAD_X", std::to_wstring(g_NumThreadX)));
         defineList.insert(std::make_pair(L"NUM_THREAD_Y", std::to_wstring(g_NumThreadY)));
-        uiPsoDesc.AddShaderDesc(ShaderBuildDesc::Vertex(L"ui.hlsl", L"uiVS", ShaderModel::SM6_0, &defineList));
-        uiPsoDesc.AddShaderDesc(ShaderBuildDesc::Pixel(L"ui.hlsl", L"uiPS", ShaderModel::SM6_0, &defineList));
+        {
+            PipelineDesc uiPsoDesc;
+            uiPsoDesc.SetRootSignature(m_pUIRootSignature);
 
-        // Setup vertex elements
-        std::vector<InputLayoutDesc> vertexAttributes;
-        vertexAttributes.push_back(InputLayoutDesc(VertexAttributeType::Position, ResourceFormat::RG32_FLOAT, 0, 0));
-        vertexAttributes.push_back(InputLayoutDesc(VertexAttributeType::Texcoord0, ResourceFormat::RG32_FLOAT, 0, 8));
-        vertexAttributes.push_back(InputLayoutDesc(VertexAttributeType::Color0, ResourceFormat::RGBA8_UNORM, 0, 16));
-        uiPsoDesc.AddInputLayout(vertexAttributes);
+            uiPsoDesc.AddShaderDesc(ShaderBuildDesc::Vertex(L"ui.hlsl", L"uiVS", ShaderModel::SM6_0, &defineList));
+            uiPsoDesc.AddShaderDesc(ShaderBuildDesc::Pixel(L"ui.hlsl", L"uiPS", ShaderModel::SM6_0, &defineList));
 
-        // Setup blend and depth states
-        BlendDesc blendDesc = { true, Blend::SrcAlpha, Blend::InvSrcAlpha, BlendOp::Add, Blend::One, Blend::InvSrcAlpha, BlendOp::Add, static_cast<uint32_t>(ColorWriteMask::All) };
-        std::vector<BlendDesc> blends;
-        blends.push_back(blendDesc);
-        uiPsoDesc.AddBlendStates(blends, false, false);
-        DepthDesc depthDesc;
-        uiPsoDesc.AddDepthState(&depthDesc);  // Use defaults
+            // Setup vertex elements
+            std::vector<InputLayoutDesc> vertexAttributes;
+            vertexAttributes.push_back(InputLayoutDesc(VertexAttributeType::Position, ResourceFormat::RG32_FLOAT, 0, 0));
+            vertexAttributes.push_back(InputLayoutDesc(VertexAttributeType::Texcoord0, ResourceFormat::RG32_FLOAT, 0, 8));
+            vertexAttributes.push_back(InputLayoutDesc(VertexAttributeType::Color0, ResourceFormat::RGBA8_UNORM, 0, 16));
+            uiPsoDesc.AddInputLayout(vertexAttributes);
 
-        RasterDesc rasterDesc;
-        rasterDesc.CullingMode = CullMode::None;
-        uiPsoDesc.AddRasterStateDescription(&rasterDesc);
+            // Setup blend and depth states
+            BlendDesc              blendDesc = {true,
+                                                Blend::SrcAlpha,
+                                                Blend::InvSrcAlpha,
+                                                BlendOp::Add,
+                                                Blend::One,
+                                                Blend::InvSrcAlpha,
+                                                BlendOp::Add,
+                                                static_cast<uint32_t>(ColorWriteMask::All)};
+            std::vector<BlendDesc> blends;
+            blends.push_back(blendDesc);
+            uiPsoDesc.AddBlendStates(blends, false, false);
+            DepthDesc depthDesc;
+            uiPsoDesc.AddDepthState(&depthDesc);  // Use defaults
 
-        // Setup remaining information and build
-        uiPsoDesc.AddPrimitiveTopology(PrimitiveTopologyType::Triangle);
+            RasterDesc rasterDesc;
+            rasterDesc.CullingMode = CullMode::None;
+            uiPsoDesc.AddRasterStateDescription(&rasterDesc);
 
-        uiPsoDesc.AddRasterFormats(m_pRenderTarget->GetFormat());
-        m_pUIPipelineObj = PipelineObject::CreatePipelineObject(L"UI_PipelineObj", uiPsoDesc);
+            // Setup remaining information and build
+            uiPsoDesc.AddPrimitiveTopology(PrimitiveTopologyType::Triangle);
+
+            uiPsoDesc.AddRasterFormats(m_pRenderTarget->GetFormat());
+            m_pUIPipelineObj = PipelineObject::CreatePipelineObject(L"UI_PipelineObj", uiPsoDesc);
+        }
+
+        {
+            PipelineDesc uiPsoDesc;
+            uiPsoDesc.SetRootSignature(m_pUIRootSignature);
+
+            uiPsoDesc.AddShaderDesc(ShaderBuildDesc::Vertex(L"ui.hlsl", L"uiVS", ShaderModel::SM6_0, &defineList));
+            uiPsoDesc.AddShaderDesc(ShaderBuildDesc::Pixel(L"ui.hlsl", L"uiPS", ShaderModel::SM6_0, &defineList));
+
+            // Setup vertex elements
+            std::vector<InputLayoutDesc> vertexAttributes;
+            vertexAttributes.push_back(InputLayoutDesc(VertexAttributeType::Position, ResourceFormat::RG32_FLOAT, 0, 0));
+            vertexAttributes.push_back(InputLayoutDesc(VertexAttributeType::Texcoord0, ResourceFormat::RG32_FLOAT, 0, 8));
+            vertexAttributes.push_back(InputLayoutDesc(VertexAttributeType::Color0, ResourceFormat::RGBA8_UNORM, 0, 16));
+            uiPsoDesc.AddInputLayout(vertexAttributes);
+
+            // Setup blend and depth states
+            BlendDesc              blendDesc = {true,
+                                                Blend::SrcAlpha,
+                                                Blend::InvSrcAlpha,
+                                                BlendOp::Add,
+                                                Blend::One,
+                                                Blend::InvSrcAlpha,
+                                                BlendOp::Add,
+                                                static_cast<uint32_t>(ColorWriteMask::All)};
+            std::vector<BlendDesc> blends;
+            blends.push_back(blendDesc);
+            uiPsoDesc.AddBlendStates(blends, false, false);
+            DepthDesc depthDesc;
+            uiPsoDesc.AddDepthState(&depthDesc);  // Use defaults
+
+            RasterDesc rasterDesc;
+            rasterDesc.CullingMode = CullMode::None;
+            uiPsoDesc.AddRasterStateDescription(&rasterDesc);
+
+            // Setup remaining information and build
+            uiPsoDesc.AddPrimitiveTopology(PrimitiveTopologyType::Triangle);
+
+            uiPsoDesc.AddRasterFormats(m_pRenderTarget->GetFormat());
+            m_pAsyncPipelineObj = PipelineObject::CreatePipelineObject(L"UI_AsyncPipelineObj", uiPsoDesc);
+        }
 
         //----------------------------------------------------
         // Magnifier
@@ -162,8 +270,8 @@ namespace cauldron
 
         // UI
         m_pUIParameters = ParameterSet::CreateParameterSet(m_pUIRootSignature);
-        m_pUIParameters->SetRootConstantBufferResource(GetDynamicBufferPool()->GetResource(), sizeof(UIVertexBufferConstants), 0);
-        m_pUIParameters->SetRootConstantBufferResource(GetDynamicBufferPool()->GetResource(), sizeof(HDRCBData), 1);
+        m_pUIParameters->SetRootConstantBufferResource(m_pDynamicBufferPool->GetResource(), sizeof(UIVertexBufferConstants), 0);
+        m_pUIParameters->SetRootConstantBufferResource(m_pDynamicBufferPool->GetResource(), sizeof(HDRCBData), 1);
 
         // Magnifier
         m_pMagnifierParameters = ParameterSet::CreateParameterSet(m_pMagnifierRootSignature);
@@ -175,14 +283,20 @@ namespace cauldron
 
     UIRenderModule::~UIRenderModule()
     {
+        delete m_pHudLessRootSignature;
+        delete m_pHudLessPipelineObj;
+        delete m_pHudLessParameters;
+
         delete m_pUIRootSignature;
         delete m_pMagnifierRootSignature;
 
         delete m_pUIPipelineObj;
+        delete m_pAsyncPipelineObj;
         delete m_pMagnifierPipelineObj;
 
         delete m_pUIParameters;
         delete m_pMagnifierParameters;
+        delete m_pDynamicBufferPool;
     }
 
     void UIRenderModule::Execute(double deltaTime, CommandList* pCmdList)
@@ -195,12 +309,14 @@ namespace cauldron
                        L"Upscale state is still PreUpscale when reaching UIRendermodule. This should not be the case.");
 
         // Do input updates for magnifier
-        const InputState& inputState = GetInputManager()->GetInputState();
-        if (inputState.GetKeyUpState(Key_M) || inputState.GetMouseButtonUpState(Mouse_MButton))
-            m_MagnifierEnabled = !m_MagnifierEnabled;
+        {
+            const InputState& inputState = GetInputManager()->GetInputState();
+            if (inputState.GetKeyUpState(Key_M) || inputState.GetMouseButtonUpState(Mouse_MButton))
+                m_MagnifierEnabled = !m_MagnifierEnabled;
 
-        if (inputState.GetKeyUpState(Key_L))
-            m_LockMagnifierPosition = !m_LockMagnifierPosition;
+            if (inputState.GetKeyUpState(Key_L))
+                m_LockMagnifierPosition = !m_LockMagnifierPosition;
+        }
 
         // And fetch all the data ImGUI pushed this frame for UI rendering
         ImDrawData* pUIDrawData = ImGui::GetDrawData();
@@ -261,7 +377,7 @@ namespace cauldron
             }
 
             // If we aren't drawing UI data, then end raster and transition the render target back to read
-            if (!pUIDrawData)
+            if (!pUIDrawData || m_AsyncRender)
             {
                 {
                     Barrier barrier;
@@ -275,39 +391,14 @@ namespace cauldron
 
         if (pUIDrawData)
         {
-            // UI RM always done at display resolution
-            const ResolutionInfo& resInfo = GetFramework()->GetResolutionInfo();
-            SetViewportScissorRect(pCmdList, 0, 0, resInfo.DisplayWidth, resInfo.DisplayHeight, 0.f, 1.f);
-            SetPrimitiveTopology(pCmdList, PrimitiveTopology::TriangleList);
-
-            // Pick the right pipeline / raster set / render target
-            PipelineObject* pPipelineObj = m_pUIPipelineObj;
-            const RasterView* pRasterView = m_pUIRasterView;
-            const Texture* pRenderTarget = m_pRenderTarget;
-
-            // If we didn't render magnifier, transition the resources from a different state
-            {
-                // Render modules expect resources coming in/going out to be in a shader read state
-                Barrier rtBarrier = Barrier::Transition(pRenderTarget->GetResource(),
-                    m_MagnifierEnabled ? ResourceState::CopyDest : ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource,
-                    ResourceState::RenderTargetResource);
-                ResourceBarrier(pCmdList, 1, &rtBarrier);
-            }
-
-            // Set the render targets
-            BeginRaster(pCmdList, 1, &pRasterView);
-
-            // Get buffers for vertices and indices
-            char* pVertices = nullptr;
-            BufferAddressInfo vertBufferInfo = GetDynamicBufferPool()->AllocVertexBuffer(pUIDrawData->TotalVtxCount, sizeof(ImDrawVert), reinterpret_cast<void**>(&pVertices));
-
-            char* pIndices = nullptr;
-            BufferAddressInfo idxBufferInfo = GetDynamicBufferPool()->AllocIndexBuffer(pUIDrawData->TotalIdxCount, sizeof(ImDrawIdx), reinterpret_cast<void**>(&pIndices));
+            RenderParams renderParams{};
+            renderParams.vtxBuffer.resize(pUIDrawData->TotalVtxCount);
+            renderParams.idxBuffer.resize(pUIDrawData->TotalIdxCount);
 
             // Copy data in
-            ImDrawVert* pVtx = (ImDrawVert*)pVertices;
-            ImDrawIdx* pIdx = (ImDrawIdx*)pIndices;
-            for (int32_t n = 0; n < pUIDrawData->CmdListsCount; n++)
+            ImDrawVert* pVtx = (ImDrawVert*)renderParams.vtxBuffer.data();
+            ImDrawIdx*  pIdx = (ImDrawIdx*)renderParams.idxBuffer.data();
+            for (int n = 0; n < pUIDrawData->CmdListsCount; n++)
             {
                 const ImDrawList* pIMCmdList = pUIDrawData->CmdLists[n];
                 memcpy(pVtx, pIMCmdList->VtxBuffer.Data, pIMCmdList->VtxBuffer.Size * sizeof(ImDrawVert));
@@ -317,16 +408,16 @@ namespace cauldron
             }
 
             // Setup constant buffer data
-            float left = 0.0f;
-            float right = ImGui::GetIO().DisplaySize.x;
+            float left   = 0.0f;
+            float right  = ImGui::GetIO().DisplaySize.x;
             float bottom = ImGui::GetIO().DisplaySize.y;
-            float top = 0.0f;
-            Mat4 mvp(Vec4(2.f / (right - left), 0.f, 0.f, 0.f),
+            float top    = 0.0f;
+            Mat4  mvp(Vec4(2.f / (right - left), 0.f, 0.f, 0.f),
                      Vec4(0.f, 2.f / (top - bottom), 0.f, 0.f),
                      Vec4(0.f, 0.f, 0.5f, 0.f),
                      Vec4((right + left) / (left - right), (top + bottom) / (bottom - top), 0.5f, 1.f));
 
-            BufferAddressInfo bufferInfo = GetDynamicBufferPool()->AllocConstantBuffer(sizeof(Mat4), &mvp);
+            renderParams.matrix = mvp;
 
             m_HDRCBData.MonitorDisplayMode  = GetFramework()->GetSwapChain()->GetSwapChainDisplayMode();
             m_HDRCBData.DisplayMaxLuminance = GetFramework()->GetSwapChain()->GetHDRMetaData().MaxLuminance;
@@ -340,64 +431,144 @@ namespace cauldron
             ColorSpace outputColorSpace = ColorSpace_REC2020;
             SetupGamutMapperMatrices(inputColorSpace, outputColorSpace, &m_HDRCBData.ContentToMonitorRecMatrix);
 
-            BufferAddressInfo hdrbufferInfo = GetDynamicBufferPool()->AllocConstantBuffer(sizeof(HDRCBData), &m_HDRCBData);
-
-            // Update constant buffer
-            m_pUIParameters->UpdateRootConstantBuffer(&bufferInfo, 0);
-            m_pUIParameters->UpdateRootConstantBuffer(&hdrbufferInfo, 1);
-
-            // Bind all parameters
-            m_pUIParameters->Bind(pCmdList, pPipelineObj);
-
-            // Set pipeline and draw
-            SetPipelineState(pCmdList, pPipelineObj);
+            renderParams.hdr = m_HDRCBData;
 
             // Render command lists
             uint32_t vtxOffset = 0;
             uint32_t idxOffset = 0;
             for (int32_t n = 0; n < pUIDrawData->CmdListsCount; n++)
             {
-                // Set vertex info
-                SetVertexBuffers(pCmdList, 0, 1, &vertBufferInfo);
-
                 const ImDrawList* pIMCmdList = pUIDrawData->CmdLists[n];
                 for (int32_t cmdIndex = 0; cmdIndex < pIMCmdList->CmdBuffer.Size; cmdIndex++)
                 {
-                    // Set index info
-                    SetIndexBuffer(pCmdList, &idxBufferInfo);
-
                     const ImDrawCmd* pDrawCmd = &pIMCmdList->CmdBuffer[cmdIndex];
-                    if (pDrawCmd->UserCallback)
-                        pDrawCmd->UserCallback(pIMCmdList, pDrawCmd);
+                    CauldronAssert(ASSERT_ERROR, !pDrawCmd->UserCallback, L"ImGui User Callback is not supported!");
+                    // Project scissor/clipping rectangles into framebuffer space
+                    ImVec2 clipOffset = pUIDrawData->DisplayPos;
+                    ImVec2 clipMin(pDrawCmd->ClipRect.x - clipOffset.x, pDrawCmd->ClipRect.y - clipOffset.y);
+                    ImVec2 clipMax(pDrawCmd->ClipRect.z - clipOffset.x, pDrawCmd->ClipRect.w - clipOffset.y);
+                    if (clipMax.x <= clipMin.x || clipMax.y <= clipMin.y)
+                        continue;
+                    Rect scissorRect = {
+                        static_cast<uint32_t>(clipMin.x), static_cast<uint32_t>(clipMin.y), static_cast<uint32_t>(clipMax.x), static_cast<uint32_t>(clipMax.y)};
 
-                    else
-                    {
-                        // Project scissor/clipping rectangles into framebuffer space
-                        ImVec2 clipOffset = pUIDrawData->DisplayPos;
-                        ImVec2 clipMin(pDrawCmd->ClipRect.x - clipOffset.x, pDrawCmd->ClipRect.y - clipOffset.y);
-                        ImVec2 clipMax(pDrawCmd->ClipRect.z - clipOffset.x, pDrawCmd->ClipRect.w - clipOffset.y);
-                        if (clipMax.x <= clipMin.x || clipMax.y <= clipMin.y)
-                            continue;
-                        Rect scissorRect = {static_cast<uint32_t>(clipMin.x),
-                                            static_cast<uint32_t>(clipMin.y),
-                                            static_cast<uint32_t>(clipMax.x),
-                                            static_cast<uint32_t>(clipMax.y)};
-                        SetScissorRects(pCmdList, 1, &scissorRect);
-                        DrawIndexedInstanced(pCmdList, pDrawCmd->ElemCount, 1, idxOffset, vtxOffset);
-                    }
+                    RenderCommand cmd{};
+                    cmd.scissor    = scissorRect;
+                    cmd.indexCount = pDrawCmd->ElemCount;
+                    cmd.startIndex = idxOffset;
+                    cmd.baseVertex = vtxOffset;
+                    renderParams.commands.push_back(cmd);
 
                     idxOffset += pDrawCmd->ElemCount;
                 }
                 vtxOffset += pIMCmdList->VtxBuffer.Size;
             }
 
-            // Done rendering to render target
-            EndRaster(pCmdList);
+            if (m_AsyncRender)
+            {
+                // Store value for later/different thread.
+                RenderParams* pParams = new RenderParams{renderParams};
+                pParams               = m_AsyncChannel.exchange(pParams);
+                // No one else has this pointer, therefore we should delete it.
+                delete pParams;
+            }
+            else
+            {
+                const cauldron::GPUResource* rt = m_bRenderToTexture ? m_pUiOnlyRenderTarget[m_curUiTextureIndex]->GetResource() : m_pRenderTarget->GetResource();
+                ResourceState prevState = rt->GetCurrentResourceState();
+                Barrier       rtBarrier = Barrier::Transition(rt, prevState, ResourceState::RenderTargetResource);
+                ResourceBarrier(pCmdList, 1, &rtBarrier);
 
-            // Render modules expect resources coming in/going out to be in a shader read state
-            Barrier rtBarrier = Barrier::Transition(pRenderTarget->GetResource(), ResourceState::RenderTargetResource, ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource);
-            ResourceBarrier(pCmdList, 1, &rtBarrier);
+                if (m_bCopyHudLessTexture)
+                {
+                    BlitBackbufferToHudLess(pCmdList);
+                }
+
+                // Set the render targets
+                BeginRaster(pCmdList, 1, m_bRenderToTexture ? &m_pUiOnlyRasterView[m_curUiTextureIndex] : &m_pUIRasterView);
+                Render(pCmdList, &renderParams);
+                EndRaster(pCmdList);
+
+                // Render modules expect resources coming in/going out to be in a shader read state
+                rtBarrier.SourceState = rtBarrier.DestState;
+                rtBarrier.DestState   = ResourceState::ShaderResource;
+                ResourceBarrier(pCmdList, 1, &rtBarrier);
+
+                if (m_MagnifierEnabled && m_bRenderToTexture)
+                {
+                    Barrier rtBarrier = Barrier::Transition(m_pRenderTarget->GetResource(), ResourceState::CopyDest, ResourceState::ShaderResource);
+                    ResourceBarrier(pCmdList, 1, &rtBarrier);
+                }
+            } 
         }
+    }
+
+    void UIRenderModule::Render(CommandList* pCmdList, RenderParams* pParams)
+    {
+        if (m_bRenderToTexture)
+        {
+            float clearColor[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+            ClearRenderTarget(pCmdList, &m_pUiOnlyRasterView[m_curUiTextureIndex]->GetResourceView(), clearColor);
+        }
+
+        m_pDynamicBufferPool->BeginFrame();
+        // UI RM always done at display resolution
+        const ResolutionInfo& resInfo = GetFramework()->GetResolutionInfo();
+        Viewport              vp      = {0.f, 0.f, resInfo.fDisplayWidth(), resInfo.fDisplayHeight(), 0.f, 1.f};
+        SetViewport(pCmdList, &vp);
+        SetPrimitiveTopology(pCmdList, PrimitiveTopology::TriangleList);
+
+        // Pick the right pipeline / raster set / render target
+        PipelineObject* pPipelineObj = m_AsyncRender || m_bRenderToTexture ? m_pAsyncPipelineObj : m_pUIPipelineObj;
+
+        // Get buffers for vertices and indices
+        char*             pVertices = nullptr;
+        BufferAddressInfo vertBufferInfo =
+            m_pDynamicBufferPool->AllocVertexBuffer((uint32_t)pParams->vtxBuffer.size(), sizeof(ImDrawVert), reinterpret_cast<void**>(&pVertices));
+        memcpy(pVertices, pParams->vtxBuffer.data(), pParams->vtxBuffer.size() * sizeof(ImDrawVert));
+        char*             pIndices = nullptr;
+        BufferAddressInfo idxBufferInfo =
+            m_pDynamicBufferPool->AllocIndexBuffer((uint32_t)pParams->idxBuffer.size(), sizeof(ImDrawIdx), reinterpret_cast<void**>(&pIndices));
+        memcpy(pIndices, pParams->idxBuffer.data(), pParams->idxBuffer.size() * sizeof(ImDrawIdx));
+
+        BufferAddressInfo bufferInfo    = m_pDynamicBufferPool->AllocConstantBuffer(sizeof(Mat4), &pParams->matrix);
+        BufferAddressInfo hdrbufferInfo = m_pDynamicBufferPool->AllocConstantBuffer(sizeof(HDRCBData), &pParams->hdr);
+
+        // Update constant buffer
+        m_pUIParameters->UpdateRootConstantBuffer(&bufferInfo, 0);
+        m_pUIParameters->UpdateRootConstantBuffer(&hdrbufferInfo, 1);
+
+        // Bind all parameters
+        m_pUIParameters->Bind(pCmdList, pPipelineObj);
+
+        // Set pipeline and draw
+        SetPipelineState(pCmdList, pPipelineObj);
+        SetVertexBuffers(pCmdList, 0, 1, &vertBufferInfo);
+        SetIndexBuffer(pCmdList, &idxBufferInfo);
+
+        for (auto& cmd : pParams->commands)
+        {
+            SetScissorRects(pCmdList, 1, &cmd.scissor);
+            DrawIndexedInstanced(pCmdList, cmd.indexCount, 1, cmd.startIndex, cmd.baseVertex, 0);
+        }
+    }
+
+    void UIRenderModule::ExecuteAsync(CommandList* pCmdList)
+    {
+        // Get parameters from async channel
+        RenderParams* pParams = m_AsyncChannel.exchange(nullptr);
+        // Params are buffered here so that they can be re-used for interpolated frames
+        if (pParams)
+        {
+            delete m_BufferedRenderParams;
+            m_BufferedRenderParams = pParams;
+        }
+        else
+        {
+            pParams = m_BufferedRenderParams;
+        }
+        if (pParams)
+            Render(pCmdList, pParams);
     }
 
     void UIRenderModule::SetFontResourceTexture(const Texture* pFontTexture)
@@ -407,6 +578,26 @@ namespace cauldron
 
         // We are now ready for use
         SetModuleReady(true);
+    }
+
+    void UIRenderModule::SetAsyncRender(bool async)
+    {
+        m_AsyncRender = async;
+    }
+
+    void UIRenderModule::SetRenderToTexture(bool renderToTexture)
+    {
+        m_bRenderToTexture = renderToTexture;
+    }
+
+    void UIRenderModule::SetCopyHudLessTexture(bool copyHudLessTexture)
+    {
+        m_bCopyHudLessTexture = copyHudLessTexture;
+    }
+
+    void UIRenderModule::SetUiSurfaceIndex(uint32_t uiTextureIndex)
+    {
+        m_curUiTextureIndex = uiTextureIndex;
     }
 
     void UIRenderModule::UpdateMagnifierParams()
@@ -473,6 +664,43 @@ namespace cauldron
                 }
             }
         }
+    }
+
+    void UIRenderModule::BlitBackbufferToHudLess(CommandList* pCmdList)
+    {
+        GPUScopedProfileCapture SwapchainMarker(pCmdList, L"Copy Hudless");
+
+        // Cauldron resources need to be transitioned app-side to avoid confusion in states internally
+        // Render modules expect resources coming in/going out to be in a shader read state
+        ResourceState state0     = m_pRenderTarget->GetResource()->GetCurrentResourceState();
+        ResourceState state1     = m_pHudLessRenderTarget[m_curUiTextureIndex]->GetResource()->GetCurrentResourceState();
+        Barrier       barriers[] = {Barrier::Transition(m_pRenderTarget->GetResource(), state0, ResourceState::PixelShaderResource), 
+                                    Barrier::Transition(m_pHudLessRenderTarget[m_curUiTextureIndex]->GetResource(), state1, ResourceState::RenderTargetResource)};
+        ResourceBarrier(pCmdList, _countof(barriers), barriers);
+
+        BeginRaster(pCmdList, 1, &m_pHudLessRasterView[m_curUiTextureIndex]);
+
+        m_pHudLessParameters->SetTextureSRV(m_pRenderTarget, ViewDimension::Texture2D, 0);
+
+        // Bind all the parameters
+        m_pHudLessParameters->Bind(pCmdList, m_pHudLessPipelineObj);
+
+        // Swap chain RM always done at display res
+        const ResolutionInfo& resInfo = GetFramework()->GetResolutionInfo();
+        SetViewportScissorRect(pCmdList, 0, 0, resInfo.DisplayWidth, resInfo.DisplayHeight, 0.f, 1.f);
+
+        // Set pipeline and draw
+        SetPrimitiveTopology(pCmdList, PrimitiveTopology::TriangleList);
+        SetPipelineState(pCmdList, m_pHudLessPipelineObj);
+
+        DrawInstanced(pCmdList, 3);
+
+        EndRaster(pCmdList);
+
+        // Revert resource states
+        for (int i = 0; i < _countof(barriers); ++i)
+            std::swap(barriers[i].SourceState, barriers[i].DestState);
+        ResourceBarrier(pCmdList, _countof(barriers), barriers);
     }
 
 } // namespace cauldron

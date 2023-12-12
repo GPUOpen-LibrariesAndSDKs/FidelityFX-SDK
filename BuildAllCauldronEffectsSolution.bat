@@ -26,7 +26,7 @@ if not exist build\ (
 )
 
 cd build
-cmake -A x64 .. -DBUILD_TYPE=ALL_SAMPLES -DFFX_API=CAULDRON
+cmake -A x64 .. -DBUILD_TYPE=ALL_SAMPLES -DFFX_API=CAULDRON %*
 
 :: Come back to root level
 cd ..

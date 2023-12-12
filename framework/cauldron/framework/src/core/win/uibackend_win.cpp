@@ -30,6 +30,7 @@
 #include "render/dynamicresourcepool.h"
 #include "render/rendermodules/ui/uirendermodule.h"
 #include "render/profiler.h"
+#include "render/swapchain.h"
 
 // For windows DPI scaling fetching
 #include <shellscalingapi.h>
@@ -309,7 +310,42 @@ namespace cauldron
             ImGui::Text("GPU         : %S", pDevice->GetDeviceName());
             ImGui::Text("Driver      : %S", pDevice->GetDriverVersion());
             ImGui::Text("CPU         : %S", pFwrk->GetCPUName());
-            ImGui::Text("FPS         : %d (%.2f ms)", fps, frameTimeMilliSeconds);
+
+                        if (GetFramework()->FrameInterpolationEnabled())
+            {
+                static std::chrono::nanoseconds cpuTimestamp  = cpuTimings[0].EndTime;
+                static uint64_t                 renderFrames  = GetFramework()->GetFrameID();
+                static uint64_t                 displayFrames = 0;  // GetFramework()->GetSwapChain()->GetLastPresentCount();
+                static uint64_t                 renderFPS     = 0;
+                static uint64_t                 displayFPS    = 0;
+                if ((cpuTimings[0].EndTime - cpuTimestamp).count() > 1000000000)
+                {
+                    // minus one to exclude the current frame from measurement,
+                    // as we're on the next frame AFTER the 1 second we wanted to measure
+                    renderFPS    = GetFramework()->GetFrameID() - renderFrames - 1;
+                    renderFrames = GetFramework()->GetFrameID();
+
+                    UINT lastPresentCount = 0;
+                    GetFramework()->GetSwapChain()->GetLastPresentCount(&lastPresentCount);
+                    displayFPS    = lastPresentCount - displayFrames - 1;
+                    displayFrames = lastPresentCount;
+
+                    cpuTimestamp = cpuTimings[0].EndTime;
+                }
+
+                double monitorRefreshRate = 0.0;
+                GetFramework()->GetSwapChain()->GetRefreshRate(&monitorRefreshRate);
+
+                ImGui::Text("Render FPS  : %d", renderFPS);
+                ImGui::Text("Display FPS : %d", displayFPS);
+                ImGui::Text("RefreshRate : %.1f", monitorRefreshRate);
+                ImGui::Text("CPU time    : %.2f ms", frameTimeNanoSecondsCPU / 1000000.f);
+                ImGui::Text("GPU time    : %.2f ms", frameTimeNanoSecondsGPU / 1000000.f);
+            }
+            else
+            {
+                ImGui::Text("FPS         : %d (%.2f ms)", fps, frameTimeMilliSeconds);
+            }
 
             if (ImGui::CollapsingHeader("Timing Information", ImGuiTreeNodeFlags_DefaultOpen))
             {
@@ -506,7 +542,7 @@ namespace cauldron
         const std::vector<UISection>& sections = GetUIManager()->GetGeneralLayout();
         for (auto& sectionIter = sections.begin(); sectionIter != sections.end(); ++sectionIter)
         {
-            if (ImGui::CollapsingHeader(sectionIter->SectionName.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+            if (ImGui::CollapsingHeader(sectionIter->SectionName.c_str(), sectionIter->defaultOpen ? ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_None))
             {
                 // Iterate through all elements
                 for (auto& elementIter = sectionIter->SectionElements.begin(); elementIter != sectionIter->SectionElements.end(); ++elementIter)

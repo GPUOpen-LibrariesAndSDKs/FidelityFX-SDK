@@ -1,24 +1,24 @@
 // This file is part of the FidelityFX SDK.
-//
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
-// furnished to do so, subject to the following conditions :
+// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
 // 
-// The above copyright notice and this permission notice shall be included in 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 // 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 
 /// @defgroup FfxGPULpm FidelityFX LPM
 /// FidelityFX Luma Preserving Mapper GPU documentation
@@ -920,34 +920,34 @@ void LpmMapH(inout FfxFloat16x2 colorR,
             ratioB *= rcpMax;
         }
 
-        ratioR = min(max(FFX_BROADCAST_FLOAT16X2(softGap.x), ffxSaturate(ratioR * FFX_BROADCAST_FLOAT16X2(-softGap.x) + ratioR)),
-                     ffxSaturate(FFX_BROADCAST_FLOAT16X2(softGap.x) * exp2(ratioR * FFX_BROADCAST_FLOAT16X2(softGap.y))));
-        ratioG = min(max(FFX_BROADCAST_FLOAT16X2(softGap.x), ffxSaturate(ratioG * FFX_BROADCAST_FLOAT16X2(-softGap.x) + ratioG)),
-                     ffxSaturate(FFX_BROADCAST_FLOAT16X2(softGap.x) * exp2(ratioG * FFX_BROADCAST_FLOAT16X2(softGap.y))));
-        ratioB = min(max(FFX_BROADCAST_FLOAT16X2(softGap.x), ffxSaturate(ratioB * FFX_BROADCAST_FLOAT16X2(-softGap.x) + ratioB)),
-                     ffxSaturate(FFX_BROADCAST_FLOAT16X2(softGap.x) * exp2(ratioB * FFX_BROADCAST_FLOAT16X2(softGap.y))));
+        ratioR = FfxFloat16x2(min(max(FFX_BROADCAST_FLOAT16X2(softGap.x), ffxSaturate(ratioR * FFX_BROADCAST_FLOAT16X2(-softGap.x) + ratioR)),
+                     ffxSaturate(FFX_BROADCAST_FLOAT16X2(softGap.x) * exp2(ratioR * FFX_BROADCAST_FLOAT16X2(softGap.y)))));
+        ratioG = FfxFloat16x2(min(max(FFX_BROADCAST_FLOAT16X2(softGap.x), ffxSaturate(ratioG * FFX_BROADCAST_FLOAT16X2(-softGap.x) + ratioG)),
+                     ffxSaturate(FFX_BROADCAST_FLOAT16X2(softGap.x) * exp2(ratioG * FFX_BROADCAST_FLOAT16X2(softGap.y)))));
+        ratioB = FfxFloat16x2(min(max(FFX_BROADCAST_FLOAT16X2(softGap.x), ffxSaturate(ratioB * FFX_BROADCAST_FLOAT16X2(-softGap.x) + ratioB)),
+                     ffxSaturate(FFX_BROADCAST_FLOAT16X2(softGap.x) * exp2(ratioB * FFX_BROADCAST_FLOAT16X2(softGap.y)))));
     }
 
     FfxFloat16x2 lumaRatio  = ratioR * FFX_BROADCAST_FLOAT16X2(lumaT.r) + ratioG * FFX_BROADCAST_FLOAT16X2(lumaT.g) + ratioB * FFX_BROADCAST_FLOAT16X2(lumaT.b);
-    FfxFloat16x2 ratioScale = ffxSaturate(luma * ffxReciprocalHalf(lumaRatio));
-    colorR                  = ffxSaturate(ratioR * ratioScale);
-    colorG                  = ffxSaturate(ratioG * ratioScale);
-    colorB                  = ffxSaturate(ratioB * ratioScale);
+    FfxFloat16x2 ratioScale = FfxFloat16x2(ffxSaturate(luma * ffxReciprocalHalf(lumaRatio)));
+    colorR                  = FfxFloat16x2(ffxSaturate(ratioR * ratioScale));
+    colorG                  = FfxFloat16x2(ffxSaturate(ratioG * ratioScale));
+    colorB                  = FfxFloat16x2(ffxSaturate(ratioB * ratioScale));
     FfxFloat16x2 capR       = FFX_BROADCAST_FLOAT16X2(-crosstalk.r) * colorR + FFX_BROADCAST_FLOAT16X2(crosstalk.r);
     FfxFloat16x2 capG       = FFX_BROADCAST_FLOAT16X2(-crosstalk.g) * colorG + FFX_BROADCAST_FLOAT16X2(crosstalk.g);
     FfxFloat16x2 capB       = FFX_BROADCAST_FLOAT16X2(-crosstalk.b) * colorB + FFX_BROADCAST_FLOAT16X2(crosstalk.b);
-    FfxFloat16x2 lumaAdd    = ffxSaturate((-colorB) * FFX_BROADCAST_FLOAT16X2(lumaT.b) +
-                                           ((-colorR) * FFX_BROADCAST_FLOAT16X2(lumaT.r) + ((-colorG) * FFX_BROADCAST_FLOAT16X2(lumaT.g) + luma)));
+    FfxFloat16x2 lumaAdd    = FfxFloat16x2(ffxSaturate((-colorB) * FFX_BROADCAST_FLOAT16X2(lumaT.b) +
+                                           ((-colorR) * FFX_BROADCAST_FLOAT16X2(lumaT.r) + ((-colorG) * FFX_BROADCAST_FLOAT16X2(lumaT.g) + luma))));
     FfxFloat16x2 t          = lumaAdd * ffxReciprocalHalf(capG * FFX_BROADCAST_FLOAT16X2(lumaT.g) +
                                                  (capR * FFX_BROADCAST_FLOAT16X2(lumaT.r) + (capB * FFX_BROADCAST_FLOAT16X2(lumaT.b))));
-    colorR                  = ffxSaturate(t * capR + colorR);
-    colorG                  = ffxSaturate(t * capG + colorG);
-    colorB                  = ffxSaturate(t * capB + colorB);
-    lumaAdd                 = ffxSaturate((-colorB) * FFX_BROADCAST_FLOAT16X2(lumaT.b) +
-                              ((-colorR) * FFX_BROADCAST_FLOAT16X2(lumaT.r) + ((-colorG) * FFX_BROADCAST_FLOAT16X2(lumaT.g) + luma)));
-    colorR                  = ffxSaturate(lumaAdd * FFX_BROADCAST_FLOAT16X2(rcpLumaT.r) + colorR);
-    colorG                  = ffxSaturate(lumaAdd * FFX_BROADCAST_FLOAT16X2(rcpLumaT.g) + colorG);
-    colorB                  = ffxSaturate(lumaAdd * FFX_BROADCAST_FLOAT16X2(rcpLumaT.b) + colorB);
+    colorR                  = FfxFloat16x2(ffxSaturate(t * capR + colorR));
+    colorG                  = FfxFloat16x2(ffxSaturate(t * capG + colorG));
+    colorB                  = FfxFloat16x2(ffxSaturate(t * capB + colorB));
+    lumaAdd                 = FfxFloat16x2(ffxSaturate((-colorB) * FFX_BROADCAST_FLOAT16X2(lumaT.b) +
+                              ((-colorR) * FFX_BROADCAST_FLOAT16X2(lumaT.r) + ((-colorG) * FFX_BROADCAST_FLOAT16X2(lumaT.g) + luma))));
+    colorR                  = FfxFloat16x2(ffxSaturate(lumaAdd * FFX_BROADCAST_FLOAT16X2(rcpLumaT.r) + colorR));
+    colorG                  = FfxFloat16x2(ffxSaturate(lumaAdd * FFX_BROADCAST_FLOAT16X2(rcpLumaT.g) + colorG));
+    colorB                  = FfxFloat16x2(ffxSaturate(lumaAdd * FFX_BROADCAST_FLOAT16X2(rcpLumaT.b) + colorB));
 
     if (con2)
     {
@@ -956,12 +956,12 @@ void LpmMapH(inout FfxFloat16x2 colorR,
         ratioB = colorB;
         if (clip)
         {
-            colorR = ffxSaturate(ratioR * FFX_BROADCAST_FLOAT16X2(con2R.r) +
-                                     (ratioG * FFX_BROADCAST_FLOAT16X2(con2R.g) + (ratioB * FFX_BROADCAST_FLOAT16X2(con2R.b))));
-            colorG = ffxSaturate(ratioG * FFX_BROADCAST_FLOAT16X2(con2G.g) +
-                                     (ratioR * FFX_BROADCAST_FLOAT16X2(con2G.r) + (ratioB * FFX_BROADCAST_FLOAT16X2(con2G.b))));
-            colorB = ffxSaturate(ratioB * FFX_BROADCAST_FLOAT16X2(con2B.b) +
-                                     (ratioG * FFX_BROADCAST_FLOAT16X2(con2B.g) + (ratioR * FFX_BROADCAST_FLOAT16X2(con2B.r))));
+            colorR = FfxFloat16x2(ffxSaturate(ratioR * FFX_BROADCAST_FLOAT16X2(con2R.r) +
+                                     (ratioG * FFX_BROADCAST_FLOAT16X2(con2R.g) + (ratioB * FFX_BROADCAST_FLOAT16X2(con2R.b)))));
+            colorG = FfxFloat16x2(ffxSaturate(ratioG * FFX_BROADCAST_FLOAT16X2(con2G.g) +
+                                     (ratioR * FFX_BROADCAST_FLOAT16X2(con2G.r) + (ratioB * FFX_BROADCAST_FLOAT16X2(con2G.b)))));
+            colorB = FfxFloat16x2(ffxSaturate(ratioB * FFX_BROADCAST_FLOAT16X2(con2B.b) +
+                                     (ratioG * FFX_BROADCAST_FLOAT16X2(con2B.g) + (ratioR * FFX_BROADCAST_FLOAT16X2(con2B.r)))));
         }
         else
         {

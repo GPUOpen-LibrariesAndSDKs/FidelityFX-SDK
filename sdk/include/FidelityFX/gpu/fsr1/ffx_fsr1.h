@@ -1,24 +1,24 @@
 // This file is part of the FidelityFX SDK.
-//
-// Copyright (C)2023 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
-// furnished to do so, subject to the following conditions :
+// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
 // 
-// The above copyright notice and this permission notice shall be included in 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 // 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 
 /// @defgroup FfxGPUFsr1 FidelityFX FSR1
 /// FidelityFX Super Resolution 1 GPU documentation
@@ -459,7 +459,7 @@ void FsrEasuSetH(
 
     FfxFloat16x2 dirX = lD - lB;
     dirPX += dirX * w;
-    lenX = ffxSaturate(abs(dirX) * lenX);
+    lenX = FfxFloat16x2(ffxSaturate(abs(dirX) * lenX));
     lenX *= lenX;
     lenP += lenX * w;
     FfxFloat16x2 ec   = lE - lC;
@@ -468,7 +468,7 @@ void FsrEasuSetH(
     lenY              = ffxReciprocalHalf(lenY);
     FfxFloat16x2 dirY = lE - lA;
     dirPY += dirY * w;
-    lenY = ffxSaturate(abs(dirY) * lenY);
+    lenY = FfxFloat16x2(ffxSaturate(abs(dirY) * lenY));
     lenY *= lenY;
     lenP += lenY * w;
 }
@@ -836,7 +836,7 @@ void FsrEasuH(
   FfxFloat16 hL=hB*FFX_BROADCAST_FLOAT16(0.5)+(hR*FFX_BROADCAST_FLOAT16(0.5)+hG);
   // Noise detection.
   FfxFloat16 nz=FFX_BROADCAST_FLOAT16(0.25)*bL+FFX_BROADCAST_FLOAT16(0.25)*dL+FFX_BROADCAST_FLOAT16(0.25)*fL+FFX_BROADCAST_FLOAT16(0.25)*hL-eL;
-  nz=ffxSaturate(abs(nz)*ffxApproximateReciprocalMediumHalf(ffxMax3Half(ffxMax3Half(bL,dL,eL),fL,hL)-ffxMin3Half(ffxMin3Half(bL,dL,eL),fL,hL)));
+  nz=FfxFloat16(ffxSaturate(abs(nz)*ffxApproximateReciprocalMediumHalf(ffxMax3Half(ffxMax3Half(bL,dL,eL),fL,hL)-ffxMin3Half(ffxMin3Half(bL,dL,eL),fL,hL))));
   nz=FFX_BROADCAST_FLOAT16(-0.5)*nz+FFX_BROADCAST_FLOAT16(1.0);
   // Min and max of ring.
   FfxFloat16 mn4R=min(ffxMin3Half(bR,dR,fR),hR);
@@ -1177,7 +1177,7 @@ void FsrEasuH(
      FfxFloat16x3 b = n + FFX_BROADCAST_FLOAT16X3(1.0 / 255.0);
      b     = b * b;
      FfxFloat16x3 r = (c - b) * ffxApproximateReciprocalMediumHalf(a - b);
-     c     = ffxSaturate(n + ffxIsGreaterThanZeroHalf(FFX_BROADCAST_FLOAT16X3(dit) - r) * FFX_BROADCAST_FLOAT16X3(1.0 / 255.0));
+     c     = FfxFloat16x3(ffxSaturate(n + ffxIsGreaterThanZeroHalf(FFX_BROADCAST_FLOAT16X3(dit) - r) * FFX_BROADCAST_FLOAT16X3(1.0 / 255.0)));
  }
  //------------------------------------------------------------------------------------------------------------------------------
  void FsrTepdC10H(inout FfxFloat16x3 c, FfxFloat16 dit)
@@ -1188,7 +1188,7 @@ void FsrEasuH(
      FfxFloat16x3 b = n + FFX_BROADCAST_FLOAT16X3(1.0 / 1023.0);
      b     = b * b;
      FfxFloat16x3 r = (c - b) * ffxApproximateReciprocalMediumHalf(a - b);
-     c     = ffxSaturate(n + ffxIsGreaterThanZeroHalf(FFX_BROADCAST_FLOAT16X3(dit) - r) * FFX_BROADCAST_FLOAT16X3(1.0 / 1023.0));
+     c     = FfxFloat16x3(ffxSaturate(n + ffxIsGreaterThanZeroHalf(FFX_BROADCAST_FLOAT16X3(dit) - r) * FFX_BROADCAST_FLOAT16X3(1.0 / 1023.0)));
  }
  //==============================================================================================================================
  // This computes dither for positions 'p' and 'p+{8,0}'.
@@ -1224,9 +1224,9 @@ void FsrEasuH(
      FfxFloat16x2 rR = (cR - bR) * ffxApproximateReciprocalMediumHalf(aR - bR);
      FfxFloat16x2 rG = (cG - bG) * ffxApproximateReciprocalMediumHalf(aG - bG);
      FfxFloat16x2 rB = (cB - bB) * ffxApproximateReciprocalMediumHalf(aB - bB);
-     cR     = ffxSaturate(nR + ffxIsGreaterThanZeroHalf(dit - rR) * FFX_BROADCAST_FLOAT16X2(1.0 / 255.0));
-     cG     = ffxSaturate(nG + ffxIsGreaterThanZeroHalf(dit - rG) * FFX_BROADCAST_FLOAT16X2(1.0 / 255.0));
-     cB     = ffxSaturate(nB + ffxIsGreaterThanZeroHalf(dit - rB) * FFX_BROADCAST_FLOAT16X2(1.0 / 255.0));
+     cR     = FfxFloat16x2(ffxSaturate(nR + ffxIsGreaterThanZeroHalf(dit - rR) * FFX_BROADCAST_FLOAT16X2(1.0 / 255.0)));
+     cG     = FfxFloat16x2(ffxSaturate(nG + ffxIsGreaterThanZeroHalf(dit - rG) * FFX_BROADCAST_FLOAT16X2(1.0 / 255.0)));
+     cB     = FfxFloat16x2(ffxSaturate(nB + ffxIsGreaterThanZeroHalf(dit - rB) * FFX_BROADCAST_FLOAT16X2(1.0 / 255.0)));
  }
  //------------------------------------------------------------------------------------------------------------------------------
  void FsrTepdC10Hx2(inout FfxFloat16x2 cR,inout FfxFloat16x2 cG,inout FfxFloat16x2 cB,FfxFloat16x2 dit){
@@ -1245,8 +1245,8 @@ void FsrEasuH(
   FfxFloat16x2 rR=(cR-bR)*ffxApproximateReciprocalMediumHalf(aR-bR);
   FfxFloat16x2 rG=(cG-bG)*ffxApproximateReciprocalMediumHalf(aG-bG);
   FfxFloat16x2 rB=(cB-bB)*ffxApproximateReciprocalMediumHalf(aB-bB);
-  cR=ffxSaturate(nR+ffxIsGreaterThanZeroHalf(dit-rR)*FFX_BROADCAST_FLOAT16X2(1.0/1023.0));
-  cG=ffxSaturate(nG+ffxIsGreaterThanZeroHalf(dit-rG)*FFX_BROADCAST_FLOAT16X2(1.0/1023.0));
-  cB                                                       = ffxSaturate(nB + ffxIsGreaterThanZeroHalf(dit - rB) * FFX_BROADCAST_FLOAT16X2(1.0 / 1023.0));
+  cR=FfxFloat16x2(ffxSaturate(nR+ffxIsGreaterThanZeroHalf(dit-rR)*FFX_BROADCAST_FLOAT16X2(1.0/1023.0)));
+  cG=FfxFloat16x2(ffxSaturate(nG+ffxIsGreaterThanZeroHalf(dit-rG)*FFX_BROADCAST_FLOAT16X2(1.0/1023.0)));
+  cB=FfxFloat16x2(ffxSaturate(nB + ffxIsGreaterThanZeroHalf(dit - rB) * FFX_BROADCAST_FLOAT16X2(1.0 / 1023.0)));
 }
 #endif

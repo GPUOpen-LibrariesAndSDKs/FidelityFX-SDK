@@ -21,7 +21,7 @@ In order to fully sort a buffer of 32-bit keys, the algorithm is invoked over 8 
 - ScanPrefix + Add: Thread counts are summed and summed with thread group offsets to provide the final offset location.
 - Scatter: Copies the source value to its new location (sorted up to n-bits processed thus far)
 
-![FidelityFX Parallel Sort Technique](./media/parallel-sort/parallel-sort-algorightm.jpg)
+<!-- ![FidelityFX Parallel Sort Technique](./media/parallel-sort/parallel-sort-algorightm.jpg) -->
 
 <h3>Example C++</h3>
 

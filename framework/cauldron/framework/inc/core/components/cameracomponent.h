@@ -20,6 +20,7 @@
 
 #include "core/component.h"
 #include "misc/math.h"
+#include <functional>
 
 namespace cauldron
 {
@@ -114,6 +115,8 @@ namespace cauldron
         };
         std::wstring  Name       = L"";
     };
+
+    typedef std::function<void(Vec2& values)> CameraJitterCallback;
 
     /**
      * @class CameraComponent
@@ -238,13 +241,9 @@ namespace cauldron
         const float GetFovY() const { return m_pData->Perspective.Yfov; }
 
         /**
-         * @brief   Sets the camera's jitter values for the frame, and marks the camera dirty.
+         * @brief   Sets the camera's jitter update callback to use.
          */
-        void SetJitterValues(const Vec2& values)
-        {
-            m_jitterValues = values;
-            SetDirty();
-        }
+        static void SetJitterCallbackFunc(CameraJitterCallback callbackFunc) { s_pSetJitterCallback = callbackFunc; }
 
     private:
         CameraComponent() = delete;
@@ -292,6 +291,7 @@ namespace cauldron
         Vec2 m_jitterValues     = Vec2(0, 0);
         Mat4 m_ProjJittered     = Mat4::identity();
         Mat4 m_PrevProjJittered = Mat4::identity();
+        static CameraJitterCallback s_pSetJitterCallback;
     };
 
 } // namespace cauldron

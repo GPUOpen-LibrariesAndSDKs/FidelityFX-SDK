@@ -1,29 +1,36 @@
 // This file is part of the FidelityFX SDK.
-//
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
-// furnished to do so, subject to the following conditions :
-//
+// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+// 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+
 /// @defgroup HLSLCore HLSL Core
 /// HLSL core defines and functions
 ///
 /// @ingroup FfxHLSL
+
+#define DECLARE_SRV_REGISTER(regIndex) t##regIndex
+#define DECLARE_UAV_REGISTER(regIndex) u##regIndex
+#define DECLARE_CB_REGISTER(regIndex)  b##regIndex
+#define FFX_DECLARE_SRV(regIndex)   register(DECLARE_SRV_REGISTER(regIndex))
+#define FFX_DECLARE_UAV(regIndex)   register(DECLARE_UAV_REGISTER(regIndex))
+#define FFX_DECLARE_CB(regIndex)    register(DECLARE_CB_REGISTER(regIndex))
 
 /// A define for abstracting shared memory between shading languages.
 ///
@@ -1264,7 +1271,7 @@ FfxUInt32x2 FFX_MIN16_U4ToUint32x2(FFX_MIN16_U4 x)
 #define FFX_UINT16X2_TO_UINT32(x) FFX_MIN16_U2ToUint32(FFX_MIN16_U2(x))
 #define FFX_UINT16X4_TO_UINT32X2(x) FFX_MIN16_U4ToUint32x2(FFX_MIN16_U4(x))
 
-#if defined(FFX_HLSL_6_2) && !defined(FFX_NO_16_BIT_CAST)
+#if (FFX_HLSL_SM >= 62) && !defined(FFX_NO_16_BIT_CAST)
 #define FFX_TO_UINT16(x) asuint16(x)
 #define FFX_TO_UINT16X2(x) asuint16(x)
 #define FFX_TO_UINT16X3(x) asuint16(x)
@@ -1274,9 +1281,9 @@ FfxUInt32x2 FFX_MIN16_U4ToUint32x2(FFX_MIN16_U4 x)
 #define FFX_TO_UINT16X2(a) FFX_MIN16_U2(FFX_TO_UINT16((a).x), FFX_TO_UINT16((a).y))
 #define FFX_TO_UINT16X3(a) FFX_MIN16_U3(FFX_TO_UINT16((a).x), FFX_TO_UINT16((a).y), FFX_TO_UINT16((a).z))
 #define FFX_TO_UINT16X4(a) FFX_MIN16_U4(FFX_TO_UINT16((a).x), FFX_TO_UINT16((a).y), FFX_TO_UINT16((a).z), FFX_TO_UINT16((a).w))
-#endif // #if defined(FFX_HLSL_6_2) && !defined(FFX_NO_16_BIT_CAST)
+#endif // #if (FFX_HLSL_SM>=62) && !defined(FFX_NO_16_BIT_CAST)
 
-#if defined(FFX_HLSL_6_2) && !defined(FFX_NO_16_BIT_CAST)
+#if (FFX_HLSL_SM >= 62) && !defined(FFX_NO_16_BIT_CAST)
 #define FFX_TO_FLOAT16(x) asfloat16(x)
 #define FFX_TO_FLOAT16X2(x) asfloat16(x)
 #define FFX_TO_FLOAT16X3(x) asfloat16(x)
@@ -1286,7 +1293,7 @@ FfxUInt32x2 FFX_MIN16_U4ToUint32x2(FFX_MIN16_U4 x)
 #define FFX_TO_FLOAT16X2(a) FFX_MIN16_F2(FFX_TO_FLOAT16((a).x), FFX_TO_FLOAT16((a).y))
 #define FFX_TO_FLOAT16X3(a) FFX_MIN16_F3(FFX_TO_FLOAT16((a).x), FFX_TO_FLOAT16((a).y), FFX_TO_FLOAT16((a).z))
 #define FFX_TO_FLOAT16X4(a) FFX_MIN16_F4(FFX_TO_FLOAT16((a).x), FFX_TO_FLOAT16((a).y), FFX_TO_FLOAT16((a).z), FFX_TO_FLOAT16((a).w))
-#endif // #if defined(FFX_HLSL_6_2) && !defined(FFX_NO_16_BIT_CAST)
+#endif // #if (FFX_HLSL_SM>=62) && !defined(FFX_NO_16_BIT_CAST)
 
 //==============================================================================================================================
 #define FFX_BROADCAST_FLOAT16(a)   FFX_MIN16_F(a)

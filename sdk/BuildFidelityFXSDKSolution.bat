@@ -34,7 +34,7 @@ if not exist build\ (
 	mkdir build 
 )
 cd build
-cmake -A x64 .. -DFFX_API_CUSTOM=OFF -DFFX_ALL=ON -DFFX_AUTO_COMPILE_SHADERS=1
+cmake -A x64 .. -DFFX_API_CUSTOM=OFF -DFFX_ALL=ON -DFFX_AUTO_COMPILE_SHADERS=1 %*
 cd..
 
 :: Pause so the user can acknowledge any errors or other outputs from the build process

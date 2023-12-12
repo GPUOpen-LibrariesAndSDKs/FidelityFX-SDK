@@ -1,24 +1,24 @@
 // This file is part of the FidelityFX SDK.
-//
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
-// furnished to do so, subject to the following conditions :
+// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
 // 
-// The above copyright notice and this permission notice shall be included in 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 // 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 
 #ifndef FFX_COMMON_TYPES_H
 #define FFX_COMMON_TYPES_H
@@ -132,7 +132,7 @@ typedef uint32_t FfxUInt32x4[4];
 /// @ingroup HLSLTypes
 typedef bool FfxBoolean;
 
-#if FFX_HLSL_6_2
+#if FFX_HLSL_SM>=62
 
 /// @defgroup HLSL62Types HLSL 6.2 And Above Types
 /// HLSL 6.2 and above type defines for all commonly used variables
@@ -204,7 +204,7 @@ typedef int32_t3    FfxInt32x3;
 /// @ingroup HLSL62Types
 typedef int32_t4    FfxInt32x4;
 
-#else // #if defined(FFX_HLSL_6_2)
+#else // #if FFX_HLSL_SM>=62
 
 /// @defgroup HLSLBaseTypes HLSL 6.1 And Below Types
 /// HLSL 6.1 and below type defines for all commonly used variables
@@ -234,11 +234,11 @@ typedef int2        FfxInt32x2;
 typedef int3        FfxInt32x3;
 typedef int4        FfxInt32x4;
 
-#endif // #if defined(FFX_HLSL_6_2)
+#endif // #if FFX_HLSL_SM>=62
 
 #if FFX_HALF
 
-#if FFX_HLSL_6_2
+#if FFX_HLSL_SM >= 62
 
 typedef float16_t   FfxFloat16;
 typedef float16_t2  FfxFloat16x2;
@@ -260,7 +260,7 @@ typedef int16_t     FfxInt16;
 typedef int16_t2    FfxInt16x2;
 typedef int16_t3    FfxInt16x3;
 typedef int16_t4    FfxInt16x4;
-#else // #if FFX_HLSL_6_2
+#else // #if FFX_HLSL_SM>=62
 typedef min16float  FfxFloat16;
 typedef min16float2 FfxFloat16x2;
 typedef min16float3 FfxFloat16x3;
@@ -281,7 +281,7 @@ typedef min16int    FfxInt16;
 typedef min16int2   FfxInt16x2;
 typedef min16int3   FfxInt16x3;
 typedef min16int4   FfxInt16x4;
-#endif  // #if FFX_HLSL_6_2
+#endif  // #if FFX_HLSL_SM>=62
 
 #endif // FFX_HALF
 
@@ -332,11 +332,11 @@ typedef min16int4   FfxInt16x4;
 
 // Global toggles:
 // #define FFX_HALF            (1)
-// #define FFX_HLSL_6_2        (1)
+// #define FFX_HLSL_SM         (62)
 
 #if FFX_HALF
 
-#if FFX_HLSL_6_2
+#if FFX_HLSL_SM >= 62
 
 #define FFX_MIN16_SCALAR( TypeName, BaseComponentType )           typedef BaseComponentType##16_t TypeName;
 #define FFX_MIN16_VECTOR( TypeName, BaseComponentType, COL )      typedef vector<BaseComponentType##16_t, COL> TypeName;
@@ -346,7 +346,7 @@ typedef min16int4   FfxInt16x4;
 #define FFX_16BIT_VECTOR( TypeName, BaseComponentType, COL )      typedef vector<BaseComponentType##16_t, COL> TypeName;
 #define FFX_16BIT_MATRIX( TypeName, BaseComponentType, ROW, COL ) typedef matrix<BaseComponentType##16_t, ROW, COL> TypeName;
 
-#else //FFX_HLSL_6_2
+#else //FFX_HLSL_SM>=62
 
 #define FFX_MIN16_SCALAR( TypeName, BaseComponentType )           typedef min16##BaseComponentType TypeName;
 #define FFX_MIN16_VECTOR( TypeName, BaseComponentType, COL )      typedef vector<min16##BaseComponentType, COL> TypeName;
@@ -356,7 +356,7 @@ typedef min16int4   FfxInt16x4;
 #define FFX_16BIT_VECTOR( TypeName, BaseComponentType, COL )      FFX_MIN16_VECTOR( TypeName, BaseComponentType, COL );
 #define FFX_16BIT_MATRIX( TypeName, BaseComponentType, ROW, COL ) FFX_MIN16_MATRIX( TypeName, BaseComponentType, ROW, COL );
 
-#endif //FFX_HLSL_6_2
+#endif //FFX_HLSL_SM>=62
 
 #else //FFX_HALF
 

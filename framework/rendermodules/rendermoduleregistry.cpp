@@ -33,6 +33,7 @@
 #include "skydome/skydomerendermodule.h"
 #include "taa/taarendermodule.h"
 #include "translucency/translucencyrendermodule.h"
+#include "animatedtextures/animatedtexturesrendermodule.h"
 
 using namespace cauldron;
 namespace rendermodule
@@ -48,6 +49,7 @@ namespace rendermodule
         RenderModuleFactory::RegisterModule<RasterShadowRenderModule>("RasterShadowRenderModule");
         RenderModuleFactory::RegisterModule<TAARenderModule>("TAARenderModule");
         RenderModuleFactory::RegisterModule<TranslucencyRenderModule>("TranslucencyRenderModule");
+        RenderModuleFactory::RegisterModule<AnimatedTexturesRenderModule>("AnimatedTexturesRenderModule");
     }
 
 } // namespace rendermodule

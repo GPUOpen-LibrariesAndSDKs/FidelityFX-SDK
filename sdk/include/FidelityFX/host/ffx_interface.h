@@ -1,24 +1,24 @@
 // This file is part of the FidelityFX SDK.
-//
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
-// furnished to do so, subject to the following conditions :
-//
+// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+// 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 
 #pragma once
 
@@ -56,37 +56,12 @@ FFX_FORWARD_DECLARE(FfxInterface);
 /// FidelityFX SDK patch version.
 ///
 /// @ingroup FfxInterface
-#define FFX_SDK_VERSION_PATCH (0)
+#define FFX_SDK_VERSION_PATCH (1)
 
 /// Macro to pack a FidelityFX SDK version id together.
 ///
 /// @ingroup FfxInterface
 #define FFX_SDK_MAKE_VERSION( major, minor, patch ) ( ( major << 22 ) | ( minor << 12 ) | patch )
-
-/// An enumeration of all the effects which constitute the FidelityFX SDK.
-///
-/// Dictates what effect shader blobs to fetch for pipeline creation
-///
-/// @ingroup FfxInterface
-typedef enum FfxEffect
-{
-
-    FFX_EFFECT_FSR2 = 0,               ///< FidelityFX Super Resolution v2
-    FFX_EFFECT_FSR1,                   ///< FidelityFX Super Resolution
-    FFX_EFFECT_SPD,                    ///< FidelityFX Single Pass Downsampler
-    FFX_EFFECT_BLUR,                   ///< FidelityFX Blur
-    FFX_EFFECT_CACAO,                  ///< FidelityFX Combined Adaptive Compute Ambient Occlusion
-    FFX_EFFECT_CAS,                    ///< FidelityFX Contrast Adaptive Sharpening
-    FFX_EFFECT_DENOISER,               ///< FidelityFX Denoiser
-    FFX_EFFECT_LENS,                   ///< FidelityFX Lens
-    FFX_EFFECT_PARALLEL_SORT,          ///< FidelityFX Parallel Sort
-    FFX_EFFECT_SSSR,                   ///< FidelityFX Stochastic Screen Space Reflections
-    FFX_EFFECT_VARIABLE_SHADING,       ///< FidelityFX Variable Shading
-    FFX_EFFECT_LPM,                    ///< FidelityFX Luma Preserving Mapper
-    FFX_EFFECT_DOF,                    ///< FidelityFX Depth of Field
-    FFX_EFFECT_CLASSIFIER              ///< FidelityFX Classifier
-
-} FfxEffect;
 
 /// Stand in type for FfxPass
 ///
@@ -290,6 +265,7 @@ typedef FfxResourceDescription (*FfxGetResourceDescriptionFunc)(
 ///
 /// @param [in] backendInterface                    A pointer to the backend interface.
 /// @param [in] resource                            A pointer to a <c><i>FfxResource</i></c> object.
+/// @param [in] effectContextId                     The context space to be used for the effect in question.
 ///
 /// @retval
 /// FFX_OK                                          The operation completed successfully.
@@ -299,7 +275,8 @@ typedef FfxResourceDescription (*FfxGetResourceDescriptionFunc)(
 /// @ingroup FfxInterface
 typedef FfxErrorCode (*FfxDestroyResourceFunc)(
     FfxInterface* backendInterface,
-    FfxResourceInternal resource);
+    FfxResourceInternal resource,
+	FfxUInt32 effectContextId);
 
 /// Create a render pipeline.
 ///
@@ -326,6 +303,12 @@ typedef FfxErrorCode (*FfxCreatePipelineFunc)(
     const FfxPipelineDescription* pipelineDescription,
     FfxUInt32 effectContextId,
     FfxPipelineState* outPipeline);
+
+typedef FfxErrorCode(*FfxGetPermutationBlobByIndexFunc)(FfxEffect effectId,
+    FfxPass passId,
+    FfxBindStage bindStage,
+    uint32_t permutationOptions,
+    FfxShaderBlob* outBlob);
 
 /// Destroy a render pipeline.
 ///
@@ -390,6 +373,23 @@ typedef FfxErrorCode (*FfxExecuteGpuJobsFunc)(
     FfxInterface* backendInterface,
     FfxCommandList commandList);
 
+typedef FfxErrorCode(*FfxPresentCallbackFunc)(const FfxPresentCallbackDescription* params);
+typedef FfxErrorCode(*FfxFrameGenerationDispatchFunc)(const FfxFrameGenerationDispatchDescription* params);
+
+typedef struct FfxFrameGenerationConfig
+{
+    FfxSwapchain                    swapChain;
+    FfxPresentCallbackFunc          presentCallback;
+    FfxFrameGenerationDispatchFunc  frameGenerationCallback;
+    bool                            frameGenerationEnabled;
+    bool                            allowAsyncWorkloads;
+    FfxResource                     HUDLessColor;
+    FfxUInt32                       flags;
+    bool                            onlyPresentInterpolated;
+} FfxFrameGenerationConfig;
+
+typedef FfxErrorCode (*ffxSwapChainConfigureFrameGenerationFunc)(FfxFrameGenerationConfig const* config);
+
 /// A structure encapsulating the interface between the core implementation of
 /// the FfxInterface and any graphics API that it should ultimately call.
 ///
@@ -448,9 +448,11 @@ typedef struct FfxInterface {
     FfxGetResourceDescriptionFunc   fpGetResourceDescription;  ///< A callback function to retrieve a resource description.
     FfxDestroyResourceFunc          fpDestroyResource;         ///< A callback function to destroy a resource.
     FfxCreatePipelineFunc           fpCreatePipeline;          ///< A callback function to create a render or compute pipeline.
+    FfxGetPermutationBlobByIndexFunc fpGetPermutationBlobByIndex;
     FfxDestroyPipelineFunc          fpDestroyPipeline;         ///< A callback function to destroy a render or compute pipeline.
     FfxScheduleGpuJobFunc           fpScheduleGpuJob;          ///< A callback function to schedule a render job.
     FfxExecuteGpuJobsFunc           fpExecuteGpuJobs;          ///< A callback function to execute all queued render jobs.
+    ffxSwapChainConfigureFrameGenerationFunc    fpSwapChainConfigureFrameGeneration;   ///< A callback function to configure swap chain present callback.
 
     void*                           scratchBuffer;             ///< A preallocated buffer for memory utilized internally by the backend.
     size_t                          scratchBufferSize;         ///< Size of the buffer pointed to by <c><i>scratchBuffer</i></c>.

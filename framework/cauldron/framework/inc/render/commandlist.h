@@ -129,7 +129,7 @@ namespace cauldron
         /**
          * @brief   Destruction.
          */
-        ~UploadContext();
+        virtual ~UploadContext();
 
         /**
          * @brief   Executes batched GPU resource copies.

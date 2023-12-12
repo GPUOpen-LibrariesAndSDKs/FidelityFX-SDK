@@ -4,9 +4,9 @@
 
 ![alt text](media/super-resolution/fsr-sample_resized.jpg "A screenshot of the FSR sample.")
 
-This sample demonstrates the use of FidelityFX Super Resolution (FSR1) and FidelityFX Super Resolution 2 (FSR2) for upscaling.
+This sample demonstrates the use of FidelityFX Super Resolution (FSR1), FidelityFX Super Resolution 2 (FSR2) and FidelityFX Super Resolution 3 (FSR3) for upscaling.
 
-For details on the underlying algorithms you can refer to the per-technique documentation for [FSR1](../techniques/super-resolution-spatial.md) and [FSR2](../techniques/super-resolution-temporal.md).
+For details on the underlying algorithms you can refer to the per-technique documentation for [FSR1](../techniques/super-resolution-spatial.md), [FSR2](../techniques/super-resolution-temporal.md) and [FSR3](../techniques/super-resolution-interpolation.md).
 
 <h2>Requirements</h2>
 
@@ -36,6 +36,10 @@ The sample contains a [dedicated Render Module for FSR1](../../samples/fsr/fsr2r
 
 Similarly to FSR1, FSR2 also contains [its own Render Module that manages the context](../../samples/fsr/fsr2rendermodule.h). Additional resources are created interally for the Reactive Mask, Composition Mask. A separate resource at rendering resolution is also created for copying the color render target just before transparency is rendered, which is used for auto-generation of the Reactive mask. During the FSR2 compute dispatch, the input resource itself is used to store the upscaled result.   
 
+<h2>Setting up FidelityFX Super Resolution 3</h2>
+
+FSR3 also contains [its own Render Module that manages the context](../../samples/fsr/fsr3rendermodule.h). In addition to FSR2, this sample replaces the swapchain with a proxy swapchain that handles pacing and presentation of both the interpolated and real frames. It also demonstrates the different ways of handling rendering of the user interface in conjunction with frame interpolation.
+
 <h2>Sample Controls and Configurations</h2>
 
 For sample controls, configuration and Cauldron UI element details, please see [Running the samples](../getting-started/running-samples.md)
@@ -44,4 +48,5 @@ For sample controls, configuration and Cauldron UI element details, please see [
 
 - [FidelityFX Super Resolution 1](../techniques/super-resolution-spatial.md)
 - [FidelityFX Super Resolution 2](../techniques/super-resolution-temporal.md)
+- [FidelityFX Super Resolution 3](../techniques/super-resolution-interpolation.md)
 - [FidelityFX Naming guidelines](../getting-started/naming-guidelines.md)

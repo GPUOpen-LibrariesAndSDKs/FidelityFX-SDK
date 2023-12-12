@@ -156,6 +156,7 @@ package_release_samples:
     - ./LICENSE.txt
     - ./readme.md
     - ./sample.cmake
+    - ./Third_party_notices.txt
 
 package_debug_samples:
   stage: package
@@ -179,3 +180,4 @@ package_debug_samples:
     - ./LICENSE.txt
     - ./readme.md
     - ./sample.cmake
+    - ./Third_party_notices.txt

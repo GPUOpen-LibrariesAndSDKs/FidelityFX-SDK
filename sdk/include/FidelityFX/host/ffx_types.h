@@ -1,24 +1,24 @@
 // This file is part of the FidelityFX SDK.
-//
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
-// furnished to do so, subject to the following conditions :
-//
+// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+// 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 
 #pragma once
 
@@ -51,6 +51,8 @@
 #define FFX_API __declspec(dllexport)
 #endif // #if defined (FFX_GCC)
 
+#define FFX_SDK_DEFAULT_CONTEXT_SIZE (1024 * 128)
+
 /// Maximum supported number of simultaneously bound SRVs.
 ///
 /// @ingroup Defines
@@ -82,7 +84,7 @@
 /// Maximum number of resources per effect context
 ///
 /// @ingroup Defines
-#define FFX_MAX_RESOURCE_COUNT         (64)
+#define FFX_MAX_RESOURCE_COUNT         (128)
 
 /// Maximum number of passes per effect component
 ///
@@ -227,28 +229,31 @@ typedef uint32_t FfxUInt32x4[4];
 /// @ingroup SDKTypes
 typedef enum FfxSurfaceFormat {
 
-    FFX_SURFACE_FORMAT_UNKNOWN,                     ///< Unknown format
-    FFX_SURFACE_FORMAT_R32G32B32A32_TYPELESS,       ///< 32 bit per channel, 4 channel typeless format
-    FFX_SURFACE_FORMAT_R32G32B32A32_UINT,           ///< 32 bit per channel, 4 channel uint format
-    FFX_SURFACE_FORMAT_R32G32B32A32_FLOAT,          ///< 32 bit per channel, 4 channel float format
-    FFX_SURFACE_FORMAT_R16G16B16A16_FLOAT,          ///< 16 bit per channel, 4 channel float format
-    FFX_SURFACE_FORMAT_R32G32_FLOAT,                ///< 32 bit per channel, 2 channel float format
-    FFX_SURFACE_FORMAT_R8_UINT,                     ///< 8 bit per channel, 1 channel float format
-    FFX_SURFACE_FORMAT_R32_UINT,                    ///< 32 bit per channel, 1 channel float format
-    FFX_SURFACE_FORMAT_R8G8B8A8_TYPELESS,           ///<  8 bit per channel, 4 channel float format
-    FFX_SURFACE_FORMAT_R8G8B8A8_UNORM,              ///<  8 bit per channel, 4 channel unsigned normalized format
-    FFX_SURFACE_FORMAT_R8G8B8A8_SNORM,              ///<  8 bit per channel, 4 channel signed normalized format
-    FFX_SURFACE_FORMAT_R8G8B8A8_SRGB,               ///<  8 bit per channel, 4 channel srgb normalized
-    FFX_SURFACE_FORMAT_R11G11B10_FLOAT,             ///< 32 bit 3 channel float format
-    FFX_SURFACE_FORMAT_R16G16_FLOAT,                ///< 16 bit per channel, 2 channel float format
-    FFX_SURFACE_FORMAT_R16G16_UINT,                 ///< 16 bit per channel, 2 channel unsigned int format
-    FFX_SURFACE_FORMAT_R16_FLOAT,                   ///< 16 bit per channel, 1 channel float format
-    FFX_SURFACE_FORMAT_R16_UINT,                    ///< 16 bit per channel, 1 channel unsigned int format
-    FFX_SURFACE_FORMAT_R16_UNORM,                   ///< 16 bit per channel, 1 channel unsigned normalized format
-    FFX_SURFACE_FORMAT_R16_SNORM,                   ///< 16 bit per channel, 1 channel signed normalized format
-    FFX_SURFACE_FORMAT_R8_UNORM,                    ///<  8 bit per channel, 1 channel unsigned normalized format
-    FFX_SURFACE_FORMAT_R8G8_UNORM,                  ///<  8 bit per channel, 2 channel unsigned normalized format
-    FFX_SURFACE_FORMAT_R32_FLOAT                    ///< 32 bit per channel, 1 channel float format
+    FFX_SURFACE_FORMAT_UNKNOWN,                ///< Unknown format
+    FFX_SURFACE_FORMAT_R32G32B32A32_TYPELESS,  ///< 32 bit per channel, 4 channel typeless format
+    FFX_SURFACE_FORMAT_R32G32B32A32_UINT,      ///< 32 bit per channel, 4 channel uint format
+    FFX_SURFACE_FORMAT_R32G32B32A32_FLOAT,     ///< 32 bit per channel, 4 channel float format
+    FFX_SURFACE_FORMAT_R16G16B16A16_FLOAT,     ///< 16 bit per channel, 4 channel float format
+    FFX_SURFACE_FORMAT_R32G32_FLOAT,           ///< 32 bit per channel, 2 channel float format
+    FFX_SURFACE_FORMAT_R8_UINT,                ///< 8 bit per channel, 1 channel float format
+    FFX_SURFACE_FORMAT_R32_UINT,               ///< 32 bit per channel, 1 channel float format
+    FFX_SURFACE_FORMAT_R10G10B10A2_UNORM,      ///< 10 bit per RGB channel with 2 bit alpha, 4 channel unsigned normalized format
+    FFX_SURFACE_FORMAT_R8G8B8A8_TYPELESS,      ///<  8 bit per channel, 4 channel float format
+    FFX_SURFACE_FORMAT_R8G8B8A8_UNORM,         ///<  8 bit per channel, 4 channel unsigned normalized format
+    FFX_SURFACE_FORMAT_R8G8B8A8_SNORM,         ///<  8 bit per channel, 4 channel signed normalized format
+    FFX_SURFACE_FORMAT_R8G8B8A8_SRGB,          ///<  8 bit per channel, 4 channel srgb normalized
+    FFX_SURFACE_FORMAT_R11G11B10_FLOAT,        ///< 32 bit 3 channel float format
+    FFX_SURFACE_FORMAT_R16G16_FLOAT,           ///< 16 bit per channel, 2 channel float format
+    FFX_SURFACE_FORMAT_R16G16_UINT,            ///< 16 bit per channel, 2 channel unsigned int format
+    FFX_SURFACE_FORMAT_R16G16_SINT,            ///< 16 bit per channel, 2 channel signed int format
+    FFX_SURFACE_FORMAT_R16_FLOAT,              ///< 16 bit per channel, 1 channel float format
+    FFX_SURFACE_FORMAT_R16_UINT,               ///< 16 bit per channel, 1 channel unsigned int format
+    FFX_SURFACE_FORMAT_R16_UNORM,              ///< 16 bit per channel, 1 channel unsigned normalized format
+    FFX_SURFACE_FORMAT_R16_SNORM,              ///< 16 bit per channel, 1 channel signed normalized format
+    FFX_SURFACE_FORMAT_R8_UNORM,               ///<  8 bit per channel, 1 channel unsigned normalized format
+    FFX_SURFACE_FORMAT_R8G8_UNORM,             ///<  8 bit per channel, 2 channel unsigned normalized format
+    FFX_SURFACE_FORMAT_R8G8_UINT,              ///<  8 bit per channel, 2 channel unsigned integer format
+    FFX_SURFACE_FORMAT_R32_FLOAT               ///< 32 bit per channel, 1 channel float format
 } FfxSurfaceFormat;
 
 /// An enumeration of resource usage.
@@ -269,14 +274,17 @@ typedef enum FfxResourceUsage {
 /// @ingroup SDKTypes
 typedef enum FfxResourceStates {
 
-    FFX_RESOURCE_STATE_UNORDERED_ACCESS = (1<<0),   ///< Indicates a resource is in the state to be used as UAV.
-    FFX_RESOURCE_STATE_COMPUTE_READ = (1 << 1),     ///< Indicates a resource is in the state to be read by compute shaders.
-    FFX_RESOURCE_STATE_PIXEL_READ = (1 << 2),       ///< Indicates a resource is in the state to be read by pixel shaders.
-    FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ = (FFX_RESOURCE_STATE_PIXEL_READ | FFX_RESOURCE_STATE_COMPUTE_READ), ///< Indicates a resource is in the state to be read by pixel or compute shaders.
-    FFX_RESOURCE_STATE_COPY_SRC = (1 << 3),         ///< Indicates a resource is in the state to be used as source in a copy command.
-    FFX_RESOURCE_STATE_COPY_DEST = (1 << 4),        ///< Indicates a resource is in the state to be used as destination in a copy command.
-    FFX_RESOURCE_STATE_GENERIC_READ = (FFX_RESOURCE_STATE_COPY_SRC | FFX_RESOURCE_STATE_COMPUTE_READ),  ///< Indicates a resource is in generic (slow) read state.
-    FFX_RESOURCE_STATE_INDIRECT_ARGUMENT = (1 << 5),///< Indicates a resource is in the state to be used as an indirect command argument
+    FFX_RESOURCE_STATE_COMMON               = (1 << 0),
+    FFX_RESOURCE_STATE_UNORDERED_ACCESS     = (1 << 1), ///< Indicates a resource is in the state to be used as UAV.
+    FFX_RESOURCE_STATE_COMPUTE_READ         = (1 << 2), ///< Indicates a resource is in the state to be read by compute shaders.
+    FFX_RESOURCE_STATE_PIXEL_READ           = (1 << 3), ///< Indicates a resource is in the state to be read by pixel shaders.
+    FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ   = (FFX_RESOURCE_STATE_PIXEL_READ | FFX_RESOURCE_STATE_COMPUTE_READ), ///< Indicates a resource is in the state to be read by pixel or compute shaders.
+    FFX_RESOURCE_STATE_COPY_SRC             = (1 << 4), ///< Indicates a resource is in the state to be used as source in a copy command.
+    FFX_RESOURCE_STATE_COPY_DEST            = (1 << 5), ///< Indicates a resource is in the state to be used as destination in a copy command.
+    FFX_RESOURCE_STATE_GENERIC_READ         = (FFX_RESOURCE_STATE_COPY_SRC | FFX_RESOURCE_STATE_COMPUTE_READ),  ///< Indicates a resource is in generic (slow) read state.
+    FFX_RESOURCE_STATE_INDIRECT_ARGUMENT    = (1 << 6), ///< Indicates a resource is in the state to be used as an indirect command argument
+    FFX_RESOURCE_STATE_PRESENT              = (1 << 7), ///< Indicates a resource is in the state to be used to present to the swap chain
+    FFX_RESOURCE_STATE_RENDER_TARGET        = (1 << 8), ///< Indicates a resource is in the state to be used as render target
 } FfxResourceStates;
 
 /// An enumeration of surface dimensions.
@@ -387,6 +395,8 @@ typedef enum FfxGpuJobType {
     FFX_GPU_JOB_CLEAR_FLOAT = 0,                 ///< The GPU job is performing a floating-point clear.
     FFX_GPU_JOB_COPY = 1,                        ///< The GPU job is performing a copy.
     FFX_GPU_JOB_COMPUTE = 2,                     ///< The GPU job is performing a compute dispatch.
+    FFX_GPU_JOB_BARRIER = 3,                     ///< The GPU job is performing a barrier.
+
 } FfxGpuJobType;
 
 /// An enumeration for various descriptor types
@@ -431,10 +441,48 @@ typedef enum FfxMsgType {
     FFX_MESSAGE_TYPE_COUNT
 } FfxMsgType;
 
+/// An enumeration of all the effects which constitute the FidelityFX SDK.
+///
+/// Dictates what effect shader blobs to fetch for pipeline creation
+///
+/// @ingroup FfxInterface
+typedef enum FfxEffect
+{
+
+    FFX_EFFECT_FSR2 = 0,               ///< FidelityFX Super Resolution v2
+    FFX_EFFECT_FSR1,                   ///< FidelityFX Super Resolution
+    FFX_EFFECT_SPD,                    ///< FidelityFX Single Pass Downsampler
+    FFX_EFFECT_BLUR,                   ///< FidelityFX Blur
+    FFX_EFFECT_CACAO,                  ///< FidelityFX Combined Adaptive Compute Ambient Occlusion
+    FFX_EFFECT_CAS,                    ///< FidelityFX Contrast Adaptive Sharpening
+    FFX_EFFECT_DENOISER,               ///< FidelityFX Denoiser
+    FFX_EFFECT_LENS,                   ///< FidelityFX Lens
+    FFX_EFFECT_PARALLEL_SORT,          ///< FidelityFX Parallel Sort
+    FFX_EFFECT_SSSR,                   ///< FidelityFX Stochastic Screen Space Reflections
+    FFX_EFFECT_VARIABLE_SHADING,       ///< FidelityFX Variable Shading
+    FFX_EFFECT_LPM,                    ///< FidelityFX Luma Preserving Mapper
+    FFX_EFFECT_DOF,                    ///< FidelityFX Depth of Field
+    FFX_EFFECT_CLASSIFIER,             ///< FidelityFX Classifier
+    FFX_EFFECT_FSR3UPSCALER,           ///< FidelityFX Super Resolution v3
+    FFX_EFFECT_FRAMEINTERPOLATION,     ///< FidelityFX Frame Interpolation, part of FidelityFX Super Resolution v3
+    FFX_EFFECT_OPTICALFLOW,            ///< FidelityFX Optical Flow, part of FidelityFX Super Resolution v3
+
+} FfxEffect;
+
+typedef enum FfxBackbufferTransferFunction {
+    FFX_BACKBUFFER_TRANSFER_FUNCTION_SRGB,
+    FFX_BACKBUFFER_TRANSFER_FUNCTION_PQ,
+    FFX_BACKBUFFER_TRANSFER_FUNCTION_SCRGB
+} FfxBackbufferTransferFunction;
+
 /// A typedef representing the graphics device.
 ///
 /// @ingroup SDKTypes
 typedef void* FfxDevice;
+
+typedef void* FfxCommandQueue;
+
+typedef void* FfxSwapchain;
 
 /// A typedef representing a command list or command buffer.
 ///
@@ -485,6 +533,17 @@ typedef struct FfxIntCoords2D {
     int32_t                         x;                                      ///< The x coordinate of a 2-dimensional point.
     int32_t                         y;                                      ///< The y coordinate of a 2-dimensional point.
 } FfxIntCoords2D;
+
+/// A structure encapsulating a 2-dimensional rect.
+///
+/// @ingroup SDKTypes
+typedef struct FfxRect2D
+{
+    int32_t left;
+    int32_t top;
+    int32_t width;
+    int32_t height;
+} FfxRect2D;
 
 /// A structure encapsulating a 2-dimensional set of floating point coordinates.
 ///
@@ -684,6 +743,7 @@ typedef struct FfxPipelineDescription {
     wchar_t                             name[64];                       ///< Pipeline name with which to name the pipeline object
     FfxBindStage                        stage;                          ///< The stage(s) for which this pipeline is being built
     uint32_t                            indirectWorkload;               ///< Whether this pipeline has an indirect workload
+    FfxSurfaceFormat                    backbufferFormat;               ///< For raster pipelines this contains the backbuffer format
 } FfxPipelineDescription;
 
 /// A structure containing the data required to create a barrier
@@ -691,6 +751,7 @@ typedef struct FfxPipelineDescription {
 /// @ingroup SDKTypes
 typedef struct FfxBarrierDescription
 {
+    FfxResourceInternal resource;
     FfxBarrierType    barrierType;
     FfxResourceStates currentState;
     FfxResourceStates newState;
@@ -738,6 +799,21 @@ typedef struct FfxComputeJobDescription {
     wchar_t                         cbNames[FFX_MAX_NUM_CONST_BUFFERS][64];
 } FfxComputeJobDescription;
 
+typedef struct FfxRasterJobDescription
+{
+    FfxPipelineState                pipeline;                               ///< Raster pipeline for the render job.
+    uint32_t                        numVertices;
+    FfxResourceInternal             renderTarget;
+
+    FfxResourceInternal             srvTextures[FFX_MAX_NUM_SRVS];                 ///< SRV resources to be bound in the compute job.
+    wchar_t                         srvTextureNames[FFX_MAX_NUM_SRVS][64];
+    FfxResourceInternal             uavTextures[FFX_MAX_NUM_UAVS];                 ///< UAV resources to be bound in the compute job.
+    uint32_t                        uavTextureMips[FFX_MAX_NUM_UAVS];               ///< Mip level of UAV resources to be bound in the compute job.
+    wchar_t                         uavTextureNames[FFX_MAX_NUM_UAVS][64];
+    FfxConstantBuffer               cbs[FFX_MAX_NUM_CONST_BUFFERS];         ///< Constant buffers to be bound in the compute job.
+    wchar_t                         cbNames[FFX_MAX_NUM_CONST_BUFFERS][64];
+} FfxRasterJobDescription;
+
 /// A structure describing a copy render job.
 ///
 /// @ingroup SDKTypes
@@ -758,6 +834,8 @@ typedef struct FfxGpuJobDescription{
         FfxClearFloatJobDescription clearJobDescriptor;                     ///< Clear job descriptor. Valid when <c><i>jobType</i></c> is <c><i>FFX_RENDER_JOB_CLEAR_FLOAT</i></c>.
         FfxCopyJobDescription       copyJobDescriptor;                      ///< Copy job descriptor. Valid when <c><i>jobType</i></c> is <c><i>FFX_RENDER_JOB_COPY</i></c>.
         FfxComputeJobDescription    computeJobDescriptor;                   ///< Compute job descriptor. Valid when <c><i>jobType</i></c> is <c><i>FFX_RENDER_JOB_COMPUTE</i></c>.
+        FfxRasterJobDescription     rasterJobDescriptor;
+        FfxBarrierDescription       barrierDescriptor;
     };
 } FfxGpuJobDescription;
 
@@ -833,6 +911,26 @@ typedef struct FfxShaderBlob {
     const uint32_t* boundRTAccelerationStructureCounts; // Pointer to an array of bound UAV buffer resource counts
 
 } FfxShaderBlob;
+
+typedef struct FfxPresentCallbackDescription
+{
+    FfxDevice        device;
+    FfxCommandList   commandList;
+    FfxResource      currentBackBuffer;
+    FfxResource      currentUI;
+    FfxResource      outputSwapChainBuffer;
+    bool             isInterpolatedFrame;
+} FfxPresentCallbackDescription;
+
+typedef struct FfxFrameGenerationDispatchDescription {
+    FfxCommandList              commandList;
+    FfxResource                 presentColor;
+    FfxResource                 outputs[4];
+    uint32_t                    numInterpolatedFrames;
+    bool                        reset;
+    FfxBackbufferTransferFunction backBufferTransferFunction;
+    float                       minMaxLuminance[2];
+} FfxFrameGenerationDispatchDescription;
 
 #ifdef __cplusplus
 }

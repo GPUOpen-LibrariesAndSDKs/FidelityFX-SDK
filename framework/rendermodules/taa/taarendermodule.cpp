@@ -76,16 +76,16 @@ void TAARenderModule::Execute(double deltaTime, cauldron::CommandList* pCmdList)
     if (!m_bEnableTaa)
     {
         // Disable Jitter
-        GetScene()->GetCurrentCamera()->SetJitterValues({0, 0});
+        //GetScene()->GetCurrentCamera()->SetJitterValues({0, 0});
 
         m_bFirst = true;
         return;
     }
-    else
+    /*else
     {
         Vec2 jitterValues = CalculateJitterOffsets(m_pTAAOutputBuffer->GetDesc().Width, m_pTAAOutputBuffer->GetDesc().Height, s_Seed);
         GetScene()->GetCurrentCamera()->SetJitterValues(jitterValues);
-    }
+    }*/
 
     GPUScopedProfileCapture tonemappingMarker(pCmdList, L"TAA");
 
@@ -168,8 +168,14 @@ void TAARenderModule::EnableModule(bool enabled)
 
     if (enabled)
     {
-        Vec2 jitterValues = CalculateJitterOffsets(m_pTAAOutputBuffer->GetDesc().Width, m_pTAAOutputBuffer->GetDesc().Height, s_Seed);
-        GetScene()->GetCurrentCamera()->SetJitterValues(jitterValues);
+        // Set the jitter callback to use 
+        CameraJitterCallback jitterCallback = [this](Vec2& values) {
+                values = CalculateJitterOffsets(m_pTAAOutputBuffer->GetDesc().Width, m_pTAAOutputBuffer->GetDesc().Height, s_Seed);
+            };
+        CameraComponent::SetJitterCallbackFunc(jitterCallback);
+
+        /*Vec2 jitterValues = CalculateJitterOffsets(m_pTAAOutputBuffer->GetDesc().Width, m_pTAAOutputBuffer->GetDesc().Height, s_Seed);
+        GetScene()->GetCurrentCamera()->SetJitterValues(jitterValues);*/
         m_bFirst = true;
 
         // Re-enable UI
@@ -177,6 +183,8 @@ void TAARenderModule::EnableModule(bool enabled)
     }
     else
     {
+        CameraComponent::SetJitterCallbackFunc(nullptr);
+        
         // Disable the UI
         GetUIManager()->UnRegisterUIElements(m_UISection);
     }

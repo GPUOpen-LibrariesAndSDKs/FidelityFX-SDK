@@ -550,6 +550,10 @@ namespace cauldron
          */
         bool UpscalerEnabled() const { return m_UpscalerEnabled; }
 
+        void EnableFrameInterpolation(bool enabled);
+        
+        bool FrameInterpolationEnabled() const { return m_FrameInterpolationEnabled; }
+
         /**
          * @brief   Overrides the default tonemapper.
          */
@@ -670,6 +674,8 @@ namespace cauldron
         void BeginFrame();
         void EndFrame();
 
+        void DeleteCommandListAsync(void* pInFlightGPUInfo);
+
         // Members
         CauldronConfig          m_Config = {};
         std::wstring            m_Name;
@@ -681,6 +687,7 @@ namespace cauldron
         UpscalerState           m_UpscalingState = UpscalerState::None;
         ResolutionUpdateFunc    m_ResolutionUpdaterFn = nullptr;
         bool                    m_UpscalerEnabled = false;
+        bool                    m_FrameInterpolationEnabled = false;
         std::atomic_bool        m_Running = false;
         FrameCaptureState       m_RenderDocCaptureState = FrameCaptureState::None;
         FrameCaptureState       m_PixCaptureState       = FrameCaptureState::None;
@@ -700,6 +707,9 @@ namespace cauldron
         double                  m_DeltaTime = 0.0;
         uint64_t                m_FrameID   = -1;               // Start at -1 so that the first frame is 0 (as we increment on begin frame)
         CommandList*            m_pCmdListForFrame = nullptr;  // Valid between Begin/EndFrame only
+
+        CommandList*                                       m_pDeviceCmdListForFrame = nullptr;    // Valid between Begin/EndFrame only
+        std::vector<CommandList*>                          m_vecCmdListsForFrame;                 // Valid between Begin/EndFrame only
 
         // Profiling/Perf data
         Profiler*               m_pProfiler = nullptr;

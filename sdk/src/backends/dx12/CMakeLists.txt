@@ -1,20 +1,19 @@
 # This file is part of the FidelityFX SDK.
-#
-# Copyright © 2023 Advanced Micro Devices, Inc.
-#
+# 
+# Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+# 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files(the “Software”), to deal
+# of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions :
-#
+# furnished to do so, subject to the following conditions:
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -65,7 +64,7 @@ function(compile_shaders EXECUTABLE BASE_ARGS DX12_BASE_ARGS PERMUTATION_ARGS IN
 			# Wave32
 			add_custom_command(
 				OUTPUT ${WAVE32_PERMUTATION_HEADER}
-				COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME} -DFFX_HALF=0 -T cs_6_2 ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
+				COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME} -DFFX_HALF=0 -T cs_6_2 -DFFX_HLSL_SM=62 ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
 				WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 				DEPENDS ${PASS_SHADER}
 				DEPFILE ${WAVE32_PERMUTATION_HEADER}.d
@@ -75,7 +74,7 @@ function(compile_shaders EXECUTABLE BASE_ARGS DX12_BASE_ARGS PERMUTATION_ARGS IN
 			# Wave64
 			add_custom_command(
 				OUTPUT ${WAVE64_PERMUTATION_HEADER}
-				COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_wave64 "-DFFX_PREFER_WAVE64=\"[WaveSize(64)]\"" -DFFX_HALF=0 -T cs_6_6 ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
+				COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_wave64 "-DFFX_PREFER_WAVE64=\"[WaveSize(64)]\"" -DFFX_HALF=0 -T cs_6_6 -DFFX_HLSL_SM=66 ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
 				WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 				DEPENDS ${PASS_SHADER}
 				DEPFILE ${WAVE64_PERMUTATION_HEADER}.d
@@ -85,7 +84,7 @@ function(compile_shaders EXECUTABLE BASE_ARGS DX12_BASE_ARGS PERMUTATION_ARGS IN
 			# Wave32 16-bit
 			add_custom_command(
 				OUTPUT ${WAVE32_16BIT_PERMUTATION_HEADER}
-				COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_16bit -DFFX_HALF=1 -enable-16bit-types -T cs_6_2 ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
+				COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_16bit -DFFX_HALF=1 -enable-16bit-types -T cs_6_2 -DFFX_HLSL_SM=62 ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
 				WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 				DEPENDS ${PASS_SHADER}
 				DEPFILE ${WAVE32_16BIT_PERMUTATION_HEADER}.d
@@ -95,7 +94,7 @@ function(compile_shaders EXECUTABLE BASE_ARGS DX12_BASE_ARGS PERMUTATION_ARGS IN
 			# Wave64 16-bit
 			add_custom_command(
 				OUTPUT ${WAVE64_16BIT_PERMUTATION_HEADER}
-				COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_wave64_16bit "-DFFX_PREFER_WAVE64=\"[WaveSize(64)]\"" -DFFX_HALF=1 -enable-16bit-types -T cs_6_6 ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
+				COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_wave64_16bit "-DFFX_PREFER_WAVE64=\"[WaveSize(64)]\"" -DFFX_HALF=1 -enable-16bit-types -T cs_6_6 -DFFX_HLSL_SM=66 ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
 				WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 				DEPENDS ${PASS_SHADER}
 				DEPFILE ${WAVE64_16BIT_PERMUTATION_HEADER}.d
@@ -106,7 +105,7 @@ function(compile_shaders EXECUTABLE BASE_ARGS DX12_BASE_ARGS PERMUTATION_ARGS IN
 			# Wave32
 			add_custom_command(
 				OUTPUT ${WAVE32_PERMUTATION_HEADER}
-				COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME} -DFFX_HALF=0 -T cs_6_2 ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
+				COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME} -DFFX_HALF=0 -T cs_6_2 -DFFX_HLSL_SM=62 ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
 				WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 				DEPENDS ${PASS_SHADER}
 			)
@@ -115,7 +114,7 @@ function(compile_shaders EXECUTABLE BASE_ARGS DX12_BASE_ARGS PERMUTATION_ARGS IN
 			# Wave64
 			add_custom_command(
 				OUTPUT ${WAVE64_PERMUTATION_HEADER}
-				COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_wave64 "-DFFX_PREFER_WAVE64=\"[WaveSize(64)]\"" -DFFX_HALF=0 -T cs_6_6 ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
+				COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_wave64 "-DFFX_PREFER_WAVE64=\"[WaveSize(64)]\"" -DFFX_HALF=0 -T cs_6_6 -DFFX_HLSL_SM=66 ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
 				WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 				DEPENDS ${PASS_SHADER}
 			)
@@ -124,7 +123,7 @@ function(compile_shaders EXECUTABLE BASE_ARGS DX12_BASE_ARGS PERMUTATION_ARGS IN
 			# Wave32 16-bit
 			add_custom_command(
 				OUTPUT ${WAVE32_16BIT_PERMUTATION_HEADER}
-				COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_16bit -DFFX_HALF=1 -enable-16bit-types -T cs_6_2 ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
+				COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_16bit -DFFX_HALF=1 -enable-16bit-types -T cs_6_2 -DFFX_HLSL_SM=62 ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
 				WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 				DEPENDS ${PASS_SHADER}
 			)
@@ -133,7 +132,7 @@ function(compile_shaders EXECUTABLE BASE_ARGS DX12_BASE_ARGS PERMUTATION_ARGS IN
 			# Wave64 16-bit
 			add_custom_command(
 				OUTPUT ${WAVE64_16BIT_PERMUTATION_HEADER}
-				COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_wave64_16bit "-DFFX_PREFER_WAVE64=\"[WaveSize(64)]\"" -DFFX_HALF=1 -enable-16bit-types -T cs_6_6 ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
+				COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_wave64_16bit "-DFFX_PREFER_WAVE64=\"[WaveSize(64)]\"" -DFFX_HALF=1 -enable-16bit-types -T cs_6_6 -DFFX_HLSL_SM=66 ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
 				WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 				DEPENDS ${PASS_SHADER}
 			)
@@ -157,8 +156,14 @@ endmacro()
 
 file(GLOB PUBLIC_SHADERS
 	FFX_PUBLIC_SHADER_SOURCES
+    "${FFX_GPU_PATH}/frameinterpolation/*.h"
+    "${FFX_GPU_PATH}/frameinterpolation/*.hlsl"
+    "${FFX_GPU_PATH}/opticalflow/*.h"
+    "${FFX_GPU_PATH}/opticalflow/*.hlsl"
     "${FFX_GPU_PATH}/fsr2/*.h"
     "${FFX_GPU_PATH}/fsr2/*.hlsl"
+    "${FFX_GPU_PATH}/fsr3upscaler/*.h"
+    "${FFX_GPU_PATH}/fsr3upscaler/*.hlsl"
     "${FFX_GPU_PATH}/fsr1/*.h"
     "${FFX_GPU_PATH}/fsr1/*.hlsl"
     "${FFX_GPU_PATH}/spd/*.h"
@@ -193,14 +198,23 @@ file(GLOB PRIVATE_SOURCE
 	"${FFX_SRC_BACKENDS_PATH}/shared/blob_accessors/"
 	"${FFX_SRC_BACKENDS_PATH}/shared/blob_accessors/"
     "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/FrameInterpolationSwapchain/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/FrameInterpolationSwapchain/*.cpp"
+)
 
 if (FFX_FSR OR FFX_ALL)
 	set(FFX_FSR_PRIVATE_SOURCE
 		"${FFX_SRC_BACKENDS_PATH}/shared/blob_accessors/ffx_fsr1_shaderblobs.h"
 		"${FFX_SRC_BACKENDS_PATH}/shared/blob_accessors/ffx_fsr1_shaderblobs.cpp"
 		"${FFX_SRC_BACKENDS_PATH}/shared/blob_accessors/ffx_fsr2_shaderblobs.h"
-		"${FFX_SRC_BACKENDS_PATH}/shared/blob_accessors/ffx_fsr2_shaderblobs.cpp")
+		"${FFX_SRC_BACKENDS_PATH}/shared/blob_accessors/ffx_fsr2_shaderblobs.cpp"
+		"${FFX_SRC_BACKENDS_PATH}/shared/blob_accessors/ffx_fsr3upscaler_shaderblobs.h"
+		"${FFX_SRC_BACKENDS_PATH}/shared/blob_accessors/ffx_fsr3upscaler_shaderblobs.cpp"
+		"${FFX_SRC_BACKENDS_PATH}/shared/blob_accessors/ffx_frameinterpolation_shaderblobs.h"
+		"${FFX_SRC_BACKENDS_PATH}/shared/blob_accessors/ffx_frameinterpolation_shaderblobs.cpp"
+		"${FFX_SRC_BACKENDS_PATH}/shared/blob_accessors/ffx_opticalflow_shaderblobs.h"
+		"${FFX_SRC_BACKENDS_PATH}/shared/blob_accessors/ffx_opticalflow_shaderblobs.cpp")
 	list(APPEND PRIVATE_SOURCE ${FFX_FSR_PRIVATE_SOURCE})
 endif()
 
@@ -315,11 +329,16 @@ source_group("public_shaders"  FILES ${PUBLIC_SHADERS})
 get_filename_component(FFX_PASS_SHADER_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/../shaders/dx12 ABSOLUTE)
 
 target_include_directories(ffx_backend_dx12_${FFX_PLATFORM_NAME} PUBLIC ${FFX_INCLUDE_PATH})
+target_include_directories(ffx_backend_dx12_${FFX_PLATFORM_NAME} PUBLIC ${FFX_LIB_PATH})
 target_include_directories(ffx_backend_dx12_${FFX_PLATFORM_NAME} PUBLIC ${FFX_PASS_SHADER_OUTPUT_PATH})
 target_include_directories(ffx_backend_dx12_${FFX_PLATFORM_NAME} PRIVATE ${FFX_COMPONENTS_PATH})
 target_include_directories(ffx_backend_dx12_${FFX_PLATFORM_NAME} PRIVATE ${FFX_SHARED_PATH})
 target_include_directories(ffx_backend_dx12_${FFX_PLATFORM_NAME} PRIVATE "${FFX_SRC_BACKENDS_PATH}/shared")
 target_include_directories(ffx_backend_dx12_${FFX_PLATFORM_NAME} PRIVATE ${FFX_PASS_SHADER_OUTPUT_PATH})
+
+if (NOT FFX_BUILD_AS_DLL)
+    target_link_libraries (ffx_backend_dx12_${FFX_PLATFORM_NAME} pixlib)
+endif()
 
 set_source_files_properties(${PRIVATE_SHADERS} PROPERTIES HEADER_FILE_ONLY TRUE)
 set_source_files_properties(${PUBLIC_SHADERS} PROPERTIES HEADER_FILE_ONLY TRUE)
@@ -340,8 +359,28 @@ endif()
 # add pass shaders for all the components
 if (FFX_FSR OR FFX_ALL)
 	target_compile_definitions(ffx_backend_dx12_${FFX_PLATFORM_NAME} PRIVATE FFX_FSR)
+
+    # FFX_FSR3 is currently only defined in DX12 native backend
+    target_compile_definitions(ffx_backend_dx12_${FFX_PLATFORM_NAME} PRIVATE FFX_FSR3)
+	include (CMakeShadersFrameinterpolation.txt)
+	include (CMakeShadersOpticalflow.txt)
+	include (CMakeShadersFSR3Upscaler.txt)
 	include (CMakeShadersFSR2.txt)
 	include (CMakeShadersFSR1.txt)
+
+#	ADD_CUSTOM_TARGET(copy-shaders-FSR2 ALL
+#		COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_SOURCE_DIR}/src/backends/dx12/shaders/fsr2 ${CMAKE_BINARY_DIR}/../bin/ffx_sdk/passes_fsr2)
+#	ADD_CUSTOM_TARGET(copy-shaders-FSR3 ALL
+#		COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_SOURCE_DIR}/src/backends/dx12/shaders/fsr3upscaler ${CMAKE_BINARY_DIR}/../bin/ffx_sdk/passes_fsr3upscaler)
+#	ADD_CUSTOM_TARGET(copy-shaders-OF ALL
+#		COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_SOURCE_DIR}/src/backends/dx12/shaders/opticalflow ${CMAKE_BINARY_DIR}/../bin/ffx_sdk/passes_opticalflow)
+#	ADD_CUSTOM_TARGET(copy-shaders-FI ALL
+#		COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_SOURCE_DIR}/src/backends/dx12/shaders/frameinterpolation ${CMAKE_BINARY_DIR}/../bin/ffx_sdk/passes_frameinterpolation)
+
+#	add_dependencies(copy-shaders-FSR2 ffx_backend_dx12_${FFX_PLATFORM_NAME})
+#	add_dependencies(copy-shaders-FSR3 ffx_backend_dx12_${FFX_PLATFORM_NAME})
+#	add_dependencies(copy-shaders-OF ffx_backend_dx12_${FFX_PLATFORM_NAME})
+#	add_dependencies(copy-shaders-FI ffx_backend_dx12_${FFX_PLATFORM_NAME})
 endif()
 
 if (FFX_SPD OR FFX_ALL)

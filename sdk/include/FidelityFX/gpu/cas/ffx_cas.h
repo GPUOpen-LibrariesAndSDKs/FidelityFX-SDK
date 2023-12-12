@@ -1,24 +1,24 @@
 // This file is part of the FidelityFX SDK.
-//
-// Copyright (C)2023 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
-// furnished to do so, subject to the following conditions :
+// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
 // 
-// The above copyright notice and this permission notice shall be included in 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 // 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 
 /// @defgroup FfxGPUCas FidelityFX CAS
 /// FidelityFX Contrast Adaptive Sharpening GPU documentation
@@ -333,9 +333,9 @@ void casFilterNoScalingHalf(
     FfxFloat16x2 amplifyGreen = ffxSaturate(min(minimumGreen, FFX_BROADCAST_FLOAT16X2(2.0) - maximumGreen) * reciprocalMaximumGreen);
     FfxFloat16x2 amplifyBlue  = ffxSaturate(min(minimumBlue, FFX_BROADCAST_FLOAT16X2(2.0) - maximumBlue) * reciprocalMaximumBlue);
 #else
-    FfxFloat16x2 amplifyRed   = ffxSaturate(min(minimumRed, FFX_BROADCAST_FLOAT16X2(1.0) - maximumRed) * reciprocalMaximumRed);
-    FfxFloat16x2 amplifyGreen = ffxSaturate(min(minimumGreen, FFX_BROADCAST_FLOAT16X2(1.0) - maximumGreen) * reciprocalMaximumGreen);
-    FfxFloat16x2 amplifyBlue  = ffxSaturate(min(minimumBlue, FFX_BROADCAST_FLOAT16X2(1.0) - maximumBlue) * reciprocalMaximumBlue);
+    FfxFloat16x2 amplifyRed   = FfxFloat16x2(ffxSaturate(min(minimumRed, FFX_BROADCAST_FLOAT16X2(1.0) - maximumRed) * reciprocalMaximumRed));
+    FfxFloat16x2 amplifyGreen = FfxFloat16x2(ffxSaturate(min(minimumGreen, FFX_BROADCAST_FLOAT16X2(1.0) - maximumGreen) * reciprocalMaximumGreen));
+    FfxFloat16x2 amplifyBlue  = FfxFloat16x2(ffxSaturate(min(minimumBlue, FFX_BROADCAST_FLOAT16X2(1.0) - maximumBlue) * reciprocalMaximumBlue));
 #endif  // #if defined(FFX_CAS_BETTER_DIAGONALS)
 
     // Shaping amount of sharpening.
@@ -361,9 +361,9 @@ void casFilterNoScalingHalf(
     FfxFloat16x2 reciprocalWeight = ffxApproximateReciprocalMediumHalf(FFX_BROADCAST_FLOAT16X2(1.0) + FFX_BROADCAST_FLOAT16X2(4.0) * weightGreen);
 #endif  // #if defined(FFX_CAS_USE_PRECISE_MATH)
 
-    outPixelRed = ffxSaturate((bR * weightGreen + dR * weightGreen + fR * weightGreen + hR * weightGreen + eR) * reciprocalWeight);
-    outPixelGreen = ffxSaturate((bG * weightGreen + dG * weightGreen + fG * weightGreen + hG * weightGreen + eG) * reciprocalWeight);
-    outPixelBlue = ffxSaturate((bB * weightGreen + dB * weightGreen + fB * weightGreen + hB * weightGreen + eB) * reciprocalWeight);
+    outPixelRed   = FfxFloat16x2(ffxSaturate((bR * weightGreen + dR * weightGreen + fR * weightGreen + hR * weightGreen + eR) * reciprocalWeight));
+    outPixelGreen = FfxFloat16x2(ffxSaturate((bG * weightGreen + dG * weightGreen + fG * weightGreen + hG * weightGreen + eG) * reciprocalWeight));
+    outPixelBlue  = FfxFloat16x2(ffxSaturate((bB * weightGreen + dB * weightGreen + fB * weightGreen + hB * weightGreen + eB) * reciprocalWeight));
 }
 #endif // #if FFX_HALF == 1
 
@@ -1011,18 +1011,18 @@ void casFilterWithScalingHalf(
     FfxFloat16x2 ampkG = ffxSaturate(min(mnkG, FFX_BROADCAST_FLOAT16X2(2.0) - mxkG) * rcpMkG);
     FfxFloat16x2 ampkB = ffxSaturate(min(mnkB, FFX_BROADCAST_FLOAT16X2(2.0) - mxkB) * rcpMkB);
 #else
-    FfxFloat16x2 ampfR  = ffxSaturate(min(minimumRed, FFX_BROADCAST_FLOAT16X2(1.0) - mxfR) * rcpMfR);
-    FfxFloat16x2 ampfG  = ffxSaturate(min(minimumGreen, FFX_BROADCAST_FLOAT16X2(1.0) - mxfG) * rcpMfG);
-    FfxFloat16x2 ampfB  = ffxSaturate(min(minimumBlue, FFX_BROADCAST_FLOAT16X2(1.0) - mxfB) * rcpMfB);
-    FfxFloat16x2 ampgR  = ffxSaturate(min(mngR, FFX_BROADCAST_FLOAT16X2(1.0) - mxgR) * rcpMgR);
-    FfxFloat16x2 ampgG  = ffxSaturate(min(mngG, FFX_BROADCAST_FLOAT16X2(1.0) - mxgG) * rcpMgG);
-    FfxFloat16x2 ampgB  = ffxSaturate(min(mngB, FFX_BROADCAST_FLOAT16X2(1.0) - mxgB) * rcpMgB);
-    FfxFloat16x2 ampjR  = ffxSaturate(min(mnjR, FFX_BROADCAST_FLOAT16X2(1.0) - mxjR) * rcpMjR);
-    FfxFloat16x2 ampjG  = ffxSaturate(min(mnjG, FFX_BROADCAST_FLOAT16X2(1.0) - mxjG) * rcpMjG);
-    FfxFloat16x2 ampjB  = ffxSaturate(min(mnjB, FFX_BROADCAST_FLOAT16X2(1.0) - mxjB) * rcpMjB);
-    FfxFloat16x2 ampkR  = ffxSaturate(min(mnkR, FFX_BROADCAST_FLOAT16X2(1.0) - mxkR) * rcpMkR);
-    FfxFloat16x2 ampkG  = ffxSaturate(min(mnkG, FFX_BROADCAST_FLOAT16X2(1.0) - mxkG) * rcpMkG);
-    FfxFloat16x2 ampkB  = ffxSaturate(min(mnkB, FFX_BROADCAST_FLOAT16X2(1.0) - mxkB) * rcpMkB);
+    FfxFloat16x2 ampfR  = FfxFloat16x2(ffxSaturate(min(minimumRed, FFX_BROADCAST_FLOAT16X2(1.0) - mxfR) * rcpMfR));
+    FfxFloat16x2 ampfG  = FfxFloat16x2(ffxSaturate(min(minimumGreen, FFX_BROADCAST_FLOAT16X2(1.0) - mxfG) * rcpMfG));
+    FfxFloat16x2 ampfB  = FfxFloat16x2(ffxSaturate(min(minimumBlue, FFX_BROADCAST_FLOAT16X2(1.0) - mxfB) * rcpMfB));
+    FfxFloat16x2 ampgR  = FfxFloat16x2(ffxSaturate(min(mngR, FFX_BROADCAST_FLOAT16X2(1.0) - mxgR) * rcpMgR));
+    FfxFloat16x2 ampgG  = FfxFloat16x2(ffxSaturate(min(mngG, FFX_BROADCAST_FLOAT16X2(1.0) - mxgG) * rcpMgG));
+    FfxFloat16x2 ampgB  = FfxFloat16x2(ffxSaturate(min(mngB, FFX_BROADCAST_FLOAT16X2(1.0) - mxgB) * rcpMgB));
+    FfxFloat16x2 ampjR  = FfxFloat16x2(ffxSaturate(min(mnjR, FFX_BROADCAST_FLOAT16X2(1.0) - mxjR) * rcpMjR));
+    FfxFloat16x2 ampjG  = FfxFloat16x2(ffxSaturate(min(mnjG, FFX_BROADCAST_FLOAT16X2(1.0) - mxjG) * rcpMjG));
+    FfxFloat16x2 ampjB  = FfxFloat16x2(ffxSaturate(min(mnjB, FFX_BROADCAST_FLOAT16X2(1.0) - mxjB) * rcpMjB));
+    FfxFloat16x2 ampkR  = FfxFloat16x2(ffxSaturate(min(mnkR, FFX_BROADCAST_FLOAT16X2(1.0) - mxkR) * rcpMkR));
+    FfxFloat16x2 ampkG  = FfxFloat16x2(ffxSaturate(min(mnkG, FFX_BROADCAST_FLOAT16X2(1.0) - mxkG) * rcpMkG));
+    FfxFloat16x2 ampkB  = FfxFloat16x2(ffxSaturate(min(mnkB, FFX_BROADCAST_FLOAT16X2(1.0) - mxkB) * rcpMkB));
 #endif
 
     // Shaping amount of sharpening.
@@ -1126,12 +1126,12 @@ void casFilterWithScalingHalf(
                             FFX_BROADCAST_FLOAT16X2(2.0) * qloG + qfG + qgG + qjG + qkG);
 #endif  // #if defined(FFX_CAS_USE_PRECISE_MATH)
 
-    pixR = ffxSaturate(
-        (bR * qbeG + eR * qbeG + cR * qchG + hR * qchG + iR * qinG + nR * qinG + lR * qloG + oR * qloG + fR * qfG + gR * qgG + jR * qjG + kR * qkG) * rcpWG);
-    pixG = ffxSaturate(
-        (bG * qbeG + eG * qbeG + cG * qchG + hG * qchG + iG * qinG + nG * qinG + lG * qloG + oG * qloG + fG * qfG + gG * qgG + jG * qjG + kG * qkG) * rcpWG);
-    pixB = ffxSaturate(
-        (bB * qbeG + eB * qbeG + cB * qchG + hB * qchG + iB * qinG + nB * qinG + lB * qloG + oB * qloG + fB * qfG + gB * qgG + jB * qjG + kB * qkG) * rcpWG);
+    pixR = FfxFloat16x2(ffxSaturate(
+        (bR * qbeG + eR * qbeG + cR * qchG + hR * qchG + iR * qinG + nR * qinG + lR * qloG + oR * qloG + fR * qfG + gR * qgG + jR * qjG + kR * qkG) * rcpWG));
+    pixG = FfxFloat16x2(ffxSaturate(
+        (bG * qbeG + eG * qbeG + cG * qchG + hG * qchG + iG * qinG + nG * qinG + lG * qloG + oG * qloG + fG * qfG + gG * qgG + jG * qjG + kG * qkG) * rcpWG));
+    pixB = FfxFloat16x2(ffxSaturate(
+        (bB * qbeG + eB * qbeG + cB * qchG + hB * qchG + iB * qinG + nB * qinG + lB * qloG + oB * qloG + fB * qfG + gB * qgG + jB * qjG + kB * qkG) * rcpWG));
 }
 #endif // #if FFX_HALF == 1
 

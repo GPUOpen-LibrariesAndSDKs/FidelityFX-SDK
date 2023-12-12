@@ -17,16 +17,28 @@
 
         "Presentation": {
             "BackBufferCount": 3,
-            "Vsync": false,
+            "Vsync": true,
             "Fullscreen": false,
             "Width": 2560,
             "Height": 1440,
-            "Mode": "DISPLAYMODE_LDR"
+            "Mode": "DISPLAYMODE_HDR10_2084"
         },
 
         "RenderResources": {
+            "LDR8Color": {
+                "Format": "RGBA8_UNORM",
+                "AllowUAV": true
+            },
             "HDR11Color": {
                 "Format": "RG11B10_FLOAT",
+                "AllowUAV": true
+            },
+            "HDR10Color": {
+                "Format": "RGB10A2_UNORM",
+                "AllowUAV": true
+            },
+            "HDR16Color": {
+                "Format": "RGBA16_FLOAT",
                 "AllowUAV": true
             },
             "DepthTarget": {
@@ -46,7 +58,7 @@
             "UploadHeapSize": 419430400,
             "DynamicBufferPoolSize": 78643200,
             "GPUSamplerViewCount": 300,
-            "GPUResourceViewCount": 50000,
+            "GPUResourceViewCount": 60000,
             "CPUResourceViewCount": 50000,
             "CPURenderViewCount": 100,
             "CPUDepthViewCount": 100

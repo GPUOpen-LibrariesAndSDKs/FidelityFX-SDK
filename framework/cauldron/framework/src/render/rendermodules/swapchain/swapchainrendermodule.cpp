@@ -32,7 +32,20 @@ namespace cauldron
     void SwapChainRenderModule::Init(const json& initData)
     {
         // Setup the texture to be the swapchain render target input
-        m_pTexture = GetFramework()->GetColorTargetForCallback(GetName()); // Pass in the highest value as this is always the last module to execute
+        switch (GetFramework()->GetSwapChain()->GetSwapChainDisplayMode())
+        {
+            case DisplayMode::DISPLAYMODE_LDR:
+                m_pTexture = GetFramework()->GetRenderTexture(L"LDR8Color");
+                break;
+            case DisplayMode::DISPLAYMODE_HDR10_2084:
+            case DisplayMode::DISPLAYMODE_FSHDR_2084:
+                m_pTexture = GetFramework()->GetRenderTexture(L"HDR10Color");
+                break;
+            case DisplayMode::DISPLAYMODE_HDR10_SCRGB:
+            case DisplayMode::DISPLAYMODE_FSHDR_SCRGB:
+                m_pTexture = GetFramework()->GetRenderTexture(L"HDR16Color");
+                break;
+        }
 
         // root signature
         RootSignatureDesc signatureDesc;
@@ -64,7 +77,6 @@ namespace cauldron
         m_pPipelineObj = PipelineObject::CreatePipelineObject(L"SwapChainCopyPass_PipelineObj", psoDesc);
 
         m_pParameters = ParameterSet::CreateParameterSet(m_pRootSignature);
-        m_pParameters->SetRootConstantBufferResource(GetDynamicBufferPool()->GetResource(), sizeof(SwapchainCBData), 0);
 
         // Set our texture to the right parameter slot
         m_pParameters->SetTextureSRV(m_pTexture, ViewDimension::Texture2D, 0);
@@ -84,20 +96,12 @@ namespace cauldron
     {
         GPUScopedProfileCapture SwapchainMarker(pCmdList, L"SwapChain");
 
-        m_ConstantData.displayMode = GetFramework()->GetSwapChain()->GetSwapChainDisplayMode();
-
         // Cauldron resources need to be transitioned app-side to avoid confusion in states internally
         // Render modules expect resources coming in/going out to be in a shader read state
         Barrier barrier = Barrier::Transition(m_pRenderTarget->GetCurrentResource(), ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource, ResourceState::RenderTargetResource);
         ResourceBarrier(pCmdList, 1, &barrier);
 
         BeginRaster(pCmdList, 1, &m_pRasterView);
-
-        // Allocate a dynamic constant buffers and set
-        BufferAddressInfo bufferInfo  = GetDynamicBufferPool()->AllocConstantBuffer(sizeof(SwapchainCBData), &m_ConstantData);
-
-        // Update constant buffers
-        m_pParameters->UpdateRootConstantBuffer(&bufferInfo, 0);
 
         // Bind all the parameters
         m_pParameters->Bind(pCmdList, m_pPipelineObj);

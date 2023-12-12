@@ -1,24 +1,24 @@
 // This file is part of the FidelityFX SDK.
-//
-// Copyright (C)2023 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
-// furnished to do so, subject to the following conditions :
+// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
 // 
-// The above copyright notice and this permission notice shall be included in 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 // 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 
 #include "ffx_core.h"
 #include "ffx_dof_common.h"
@@ -218,8 +218,8 @@ FfxHalfOpt4 FfxDofFinalCombineColors(FfxUInt32x2 coord, FfxUInt32x2 relCoord, Ff
 	// if any FG sample has zero weight, the interpolation is invalid.
 	if (minFgW == FfxHalfOpt(0)) fg.a = FfxHalfOpt(0);
 	FfxHalfOpt c = FfxHalfOpt(2) * FfxHalfOpt(abs(FfxDofGetCoc(d))); // double it for full-res pixels
-	FfxHalfOpt c1 = ffxSaturate(c - FfxHalfOpt(0.5)); // lerp factor for full vs. fixed 1.5px blur
-	FfxHalfOpt c2 = ffxSaturate(c - FfxHalfOpt(1.5)); // lerp factor for prev vs. quarter res
+	FfxHalfOpt c1 = FfxHalfOpt(ffxSaturate(c - FfxHalfOpt(0.5))); // lerp factor for full vs. fixed 1.5px blur
+	FfxHalfOpt c2 = FfxHalfOpt(ffxSaturate(c - FfxHalfOpt(1.5))); // lerp factor for prev vs. quarter res
 	if (fg.a > FfxHalfOpt(0.3)) c2 = FfxHalfOpt(1);
 	if (bg.a == FfxHalfOpt(0)) c2 = FfxHalfOpt(0);
 	FfxHalfOpt3 combinedColor = ffxLerp(full, fixBlurred, c1);

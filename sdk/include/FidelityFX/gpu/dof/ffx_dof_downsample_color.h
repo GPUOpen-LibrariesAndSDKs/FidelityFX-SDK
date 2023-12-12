@@ -1,24 +1,24 @@
 // This file is part of the FidelityFX SDK.
-//
-// Copyright (C)2023 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
-// furnished to do so, subject to the following conditions :
+// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
 // 
-// The above copyright notice and this permission notice shall be included in 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 // 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 
 #include "ffx_core.h"
 
@@ -71,9 +71,9 @@ FfxFloat16x4 FfxDofDownsampleQuadH(FfxFloat16x4 v0, FfxFloat16x4 v1, FfxFloat16x
 	FfxFloat16 c1 = v1.a;
 	FfxFloat16 c2 = v2.a;
 	FfxFloat16 c3 = v3.a;
-	FfxFloat16 w1 = ffxSaturate(FfxFloat16(1.0) - abs(c0 - c1));
-	FfxFloat16 w2 = ffxSaturate(FfxFloat16(1.0) - abs(c0 - c2));
-	FfxFloat16 w3 = ffxSaturate(FfxFloat16(1.0) - abs(c0 - c3));
+	FfxFloat16 w1 = FfxFloat16(ffxSaturate(FfxFloat16(1.0) - abs(c0 - c1)));
+	FfxFloat16 w2 = FfxFloat16(ffxSaturate(FfxFloat16(1.0) - abs(c0 - c2)));
+	FfxFloat16 w3 = FfxFloat16(ffxSaturate(FfxFloat16(1.0) - abs(c0 - c3)));
 	FfxFloat16x3 color = v0.rgb + w1 * v1.rgb + w2 * v2.rgb + w3 * v3.rgb;
 	FfxFloat16 weights = FfxFloat16(1.0) + w1 + w2 + w3;
 	return FfxFloat16x4(color / weights, c0);

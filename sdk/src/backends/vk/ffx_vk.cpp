@@ -1,24 +1,24 @@
 // This file is part of the FidelityFX SDK.
-//
-// Copyright © 2023 Advanced Micro Devices, Inc.
-//
+// 
+// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this softwareand associated documentation files(the “Software”), to deal
+// of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions :
-//
-// The above copyright noticeand this permission notice shall be included in
+// furnished to do so, subject to the following conditions:
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 
 #include <FidelityFX/host/ffx_interface.h>
 #include <FidelityFX/host/ffx_util.h>
@@ -33,7 +33,7 @@ FfxErrorCode           CreateBackendContextVK(FfxInterface* backendInterface, Ff
 FfxErrorCode           GetDeviceCapabilitiesVK(FfxInterface* backendInterface, FfxDeviceCapabilities* deviceCapabilities);
 FfxErrorCode           DestroyBackendContextVK(FfxInterface* backendInterface, FfxUInt32 effectContextId);
 FfxErrorCode           CreateResourceVK(FfxInterface* backendInterface, const FfxCreateResourceDescription* desc, FfxUInt32 effectContextId, FfxResourceInternal* outTexture);
-FfxErrorCode           DestroyResourceVK(FfxInterface* backendInterface, FfxResourceInternal resource);
+FfxErrorCode           DestroyResourceVK(FfxInterface* backendInterface, FfxResourceInternal resource, FfxUInt32 effectContextId);
 FfxErrorCode           RegisterResourceVK(FfxInterface* backendInterface, const FfxResource* inResource, FfxUInt32 effectContextId, FfxResourceInternal* outResourceInternal);
 FfxResource            GetResourceVK(FfxInterface* backendInterface, FfxResourceInternal resource);
 FfxErrorCode           UnregisterResourcesVK(FfxInterface* backendInterface, FfxCommandList commandList, FfxUInt32 effectContextId);
@@ -1131,7 +1131,7 @@ FfxErrorCode DestroyBackendContextVK(FfxInterface* backendInterface, FfxUInt32 e
         if (backendContext->pResources[currentStaticResourceIndex].imageResource != VK_NULL_HANDLE) {
             FFX_ASSERT_MESSAGE(false, "FFXInterface: Vulkan: SDK Resource was not destroyed prior to destroying the backend context. There is a resource leak.");
             FfxResourceInternal internalResource = { currentStaticResourceIndex };
-            DestroyResourceVK(backendInterface, internalResource);
+            DestroyResourceVK(backendInterface, internalResource, effectContextId);
         }
     }
 
@@ -1460,12 +1460,14 @@ FfxErrorCode CreateResourceVK(
     return FFX_OK;
 }
 
-FfxErrorCode DestroyResourceVK(FfxInterface* backendInterface, FfxResourceInternal resource)
+FfxErrorCode DestroyResourceVK(FfxInterface* backendInterface, FfxResourceInternal resource, FfxUInt32 effectContextId)
 {
     FFX_ASSERT(backendInterface != nullptr);
     BackendContext_VK* backendContext = (BackendContext_VK*)backendInterface->scratchBuffer;
+    BackendContext_VK::EffectContext& effectContext = backendContext->pEffectContexts[effectContextId];
 
-     if (resource.internalIndex != -1)
+     if (resource.internalIndex != -1 &&
+        ((resource.internalIndex >= int32_t(effectContextId * FFX_MAX_RESOURCE_COUNT)) && (resource.internalIndex < int32_t(effectContext.nextStaticResource))))
      {
          BackendContext_VK::Resource& backgroundResource = backendContext->pResources[resource.internalIndex];
 
@@ -1818,7 +1820,7 @@ FfxErrorCode CreatePipelineVK(FfxInterface* backendInterface,
 
     // start by fetching the shader blob
     FfxShaderBlob shaderBlob = { };
-    ffxGetPermutationBlobByIndex(effect, pass, permutationOptions, &shaderBlob);
+    ffxGetPermutationBlobByIndex(effect, pass, FFX_BIND_COMPUTE_SHADER_STAGE, permutationOptions, &shaderBlob);
     FFX_ASSERT(shaderBlob.data && shaderBlob.size);
 
     //////////////////////////////////////////////////////////////////////////

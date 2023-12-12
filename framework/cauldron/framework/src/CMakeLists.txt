@@ -113,16 +113,17 @@ copyCommand("${shaderfiles}" ${SHADER_OUTPUT})
 set(cauldronconfigfiles ${CMAKE_CURRENT_SOURCE_DIR}/../config/cauldronconfig.json)
 copyCommand("${cauldronconfigfiles}" ${CONFIG_OUTPUT})
 
+# CUSTOM_CHANGES_TO_FSR3 Build FSR3 DLL with RelWithDebInfo configuration
 add_library(Framework STATIC
     ${imguifiles} ${miscfiles} ${corefiles} ${cauldronconfigfiles} ${corefiles_components} ${corefiles_loaders} ${corefiles_windows} ${renderfiles} ${renderfiles_win} ${rendermodules_swapchain} ${rendermodules_ui} ${rendermodules_tonemapping} ${rendermodules_fpslimiter} ${shaderfiles}
     $<$<OR:$<CONFIG:DebugVK>,$<CONFIG:ReleaseVK>>: ${miscfiles_vk} ${renderfiles_vk}>
-    $<$<OR:$<CONFIG:DebugDX12>,$<CONFIG:ReleaseDX12>>: ${miscfiles_dx12} ${renderfiles_dx12} ${memoryallocator_dx12}>)
+    $<$<OR:$<CONFIG:DebugDX12>,$<CONFIG:ReleaseDX12>,$<CONFIG:RelWithDebInfoDX12>>: ${miscfiles_dx12} ${renderfiles_dx12} ${memoryallocator_dx12}>)
 
 target_compile_definitions(Framework PRIVATE RenderModuleRoot="${RENDERMODULE_ROOT}")
 
 target_link_libraries (Framework stb imgui
     $<$<OR:$<CONFIG:DebugVK>,$<CONFIG:ReleaseVK>>: amd_acs dxc "Vulkan::Vulkan" Xinput Shcore>
-    $<$<OR:$<CONFIG:DebugDX12>,$<CONFIG:ReleaseDX12>>: amd_acs dxc DXGI amd_ags memoryallocator
+    $<$<OR:$<CONFIG:DebugDX12>,$<CONFIG:ReleaseDX12>,$<CONFIG:RelWithDebInfoDX12>>: amd_acs dxc DXGI amd_ags memoryallocator
 	D3D12 pixlib agilitysdk dxheaders Xinput Shcore>)
 
 source_group("Config"							             FILES ${cauldronconfigfiles})

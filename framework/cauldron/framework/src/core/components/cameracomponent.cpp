@@ -69,6 +69,8 @@ namespace cauldron
         s_pComponentManager = nullptr;
     }
 
+    CameraJitterCallback CameraComponent::s_pSetJitterCallback = nullptr;
+
     CameraComponent::CameraComponent(Entity* pOwner, ComponentData* pData, CameraComponentMgr* pManager) :
         Component(pOwner, pData, pManager),
         m_pData(reinterpret_cast<CameraComponentData*>(pData)),
@@ -314,6 +316,22 @@ namespace cauldron
 
                         // Update everything
                         lookAt = eyePos - polarVector;
+                    }
+                }
+
+                // Update camera jitter if we need it
+                if (CameraComponent::s_pSetJitterCallback)
+                {
+                    s_pSetJitterCallback(m_jitterValues);
+                    m_Dirty = true;
+                }
+                else
+                {
+                    // Reset jitter if disabled
+                    if (m_jitterValues.getX() != 0.f || m_jitterValues.getY() != 0.f)
+                    {
+                        m_jitterValues = Vec2(0.f, 0.f);
+                        m_Dirty        = true;
                     }
                 }
 

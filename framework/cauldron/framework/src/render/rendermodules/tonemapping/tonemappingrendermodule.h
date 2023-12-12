@@ -57,6 +57,6 @@ private:
     cauldron::PipelineObject*   m_pPipelineObj    = nullptr;
     cauldron::ParameterSet*     m_pParameters     = nullptr;
 
-    const cauldron::Texture* m_pTexture      = nullptr;
+    const cauldron::Texture*    m_pTexture      = nullptr;
     const cauldron::Texture*    m_pRenderTarget   = nullptr;
 };

@@ -22,7 +22,7 @@
 
 float3 ApplyGamma(float3 color)
 {
-    color.xyz = pow(color.xyz, 1.0f / 2.2f);
+    color = pow(color, 1.0f / 2.2f);
     return color;
 }
 
