@@ -1307,7 +1307,11 @@ HRESULT STDMETHODCALLTYPE FrameInterpolationSwapChainDX12::ResizeBuffers(UINT Bu
     const UINT fiAdjustedFlags = getInterpolationEnabledSwapChainFlags(SwapChainFlags);
 
     // update params expected by the application
-    gameBufferCount_ = BufferCount;
+    // a buffer count of zero means we need to preserve the original count
+    if (BufferCount != 0) 
+    {
+        gameBufferCount_ = BufferCount;
+    }
     gameFlags_       = SwapChainFlags;
 
     HRESULT hr = real()->ResizeBuffers(0 /* preserve count */, Width, Height, NewFormat, fiAdjustedFlags);
