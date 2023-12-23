@@ -10,7 +10,7 @@
             "TransCompMask": {
                 "Format": "R8_UNORM",
                 "AllowUAV": true,
-                "RenderResolution": false
+                "RenderResolution": true
             }
         },
 
