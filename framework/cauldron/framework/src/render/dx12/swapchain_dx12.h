@@ -33,6 +33,32 @@ namespace cauldron
         const IDXGISwapChain4* DX12SwapChain() const { return m_pSwapChain.Get(); }
         IDXGISwapChain4* DX12SwapChain() { return m_pSwapChain.Get(); }
 
+        void SetDXGISwapChain(IDXGISwapChain4* pDxgiSwapChain)
+        {
+            if (pDxgiSwapChain)
+            {
+                m_pSwapChain = pDxgiSwapChain;
+
+                CreateSwapChainRenderTargets();
+            }
+            else
+            {
+                DestroySwapChainRenderTargets();
+
+                // delete m_pRenderTarget;
+
+                // delete m_pSwapChainRTV;
+
+                m_pSwapChain = pDxgiSwapChain;
+            }
+        }
+
+        virtual void GetLastPresentCount(UINT* pLastPresentCount)
+        {
+            m_pSwapChain->GetLastPresentCount(pLastPresentCount);
+        }
+        virtual void GetRefreshRate(double* outRefreshRate);
+
         void OnResize(uint32_t width, uint32_t height) override;
         void WaitForSwapChain() override;
         void Present() override;

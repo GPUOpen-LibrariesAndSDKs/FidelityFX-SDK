@@ -79,6 +79,8 @@ inline FfxSurfaceFormat GetFfxSurfaceFormat(cauldron::ResourceFormat format)
         return FFX_SURFACE_FORMAT_R16G16_FLOAT;
     case (cauldron::ResourceFormat::RG16_UINT):
         return FFX_SURFACE_FORMAT_R16G16_UINT;
+    case (cauldron::ResourceFormat::RG16_SINT):
+        return FFX_SURFACE_FORMAT_R16G16_SINT;
     case (cauldron::ResourceFormat::R16_FLOAT):
         return FFX_SURFACE_FORMAT_R16_FLOAT;
     case (cauldron::ResourceFormat::R16_UINT):
@@ -98,6 +100,8 @@ inline FfxSurfaceFormat GetFfxSurfaceFormat(cauldron::ResourceFormat format)
         return FFX_SURFACE_FORMAT_UNKNOWN;
     case cauldron::ResourceFormat::RGBA32_UINT:
         return FFX_SURFACE_FORMAT_R32G32B32A32_UINT;
+    case cauldron::ResourceFormat::RGB10A2_UNORM:
+        return FFX_SURFACE_FORMAT_R10G10B10A2_UNORM;
     default:
         FFX_ASSERT_MESSAGE(false, "ValidationRemap: Unsupported format requested. Please implement.");
         return FFX_SURFACE_FORMAT_UNKNOWN;
@@ -190,7 +194,7 @@ inline FfxErrorCode ffxGetInterface(FfxInterface* backendInterface, cauldron::De
 #ifdef FFX_API_CAULDRON
     return ffxGetInterfaceCauldron(backendInterface, ffxGetDeviceCauldron(device), scratchBuffer, scratchBufferSize, maxContexts);
 #elif FFX_API_DX12
-    return ffxGetInterfaceDX12(backendInterface, ffxGetDeviceDX12(device->GetImpl()->DX12Device()), scratchBuffer, scratchBufferSize, maxContexts);
+    return ffxGetInterfaceDX12(backendInterface, ffxGetDeviceDX12(device->GetImpl()->DX12Device()), scratchBuffer, scratchBufferSize, (uint32_t)maxContexts);
 #elif FFX_API_VK
     VkDeviceContext vkDeviceContext = { device->GetImpl()->VKDevice(), device->GetImpl()->VKPhysicalDevice(), vkGetDeviceProcAddr };
     return ffxGetInterfaceVK(backendInterface, ffxGetDeviceVK(&vkDeviceContext), scratchBuffer, scratchBufferSize, maxContexts);
@@ -226,4 +230,46 @@ inline FfxResource ffxGetResource(const cauldron::GPUResource* cauldronResource,
 
     cauldron::CauldronCritical(L"Unsupported API or Platform for FFX Validation Remap");
     return FfxResource();   // Error
+}
+
+inline FfxErrorCode ffxReplaceSwapchainForFrameinterpolation(FfxCommandQueue gameQueue, FfxSwapchain& gameSwapChain)
+{
+#ifdef FFX_API_CAULDRON
+    FFX_ASSERT_FAIL("FSR3 is not implemented for Cauldron backend, yet. Please use the native DX12 backend to test FSR3.");
+#elif FFX_API_DX12
+    return ffxReplaceSwapchainForFrameinterpolationDX12(gameQueue, gameSwapChain);
+#elif FFX_API_VK
+    FFX_ASSERT(false && "Not Implemented!");
+#endif  // FFX_API_CAULDRON
+
+    cauldron::CauldronCritical(L"Unsupported API or Platform for FFX Validation Remap");
+    return FFX_ERROR_BACKEND_API_ERROR;  // Error
+}
+
+inline FfxErrorCode ffxRegisterFrameinterpolationUiResource(FfxSwapchain gameSwapChain, FfxResource uiResource)
+{
+#ifdef FFX_API_CAULDRON
+    FFX_ASSERT(false && "Not Implemented!");
+#elif FFX_API_DX12
+    return ffxRegisterFrameinterpolationUiResourceDX12(gameSwapChain, uiResource);
+#elif FFX_API_VK
+    FFX_ASSERT(false && "Not Implemented!");
+#endif  // FFX_API_CAULDRON
+
+    cauldron::CauldronCritical(L"Unsupported API or Platform for FFX Validation Remap");
+    return FFX_ERROR_BACKEND_API_ERROR;  // Error
+}
+
+inline FfxErrorCode ffxGetInterpolationCommandlist(FfxSwapchain gameSwapChain, FfxCommandList& gameCommandlist)
+{
+#ifdef FFX_API_CAULDRON
+    FFX_ASSERT(false && "Not Implemented!");
+#elif FFX_API_DX12
+    return ffxGetFrameinterpolationCommandlistDX12(gameSwapChain, gameCommandlist);
+#elif FFX_API_VK
+    FFX_ASSERT(false && "Not Implemented!");
+#endif  // FFX_API_CAULDRON
+
+    cauldron::CauldronCritical(L"Unsupported API or Platform for FFX Validation Remap");
+    return FFX_ERROR_BACKEND_API_ERROR;  // Error
 }

@@ -22,6 +22,7 @@
 #include "render/renderdefines.h"
 #include "core/uimanager.h"
 #include "misc/math.h"
+#include <chrono>
 
 namespace cauldron
 {
@@ -49,11 +50,12 @@ private:
     cauldron::PipelineObject* m_pPipelineObj   = nullptr;
     cauldron::Buffer*         m_pBuffer        = nullptr;
 
-    double                m_Overhead                    = 1.0;
-    static const uint32_t s_FRAME_TIME_HISTORY_SAMPLES  = 4;
-    uint64_t              m_FrameTimeHistory[s_FRAME_TIME_HISTORY_SAMPLES];
-    uint64_t              m_FrameTimeHistorySum         = 0;
-    uint64_t              m_FrameTimeHistoryCount       = 0;
+    double                   m_Overhead                   = 1.0;
+    static const uint32_t    s_FRAME_TIME_HISTORY_SAMPLES = 4;
+    uint64_t                 m_FrameTimeHistory[s_FRAME_TIME_HISTORY_SAMPLES];
+    uint64_t                 m_FrameTimeHistorySum   = 0;
+    uint64_t                 m_FrameTimeHistoryCount = 0;
+    std::chrono::nanoseconds m_LastFrameEnd{0};
 
     // UI
     cauldron::UISection m_UISection;

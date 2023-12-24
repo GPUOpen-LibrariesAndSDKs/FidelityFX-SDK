@@ -57,11 +57,24 @@ void ToneMappingRenderModule::Init(const json& InitData)
     m_pRootSignature = RootSignature::CreateRootSignature(L"ToneMappingRenderPass_RootSignature", signatureDesc);
 
     // Get the proper post tone map color target
-    m_pRenderTarget = GetFramework()->GetRenderTexture(L"HDR11Color");
+    switch (GetFramework()->GetSwapChain()->GetSwapChainDisplayMode())
+    {
+        case DisplayMode::DISPLAYMODE_LDR:
+            m_pRenderTarget = GetFramework()->GetRenderTexture(L"LDR8Color");
+            break;
+        case DisplayMode::DISPLAYMODE_HDR10_2084:
+        case DisplayMode::DISPLAYMODE_FSHDR_2084:
+            m_pRenderTarget = GetFramework()->GetRenderTexture(L"HDR10Color");
+            break;
+        case DisplayMode::DISPLAYMODE_HDR10_SCRGB:
+        case DisplayMode::DISPLAYMODE_FSHDR_SCRGB:
+            m_pRenderTarget = GetFramework()->GetRenderTexture(L"HDR16Color");
+            break;
+    }
     CauldronAssert(ASSERT_CRITICAL, m_pRenderTarget != nullptr, L"Couldn't find the render target for the tone mapper");
 
-    // Get the input texture (these are the same now)
-    m_pTexture = m_pRenderTarget;
+    // Get the input texture
+    m_pTexture = GetFramework()->GetRenderTexture(L"HDR11Color");
 
     // Setup the pipeline object
     PipelineDesc psoDesc;
@@ -111,14 +124,6 @@ ToneMappingRenderModule::~ToneMappingRenderModule()
 
 void ToneMappingRenderModule::Execute(double deltaTime, CommandList* pCmdList)
 {
-    // If display mode is set to FSHDR_SCRGB or HDR10_SCRGB, the tonemapper will not run
-    // the color target for the duration of the frame will be RGBA16_FLOAT (HDR16Color)
-    if (GetFramework()->GetSwapChain()->GetSwapChainDisplayMode() == DisplayMode::DISPLAYMODE_FSHDR_SCRGB ||
-        GetFramework()->GetSwapChain()->GetSwapChainDisplayMode() == DisplayMode::DISPLAYMODE_HDR10_SCRGB)
-    {
-        return;
-    }
-
     GPUScopedProfileCapture tonemappingMarker(pCmdList, L"ToneMapping");
 
         // Render modules expect resources coming in/going out to be in a shader read state

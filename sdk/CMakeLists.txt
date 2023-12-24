@@ -1,9 +1,9 @@
 # This file is part of the FidelityFX SDK.
 #
-# Copyright © 2023 Advanced Micro Devices, Inc.
+# Copyright � 2023 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files(the “Software”), to deal
+# of this software and associated documentation files(the �Software�), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 # copies of the Software, and to permit persons to whom the Software is
@@ -12,7 +12,7 @@
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
 #
-# THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# THE SOFTWARE IS PROVIDED �AS IS�, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
 # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -25,7 +25,7 @@ cmake_minimum_required(VERSION 3.17)
 # Set configuration types based on what we are building for
 if (NOT FFX_API_CUSTOM)
 	message(STATUS "Building FidelityFX SDK with DX12 & VK backends")
-	set(CMAKE_CONFIGURATION_TYPES Debug Release)
+	set(CMAKE_CONFIGURATION_TYPES Debug Release RelWithDebInfo)
 	set(CMAKE_DEBUG_POSTFIX d)
 	set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 	
@@ -79,6 +79,7 @@ if (NOT FFX_API_CUSTOM)
 	# Write both debug and release versions of the static libs to the /bin folder as they are uniquely named
 	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_HOME_DIRECTORY}/bin/ffx_sdk/)
 	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_HOME_DIRECTORY}/bin/ffx_sdk/)
+	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_HOME_DIRECTORY}/bin/ffx_sdk/)
 
 else()
 
@@ -157,6 +158,10 @@ set(FFX_PUBLIC_SHADER_SOURCES
 project (FidelityFX-SDK)
 
 # Components
+add_subdirectory(${FFX_COMPONENTS_PATH}/opticalflow)
+add_subdirectory(${FFX_COMPONENTS_PATH}/frameinterpolation)
+add_subdirectory(${FFX_COMPONENTS_PATH}/fsr3)
+add_subdirectory(${FFX_COMPONENTS_PATH}/fsr3upscaler)
 add_subdirectory(${FFX_COMPONENTS_PATH}/fsr2)
 add_subdirectory(${FFX_COMPONENTS_PATH}/fsr1)
 add_subdirectory(${FFX_COMPONENTS_PATH}/spd)

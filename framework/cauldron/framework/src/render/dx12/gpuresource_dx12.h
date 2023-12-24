@@ -61,6 +61,7 @@ namespace cauldron
 
     private:
         friend class GPUResource;
+        friend class FSR3RenderModule;
         GPUResourceInternal() = delete;
         GPUResourceInternal(ID3D12Resource* pResource, const wchar_t* resourceName, ResourceState initialState, bool resizable = false);
         GPUResourceInternal(D3D12_RESOURCE_DESC& resourceDesc, D3D12_HEAP_TYPE heapType, ResourceState initialState, const wchar_t* resourceName, void* pOwner, bool resizable = false);

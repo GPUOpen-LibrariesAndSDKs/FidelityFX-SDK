@@ -23,6 +23,7 @@
 #include "uicommon.h"
 #include "fullscreen.hlsl"
 #include "upscaler.h"
+#include "transferFunction.h"
 
 //--------------------------------------------------------------------------------------
 // Input structures
@@ -206,8 +207,12 @@ float4 uiPS(PS_INPUT input) : SV_Target
     switch (HDRCB.MonitorDisplayMode)
     {
         case DisplayMode::DISPLAYMODE_LDR:
+            out_col.xyz = ApplyGamma(out_col.xyz);
+            break;
+
         case DisplayMode::DISPLAYMODE_HDR10_SCRGB:
         case DisplayMode::DISPLAYMODE_FSHDR_SCRGB:
+            out_col.xyz = ApplyscRGBScale(out_col.xyz, 0.0f, HDRCB.DisplayMaxLuminance / 80.0f);
             break;
 
         case DisplayMode::DISPLAYMODE_HDR10_2084:
@@ -224,6 +229,7 @@ float4 uiPS(PS_INPUT input) : SV_Target
             // 1 * ((1000 / 80) * (80 / 10000)) = 1 / 10 = 0.1
             // For simplcity we are getting rid of conversion to per 80 nit division factor and directly dividing max luminance set by 10000 nits
             col *= (HDRCB.DisplayMaxLuminance / 10000.0f);
+            col = ApplyPQ(col);
             out_col = float4(col, out_col.a);
             break;
     }

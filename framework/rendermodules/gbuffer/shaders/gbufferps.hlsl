@@ -66,7 +66,7 @@ struct GBufferOutput
 {
     float4 BaseColorAlpha       : SV_Target0;
     float4 Normals              : SV_Target1;
-    float3 AoRoughnessMetallic  : SV_Target2;
+    float4 AoRoughnessMetallic  : SV_Target2;
 #ifdef HAS_MOTION_VECTORS_RT
     float2 MotionVectors : TARGET(HAS_MOTION_VECTORS_RT);
 #endif // HAS_MOTION_VECTORS_RT
@@ -106,7 +106,7 @@ GBufferOutput MainPS(VS_SURFACE_OUTPUT SurfaceInput
 #endif // HAS_MOTION_VECTORS_RT
 
     GBuffer.BaseColorAlpha      = BaseColorAlpha;
-    GBuffer.AoRoughnessMetallic = AoRoughnessMetallic;
+    GBuffer.AoRoughnessMetallic = float4(AoRoughnessMetallic, 0.f);
     GBuffer.AoRoughnessMetallic.r = 1.0f; // Temp for SSAO
 
     float3 normals = GetPixelNormal(SurfaceInput, Textures, SceneInfo, AllTextures, AllSamplers, SceneInfo.MipLODBias, isFrontFace);

@@ -22,6 +22,8 @@
 #include "shaders/shadercommon.h"
 #include "shaders/uicommon.h"
 
+#include "imgui/imgui.h"
+
 namespace cauldron
 {
     class RootSignature;
@@ -30,6 +32,7 @@ namespace cauldron
     class PipelineObject;
     class ParameterSet;
     class Texture;
+    class DynamicBufferPool;
 
     class UIRenderModule : public RenderModule
     {
@@ -42,12 +45,35 @@ namespace cauldron
 
         void SetFontResourceTexture(const Texture* pFontTexture);
 
+        void SetAsyncRender(bool async);
+        void SetRenderToTexture(bool renderToTexture);
+        void SetCopyHudLessTexture(bool copyHudLessTexture);
+        void SetUiSurfaceIndex(uint32_t uiTextureIndex);
+
+        // Called on separate thread to render asynchronously.
+        void ExecuteAsync(CommandList* pCmdList);
+        void BlitBackbufferToHudLess(CommandList* pCmdList);
     private:
         // No copy, No move
         NO_COPY(UIRenderModule)
         NO_MOVE(UIRenderModule)
 
-    void UpdateMagnifierParams();
+        struct RenderCommand
+        {
+            Rect     scissor;
+            uint32_t indexCount, startIndex, baseVertex;
+        };
+        struct RenderParams
+        {
+            std::vector<ImDrawVert>    vtxBuffer{};
+            std::vector<ImDrawIdx>     idxBuffer{};
+            Mat4                       matrix;
+            HDRCBData                  hdr;
+            std::vector<RenderCommand> commands;
+        };
+
+        void UpdateMagnifierParams();
+        void Render(CommandList* pCmdList, RenderParams* params);
 
     private:
 
@@ -56,25 +82,44 @@ namespace cauldron
             Mat4 ProjectionMatrix;
         };
 
-        HDRCBData           m_HDRCBData = {};
-        MagnifierCBData     m_MagnifierCBData = {};
-        bool                m_MagnifierEnabled = false;
-        bool                m_LockMagnifierPosition = false;
-        int32_t             m_LockedMagnifierPositionX = 0;
-        int32_t             m_LockedMagnifierPositionY = 0;
+        HDRCBData                   m_HDRCBData                 = {};
+        MagnifierCBData             m_MagnifierCBData           = {};
+        bool                        m_MagnifierEnabled          = false;
+        bool                        m_LockMagnifierPosition     = false;
+        int32_t                     m_LockedMagnifierPositionX  = 0;
+        int32_t                     m_LockedMagnifierPositionY  = 0;
 
-        RootSignature*      m_pUIRootSignature = nullptr;
-        RootSignature*      m_pMagnifierRootSignature = nullptr;
+        RootSignature*              m_pUIRootSignature          = nullptr;
+        RootSignature*              m_pMagnifierRootSignature   = nullptr;
 
-        const Texture*      m_pRenderTarget = nullptr;
-        const Texture*      m_pRenderTargetTemp = nullptr;
-        const RasterView*   m_pUIRasterView = nullptr;
+        const Texture*              m_pRenderTarget             = nullptr;
+        const Texture*              m_pRenderTargetTemp         = nullptr;
+        const RasterView*           m_pUIRasterView             = nullptr;
 
-        PipelineObject*     m_pUIPipelineObj        = nullptr;
-        PipelineObject*     m_pMagnifierPipelineObj = nullptr;
+        uint32_t                    m_curUiTextureIndex         = 0;
+        const cauldron::Texture*    m_pHudLessRenderTarget[2]   = {};
+        const cauldron::Texture*    m_pUiOnlyRenderTarget[2]    = {};
+        const RasterView*           m_pUiOnlyRasterView[2]      = {};
+        RootSignature*              m_pHudLessRootSignature     = nullptr;
+        const RasterView*           m_pHudLessRasterView[2]     = {};
+        ParameterSet*               m_pHudLessParameters        = nullptr;
+        PipelineObject*             m_pHudLessPipelineObj       = nullptr;
 
-        ParameterSet*       m_pUIParameters         = nullptr;
-        ParameterSet*       m_pMagnifierParameters  = nullptr;
+
+        PipelineObject*             m_pUIPipelineObj            = nullptr;
+        PipelineObject*             m_pAsyncPipelineObj         = nullptr;
+        PipelineObject*             m_pMagnifierPipelineObj     = nullptr;
+
+        ParameterSet*               m_pUIParameters             = nullptr;
+        ParameterSet*               m_pMagnifierParameters      = nullptr;
+
+        bool                        m_AsyncRender               = false;
+        std::atomic<RenderParams*>  m_AsyncChannel              = nullptr;
+        RenderParams*               m_BufferedRenderParams      = nullptr;
+        DynamicBufferPool*          m_pDynamicBufferPool        = nullptr;
+
+        bool                        m_bCopyHudLessTexture       = false;
+        bool                        m_bRenderToTexture          = false;
     };
 
 } // namespace cauldron

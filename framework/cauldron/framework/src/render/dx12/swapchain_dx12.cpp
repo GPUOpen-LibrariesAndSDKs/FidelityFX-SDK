@@ -21,6 +21,7 @@
 
 // _DX12 define implies windows
 #include "core/win/framework_win.h"
+#include "core/uimanager.h"
 #include "misc/assert.h"
 
 #include "render/dx12/commandlist_dx12.h"
@@ -105,6 +106,20 @@ namespace cauldron
 
         // Create render targets backed by the swap chain buffers
         CreateSwapChainRenderTargets();
+
+        // Register UI or defer until after init is done.
+        std::function<void(void*)> addUiTaskFunc = [this](void*) {
+            UISection section{"SwapChain"};
+            section.AddCheckBox("Vsync", &m_VSyncEnabled);
+            GetUIManager()->RegisterUIElements(section);
+        };
+        if (GetUIManager())
+            addUiTaskFunc(nullptr);
+        else
+        {
+            Task addUiTask(addUiTaskFunc);
+            GetFramework()->AddContentCreationTask(addUiTask);
+        }
     }
 
     SwapChainInternal::~SwapChainInternal()
@@ -350,7 +365,7 @@ namespace cauldron
             resourceArray.push_back(GPUResource::CreateGPUResource(name.c_str(), nullptr, ResourceState::Present, &initParams, true));
         }
 
-        TextureDesc rtDesc = TextureDesc::Tex2D(SwapChain::s_SwapChainRTName, ToGamma(m_SwapChainFormat), m_SwapChainDesc.Width, m_SwapChainDesc.Height, 1, 0, ResourceFlags::AllowRenderTarget);
+        TextureDesc rtDesc = TextureDesc::Tex2D(SwapChain::s_SwapChainRTName, m_SwapChainFormat, m_SwapChainDesc.Width, m_SwapChainDesc.Height, 1, 0, ResourceFlags::AllowRenderTarget);
         if (m_pRenderTarget == nullptr)
             m_pRenderTarget = new SwapChainRenderTarget(&rtDesc, resourceArray);
         else
@@ -441,6 +456,147 @@ namespace cauldron
             case DisplayMode::DISPLAYMODE_HDR10_SCRGB:
                 CauldronThrowOnFail(m_pSwapChain->SetColorSpace1(DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709));
                 break;
+        }
+    }
+
+    #include <dwmapi.h>
+    #pragma comment(lib, "Dwmapi.lib")
+
+    RECT clientRectToScreenSpace(HWND const hWnd)
+    {
+        RECT rc{0};
+        if (GetClientRect(hWnd, &rc) == TRUE)
+        {
+                if (MapWindowPoints(hWnd, nullptr, reinterpret_cast<POINT*>(&rc), 2) == 0)
+                {
+                }
+        }
+
+        return rc;
+    }
+
+    bool isDirectFlip(IDXGISwapChain* swapChain, RECT monitorExtents)
+    {
+        bool bResult = false;
+
+        IDXGIOutput* dxgiOutput = nullptr;
+        if (SUCCEEDED(swapChain->GetContainingOutput(&dxgiOutput)))
+        {
+            IDXGIOutput6* dxgiOutput6 = nullptr;
+            if (SUCCEEDED(dxgiOutput->QueryInterface(IID_PPV_ARGS(&dxgiOutput6))))
+            {
+                UINT hwSupportFlags = 0;
+                if (SUCCEEDED(dxgiOutput6->CheckHardwareCompositionSupport(&hwSupportFlags)))
+                {
+                    // check support in fullscreen mode
+                    if (hwSupportFlags & DXGI_HARDWARE_COMPOSITION_SUPPORT_FLAG_FULLSCREEN)
+                    {
+                        DXGI_SWAP_CHAIN_DESC desc{};
+                        if (SUCCEEDED(swapChain->GetDesc(&desc)))
+                        {
+                            RECT windowExtents = clientRectToScreenSpace(desc.OutputWindow);
+                            bResult |= memcmp(&windowExtents, &monitorExtents, sizeof(windowExtents)) == 0;
+                        }
+                    }
+
+                    // check support in windowed mode
+                    if (hwSupportFlags & DXGI_HARDWARE_COMPOSITION_SUPPORT_FLAG_WINDOWED)
+                    {
+                        bResult |= true;
+                    }
+                }
+
+                dxgiOutput6->Release();
+            }
+
+            dxgiOutput->Release();
+        }
+        return bResult;
+    }
+    void SwapChainInternal::GetRefreshRate(double* outRefreshRate)
+    {
+        double dwsRate  = 1000.0;
+        *outRefreshRate = 1000.0;
+
+        bool         bIsPotentialDirectFlip = false;
+        IDXGIOutput* dxgiOutput             = nullptr;
+        BOOL         isFullscreen           = false;
+        m_pSwapChain->GetFullscreenState(&isFullscreen, &dxgiOutput);
+
+        if (!isFullscreen)
+        {
+            DWM_TIMING_INFO compositionTimingInfo{};
+            compositionTimingInfo.cbSize = sizeof(DWM_TIMING_INFO);
+            double  monitorRefreshRate   = 0.0f;
+            HRESULT hr                   = DwmGetCompositionTimingInfo(nullptr, &compositionTimingInfo);
+            if (SUCCEEDED(hr))
+            {
+                dwsRate = double(compositionTimingInfo.rateRefresh.uiNumerator) / compositionTimingInfo.rateRefresh.uiDenominator;
+            }
+            m_pSwapChain->GetContainingOutput(&dxgiOutput);
+        }
+
+        // if FS this should be the monitor used for FS, in windowed the window containing the main portion of the output
+        if (dxgiOutput)
+        {
+            IDXGIOutput1* dxgiOutput1 = nullptr;
+            if (SUCCEEDED(dxgiOutput->QueryInterface(IID_PPV_ARGS(&dxgiOutput1))))
+            {
+                DXGI_OUTPUT_DESC outputDes{};
+                if (SUCCEEDED(dxgiOutput->GetDesc(&outputDes)))
+                {
+                    MONITORINFOEXW info{};
+                    info.cbSize = sizeof(info);
+                    if (GetMonitorInfoW(outputDes.Monitor, &info) != 0)
+                    {
+                        bIsPotentialDirectFlip = isDirectFlip(m_pSwapChain.Get(), info.rcMonitor);
+
+                        UINT32 numPathArrayElements, numModeInfoArrayElements;
+                        if (GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, &numPathArrayElements, &numModeInfoArrayElements) == ERROR_SUCCESS)
+                        {
+                            std::vector<DISPLAYCONFIG_PATH_INFO> pathArray(numPathArrayElements);
+                            std::vector<DISPLAYCONFIG_MODE_INFO> modeInfoArray(numModeInfoArrayElements);
+                            if (QueryDisplayConfig(
+                                    QDC_ONLY_ACTIVE_PATHS, &numPathArrayElements, pathArray.data(), &numModeInfoArrayElements, modeInfoArray.data(), nullptr) ==
+                                ERROR_SUCCESS)
+                            {
+                                bool rateFound = false;
+                                // iterate through all the paths until find the exact source to match
+                                for (size_t i = 0; i < pathArray.size() && !rateFound; i++)
+                                {
+                                    const DISPLAYCONFIG_PATH_INFO&   path = pathArray[i];
+                                    DISPLAYCONFIG_SOURCE_DEVICE_NAME sourceName;
+                                    sourceName.header = {
+                                        DISPLAYCONFIG_DEVICE_INFO_GET_SOURCE_NAME, sizeof(sourceName), path.sourceInfo.adapterId, path.sourceInfo.id};
+
+                                    if (DisplayConfigGetDeviceInfo(&sourceName.header) == ERROR_SUCCESS)
+                                    {
+                                        if (wcscmp(info.szDevice, sourceName.viewGdiDeviceName) == 0)
+                                        {
+                                            const DISPLAYCONFIG_RATIONAL& rate = path.targetInfo.refreshRate;
+                                            if (rate.Denominator > 0)
+                                            {
+                                                double refrate  = (double)rate.Numerator / (double)rate.Denominator;
+                                                *outRefreshRate = refrate;
+
+                                                // we found a valid rate?
+                                                rateFound = (refrate > 0.0);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                dxgiOutput1->Release();
+            }
+            dxgiOutput->Release();
+
+            if (!bIsPotentialDirectFlip)
+            {
+                *outRefreshRate = std::min(*outRefreshRate, dwsRate);
+            }
         }
     }
 

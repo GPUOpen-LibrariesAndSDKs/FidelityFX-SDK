@@ -26,7 +26,7 @@ if not exist build\ (
 )
 
 cd build
-cmake -A x64 .. -D BUILD_TYPE=CAULDRON
+cmake -A x64 .. -D BUILD_TYPE=CAULDRON %*
 
 :: Come back to root level
 cd ..

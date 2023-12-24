@@ -48,6 +48,7 @@ namespace cauldron
     
     private:
         friend class CommandList;
+        friend class FSR3RenderModule;
         CommandListInternal(const wchar_t* Name, Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> pCmdList, Microsoft::WRL::ComPtr<ID3D12CommandAllocator> pCmdAllocator, CommandQueue queueType);
         CommandListInternal() = delete;
 

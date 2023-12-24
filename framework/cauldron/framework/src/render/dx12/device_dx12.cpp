@@ -263,7 +263,7 @@ namespace cauldron
     void DeviceInternal::InitQueueSyncPrim(CommandQueue queueType, QueueSyncPrimitive& queueSyncPrim, const wchar_t* queueName)
     {
         D3D12_COMMAND_LIST_TYPE  commandListType = QueueTypeToCommandListType(queueType);
-        D3D12_COMMAND_QUEUE_DESC queueDesc       = {commandListType, D3D12_COMMAND_QUEUE_PRIORITY_HIGH, D3D12_COMMAND_QUEUE_FLAG_NONE, 0};
+        D3D12_COMMAND_QUEUE_DESC queueDesc       = {commandListType, D3D12_COMMAND_QUEUE_PRIORITY_NORMAL, D3D12_COMMAND_QUEUE_FLAG_NONE, 0};
 
         // Create the queue
         int32_t queueIndex = static_cast<int32_t>(queueType);
@@ -300,9 +300,8 @@ namespace cauldron
     {
         if (pSwapChain->GetImpl()->m_VSyncEnabled)
             CauldronThrowOnFail(pSwapChain->GetImpl()->m_pSwapChain->Present(1, 0));
-
         else
-            CauldronThrowOnFail(pSwapChain->GetImpl()->m_pSwapChain->Present(0, pSwapChain->GetImpl()->m_TearingSupported ? DXGI_PRESENT_ALLOW_TEARING : 0));
+            CauldronThrowOnFail(pSwapChain->GetImpl()->m_pSwapChain->Present(0, DXGI_PRESENT_ALLOW_TEARING));
 
         uint32_t queueID = static_cast<uint32_t>(pSwapChain->GetImpl()->m_CreationQueue);
         uint64_t signalValue;

@@ -1026,6 +1026,11 @@ namespace cauldron
         ResizeEvent();
     }
 
+    void Framework::EnableFrameInterpolation(bool enabled)
+    {
+        m_FrameInterpolationEnabled = true;
+    }
+
     void Framework::ResizeEvent()
     {
         // Flush everything before resizing resources (can't have anything in the pipes)
@@ -1493,14 +1498,26 @@ namespace cauldron
 
             // Call all registered render modules
             {
+                CloseCmdList(m_pCmdListForFrame);
+                m_vecCmdListsForFrame.push_back(m_pCmdListForFrame);
+
                 CPUScopedProfileCapture marker(L"RM Executes");
                 for (auto& callback : m_ExecutionCallbacks)
                 {
                     if (callback.second.first->ModuleEnabled() && callback.second.first->ModuleReady())
+                    {
+                        m_pCmdListForFrame = m_pDevice->CreateCommandList(L"RenderModuleGraphicsCmdList", CommandQueue::Graphics);
+                        SetAllResourceViewHeaps(m_pCmdListForFrame);
+
                         callback.second.second(m_DeltaTime, m_pCmdListForFrame);
+                        CloseCmdList(m_pCmdListForFrame);
+                        m_vecCmdListsForFrame.push_back(m_pCmdListForFrame);
+                    }
                 }
             }
         }
+
+        m_pCmdListForFrame = m_pDeviceCmdListForFrame;
 
         // EndFrame will close and submit all active command lists and
         // kick off the work for execution before performing a Present()
@@ -1610,7 +1627,11 @@ namespace cauldron
         m_pSwapChain->WaitForSwapChain();
 
         // Refresh the command list pool
-        m_pCmdListForFrame = m_pDevice->BeginFrame();
+        m_pDeviceCmdListForFrame = m_pDevice->BeginFrame();
+
+        // create a commandlist to use
+        m_pCmdListForFrame = m_pDevice->CreateCommandList(L"EndFrameGraphicsCmdList", CommandQueue::Graphics);
+        SetAllResourceViewHeaps(m_pCmdListForFrame);
 
         // Start GPU counters now that we have a cmd list
         m_pProfiler->BeginGPUFrame(m_pCmdListForFrame);
@@ -1651,6 +1672,32 @@ namespace cauldron
         }
     }
 
+    struct GPUExecutionPacket
+    {
+        std::vector<CommandList*> CmdLists     = {};
+        uint64_t                  CompletionID = 0;
+
+        GPUExecutionPacket(std::vector<CommandList*>& cmdLists, uint64_t completionID)
+            : CmdLists(std::move(cmdLists))
+            , CompletionID(completionID)
+        {
+        }
+        GPUExecutionPacket() = delete;
+    };
+    void Framework::DeleteCommandListAsync(void* pInFlightGPUInfo)
+    {
+        GPUExecutionPacket* pInflightPacket = static_cast<GPUExecutionPacket*>(pInFlightGPUInfo);
+
+        // Wait until the command lists are processed
+        m_pDevice->WaitOnQueue(pInflightPacket->CompletionID, CommandQueue::Graphics);
+
+        // Delete them to release the allocators
+        for (auto cmdListIter = pInflightPacket->CmdLists.begin(); cmdListIter != pInflightPacket->CmdLists.end(); ++cmdListIter)
+            delete *cmdListIter;
+        pInflightPacket->CmdLists.clear();
+        delete pInflightPacket;
+    }
+
     // Handles all end of frame logic (like present)
     void Framework::EndFrame()
     {
@@ -1660,11 +1707,20 @@ namespace cauldron
         Barrier presentBarrier = Barrier::Transition(m_pSwapChain->GetBackBufferRT()->GetCurrentResource(), ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource, ResourceState::Present);
         ResourceBarrier(m_pCmdListForFrame, 1, &presentBarrier);
 
+        {
+            // Asynchronously delete the active command list in the background once it's cleared the graphics queue
+            uint64_t                      signalValue     = m_pDevice->ExecuteCommandLists(m_vecCmdListsForFrame, CommandQueue::Graphics, false);
+            cauldron::GPUExecutionPacket* pInflightPacket = new GPUExecutionPacket(m_vecCmdListsForFrame, signalValue);
+            GetTaskManager()->AddTask(Task(std::bind(&Framework::DeleteCommandListAsync, this, std::placeholders::_1), reinterpret_cast<void*>(pInflightPacket)));
+        }
+
         // End the frame of the profiler
         m_pProfiler->EndFrame(m_pCmdListForFrame);
 
         // Can't be referenced until next time BeginFrame is called
+        m_pDeviceCmdListForFrame = nullptr;
         m_pCmdListForFrame = nullptr;
+        m_vecCmdListsForFrame.clear();
 
         // Closes all command lists
         m_pDevice->EndFrame();

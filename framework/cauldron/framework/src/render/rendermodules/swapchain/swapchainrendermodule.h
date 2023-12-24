@@ -46,8 +46,6 @@ namespace cauldron
 
     private:
 
-        SwapchainCBData                 m_ConstantData;
-
         RootSignature*                  m_pRootSignature = nullptr;
         const RasterView*               m_pRasterView    = nullptr;
         PipelineObject*                 m_pPipelineObj   = nullptr;

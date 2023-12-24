@@ -200,7 +200,11 @@ namespace cauldron
 
     protected:
         Texture(const TextureDesc* pDesc, ResourceState initialState, ResizeFunction fn);
+
+    public:
         Texture(const TextureDesc* pDesc, GPUResource* pResource);
+
+    protected:
         Texture() = delete;
 
         void Recreate();

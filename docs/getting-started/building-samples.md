@@ -13,21 +13,21 @@ To build the samples in the AMD FidelityFX SDK you should follow these instructi
 - [Windows 10 SDK 10.0.18362.0](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk)
 - [Vulkan SDK 1.3.239](https://vulkan.lunarg.com/)
 
-2) Generate Visual Studio solutions:
+2) Generate Visual Studio FSR sample solutions:
 
-**Cauldron custom-backend version**
+**Native-backend linked version**
 
   ```bash
-  > <installation path>\BuildAllCauldronEffectsSolution.bat
+  > <installation path>\BuildFSRSolutionNative.bat
   ```
 
-**Native-backend linked versions**
+**Native-backend DLL version**
 
   ```bash
-  > <installation path>\BuildAllNativeEffectsSolution.bat
+  > <installation path>\BuildFSRSolutionNativeDll.bat
   ```
   
-  This will generate a `build\` directory where you will find the solution for either the Cauldron-backed SDK samples (`FidelityFX SDK.sln`) or the native-backend-backed SDK samples (`FidelityFX SDK Native.sln`).
+  This will generate a `build\` directory where you will find the solution for either the native-backend-backed SDK samples (`FidelityFX SDK Native.sln`).
   
 <h2>Building & running in Visual Studio</h2>
 

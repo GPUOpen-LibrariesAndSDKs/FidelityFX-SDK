@@ -198,6 +198,9 @@ namespace cauldron
     {
         D3D12_RESOURCE_DESC resourceDesc = pResource->GetImpl()->DX12Desc();
 
+        // use the format from the TextureDesc to allow overriding it, e.g. for reading SRGB surfaces
+        resourceDesc.Format              = GetDXGIFormat(textureDesc.Format);
+
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 
         // Override TYPELESS resources to prevent device removal

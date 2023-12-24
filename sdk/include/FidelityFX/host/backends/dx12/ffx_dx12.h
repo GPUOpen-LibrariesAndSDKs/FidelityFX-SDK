@@ -1,24 +1,24 @@
 // This file is part of the FidelityFX SDK.
-//
-// Copyright © 2023 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
-// furnished to do so, subject to the following conditions :
+// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
 // 
-// The above copyright notice and this permission notice shall be included in 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 // 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 
 /// @defgroup DX12Backend DX12 Backend
 /// FidelityFX SDK native backend implementation for DirectX 12.
@@ -28,6 +28,7 @@
 #pragma once
 
 #include <d3d12.h>
+#include <dxgi1_6.h>
 #include <FidelityFX/host/ffx_interface.h>
 
 #if defined(__cplusplus)
@@ -74,7 +75,7 @@ FFX_API FfxErrorCode ffxGetInterfaceDX12(
     FfxDevice device,
     void* scratchBuffer,
     size_t scratchBufferSize, 
-    size_t maxContexts);
+    uint32_t maxContexts);
 
 /// Create a <c><i>FfxCommandList</i></c> from a <c><i>ID3D12CommandList</i></c>.
 ///
@@ -97,10 +98,48 @@ FFX_API FfxCommandList ffxGetCommandListDX12(ID3D12CommandList* cmdList);
 /// An abstract FidelityFX resources.
 ///
 /// @ingroup DX12Backend
-FFX_API FfxResource ffxGetResourceDX12(ID3D12Resource* dx12Resource,
+FFX_API FfxResource ffxGetResourceDX12(const ID3D12Resource* dx12Resource,
     FfxResourceDescription       ffxResDescription,
     wchar_t* ffxResName,
     FfxResourceStates            state = FFX_RESOURCE_STATE_COMPUTE_READ);
+
+FFX_API FfxSurfaceFormat ffxGetSurfaceFormatDX12(DXGI_FORMAT format);
+
+FFX_API FfxResourceDescription GetFfxResourceDescriptionDX12(ID3D12Resource* pResource);
+
+FFX_API FfxCommandQueue ffxGetCommandQueueDX12(ID3D12CommandQueue* pCommandQueue);
+
+FFX_API FfxSwapchain ffxGetSwapchainDX12(IDXGISwapChain4* pSwapchain);
+
+FFX_API IDXGISwapChain4* ffxGetDX12SwapchainPtr(FfxSwapchain ffxSwapchain);
+
+FFX_API FfxErrorCode ffxReplaceSwapchainForFrameinterpolationDX12(FfxCommandQueue gameQueue, FfxSwapchain& gameSwapChain);
+
+FFX_API FfxErrorCode ffxCreateFrameinterpolationSwapchainDX12(const DXGI_SWAP_CHAIN_DESC* desc,
+                                                      ID3D12CommandQueue* queue,
+                                                      IDXGIFactory* dxgiFactory,
+                                                      FfxSwapchain& outGameSwapChain);
+
+FFX_API FfxErrorCode ffxCreateFrameinterpolationSwapchainForHwndDX12(HWND hWnd,
+                                                             const DXGI_SWAP_CHAIN_DESC1* desc1,
+                                                             const DXGI_SWAP_CHAIN_FULLSCREEN_DESC* fullscreenDesc,
+                                                             ID3D12CommandQueue* queue,
+                                                             IDXGIFactory* dxgiFactory,
+                                                             FfxSwapchain& outGameSwapChain);
+
+FFX_API FfxErrorCode ffxWaitForPresents(FfxSwapchain gameSwapChain);
+FFX_API FfxErrorCode ffxRegisterFrameinterpolationUiResourceDX12(FfxSwapchain gameSwapChain, FfxResource uiResource);
+FFX_API FfxErrorCode ffxGetFrameinterpolationCommandlistDX12(FfxSwapchain gameSwapChain, FfxCommandList& gameCommandlist);
+FFX_API FfxResource ffxGetFrameinterpolationTextureDX12(FfxSwapchain gameSwapChain);
+
+FFX_API FfxErrorCode ffxSetFrameGenerationConfigToSwapchainDX12(FfxFrameGenerationConfig const* config);
+
+struct FfxFrameInterpolationContext;
+struct FfxFsr2Context;
+
+typedef FfxErrorCode (*FfxCreateFiSwapchain)(FfxFrameInterpolationContext* fiContext, FfxDevice device, FfxCommandQueue gameQueue, FfxSwapchain& swapchain);
+
+typedef FfxErrorCode (*FfxReleaseFiSwapchain)(FfxFrameInterpolationContext* fiContext, FfxSwapchain* outRealSwapchain);
 
 #if defined(__cplusplus)
 }

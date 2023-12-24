@@ -1,20 +1,19 @@
 # This file is part of the FidelityFX SDK.
-#
-# Copyright (C) 2023 Advanced Micro Devices, Inc.
+# 
+# Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files(the “Software”), to deal
+# of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions :
-#
+# furnished to do so, subject to the following conditions:
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -48,7 +47,7 @@ function(compile_shaders EXECUTABLE GLSL_SWITCH ADDITIONAL_BASE_ARGS PERMUTATION
         endforeach(INC)
 
 		set(CAULDRON_BASE_ARGS
-			-compiler=glslang -e CS --target-env vulkan1.1 -S comp -Os -DFFX_GLSL=1)
+			-compiler=glslang --target-env vulkan1.1 -Os -DFFX_GLSL=1)
 		# These don't really have an equivalent in GLSL
 		set(CAULDRON_WAVE64_ARGS "")
 		set(CAULDRON_WAVE32_ARGS "")
@@ -62,12 +61,18 @@ function(compile_shaders EXECUTABLE GLSL_SWITCH ADDITIONAL_BASE_ARGS PERMUTATION
 			list(APPEND COMPILE_INCLUDE_ARGS "-I ${INC}")
 		endforeach(INC)
 
+		# HLSL requires -I <include0> -I <include1> etc.
+		set(COMPILE_INCLUDE_ARGS )
+		foreach(INC ${INCLUDES_ARGS})
+			list(APPEND COMPILE_INCLUDE_ARGS "-I ${INC}")
+		endforeach(INC)
+
         set(CAULDRON_BASE_ARGS
-            -E CS -Wno-for-redefinition -Wno-ambig-lit-shift -DFFX_HLSL=1 -DFFX_HLSL_6_2=1)
+            -E CS -Wno-for-redefinition -Wno-ambig-lit-shift -DFFX_HLSL=1)
         set(CAULDRON_WAVE64_ARGS
-            "-DFFX_PREFER_WAVE64=\"[WaveSize(64)]\"" -T cs_6_6)
+            "-DFFX_PREFER_WAVE64=\"[WaveSize(64)]\"" -T cs_6_6 -DFFX_HLSL_SM=66)
         set(CAULDRON_WAVE32_ARGS
-            -T cs_6_2)
+            -T cs_6_2 -DFFX_HLSL_SM=62)
         set(CAULDRON_FLOAT16_ARGS
             -enable-16bit-types)
     endif()
@@ -89,90 +94,98 @@ function(compile_shaders EXECUTABLE GLSL_SWITCH ADDITIONAL_BASE_ARGS PERMUTATION
         set(WAVE32_16BIT_PERMUTATION_HEADER ${FFX_PASS_SHADER_OUTPUT_PATH}/${PASS_SHADER_TARGET}_16bit_permutations.h)
         set(WAVE64_16BIT_PERMUTATION_HEADER ${FFX_PASS_SHADER_OUTPUT_PATH}/${PASS_SHADER_TARGET}_wave64_16bit_permutations.h)
 
-        # combine base and permutation args
-        set(SC_ARGS ${BASE_ARGS} ${CAULDRON_BASE_ARGS} ${PERMUTATION_ARGS})
+		if (GLSL_SWITCH)
+			set(SC_SHADER_TYPE_WAVE32 -e CS -S comp)
+			set(SC_SHADER_TYPE_WAVE64 -e CS -S comp)
+        	else()
+			set(SC_SHADER_TYPE_WAVE32 -E CS -T cs_6_2)
+			set(SC_SHADER_TYPE_WAVE64 -E CS -T cs_6_6)
+		endif()
 
-        if (USE_DEPFILE)
-            # Wave32
-            add_custom_command(
-                OUTPUT ${WAVE32_PERMUTATION_HEADER}
-                COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME} -DFFX_HALF=0 ${CAULDRON_WAVE32_ARGS} ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
-                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-                DEPENDS ${PASS_SHADER}
-                DEPFILE ${WAVE32_PERMUTATION_HEADER}.d
-            )
-            list(APPEND PERMUTATION_OUTPUTS ${WAVE32_PERMUTATION_HEADER})
+		# combine base and permutation args
+		set(SC_ARGS ${BASE_ARGS} ${CAULDRON_BASE_ARGS} ${PERMUTATION_ARGS})
 
-            # Wave64
-            add_custom_command(
-                OUTPUT ${WAVE64_PERMUTATION_HEADER}
-                COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_wave64 -DFFX_HALF=0 ${CAULDRON_WAVE64_ARGS} ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
-                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-                DEPENDS ${PASS_SHADER}
-                DEPFILE ${WAVE64_PERMUTATION_HEADER}.d
-            )
-            list(APPEND PERMUTATION_OUTPUTS ${WAVE64_PERMUTATION_HEADER})
+		if (USE_DEPFILE)
+			# Wave32
+			add_custom_command(
+				OUTPUT ${WAVE32_PERMUTATION_HEADER}
+				COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME} -DFFX_HALF=0 ${CAULDRON_WAVE32_ARGS} ${SC_SHADER_TYPE_WAVE32} ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
+				WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+				DEPENDS ${PASS_SHADER}
+				DEPFILE ${WAVE32_PERMUTATION_HEADER}.d
+			)
+			list(APPEND PERMUTATION_OUTPUTS ${WAVE32_PERMUTATION_HEADER})
 
-            # Wave32 16-bit
-            message(STATUS COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_16bit -DFFX_HALF=1 ${CAULDRON_FLOAT16_ARGS} ${CAULDRON_WAVE32_ARGS} ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER})
-            add_custom_command(
-                OUTPUT ${WAVE32_16BIT_PERMUTATION_HEADER}
-                COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_16bit -DFFX_HALF=1 ${CAULDRON_FLOAT16_ARGS} ${CAULDRON_WAVE32_ARGS} ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
-                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-                DEPENDS ${PASS_SHADER}
-                DEPFILE ${WAVE32_16BIT_PERMUTATION_HEADER}.d
-            )
-            list(APPEND PERMUTATION_OUTPUTS ${WAVE32_16BIT_PERMUTATION_HEADER})
+			# Wave64
+			add_custom_command(
+				OUTPUT ${WAVE64_PERMUTATION_HEADER}
+				COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_wave64 -DFFX_HALF=0 ${CAULDRON_WAVE64_ARGS} ${SC_SHADER_TYPE_WAVE64} ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
+				WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+				DEPENDS ${PASS_SHADER}
+				DEPFILE ${WAVE64_PERMUTATION_HEADER}.d
+			)
+			list(APPEND PERMUTATION_OUTPUTS ${WAVE64_PERMUTATION_HEADER})
 
-            # Wave64 16-bit
-            message(STATUS COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_wave64_16bit -DFFX_HALF=1 ${CAULDRON_FLOAT16_ARGS} ${CAULDRON_WAVE64_ARGS} ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER})
-            add_custom_command(
-                OUTPUT ${WAVE64_16BIT_PERMUTATION_HEADER}
-                COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_wave64_16bit -DFFX_HALF=1 ${CAULDRON_FLOAT16_ARGS} ${CAULDRON_WAVE64_ARGS} ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
-                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-                DEPENDS ${PASS_SHADER}
-                DEPFILE ${WAVE64_16BIT_PERMUTATION_HEADER}.d
-            )
-            list(APPEND PERMUTATION_OUTPUTS ${WAVE64_16BIT_PERMUTATION_HEADER})
+			# Wave32 16-bit
+			message(STATUS COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_16bit -DFFX_HALF=1 ${CAULDRON_FLOAT16_ARGS} ${CAULDRON_WAVE32_ARGS} ${SC_SHADER_TYPE_WAVE32} ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER})
+			add_custom_command(
+				OUTPUT ${WAVE32_16BIT_PERMUTATION_HEADER}
+				COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_16bit -DFFX_HALF=1 ${CAULDRON_FLOAT16_ARGS} ${CAULDRON_WAVE32_ARGS} ${SC_SHADER_TYPE_WAVE32} ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
+				WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+				DEPENDS ${PASS_SHADER}
+				DEPFILE ${WAVE32_16BIT_PERMUTATION_HEADER}.d
+			)
+			list(APPEND PERMUTATION_OUTPUTS ${WAVE32_16BIT_PERMUTATION_HEADER})
 
-        else()
-            # Wave32
-            add_custom_command(
-                OUTPUT ${WAVE32_PERMUTATION_HEADER}
-                COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME} -DFFX_HALF=0 ${CAULDRON_WAVE32_ARGS} ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
-                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-                DEPENDS ${PASS_SHADER}
-            )
-            list(APPEND PERMUTATION_OUTPUTS ${WAVE32_PERMUTATION_HEADER})
+			# Wave64 16-bit
+			message(STATUS COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_wave64_16bit -DFFX_HALF=1 ${CAULDRON_FLOAT16_ARGS} ${CAULDRON_WAVE64_ARGS} ${SC_SHADER_TYPE_WAVE64} ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER})
+			add_custom_command(
+				OUTPUT ${WAVE64_16BIT_PERMUTATION_HEADER}
+				COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_wave64_16bit -DFFX_HALF=1 ${CAULDRON_FLOAT16_ARGS} ${CAULDRON_WAVE64_ARGS} ${SC_SHADER_TYPE_WAVE64} ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
+				WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+				DEPENDS ${PASS_SHADER}
+				DEPFILE ${WAVE64_16BIT_PERMUTATION_HEADER}.d
+			)
+			list(APPEND PERMUTATION_OUTPUTS ${WAVE64_16BIT_PERMUTATION_HEADER})
 
-            # Wave64
-            add_custom_command(
-                OUTPUT ${WAVE64_PERMUTATION_HEADER}
-                COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_wave64 -DFFX_HALF=0 ${CAULDRON_WAVE64_ARGS} ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
-                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-                DEPENDS ${PASS_SHADER}
-            )
-            list(APPEND PERMUTATION_OUTPUTS ${WAVE64_PERMUTATION_HEADER})
+		else()
+			# Wave32
+			add_custom_command(
+				OUTPUT ${WAVE32_PERMUTATION_HEADER}
+				COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME} -DFFX_HALF=0 ${CAULDRON_WAVE32_ARGS} ${SC_SHADER_TYPE_WAVE32} ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
+				WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+				DEPENDS ${PASS_SHADER}
+			)
+			list(APPEND PERMUTATION_OUTPUTS ${WAVE32_PERMUTATION_HEADER})
 
-            # Wave32 16-bit
-            message(STATUS COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_16bit -DFFX_HALF=1 ${CAULDRON_FLOAT16_ARGS} ${CAULDRON_WAVE32_ARGS} ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER})
-            add_custom_command(
-                OUTPUT ${WAVE32_16BIT_PERMUTATION_HEADER}
-                COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_16bit -DFFX_HALF=1 ${CAULDRON_FLOAT16_ARGS} ${CAULDRON_WAVE32_ARGS} ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
-                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-                DEPENDS ${PASS_SHADER}
-            )
-            list(APPEND PERMUTATION_OUTPUTS ${WAVE32_16BIT_PERMUTATION_HEADER})
+			# Wave64
+			add_custom_command(
+				OUTPUT ${WAVE64_PERMUTATION_HEADER}
+				COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_wave64 -DFFX_HALF=0 ${CAULDRON_WAVE64_ARGS} ${SC_SHADER_TYPE_WAVE64} ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
+				WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+				DEPENDS ${PASS_SHADER}
+			)
+			list(APPEND PERMUTATION_OUTPUTS ${WAVE64_PERMUTATION_HEADER})
 
-            # Wave64 16-bit
-            message(STATUS COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_wave64_16bit -DFFX_HALF=1 ${CAULDRON_FLOAT16_ARGS} ${CAULDRON_WAVE64_ARGS} ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER})
-            add_custom_command(
-                OUTPUT ${WAVE64_16BIT_PERMUTATION_HEADER}
-                COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_wave64_16bit -DFFX_HALF=1 ${CAULDRON_FLOAT16_ARGS} ${CAULDRON_WAVE64_ARGS} ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
-                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-                DEPENDS ${PASS_SHADER}
-            )
-            list(APPEND PERMUTATION_OUTPUTS ${WAVE64_16BIT_PERMUTATION_HEADER})
+			# Wave32 16-bit
+			message(STATUS COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_16bit -DFFX_HALF=1 ${CAULDRON_FLOAT16_ARGS} ${CAULDRON_WAVE32_ARGS} ${SC_SHADER_TYPE_WAVE32} ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER})
+			add_custom_command(
+				OUTPUT ${WAVE32_16BIT_PERMUTATION_HEADER}
+				COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_16bit -DFFX_HALF=1 ${CAULDRON_FLOAT16_ARGS} ${CAULDRON_WAVE32_ARGS} ${SC_SHADER_TYPE_WAVE32} ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
+				WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+				DEPENDS ${PASS_SHADER}
+			)
+			list(APPEND PERMUTATION_OUTPUTS ${WAVE32_16BIT_PERMUTATION_HEADER})
+
+			# Wave64 16-bit
+			message(STATUS COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_wave64_16bit -DFFX_HALF=1 ${CAULDRON_FLOAT16_ARGS} ${CAULDRON_WAVE64_ARGS} ${SC_SHADER_TYPE_WAVE64} ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER})
+			add_custom_command(
+				OUTPUT ${WAVE64_16BIT_PERMUTATION_HEADER}
+				COMMAND ${EXECUTABLE} ${SC_ARGS} -name=${PASS_SHADER_FILENAME}_wave64_16bit -DFFX_HALF=1 ${CAULDRON_FLOAT16_ARGS} ${CAULDRON_WAVE64_ARGS} ${SC_SHADER_TYPE_WAVE64} ${COMPILE_INCLUDE_ARGS} -output=${FFX_PASS_SHADER_OUTPUT_PATH} ${PASS_SHADER}
+				WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+				DEPENDS ${PASS_SHADER}
+			)
+			list(APPEND PERMUTATION_OUTPUTS ${WAVE64_16BIT_PERMUTATION_HEADER})
 
         endif()
     endforeach(PASS_SHADER)
@@ -192,11 +205,11 @@ endmacro()
 
 #TODO: only grab files for features being built (i.e. if (FFX_FSR1 OR FFX_ALL) ... if (FFX_SPD or FFX_ALL)
 file(GLOB PUBLIC_SHADERS
-    FFX_PUBLIC_SHADER_SOURCES
+	FFX_PUBLIC_SHADER_SOURCES
     "${FFX_GPU_PATH}/fsr2/*.h"
     "${FFX_GPU_PATH}/fsr2/*.hlsl"
     "${FFX_GPU_PATH}/fsr2/*.glsl"
-    "${FFX_GPU_PATH}/fsr1/*.h"
+	"${FFX_GPU_PATH}/fsr1/*.h"
     "${FFX_GPU_PATH}/fsr1/*.hlsl"
     "${FFX_GPU_PATH}/fsr1/*.glsl"
     "${FFX_GPU_PATH}/spd/*.h"
@@ -250,12 +263,12 @@ file(GLOB PRIVATE_SOURCE
     "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
 
 if (FFX_FSR OR FFX_ALL)
-    set(FFX_FSR_PRIVATE_SOURCE
-        "${FFX_SRC_BACKENDS_PATH}/shared/blob_accessors/ffx_fsr1_shaderblobs.h"
-        "${FFX_SRC_BACKENDS_PATH}/shared/blob_accessors/ffx_fsr1_shaderblobs.cpp"
-        "${FFX_SRC_BACKENDS_PATH}/shared/blob_accessors/ffx_fsr2_shaderblobs.h"
-        "${FFX_SRC_BACKENDS_PATH}/shared/blob_accessors/ffx_fsr2_shaderblobs.cpp")
-    list(APPEND PRIVATE_SOURCE ${FFX_FSR_PRIVATE_SOURCE})
+	set(FFX_FSR_PRIVATE_SOURCE
+		"${FFX_SRC_BACKENDS_PATH}/shared/blob_accessors/ffx_fsr1_shaderblobs.h"
+		"${FFX_SRC_BACKENDS_PATH}/shared/blob_accessors/ffx_fsr1_shaderblobs.cpp"
+		"${FFX_SRC_BACKENDS_PATH}/shared/blob_accessors/ffx_fsr2_shaderblobs.h"
+		"${FFX_SRC_BACKENDS_PATH}/shared/blob_accessors/ffx_fsr2_shaderblobs.cpp")
+	list(APPEND PRIVATE_SOURCE ${FFX_FSR_PRIVATE_SOURCE})
 endif()
 
 if (FFX_SPD OR FFX_ALL)
@@ -378,7 +391,8 @@ get_filename_component(FFX_PASS_SHADER_OUTPUT_PATH_DXIL ${CMAKE_CURRENT_BINARY_D
 get_filename_component(FFX_PASS_SHADER_OUTPUT_PATH_SPIRV ${CMAKE_CURRENT_BINARY_DIR}/../shaders/cauldron/vk ABSOLUTE)
 
 target_include_directories(ffx_backend_cauldron_${FFX_PLATFORM_NAME} PUBLIC ${FFX_INCLUDE_PATH})
-target_include_directories(ffx_backend_cauldron_${FFX_PLATFORM_NAME} PUBLIC $<$<OR:$<CONFIG:DebugDX12>,$<CONFIG:ReleaseDX12>>:${FFX_PASS_SHADER_OUTPUT_PATH_DXIL}>$<$<OR:$<CONFIG:DebugVK>,$<CONFIG:ReleaseVK>>:${FFX_PASS_SHADER_OUTPUT_PATH_SPIRV}>)
+# CUSTOM_CHANGES_TO_FSR3 Build FSR3 DLL with RelWithDebInfo configuration
+target_include_directories(ffx_backend_cauldron_${FFX_PLATFORM_NAME} PUBLIC $<$<OR:$<CONFIG:DebugDX12>,$<CONFIG:ReleaseDX12>,$<CONFIG:RelWithDebInfoDX12>>:${FFX_PASS_SHADER_OUTPUT_PATH_DXIL}>$<$<OR:$<CONFIG:DebugVK>,$<CONFIG:ReleaseVK>>:${FFX_PASS_SHADER_OUTPUT_PATH_SPIRV}>)
 target_include_directories(ffx_backend_cauldron_${FFX_PLATFORM_NAME} PRIVATE ${FFX_COMPONENTS_PATH})
 target_include_directories(ffx_backend_cauldron_${FFX_PLATFORM_NAME} PRIVATE ${FFX_SHARED_PATH})
 target_include_directories(ffx_backend_cauldron_${FFX_PLATFORM_NAME} PRIVATE "${FFX_SRC_BACKENDS_PATH}/shared")
@@ -403,9 +417,9 @@ endif()
 
 # add pass shaders for all the components
 if (FFX_FSR OR FFX_ALL)
-    target_compile_definitions(ffx_backend_cauldron_${FFX_PLATFORM_NAME} PRIVATE FFX_FSR)
-    include (CMakeShadersFSR2.txt)
-    include (CMakeShadersFSR1.txt)
+	target_compile_definitions(ffx_backend_cauldron_${FFX_PLATFORM_NAME} PRIVATE FFX_FSR)
+	include (CMakeShadersFSR2.txt)
+	include (CMakeShadersFSR1.txt)
 endif()
 if (FFX_SPD OR FFX_ALL)
     target_compile_definitions(ffx_backend_cauldron_${FFX_PLATFORM_NAME} PRIVATE FFX_SPD)

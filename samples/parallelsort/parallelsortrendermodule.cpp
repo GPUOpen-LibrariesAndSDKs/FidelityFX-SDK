@@ -1,24 +1,24 @@
 // This file is part of the FidelityFX SDK.
-//
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// 
+// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions :
-// 
+// furnished to do so, subject to the following conditions:
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 // 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 
 #include "parallelsortrendermodule.h"
 #include "shaders/parallelsort_common.h"
@@ -38,6 +38,7 @@
 #include "render/renderdefines.h"
 #include "render/rootsignature.h"
 #include "render/uploadheap.h"
+#include "render/swapchain.h"
 
 #include <random>
 
@@ -51,7 +52,7 @@ void ParallelSortRenderModule::Init(const json& initData)
     // Setup FidelityFX interface.
     {
         const size_t scratchBufferSize = ffxGetScratchMemorySize(FFX_PARALLELSORT_CONTEXT_COUNT);
-        void* scratchBuffer = malloc(scratchBufferSize);
+        void* scratchBuffer = calloc(scratchBufferSize, 1);
         FfxErrorCode errorCode = ffxGetInterface(&m_InitializationParameters.backendInterface, GetDevice(), scratchBuffer, scratchBufferSize, FFX_PARALLELSORT_CONTEXT_COUNT);
         FFX_ASSERT(errorCode == FFX_OK);
     }
@@ -128,6 +129,20 @@ void ParallelSortRenderModule::Init(const json& initData)
 
     // Create the pipeline and signature for verification pass
     m_pRenderTarget = GetFramework()->GetColorTargetForCallback(GetName());
+    switch (GetFramework()->GetSwapChain()->GetSwapChainDisplayMode())
+    {
+        case DisplayMode::DISPLAYMODE_LDR:
+            m_pRenderTarget = GetFramework()->GetRenderTexture(L"LDR8Color");
+            break;
+        case DisplayMode::DISPLAYMODE_HDR10_2084:
+        case DisplayMode::DISPLAYMODE_FSHDR_2084:
+            m_pRenderTarget = GetFramework()->GetRenderTexture(L"HDR10Color");
+            break;
+        case DisplayMode::DISPLAYMODE_HDR10_SCRGB:
+        case DisplayMode::DISPLAYMODE_FSHDR_SCRGB:
+            m_pRenderTarget = GetFramework()->GetRenderTexture(L"HDR16Color");
+            break;
+    }
     CauldronAssert(ASSERT_CRITICAL, m_pRenderTarget != nullptr, L"Couldn't find or create the render target for ParallelSortRenderModule.");
     m_pRasterView = GetRasterViewAllocator()->RequestRasterView(m_pRenderTarget, ViewDimension::Texture2D);
 

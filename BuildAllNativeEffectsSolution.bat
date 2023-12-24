@@ -3,7 +3,7 @@
 :: Start by building the backend SDK
 echo Building native backend
 cd sdk
-call BuildFidelityFXSDK.bat
+call BuildFidelityFXSDK.bat %*
 cd ..
 
 echo.
@@ -16,7 +16,7 @@ if not exist build\ (
 )
 
 cd build
-cmake -A x64 .. -DBUILD_TYPE=ALL_SAMPLES -DFFX_API=NATIVE
+cmake -A x64 .. -DBUILD_TYPE=ALL_SAMPLES -DFFX_API=NATIVE %*
 
 :: Come back to root level
 cd ..

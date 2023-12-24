@@ -1,24 +1,24 @@
 // This file is part of the FidelityFX SDK.
-//
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// 
+// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this softwareand associated documentation files(the “Software”), to deal
+// of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions :
-// 
-// The above copyright noticeand this permission notice shall be included in
+// furnished to do so, subject to the following conditions:
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 // 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 
 #include <string.h>     // for memset
 #include <math.h>       // for ceil, log2
@@ -375,15 +375,15 @@ static FfxErrorCode sssrRelease(FfxSssrContext_Private* context)
     context->srvResources[FFX_SSSR_RESOURCE_IDENTIFIER_OUTPUT]                      = { FFX_SSSR_RESOURCE_IDENTIFIER_NULL };
 
     // Release the copy resources for those that had init data
-    ffxSafeReleaseCopyResource(&context->contextDescription.backendInterface, context->srvResources[FFX_SSSR_RESOURCE_IDENTIFIER_SOBOL_BUFFER]);
-    ffxSafeReleaseCopyResource(&context->contextDescription.backendInterface, context->srvResources[FFX_SSSR_RESOURCE_IDENTIFIER_SCRAMBLING_TILE_BUFFER]);
-    ffxSafeReleaseCopyResource(&context->contextDescription.backendInterface, context->srvResources[FFX_SSSR_RESOURCE_IDENTIFIER_SPD_GLOBAL_ATOMIC]);
-    ffxSafeReleaseCopyResource(&context->contextDescription.backendInterface, context->srvResources[FFX_SSSR_RESOURCE_IDENTIFIER_RAY_COUNTER]);
+    ffxSafeReleaseCopyResource(&context->contextDescription.backendInterface, context->srvResources[FFX_SSSR_RESOURCE_IDENTIFIER_SOBOL_BUFFER], context->effectContextId);
+    ffxSafeReleaseCopyResource(&context->contextDescription.backendInterface, context->srvResources[FFX_SSSR_RESOURCE_IDENTIFIER_SCRAMBLING_TILE_BUFFER], context->effectContextId);
+    ffxSafeReleaseCopyResource(&context->contextDescription.backendInterface, context->srvResources[FFX_SSSR_RESOURCE_IDENTIFIER_SPD_GLOBAL_ATOMIC], context->effectContextId);
+    ffxSafeReleaseCopyResource(&context->contextDescription.backendInterface, context->srvResources[FFX_SSSR_RESOURCE_IDENTIFIER_RAY_COUNTER], context->effectContextId);
 
     // release internal resources
     for (int32_t currentResourceIndex = 0; currentResourceIndex < FFX_SSSR_RESOURCE_IDENTIFIER_COUNT; ++currentResourceIndex) {
 
-        ffxSafeReleaseResource(&context->contextDescription.backendInterface, context->srvResources[currentResourceIndex]);
+        ffxSafeReleaseResource(&context->contextDescription.backendInterface, context->srvResources[currentResourceIndex], context->effectContextId);
     }
 
     FFX_ASSERT(ffxDenoiserContextDestroy(&context->denoiserContext) == FFX_OK);

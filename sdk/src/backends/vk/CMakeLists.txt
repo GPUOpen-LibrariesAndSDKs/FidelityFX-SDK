@@ -1,20 +1,19 @@
 # This file is part of the FidelityFX SDK.
-#
-# Copyright © 2023 Advanced Micro Devices, Inc.
-#
+# 
+# Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+# 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this softwareand associated documentation files(the “Software”), to deal
+# of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions :
-#
-# The above copyright noticeand this permission notice shall be included in
+# furnished to do so, subject to the following conditions:
+# The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -224,14 +223,14 @@ CheckVulkanSDKVersion()
 
 file(GLOB PUBLIC_SHADERS
 	FFX_PUBLIC_SHADER_SOURCES
-    "${FFX_GPU_PATH}/fsr2/*.h"
+	"${FFX_GPU_PATH}/fsr2/*.h"
 	"${FFX_GPU_PATH}/fsr2/*.glsl"
 	"${FFX_GPU_PATH}/fsr1/*.h"
-    "${FFX_GPU_PATH}/fsr1/*.glsl"
+    	"${FFX_GPU_PATH}/fsr1/*.glsl"
 	"${FFX_GPU_PATH}/spd/*.h"
-    "${FFX_GPU_PATH}/spd/*.glsl"
-    "${FFX_GPU_PATH}/lpm/*.h"
-    "${FFX_GPU_PATH}/lpm/*.glsl"
+    	"${FFX_GPU_PATH}/spd/*.glsl"
+    	"${FFX_GPU_PATH}/lpm/*.h"
+    	"${FFX_GPU_PATH}/lpm/*.glsl"
 	"${FFX_GPU_PATH}/cacao/*.h"
 	"${FFX_GPU_PATH}/cacao/*.glsl"
     "${FFX_GPU_PATH}/cas/*.h"

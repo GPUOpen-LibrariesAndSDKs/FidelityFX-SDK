@@ -1,24 +1,24 @@
 // This file is part of the FidelityFX SDK.
-//
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// 
+// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions :
-//
+// furnished to do so, subject to the following conditions:
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 
 #include <FidelityFX/host/ffx_interface.h>
 #include <FidelityFX/host/ffx_util.h>
@@ -59,13 +59,17 @@ BINDING_SHIFT(UNORDERED_ACCESS_VIEW, 0);
 BINDING_SHIFT(CONSTANT_BUFFER, 0);
 #endif // _VK
 
+#if _DX12
+#include "render/dx12/device_dx12.h"
+#endif  // _DX12
+
 // Cauldron prototypes for functions in the backend interface
 FfxUInt32              GetSDKVersionCauldron(FfxInterface* backendInterface);
 FfxErrorCode           CreateBackendContextCauldron(FfxInterface* backendInterface, FfxUInt32* effectContextId);
 FfxErrorCode           GetDeviceCapabilitiesCauldron(FfxInterface* backendInterface, FfxDeviceCapabilities* deviceCapabilities);
 FfxErrorCode           DestroyBackendContextCauldron(FfxInterface* backendInterface, FfxUInt32 effectContextId);
 FfxErrorCode           CreateResourceCauldron(FfxInterface* backendInterface, const FfxCreateResourceDescription* desc, FfxUInt32 effectContextId, FfxResourceInternal* outTexture);
-FfxErrorCode           DestroyResourceCauldron(FfxInterface* backendInterface, FfxResourceInternal resource);
+FfxErrorCode           DestroyResourceCauldron(FfxInterface* backendInterface, FfxResourceInternal resource, FfxUInt32 effectContextId);
 FfxErrorCode           RegisterResourceCauldron(FfxInterface* backendInterface, const FfxResource* inResource, FfxUInt32 effectContextId, FfxResourceInternal* outResourceInternal);
 FfxResource            GetResourceCauldron(FfxInterface* backendInterface, FfxResourceInternal resource);
 FfxErrorCode           UnregisterResourcesCauldron(FfxInterface* backendInterface, FfxCommandList commandList, FfxUInt32 effectContextId);
@@ -181,6 +185,17 @@ FfxDevice ffxGetDeviceCauldron(Device* cauldronDevice)
     return reinterpret_cast<FfxDevice>(cauldronDevice);
 }
 
+FfxCommandQueue ffxGetCommandQueueCauldron(cauldron::CommandQueue cmdQueue)
+{
+#if _DX12
+    ID3D12CommandQueue* pGameQueue = GetDevice()->GetImpl()->DX12CmdQueue(CommandQueue::Graphics);
+    return reinterpret_cast<FfxCommandQueue>(pGameQueue);
+#else
+    FFX_ASSERT(false && "Not implemented!");
+    return NULL;
+#endif
+}
+
 // Populate interface with Cauldron pointers.
 FfxErrorCode ffxGetInterfaceCauldron(FfxInterface* backendInterface,
     FfxDevice device,
@@ -226,6 +241,12 @@ FfxCommandList ffxGetCommandListCauldron(CommandList* cauldronCmdList)
 {
     FFX_ASSERT(nullptr != cauldronCmdList);
     return reinterpret_cast<FfxCommandList>(cauldronCmdList);
+}
+
+FfxSwapchain ffxGetSwapchainCauldron(SwapChain* pSwapchain)
+{
+    FFX_ASSERT(nullptr != pSwapchain);
+    return reinterpret_cast<FfxSwapchain>(pSwapchain);
 }
 
 FfxResource ffxGetResourceCauldron(const cauldron::GPUResource* cauldronResource,
@@ -639,7 +660,7 @@ FfxErrorCode DestroyBackendContextCauldron(FfxInterface* backendInterface, FfxUI
             CauldronWarning(L"FFXInterface: Cauldron: SDK Resource %ls was not destroyed prior to destroying the backend context. There may be a resource leak.",
                 backendContext->pResources[currentStaticResourceIndex].resourcePtr->GetName());
             FfxResourceInternal internalResource = { (int32_t)currentStaticResourceIndex };
-            DestroyResourceCauldron(backendInterface, internalResource);
+            DestroyResourceCauldron(backendInterface, internalResource, effectContextId);
         }
     }
     // Free up for use by another context
@@ -844,21 +865,27 @@ FfxErrorCode CreateResourceCauldron(FfxInterface* backendInterface, const FfxCre
     return FFX_OK;
 }
 
-FfxErrorCode DestroyResourceCauldron(FfxInterface* backendInterface, FfxResourceInternal resource)
+FfxErrorCode DestroyResourceCauldron(FfxInterface* backendInterface, FfxResourceInternal resource, FfxUInt32 effectContextId)
 {
     // Since SDK needs to be able to destroy resources when resizing, need to explicitly allow resource destruction (which is normally handled automatically by cauldron)
     FFX_ASSERT(nullptr != backendInterface);
     BackendContext_Cauldron* backendContext = (BackendContext_Cauldron*)backendInterface->scratchBuffer;
+    BackendContext_Cauldron::EffectContext& effectContext = backendContext->pEffectContexts[effectContextId];
 
-    BackendContext_Cauldron::Resource* backendResource = &backendContext->pResources[resource.internalIndex];
-    if (backendResource->resourcePtr)
+    for (uint32_t currentStaticResourceIndex = effectContextId * FFX_MAX_RESOURCE_COUNT;
+         currentStaticResourceIndex < (uint32_t)effectContext.nextStaticResource;
+         ++currentStaticResourceIndex)
     {
-        if (backendResource->resourcePtr->IsCopyBuffer())
-            delete backendResource->resourcePtr;
-        else
-            GetDynamicResourcePool()->DestroyResource(backendResource->resourcePtr);
+        BackendContext_Cauldron::Resource* backendResource = &backendContext->pResources[resource.internalIndex];
+        if (backendResource->resourcePtr)
+        {
+            if (backendResource->resourcePtr->IsCopyBuffer())
+                delete backendResource->resourcePtr;
+            else
+                GetDynamicResourcePool()->DestroyResource(backendResource->resourcePtr);
 
-        backendResource->resourcePtr = nullptr;
+            backendResource->resourcePtr = nullptr;
+        }
     }
 
     return FFX_OK;
@@ -1077,7 +1104,7 @@ FfxErrorCode CreatePipelineCauldron(FfxInterface*                 backendInterfa
     BackendContext_Cauldron* backendContext = (BackendContext_Cauldron*)backendInterface->scratchBuffer;
 
     FfxShaderBlob shaderBlob = { 0 };
-    FfxErrorCode          errorCode  = ffxGetPermutationBlobByIndex(effect, passId, permutationOptions, &shaderBlob);
+    FfxErrorCode  errorCode  = ffxGetPermutationBlobByIndex(effect, passId, desc->stage, permutationOptions, &shaderBlob);
     FFX_ASSERT(errorCode == FFX_OK);
     FFX_ASSERT(shaderBlob.data && shaderBlob.size);
 

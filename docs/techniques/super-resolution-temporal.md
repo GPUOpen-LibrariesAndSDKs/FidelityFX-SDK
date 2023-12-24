@@ -2,6 +2,8 @@
 
 <h1>FidelityFX Super Resolution 2.2.2 (FSR2)</h1>
 
+**Consider using [AMD FidelityFX Super Resolution 3 (FSR3)](super-resolution-interpolation.md) instead.**
+
 ![Screenshot](media/super-resolution-temporal/fsr2-sample_resized.jpg "A screenshot showcasing the final output of the effect")
 
 AMD FidelityFX Super Resolution 2 (FSR2) is an open source, high-quality solution for producing high resolution frames from lower resolution inputs.
@@ -337,7 +339,7 @@ To do this, you can either provide a full custom backend to FSR2 via the [`FfxFs
 ``` CPP
 // Setup DX12 interface.
 const size_t scratchBufferSize = ffxGetScratchMemorySizeDX12();
-void* scratchBuffer = malloc(scratchBufferSize);
+void* scratchBuffer = calloc(scratchBufferSize, 1);
 FfxErrorCode errorCode = ffxGetInterfaceDX12(&contextDescription.callbacks, m_pDevice->GetDevice(), scratchBuffer, scratchBufferSize);
 FFX_ASSERT(errorCode == FFX_OK);
 

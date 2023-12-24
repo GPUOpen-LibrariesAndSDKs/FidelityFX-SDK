@@ -126,6 +126,7 @@ namespace cauldron
     {
         std::string     SectionName = "";                           ///< Section name
         UISectionType   SectionType = UISectionType::Framework;     ///< <c><i>UISectionType</i></c>
+        bool            defaultOpen = true;
 
         void AddText(const char* pText, bool* pEnabler = nullptr, bool sameLine = false)
         {
@@ -279,6 +280,7 @@ namespace cauldron
          * @brief   Gets all <c><i>UISection</i></c> elements that make up the general layout tab.
          */
         const std::vector<UISection>& GetGeneralLayout() const { return m_UIGeneralLayout; }
+        std::vector<UISection>& GetGeneralLayout() { return m_UIGeneralLayout; }
 
     private:
 

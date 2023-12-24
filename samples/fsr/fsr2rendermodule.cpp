@@ -1,24 +1,24 @@
 // This file is part of the FidelityFX SDK.
-//
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// 
+// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions :
-// 
+// furnished to do so, subject to the following conditions:
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 // 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 
 #include "fsr2rendermodule.h"
 #include "validation_remap.h"
@@ -116,12 +116,26 @@ void FSR2RenderModule::EnableModule(bool enabled)
 
         // Setup Cauldron FidelityFX interface.
         const size_t scratchBufferSize = ffxGetScratchMemorySize(FFX_FSR2_CONTEXT_COUNT);
-        void*        scratchBuffer     = malloc(scratchBufferSize);
+        void*        scratchBuffer     = calloc(scratchBufferSize, 1);
         FfxErrorCode errorCode         = ffxGetInterface(&m_InitializationParameters.backendInterface, GetDevice(), scratchBuffer, scratchBufferSize, FFX_FSR2_CONTEXT_COUNT);
         CauldronAssert(ASSERT_CRITICAL, errorCode == FFX_OK, L"Could not initialize the FidelityFX SDK backend");
 
         // Create the FSR2 context
         UpdateFSR2Context(true);
+
+        // Set the jitter callback to use
+        CameraJitterCallback jitterCallback = [this](Vec2& values) {
+            // Increment jitter index for frame
+            ++m_JitterIndex;
+
+            // Update FSR2 jitter for built in TAA
+            const ResolutionInfo& resInfo = GetFramework()->GetResolutionInfo();
+            const int32_t jitterPhaseCount = ffxFsr2GetJitterPhaseCount(resInfo.RenderWidth, resInfo.DisplayWidth);
+            ffxFsr2GetJitterOffset(&m_JitterX, &m_JitterY, m_JitterIndex, jitterPhaseCount);
+
+            values = Vec2(-2.f * m_JitterX / resInfo.RenderWidth, 2.f * m_JitterY / resInfo.RenderHeight);
+        };
+        CameraComponent::SetJitterCallbackFunc(jitterCallback);
 
         // ... and register UI elements for active upscaler
         GetUIManager()->RegisterUIElements(m_UISection);
@@ -138,6 +152,8 @@ void FSR2RenderModule::EnableModule(bool enabled)
 
         // Destroy the FidelityFX interface memory
         free(m_InitializationParameters.backendInterface.scratchBuffer);
+
+        CameraComponent::SetJitterCallbackFunc(nullptr);
 
         // Deregister UI elements for inactive upscaler
         GetUIManager()->UnRegisterUIElements(m_UISection);
@@ -308,15 +324,6 @@ void FSR2RenderModule::Execute(double deltaTime, CommandList* pCmdList)
     const ResolutionInfo&   resInfo = GetFramework()->GetResolutionInfo();
     CameraComponent*        pCamera = GetScene()->GetCurrentCamera();
 
-    // Increment jitter index for frame
-    ++m_JitterIndex;
-
-    // Update FSR2 jitter for built in TAA
-    float         jitterX, jitterY;
-    const int32_t jitterPhaseCount = ffxFsr2GetJitterPhaseCount(resInfo.RenderWidth, resInfo.DisplayWidth);
-    ffxFsr2GetJitterOffset(&jitterX, &jitterY, m_JitterIndex, jitterPhaseCount);
-    pCamera->SetJitterValues({-2.f * jitterX / resInfo.RenderWidth, 2.f * jitterY / resInfo.RenderHeight});
-
     // All cauldron resources come into a render module in a generic read state (ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource)
     FfxFsr2DispatchDescription dispatchParameters = {};
     dispatchParameters.commandList                = ffxGetCommandList(pCmdList);
@@ -344,8 +351,9 @@ void FSR2RenderModule::Execute(double deltaTime, CommandList* pCmdList)
         dispatchParameters.transparencyAndComposition = ffxGetResource(nullptr, L"FSR2_EmptyTransparencyAndCompositionMap", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
     }
 
-    dispatchParameters.jitterOffset.x         = jitterX;
-    dispatchParameters.jitterOffset.y         = jitterY;
+    // Jitter is calculated earlier in the frame using a callback from the camera update
+    dispatchParameters.jitterOffset.x         = -m_JitterX;
+    dispatchParameters.jitterOffset.y         = -m_JitterY;
     dispatchParameters.motionVectorScale.x    = resInfo.fRenderWidth();
     dispatchParameters.motionVectorScale.y    = resInfo.fRenderHeight();
     dispatchParameters.reset                  = false;
