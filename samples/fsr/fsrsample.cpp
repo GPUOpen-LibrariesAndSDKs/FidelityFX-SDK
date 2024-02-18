@@ -27,6 +27,7 @@
 #include "upscalerendermodule.h"
 
 #include "rendermoduleregistry.h"
+#include "core/inputmanager.h"
 #include "taa/taarendermodule.h"
 #include "translucency/translucencyrendermodule.h"
 
@@ -103,12 +104,12 @@ int32_t FSRSample::DoSampleInit()
     uiSection.SectionType = UISectionType::Sample;
 
     // Setup upscale method options
-    const char*              upscalers[] = { "Native", "Point", "Bilinear", "Bicubic", "FSR1", "FSR2" };
+    const char*              upscalers[] = { "Point", "Bilinear", "Bicubic", "FSR1", "FSR2", "Native" };
     std::vector<std::string> comboOptions;
     comboOptions.assign(upscalers, upscalers + _countof(upscalers));
 
     // Add the section header
-    uiSection.AddCombo("Method", reinterpret_cast<int32_t*>(&m_UIMethod), &comboOptions);
+    uiSection.AddCombo("Method (1-6 to swap)", reinterpret_cast<int32_t*>(&m_UIMethod), &comboOptions);
     GetUIManager()->RegisterUIElements(uiSection);
 
     // Setup the default upscaler (FSR2 for now)
@@ -167,6 +168,22 @@ void FSRSample::SwitchUpscaler(UpscaleMethod newUpscaler)
 
 void FSRSample::DoSampleUpdates(double deltaTime)
 {
+    //To swap between upscaling modes more conveniently
+    const InputState& inputState = GetInputManager()->GetInputState();
+    if (inputState.GetKeyUpState(Key_1))
+        m_UIMethod = UpscaleMethod::Point;
+    if (inputState.GetKeyUpState(Key_2))
+        m_UIMethod = UpscaleMethod::Bilinear;
+    if (inputState.GetKeyUpState(Key_3))
+        m_UIMethod = UpscaleMethod::Bicubic;
+    if (inputState.GetKeyUpState(Key_4))
+        m_UIMethod = UpscaleMethod::FSR1;
+    if (inputState.GetKeyUpState(Key_5))
+        m_UIMethod = UpscaleMethod::FSR2;
+    if (inputState.GetKeyUpState(Key_6))
+        m_UIMethod = UpscaleMethod::Native;
+
+    
     // Upscaler changes need to be done before the rest of the frame starts executing
     // as it relies on the upscale method being set for the frame and whatnot
     if (m_UIMethod != m_Method)

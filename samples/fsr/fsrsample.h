@@ -70,13 +70,12 @@ private:
 
     enum class UpscaleMethod : uint32_t
     {
-        Native = 0,
-        Point,
+        Point = 0,
         Bilinear,
         Bicubic,
         FSR1,
         FSR2,
-
+        Native,
         Count
     };
 
