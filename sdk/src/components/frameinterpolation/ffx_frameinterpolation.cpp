@@ -673,7 +673,14 @@ FFX_API FfxErrorCode ffxFrameInterpolationDispatch(FfxFrameInterpolationContext*
 
     if (contextPrivate->constants.HUDLessAttachedFactor == 1) {
 
-        FFX_ASSERT_MESSAGE(params->currentBackBuffer.description.format == params->currentBackBuffer_HUDLess.description.format, "HUDLess and Backbuffer resource formats have to be identical.");
+        // Allow intercompatible formats.
+        // Any UNORM or SRGB format that has at least 3 channels (rgb) should be mutually compatible. These textures are exclusively read from compute shaders, so SRGB formats will act identical to UNORM formats (they won't be automatically linearized on read and write).
+        const bool isBackbufferGammaSDR = params->currentBackBuffer.description.format == FFX_SURFACE_FORMAT_R8G8B8A8_UNORM || params->currentBackBuffer.description.format == FFX_SURFACE_FORMAT_R8G8B8A8_SRGB || params->currentBackBuffer.description.format == FFX_SURFACE_FORMAT_R10G10B10A2_UNORM;
+        const bool isHUDLessGammaSDR = params->currentBackBuffer_HUDLess.description.format == FFX_SURFACE_FORMAT_R8G8B8A8_UNORM || params->currentBackBuffer_HUDLess.description.format == FFX_SURFACE_FORMAT_R8G8B8A8_SRGB || params->currentBackBuffer_HUDLess.description.format == FFX_SURFACE_FORMAT_R10G10B10A2_UNORM;
+        // Any rgb float format should work with any other rgb float format.
+        const bool isBackbufferLinearHDR = params->currentBackBuffer.description.format == FFX_SURFACE_FORMAT_R32G32B32A32_FLOAT || params->currentBackBuffer.description.format == FFX_SURFACE_FORMAT_R16G16B16A16_FLOAT || params->currentBackBuffer.description.format == FFX_SURFACE_FORMAT_R11G11B10_FLOAT;
+        const bool isHUDLessLinearHDR = params->currentBackBuffer_HUDLess.description.format == FFX_SURFACE_FORMAT_R32G32B32A32_FLOAT || params->currentBackBuffer_HUDLess.description.format == FFX_SURFACE_FORMAT_R16G16B16A16_FLOAT || params->currentBackBuffer_HUDLess.description.format == FFX_SURFACE_FORMAT_R11G11B10_FLOAT;
+        FFX_ASSERT_MESSAGE((isBackbufferGammaSDR == isHUDLessGammaSDR) || (isBackbufferLinearHDR == isHUDLessLinearHDR) || (params->currentBackBuffer.description.format == params->currentBackBuffer_HUDLess.description.format), "HUDLess and Backbuffer resource formats need to be in the same format family.");
 
         contextPrivate->contextDescription.backendInterface.fpRegisterResource(&contextPrivate->contextDescription.backendInterface, &params->currentBackBuffer, contextPrivate->effectContextId, &contextPrivate->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_PRESENT_BACKBUFFER]);
         contextPrivate->contextDescription.backendInterface.fpRegisterResource(&contextPrivate->contextDescription.backendInterface, &params->currentBackBuffer_HUDLess, contextPrivate->effectContextId, &contextPrivate->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_CURRENT_INTERPOLATION_SOURCE]);
