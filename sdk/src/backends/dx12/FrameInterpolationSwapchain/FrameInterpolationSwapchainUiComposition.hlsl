@@ -33,5 +33,6 @@ float4 mainPS(float4 vPosition : SV_POSITION) : SV_Target
     float3 color = r_currBB[vPosition.xy].rgb;
     float4 guiColor = r_uiTexture[vPosition.xy];
 
-    return float4(lerp(color, guiColor.rgb, guiColor.a), 1);
+    // Pre-multiplied alpha formula
+    return float4(guiColor.rgb + (color * (1.f - guiColor.a)), 1);
 }
