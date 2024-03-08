@@ -40,7 +40,7 @@
 /// FidelityFX Frameinterpolation patch version.
 ///
 /// @ingroup FRAMEINTERPOLATIONFRAMEINTERPOLATION
-#define FFX_FRAMEINTERPOLATION_VERSION_PATCH      (0)
+#define FFX_FRAMEINTERPOLATION_VERSION_PATCH      (1)
 
 /// FidelityFX Frame Interpolation context count
 ///

@@ -1,12 +1,12 @@
 <!-- @page page_techniques_super-resolution-interpolation FidelityFX Super Resolution 3.0 Interpolation -->
 
-<h1>FidelityFX Super Resolution 3.0.3 (FSR3) - Interpolation</h1>
+<h1>FidelityFX Super Resolution 3.0.4 (FSR3) - Interpolation</h1>
 
 ![Screenshot](media/super-resolution-temporal/fsr3-sample_resized.jpg "A screenshot showcasing the final output of the effect")
 
 <h2>Table of contents</h2>
 
-- [FidelityFX Super Resolution 3.0.3 (FSR3)](#fidelityfx-super-resolution-303-fsr3)
+- [FidelityFX Super Resolution 3.0.4 (FSR3)](#fidelityfx-super-resolution-303-fsr3)
   - [Table of contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Integration guidelines](#integration-guidelines)

@@ -8,7 +8,7 @@
 - [FidelityFX Parallel Sort 1.2](parallel-sort.md)
 - [FidelityFX Single Pass Downsampler 2.1](single-pass-downsampler.md)
 - [FidelityFX Stochastic Screen-Space Reflections 1.4](stochastic-screen-space-reflections.md)
-- [FidelityFX Super Resolution 1.1, 2.2 & 3.0.3](super-resolution.md)
+- [FidelityFX Super Resolution 1.1, 2.2 & 3.0.4](super-resolution.md)
 - [FidelityFX Variable Shading 1.1](variable-shading.md)
 - [FidelityFX Blur 1.0](blur.md)
 - [FidelityFX Depth of Field 1.0](depth-of-field.md)

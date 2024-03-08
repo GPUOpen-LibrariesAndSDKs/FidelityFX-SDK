@@ -77,7 +77,7 @@ void computeGameFieldMvs(FfxInt32x2 iPxPos)
         FfxUInt32 uNumPrimaryHits = 0;
         const FfxFloat32 fSecondaryStepScale = length(1.0f / RenderSize());
         const FfxFloat32x2 fStepMv = normalize(fGameMotionVector);
-        const FfxFloat32 fBreakDist = length(fMotionVectorHalf);
+        const FfxFloat32 fBreakDist = ffxMin(length(fMotionVectorHalf), length(FfxFloat32x2(0.5f, 0.5f)));
 
         for (FfxFloat32 fMvScale = fSecondaryStepScale; fMvScale <= fBreakDist && bWriteSecondary; fMvScale += fSecondaryStepScale)
         {
