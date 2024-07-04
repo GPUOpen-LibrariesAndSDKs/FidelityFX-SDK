@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright © 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -90,22 +90,9 @@ struct VS_SURFACE_INPUT
         float4 Color0       :    COLOR0;
     #endif // HAS_COLOR_0
 
-        // Skinning related information
-    #ifdef HAS_WEIGHTS_0
-        float4 Weights0     :    WEIGHTS0;
-    #endif // HAS_WEIGHTS_0
-
-    #ifdef HAS_WEIGHTS_1
-        float4 Weights1     :    WEIGHTS1;
-    #endif // HAS_WEIGHTS_1
-
-    #ifdef HAS_JOINTS_0
-        uint4 Joints0       :    JOINTS0;
-    #endif // HAS_JOINTS_0
-
-    #ifdef HAS_JOINTS_1
-        uint4 Joints1       :    JOINTS1;
-    #endif // HAS_JOINTS_1
+#ifdef HAS_PREV_POSITION
+    float3 previousPosition : PREVIOUSPOSITION;
+#endif
 };
 
 //--------------------------------------------------------------------------------------
@@ -114,25 +101,6 @@ struct VS_SURFACE_INPUT
 VS_SURFACE_OUTPUT MainVS(VS_SURFACE_INPUT surfaceInput)
 {
     VS_SURFACE_OUTPUT output;
-
-
-// TODO: Add support for skinning
-// #ifdef HAS_WEIGHTS_0
-//     matrix skinningMatrix;
-//     skinningMatrix = GetCurrentSkinningMatrix(input.Weights0, input.Joints0);
-// #ifdef HAS_WEIGHTS_1
-//     skinningMatrix += GetCurrentSkinningMatrix(input.Weights1, input.Joints1);
-// #endif
-// #else
-//     matrix skinningMatrix =
-//     {
-//         { 1, 0, 0, 0 },
-//         { 0, 1, 0, 0 },
-//         { 0, 0, 1, 0 },
-//         { 0, 0, 0, 1 }
-//     };
-// #endif
-//     matrix transMatrix = mul(GetWorldMatrix(), skinningMatrix);
 
     // Transform geometry
     matrix worldTransform = GetWorldMatrix();
@@ -145,31 +113,16 @@ VS_SURFACE_OUTPUT MainVS(VS_SURFACE_INPUT surfaceInput)
 
     output.Position = mul(GetCameraViewProj(), float4(worldPos, 1));
 
-
-// #ifdef HAS_WEIGHTS_0
-//     matrix prevSkinningMatrix;
-//     prevSkinningMatrix = GetPreviousSkinningMatrix(input.Weights0, input.Joints0);
-// #ifdef HAS_WEIGHTS_1
-//     prevSkinningMatrix += GetPreviousSkinningMatrix(input.Weights1, input.Joints1);
-// #endif
-// #else
-//     matrix prevSkinningMatrix =
-//     {
-//         { 1, 0, 0, 0 },
-//         { 0, 1, 0, 0 },
-//         { 0, 0, 1, 0 },
-//         { 0, 0, 0, 1 }
-//     };
-// #endif
-
-
-//     transMatrix = mul(GetWorldMatrix(), skinningMatrix);
-//     matrix prevTransMatrix = mul(GetPrevWorldMatrix(), prevSkinningMatrix);
+    matrix prevTransMatrix = GetPrevWorldMatrix();
 
 #ifdef HAS_MOTION_VECTORS
     output.CurPosition = output.Position;
 
-    const float4 worldPrevPos = mul(GetPrevWorldMatrix(),    float4(surfaceInput.Position, 1));
+#ifndef HAS_PREV_POSITION
+    const float4 worldPrevPos = mul(prevTransMatrix,    float4(surfaceInput.Position, 1));
+#else
+    const float4 worldPrevPos = mul(prevTransMatrix,    float4(surfaceInput.previousPosition, 1));
+#endif
     output.PrevPosition =       mul(GetPrevCameraViewProj(), worldPrevPos);
 #endif // HAS_MOTION_VECTORS
 

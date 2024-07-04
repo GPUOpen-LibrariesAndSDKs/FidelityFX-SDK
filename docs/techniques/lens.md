@@ -21,7 +21,7 @@ This section describes the inputs to FidelityFX Lens 1.0.
 
 <h2>Integration guidelines</h2>
 
-<h3>Callback Functions</h3>
+<h3>Callback functions</h3>
 
 FidelityFX Lens requires the following callback functions defined ([H] versions if FidelityFX Lens should work with half types):
 
@@ -39,9 +39,9 @@ Stores the final computed color from Lens into the output color buffer.
 
 Note for the above callback functions: If transversal chromatic aberration is needed, R and B can point to blurred versions of the main texture. Otherwise, all three can refer to the same texture.
 
-<h3>Main Function</h3>
+<h3>Main function</h3>
 
-[`FfxLens[H]`](/sdk/include/FidelityFX/gpu/lens/ffx_lens.h#L264) is called in the main function.  
+[`FfxLens[H]`](../../sdk/include/FidelityFX/gpu/lens/ffx_lens.h#L264) is called in the main function.  
 
 ```HLSL
 void CS(uint LocalThreadID : SV_GroupThreadID,

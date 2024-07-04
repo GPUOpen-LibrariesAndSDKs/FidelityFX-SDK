@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -37,6 +37,9 @@ namespace cauldron
     class CommonResourceView;
     class Texture;
     class Buffer;
+    struct TextureDesc;
+    struct BufferDesc;
+
 
     bool IsSRGB(ResourceFormat format);
     bool IsDepth(ResourceFormat format);
@@ -51,15 +54,16 @@ namespace cauldron
     /// @ingroup CauldronRender
     enum class GPUResourceType
     {
-        Texture = 0,    ///< A texture resource. This is either a loaded texture, rendertarget or depthtarget
-        Buffer,         ///< A buffer resource.
-        Swapchain       ///< A Swapchain resource (special handling is provided).
+        Texture = 0,        ///< A texture resource. This is either a loaded texture, rendertarget or depthtarget
+        Buffer,             ///< A buffer resource.
+        BufferBreadcrumbs,  ///< AMD FidelityFX Breadcrumbs Library markers buffer resource.
+        Swapchain           ///< A Swapchain resource (special handling is provided).
     };
 
     /**
      * @class GPUResource
      *
-     * The <c><i>Cauldron</i></c> api/platform-agnostic representation of a GPU resource.
+     * The <c><i>FidelityFX Cauldron Framework</i></c> api/platform-agnostic representation of a GPU resource.
      *
      * @ingroup CauldronRender
      */
@@ -72,6 +76,23 @@ namespace cauldron
          *          internal resource type.
          */
         static GPUResource* CreateGPUResource(const wchar_t* resourceName, void* pOwner, ResourceState initialState, void* pInitParams, bool resizable = false);
+
+        /**
+         * @brief   Creates a framework resource from a FidelityFX SDK resource. This resource must be
+         *          manually destroyed after use by the caller.
+         */
+        static GPUResource* GetWrappedResourceFromSDK(const wchar_t* name, void* pSDKResource, const TextureDesc* pDesc, ResourceState initialState);
+
+        /**
+         * @brief   Creates a framework resource from a FidelityFX SDK resource. This resource must be
+         *          manually destroyed after use by the caller.
+         */
+        static GPUResource* GetWrappedResourceFromSDK(const wchar_t* name, void* pSDKResource, const BufferDesc* pDesc, ResourceState initialState);
+
+        /**
+         * @brief   Releases sdk-backed resource.
+         */
+        static void ReleaseWrappedResource(GPUResource* pResource);
 
         /**
          * @brief   Destruction with default behavior.
@@ -104,6 +125,11 @@ namespace cauldron
         bool IsCopyBuffer() const { return m_OwnerType == OwnerType::Memory; }
 
         /**
+         * @brief   Returns true if the resource is not owned by anyone.
+         */
+        bool IsEmptyResource() const { return m_OwnerType == OwnerType::None; }
+
+        /**
          * @brief   Sets the GPUResource's owner. This is either a Buffer, Texture, or CopyBuffer resource.
          */
         virtual void SetOwner(void* pOwner) = 0;
@@ -117,6 +143,8 @@ namespace cauldron
          * @brief   Returns the resource <c><i>Buffer</i></c> pointer if the resource is a buffer. Returns nullptr otherwise.
          */
         const Buffer* GetBufferResource() const { return (m_OwnerType == OwnerType::Buffer) ? m_pBuffer : nullptr; }
+
+        void* GetBreadcrumbsResource() const { return (m_OwnerType == OwnerType::BufferBreadcrumbs) ? m_pBuffer : nullptr; }
 
         /**
          * @brief   Gets the internal implementation for api/platform parameter accessors.
@@ -150,10 +178,11 @@ namespace cauldron
 
         enum class OwnerType : uint32_t
         {
-            None = 0,    // Not yet assigned (init and swap chain resource init)
-            Memory,      // Memory only resource (i.e. used for copies and as a holder etc.)
-            Texture,     // Texture resource
-            Buffer,      // Buffer resource
+            None = 0,           // Not yet assigned (init and swap chain resource init)
+            Memory,             // Memory only resource (i.e. used for copies and as a holder etc.)
+            Texture,            // Texture resource
+            Buffer,             // Buffer resource
+            BufferBreadcrumbs,  // Breadcrumbs markers buffer
         } m_OwnerType = OwnerType::None;
 
         // Pointer to the owning resource

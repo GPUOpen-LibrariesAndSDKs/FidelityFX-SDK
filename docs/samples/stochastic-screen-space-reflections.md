@@ -10,7 +10,9 @@ For details on the techniques that underpin [Stochastic Screen-Space Reflections
 
 <h2>Requirements</h2>
 
-`Windows` `DirectX(R)12` `Vulkan(R)`
+ - Windows
+ - DirectX(R)12
+ - Vulkan(R)
 
 <h2>UI elements</h2>
 
@@ -38,9 +40,9 @@ The sample contains a dedicated [`Render Module`](../../samples/sssr/sssrrenderm
 
 A final pass called `apply_reflections` is created which takes the output of the SSSR algorithm and composites it on top of the directly lit scene. It's worth noting that the output render target for the SSSR algorithm is automatically created by Cauldron as described in SSSR's render module config file.
 
-<h2>Sample Controls and Configurations</h2>
+<h2>Sample controls and configurations</h2>
 
-For sample controls, configuration and Cauldron UI element details, please see [Running the samples](../getting-started/running-samples.md)
+For sample controls, configuration, and FidelityFX Cauldron Framework UI element details, see [Running the samples](../getting-started/running-samples.md).
 
 <h2>See also</h2>
 

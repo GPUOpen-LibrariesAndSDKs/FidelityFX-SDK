@@ -1,7 +1,7 @@
 # DXHeaders
 
 ## Current Version
-1.608.2 (Lines up to AgilitySDK 1.608.2)
+1.613.1 (Lines up to AgilitySDK 1.613.2)
 
 ## How to update
 1. Download the latest version from https://github.com/microsoft/DirectX-Headers/releases (make sure the version you get matches with currently installed AgilitySDK -- these should be updated in sync)

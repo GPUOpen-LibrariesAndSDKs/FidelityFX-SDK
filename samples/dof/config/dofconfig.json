@@ -1,10 +1,10 @@
 {
     "FidelityFX DoF": {
         "RenderModules": [
-            "SkyDomeRenderModule",
             "RasterShadowRenderModule",
             "GBufferRenderModule",
             "LightingRenderModule",
+            "SkyDomeRenderModule",
             "TranslucencyRenderModule",
             "DoFRenderModule",
             "ToneMappingRenderModule"

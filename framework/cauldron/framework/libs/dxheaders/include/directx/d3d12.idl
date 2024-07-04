@@ -293,7 +293,7 @@ const UINT D3D12_OS_RESERVED_REGISTER_SPACE_VALUES_END = 0xffffffff;
 const UINT D3D12_OS_RESERVED_REGISTER_SPACE_VALUES_START = 0xfffffff8;
 const UINT D3D12_PACKED_TILE = 0xffffffff;
 const UINT D3D12_PIXEL_ADDRESS_RANGE_BIT_COUNT = 15;
-const UINT D3D12_PREVIEW_SDK_VERSION = 707;
+const UINT D3D12_PREVIEW_SDK_VERSION = 713;
 const UINT D3D12_PRE_SCISSOR_PIXEL_ADDRESS_RANGE_BIT_COUNT = 16;
 const UINT D3D12_PS_CS_UAV_REGISTER_COMPONENTS = 1;
 const UINT D3D12_PS_CS_UAV_REGISTER_COUNT = 8;
@@ -361,7 +361,7 @@ const UINT D3D12_REQ_TEXTURECUBE_DIMENSION = 16384;
 const UINT D3D12_RESINFO_INSTRUCTION_MISSING_COMPONENT_RETVAL = 0;
 const UINT D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES = 0xffffffff;
 const UINT D3D12_RS_SET_SHADING_RATE_COMBINER_COUNT = 2;
-const UINT D3D12_SDK_VERSION = 608;
+const UINT D3D12_SDK_VERSION = 613;
 const UINT D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES = 32;
 const UINT D3D12_SHADER_MAJOR_VERSION = 5;
 const UINT D3D12_SHADER_MAX_INSTANCES = 65535;
@@ -424,6 +424,11 @@ const UINT D3D12_VIDEO_DECODE_MAX_HISTOGRAM_COMPONENTS = 4;
 const UINT D3D12_VIDEO_DECODE_MIN_BITSTREAM_OFFSET_ALIGNMENT = 256;
 const UINT D3D12_VIDEO_DECODE_MIN_HISTOGRAM_OFFSET_ALIGNMENT = 256;
 const UINT D3D12_VIDEO_DECODE_STATUS_MACROBLOCKS_AFFECTED_UNKNOWN = 0xffffffff;
+const UINT D3D12_VIDEO_ENCODER_AV1_INVALID_DPB_RESOURCE_INDEX = 0xFF;
+const UINT D3D12_VIDEO_ENCODER_AV1_MAX_TILE_COLS = 64;
+const UINT D3D12_VIDEO_ENCODER_AV1_MAX_TILE_ROWS = 64;
+const UINT D3D12_VIDEO_ENCODER_AV1_SUPERRES_DENOM_MIN = 9;
+const UINT D3D12_VIDEO_ENCODER_AV1_SUPERRES_NUM = 8;
 const UINT D3D12_VIDEO_PROCESS_MAX_FILTERS = 32;
 const UINT D3D12_VIDEO_PROCESS_STEREO_VIEWS = 2;
 const UINT D3D12_VIEWPORT_AND_SCISSORRECT_MAX_INDEX = 15;
@@ -441,6 +446,8 @@ const UINT D3D12_VS_OUTPUT_REGISTER_COUNT = 32;
 const UINT D3D12_WHQL_CONTEXT_COUNT_FOR_RESOURCE_LIMIT = 10;
 const UINT D3D12_WHQL_DRAWINDEXED_INDEX_COUNT_2_TO_EXP = 25;
 const UINT D3D12_WHQL_DRAW_VERTEX_COUNT_2_TO_EXP = 25;
+const UINT D3D12_WORK_GRAPHS_BACKING_MEMORY_ALIGNMENT_IN_BYTES = 8;
+const UINT D3D12_WORK_GRAPHS_MAX_NODE_DEPTH = 32;
 cpp_quote( "#endif" )
 
 
@@ -803,6 +810,28 @@ typedef struct D3D12_RASTERIZER_DESC1
     D3D12_CONSERVATIVE_RASTERIZATION_MODE ConservativeRaster;
 } D3D12_RASTERIZER_DESC1;
 
+typedef enum D3D12_LINE_RASTERIZATION_MODE
+{
+    D3D12_LINE_RASTERIZATION_MODE_ALIASED,
+    D3D12_LINE_RASTERIZATION_MODE_ALPHA_ANTIALIASED,
+    D3D12_LINE_RASTERIZATION_MODE_QUADRILATERAL_WIDE,
+    D3D12_LINE_RASTERIZATION_MODE_QUADRILATERAL_NARROW,
+} D3D12_LINE_RASTERIZATION_MODE;
+
+typedef struct D3D12_RASTERIZER_DESC2
+{
+    D3D12_FILL_MODE FillMode;
+    D3D12_CULL_MODE CullMode;
+    BOOL FrontCounterClockwise;
+    FLOAT DepthBias;
+    FLOAT DepthBiasClamp;
+    FLOAT SlopeScaledDepthBias;
+    BOOL DepthClipEnable;
+    D3D12_LINE_RASTERIZATION_MODE LineRasterizationMode;
+    UINT ForcedSampleCount;
+    D3D12_CONSERVATIVE_RASTERIZATION_MODE ConservativeRaster;
+} D3D12_RASTERIZER_DESC2;
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // Pipeline State v1
@@ -842,6 +871,12 @@ typedef enum D3D12_INDEX_BUFFER_STRIP_CUT_VALUE
     D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_0xFFFF = 1,
     D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_0xFFFFFFFF = 2
 } D3D12_INDEX_BUFFER_STRIP_CUT_VALUE;
+
+typedef enum D3D12_STANDARD_MULTISAMPLE_QUALITY_LEVELS
+{
+    D3D12_STANDARD_MULTISAMPLE_PATTERN = 0xffffffff,
+    D3D12_CENTER_MULTISAMPLE_PATTERN = 0xfffffffe
+} 	D3D12_STANDARD_MULTISAMPLE_QUALITY_LEVELS;
 
 typedef struct D3D12_CACHED_PIPELINE_STATE
 {
@@ -940,6 +975,7 @@ typedef enum D3D12_PIPELINE_STATE_SUBOBJECT_TYPE
     D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_MS = 25, // D3D12_SHADER_BYTECODE
     D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL2 = 26, // D3D12_DEPTH_STENCIL_DESC2
     D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RASTERIZER1 = 27, // D3D12_RASTERIZER_DESC1
+    D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RASTERIZER2 = 28, // D3D12_RASTERIZER_DESC2
     D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_MAX_VALID,
 } D3D12_PIPELINE_STATE_SUBOBJECT_TYPE;
 
@@ -986,7 +1022,15 @@ typedef enum D3D12_FEATURE
     D3D12_FEATURE_D3D12_OPTIONS13                       = 42,
     D3D12_FEATURE_D3D12_OPTIONS14                       = 43,
     D3D12_FEATURE_D3D12_OPTIONS15                       = 44,
-    D3D12_FEATURE_D3D12_OPTIONS16                       = 45
+    D3D12_FEATURE_D3D12_OPTIONS16                       = 45,
+    D3D12_FEATURE_D3D12_OPTIONS17                       = 46,
+    D3D12_FEATURE_D3D12_OPTIONS18                       = 47,
+    D3D12_FEATURE_D3D12_OPTIONS19                       = 48,
+    D3D12_FEATURE_D3D12_OPTIONS20                       = 49,
+    D3D12_FEATURE_PREDICATION                           = 50,
+    D3D12_FEATURE_PLACED_RESOURCE_SUPPORT_INFO          = 51,
+    D3D12_FEATURE_HARDWARE_COPY                         = 52,
+    D3D12_FEATURE_D3D12_OPTIONS21                       = 53
 } D3D12_FEATURE;
 
 typedef enum D3D12_SHADER_MIN_PRECISION_SUPPORT
@@ -1111,6 +1155,11 @@ typedef enum D3D12_VIEW_INSTANCING_TIER
     D3D12_VIEW_INSTANCING_TIER_3 = 3,
 } D3D12_VIEW_INSTANCING_TIER;
 
+typedef enum D3D12_WORK_GRAPHS_TIER {
+    D3D12_WORK_GRAPHS_TIER_NOT_SUPPORTED = 0,
+    D3D12_WORK_GRAPHS_TIER_1_0 = 10,
+} D3D12_WORK_GRAPHS_TIER;
+
 // D3D12_FEATURE_D3D12_OPTIONS
 typedef struct D3D12_FEATURE_DATA_D3D12_OPTIONS
 {
@@ -1155,6 +1204,7 @@ typedef enum D3D_ROOT_SIGNATURE_VERSION
     D3D_ROOT_SIGNATURE_VERSION_1 = 0x1,
     D3D_ROOT_SIGNATURE_VERSION_1_0 = 0x1,
     D3D_ROOT_SIGNATURE_VERSION_1_1 = 0x2,
+    D3D_ROOT_SIGNATURE_VERSION_1_2 = 0x3,
 } D3D_ROOT_SIGNATURE_VERSION;
 
 typedef struct D3D12_FEATURE_DATA_ROOT_SIGNATURE
@@ -1192,6 +1242,7 @@ typedef struct D3D12_FEATURE_DATA_FEATURE_LEVELS
 // D3D_SHADER_MODEL
 typedef enum D3D_SHADER_MODEL
 {
+    D3D_SHADER_MODEL_NONE = 0x0, // e.g MCDM Generic devices
     D3D_SHADER_MODEL_5_1 = 0x51,
     D3D_SHADER_MODEL_6_0 = 0x60,
     D3D_SHADER_MODEL_6_1 = 0x61,
@@ -1202,7 +1253,8 @@ typedef enum D3D_SHADER_MODEL
     D3D_SHADER_MODEL_6_6 = 0x66,
     D3D_SHADER_MODEL_6_7 = 0x67,
     D3D_SHADER_MODEL_6_8 = 0x68,
-    D3D_HIGHEST_SHADER_MODEL = D3D_SHADER_MODEL_6_8
+    D3D_SHADER_MODEL_6_9 = 0x69,
+    D3D_HIGHEST_SHADER_MODEL = D3D_SHADER_MODEL_6_9
 } D3D_SHADER_MODEL;
 
 typedef struct D3D12_FEATURE_DATA_SHADER_MODEL
@@ -1492,9 +1544,82 @@ typedef struct D3D12_FEATURE_DATA_D3D12_OPTIONS15
 typedef struct D3D12_FEATURE_DATA_D3D12_OPTIONS16
 {
     [annotation("_Out_")] BOOL DynamicDepthBiasSupported;
-    [annotation("_Out_")] BOOL Reserved;                //
+    [annotation("_Out_")] BOOL GPUUploadHeapSupported;
 } D3D12_FEATURE_DATA_D3D12_OPTIONS16;
 
+// D3D12_FEATURE_D3D12_OPTIONS17
+typedef struct D3D12_FEATURE_DATA_D3D12_OPTIONS17
+{
+    [annotation("_Out_")] BOOL NonNormalizedCoordinateSamplersSupported;
+    [annotation("_Out_")] BOOL ManualWriteTrackingResourceSupported;
+} D3D12_FEATURE_DATA_D3D12_OPTIONS17;
+
+// D3D12_FEATURE_D3D12_OPTIONS18
+typedef struct D3D12_FEATURE_DATA_D3D12_OPTIONS18
+{
+    [annotation("_Out_")] BOOL RenderPassesValid;
+} D3D12_FEATURE_DATA_D3D12_OPTIONS18;
+
+// D3D12_FEATURE_D3D12_OPTIONS19
+typedef struct D3D12_FEATURE_DATA_D3D12_OPTIONS19
+{
+    BOOL MismatchingOutputDimensionsSupported;
+    UINT SupportedSampleCountsWithNoOutputs;
+    BOOL PointSamplingAddressesNeverRoundUp;
+    BOOL RasterizerDesc2Supported;
+    BOOL NarrowQuadrilateralLinesSupported;
+    BOOL AnisoFilterWithPointMipSupported;
+    UINT MaxSamplerDescriptorHeapSize;
+    UINT MaxSamplerDescriptorHeapSizeWithStaticSamplers;
+    UINT MaxViewDescriptorHeapSize;
+    [annotation("_Out_")] BOOL ComputeOnlyCustomHeapSupported;
+} D3D12_FEATURE_DATA_D3D12_OPTIONS19;
+
+
+typedef enum D3D12_RECREATE_AT_TIER
+{
+    D3D12_RECREATE_AT_TIER_NOT_SUPPORTED = 0,
+
+    // * Supports retrieving resource and heap allocation information 
+    //   with ID3D12PageableTools::GetAllocationInfo
+    // * Supports setting resource and heap virtual addresses with
+    //   ID3D12DeviceTools::SetNextAllocation
+    D3D12_RECREATE_AT_TIER_1 = 1,
+
+} D3D12_RECREATE_AT_TIER;
+
+
+// D3D12_FEATURE_D3D12_OPTIONS20
+typedef struct D3D12_FEATURE_DATA_D3D12_OPTIONS20
+{
+    [annotation("_Out_")] BOOL ComputeOnlyWriteWatchSupported;
+    D3D12_RECREATE_AT_TIER RecreateAtTier;
+} D3D12_FEATURE_DATA_D3D12_OPTIONS20;
+
+typedef enum D3D12_EXECUTE_INDIRECT_TIER
+{
+    D3D12_EXECUTE_INDIRECT_TIER_1_0 = 10,
+    D3D12_EXECUTE_INDIRECT_TIER_1_1 = 11,
+} D3D12_EXECUTE_INDIRECT_TIER;
+
+typedef struct D3D12_FEATURE_DATA_D3D12_OPTIONS21
+{
+    [annotation("_Out_")] D3D12_WORK_GRAPHS_TIER WorkGraphsTier;
+    [annotation("_Out_")] D3D12_EXECUTE_INDIRECT_TIER ExecuteIndirectTier;
+    [annotation("_Out_")] BOOL SampleCmpGradientAndBiasSupported;
+    [annotation("_Out_")] BOOL ExtendedCommandInfoSupported;
+} D3D12_FEATURE_DATA_D3D12_OPTIONS21;
+
+
+typedef struct D3D12_FEATURE_DATA_PREDICATION
+{
+    [annotation("_Out_")] BOOL Supported;
+} D3D12_FEATURE_DATA_PREDICATION;
+
+typedef struct D3D12_FEATURE_DATA_HARDWARE_COPY
+{
+    [annotation("_Out_")] BOOL Supported;
+} D3D12_FEATURE_DATA_HARDWARE_COPY;
 
 typedef struct D3D12_RESOURCE_ALLOCATION_INFO
 {
@@ -1515,6 +1640,7 @@ typedef enum D3D12_HEAP_TYPE
     D3D12_HEAP_TYPE_UPLOAD    = 2,
     D3D12_HEAP_TYPE_READBACK  = 3,
     D3D12_HEAP_TYPE_CUSTOM    = 4,
+    D3D12_HEAP_TYPE_GPU_UPLOAD = 5,
 } D3D12_HEAP_TYPE;
 
 typedef enum D3D12_CPU_PAGE_PROPERTY
@@ -1555,6 +1681,7 @@ typedef enum D3D12_HEAP_FLAGS
     D3D12_HEAP_FLAG_ALLOW_SHADER_ATOMICS = 0x400,
     D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT = 0x800,
     D3D12_HEAP_FLAG_CREATE_NOT_ZEROED = 0x1000,
+    D3D12_HEAP_FLAG_TOOLS_USE_MANUAL_WRITE_TRACKING = 0x2000,
 
     // These are convenience aliases to manage resource heap tier restrictions. They cannot be bitwise OR'ed together cleanly.
     D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES = 0x0,
@@ -1582,6 +1709,14 @@ typedef enum D3D12_RESOURCE_DIMENSION
     D3D12_RESOURCE_DIMENSION_TEXTURE2D = 3,
     D3D12_RESOURCE_DIMENSION_TEXTURE3D = 4,
 } D3D12_RESOURCE_DIMENSION;
+
+typedef struct D3D12_FEATURE_DATA_PLACED_RESOURCE_SUPPORT_INFO
+{
+    [annotation("_In_")] DXGI_FORMAT Format;
+    [annotation("_In_")] D3D12_RESOURCE_DIMENSION Dimension;
+    [annotation("_In_")] D3D12_HEAP_PROPERTIES DestHeapProperties;
+    [annotation("_Out_")] BOOL Supported;
+} D3D12_FEATURE_DATA_PLACED_RESOURCE_SUPPORT_INFO;
 
 typedef enum D3D12_TEXTURE_LAYOUT
 {
@@ -1771,6 +1906,12 @@ typedef enum D3D12_RESOURCE_STATES
     D3D12_RESOURCE_STATE_RESOLVE_SOURCE = 0x02000,
     D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE = 0x400000,
     D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE = 0x1000000,
+
+    D3D12_RESOURCE_STATE_RESERVED_INTERNAL_8000 = 0x8000,
+    D3D12_RESOURCE_STATE_RESERVED_INTERNAL_4000 = 0x4000,
+    D3D12_RESOURCE_STATE_RESERVED_INTERNAL_100000 = 0x100000,
+    D3D12_RESOURCE_STATE_RESERVED_INTERNAL_40000000 = 0x40000000,
+    D3D12_RESOURCE_STATE_RESERVED_INTERNAL_80000000 = 0x80000000,
 
     D3D12_RESOURCE_STATE_GENERIC_READ =
         /*D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER*/ 0x0001 |
@@ -2094,6 +2235,7 @@ typedef enum D3D12_FILTER
     D3D12_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR                = 0x00000011,
     D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT                       = 0x00000014,
     D3D12_FILTER_MIN_MAG_MIP_LINEAR                             = 0x00000015,
+    D3D12_FILTER_MIN_MAG_ANISOTROPIC_MIP_POINT                  = 0x00000054,
     D3D12_FILTER_ANISOTROPIC                                    = 0x00000055,
     D3D12_FILTER_COMPARISON_MIN_MAG_MIP_POINT                   = 0x00000080,
     D3D12_FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR            = 0x00000081,
@@ -2103,6 +2245,7 @@ typedef enum D3D12_FILTER
     D3D12_FILTER_COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR     = 0x00000091,
     D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT            = 0x00000094,
     D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR                  = 0x00000095,
+    D3D12_FILTER_COMPARISON_MIN_MAG_ANISOTROPIC_MIP_POINT       = 0x000000d4,
     D3D12_FILTER_COMPARISON_ANISOTROPIC                         = 0x000000d5,
     D3D12_FILTER_MINIMUM_MIN_MAG_MIP_POINT                      = 0x00000100,
     D3D12_FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR               = 0x00000101,
@@ -2112,6 +2255,7 @@ typedef enum D3D12_FILTER
     D3D12_FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR        = 0x00000111,
     D3D12_FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT               = 0x00000114,
     D3D12_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR                     = 0x00000115,
+    D3D12_FILTER_MINIMUM_MIN_MAG_ANISOTROPIC_MIP_POINT          = 0x00000154,
     D3D12_FILTER_MINIMUM_ANISOTROPIC                            = 0x00000155,
     D3D12_FILTER_MAXIMUM_MIN_MAG_MIP_POINT                      = 0x00000180,
     D3D12_FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR               = 0x00000181,
@@ -2121,6 +2265,7 @@ typedef enum D3D12_FILTER
     D3D12_FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR        = 0x00000191,
     D3D12_FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT               = 0x00000194,
     D3D12_FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR                     = 0x00000195,
+    D3D12_FILTER_MAXIMUM_MIN_MAG_ANISOTROPIC_MIP_POINT          = 0x000001d4,
     D3D12_FILTER_MAXIMUM_ANISOTROPIC                            = 0x000001d5
 } D3D12_FILTER;
 
@@ -2164,6 +2309,13 @@ cpp_quote( "                                         D3D12_ENCODE_BASIC_FILTER( 
 cpp_quote( "                                                                    D3D12_FILTER_TYPE_LINEAR,         \\" )
 cpp_quote( "                                                                    D3D12_FILTER_TYPE_LINEAR,         \\" )
 cpp_quote( "                                                                    reduction ) ) )                     " )
+cpp_quote( "#define D3D12_ENCODE_MIN_MAG_ANISOTROPIC_MIP_POINT_FILTER( reduction )                                \\" )
+cpp_quote( "                                         ( ( D3D12_FILTER ) (                                         \\" )
+cpp_quote( "                                         D3D12_ANISOTROPIC_FILTERING_BIT |                            \\" )
+cpp_quote( "                                         D3D12_ENCODE_BASIC_FILTER( D3D12_FILTER_TYPE_LINEAR,         \\" )
+cpp_quote( "                                                                    D3D12_FILTER_TYPE_LINEAR,         \\" )
+cpp_quote( "                                                                    D3D12_FILTER_TYPE_POINT,          \\" )
+cpp_quote( "                                                                    reduction ) ) )                     " )
 
 cpp_quote( "#define D3D12_DECODE_MIN_FILTER( D3D12Filter )                                                              \\" )
 cpp_quote( "                                 ( ( D3D12_FILTER_TYPE )                                                    \\" )
@@ -2187,8 +2339,7 @@ cpp_quote( "                                 ( D3D12_DECODE_FILTER_REDUCTION( D3
 cpp_quote( "#define D3D12_DECODE_IS_ANISOTROPIC_FILTER( D3D12Filter )                                               \\" )
 cpp_quote( "                            ( ( ( D3D12Filter ) & D3D12_ANISOTROPIC_FILTERING_BIT ) &&                  \\" )
 cpp_quote( "                            ( D3D12_FILTER_TYPE_LINEAR == D3D12_DECODE_MIN_FILTER( D3D12Filter ) ) &&   \\" )
-cpp_quote( "                            ( D3D12_FILTER_TYPE_LINEAR == D3D12_DECODE_MAG_FILTER( D3D12Filter ) ) &&   \\" )
-cpp_quote( "                            ( D3D12_FILTER_TYPE_LINEAR == D3D12_DECODE_MIP_FILTER( D3D12Filter ) ) )      " )
+cpp_quote( "                            ( D3D12_FILTER_TYPE_LINEAR == D3D12_DECODE_MAG_FILTER( D3D12Filter ) ) )      " )
 
 typedef enum D3D12_TEXTURE_ADDRESS_MODE
 {
@@ -2219,7 +2370,8 @@ typedef struct D3D12_SAMPLER_DESC
 typedef enum D3D12_SAMPLER_FLAGS
 {
     D3D12_SAMPLER_FLAG_NONE = 0x0,
-    D3D12_SAMPLER_FLAG_UINT_BORDER_COLOR = 0x01
+    D3D12_SAMPLER_FLAG_UINT_BORDER_COLOR = 0x01,
+    D3D12_SAMPLER_FLAG_NON_NORMALIZED_COORDINATES = 0x02,
 } D3D12_SAMPLER_FLAGS;
 cpp_quote("DEFINE_ENUM_FLAG_OPERATORS( D3D12_SAMPLER_FLAGS );")
 
@@ -2625,7 +2777,8 @@ typedef enum D3D12_STATIC_BORDER_COLOR
     D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK, // 0.0f,0.0f,0.0f,1.0f
     D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE, // 1.0f,1.0f,1.0f,1.0f
     D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK_UINT, // 0,0,0,1
-    D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE_UINT  // 1,1,1,1
+    D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE_UINT,  // 1,1,1,1
+
 } D3D12_STATIC_BORDER_COLOR;
 
 typedef struct D3D12_STATIC_SAMPLER_DESC
@@ -2645,6 +2798,23 @@ typedef struct D3D12_STATIC_SAMPLER_DESC
     D3D12_SHADER_VISIBILITY ShaderVisibility;    
 } D3D12_STATIC_SAMPLER_DESC;
 
+typedef struct D3D12_STATIC_SAMPLER_DESC1
+{
+    D3D12_FILTER Filter;
+    D3D12_TEXTURE_ADDRESS_MODE AddressU;
+    D3D12_TEXTURE_ADDRESS_MODE AddressV;
+    D3D12_TEXTURE_ADDRESS_MODE AddressW;
+    FLOAT MipLODBias;
+    UINT MaxAnisotropy;
+    D3D12_COMPARISON_FUNC ComparisonFunc;
+    D3D12_STATIC_BORDER_COLOR BorderColor;
+    FLOAT MinLOD;
+    FLOAT MaxLOD;
+    UINT ShaderRegister;
+    UINT RegisterSpace;
+    D3D12_SHADER_VISIBILITY ShaderVisibility;
+    D3D12_SAMPLER_FLAGS Flags;
+} D3D12_STATIC_SAMPLER_DESC1;
 
 typedef struct D3D12_ROOT_SIGNATURE_DESC
 {
@@ -2719,6 +2889,15 @@ typedef struct D3D12_ROOT_SIGNATURE_DESC1
     D3D12_ROOT_SIGNATURE_FLAGS Flags;
 } D3D12_ROOT_SIGNATURE_DESC1;
 
+typedef struct D3D12_ROOT_SIGNATURE_DESC2
+{
+    UINT NumParameters;
+    [annotation("_Field_size_full_(NumParameters)")] const D3D12_ROOT_PARAMETER1* pParameters;
+    UINT NumStaticSamplers;
+    [annotation("_Field_size_full_(NumStaticSamplers)")] const D3D12_STATIC_SAMPLER_DESC1* pStaticSamplers;
+    D3D12_ROOT_SIGNATURE_FLAGS Flags;
+} D3D12_ROOT_SIGNATURE_DESC2;
+
 
 typedef struct D3D12_VERSIONED_ROOT_SIGNATURE_DESC
 {
@@ -2727,6 +2906,7 @@ typedef struct D3D12_VERSIONED_ROOT_SIGNATURE_DESC
     {
         D3D12_ROOT_SIGNATURE_DESC   Desc_1_0;
         D3D12_ROOT_SIGNATURE_DESC1  Desc_1_1;
+        D3D12_ROOT_SIGNATURE_DESC2  Desc_1_2;
     };
 } D3D12_VERSIONED_ROOT_SIGNATURE_DESC;
 
@@ -2952,6 +3132,7 @@ typedef enum D3D12_INDIRECT_ARGUMENT_TYPE
     D3D12_INDIRECT_ARGUMENT_TYPE_UNORDERED_ACCESS_VIEW,
     D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_RAYS,
     D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH,
+    D3D12_INDIRECT_ARGUMENT_TYPE_INCREMENTING_CONSTANT,
 } D3D12_INDIRECT_ARGUMENT_TYPE;
 
 typedef struct D3D12_INDIRECT_ARGUMENT_DESC
@@ -2986,6 +3167,13 @@ typedef struct D3D12_INDIRECT_ARGUMENT_DESC
         {
             UINT RootParameterIndex;
         } UnorderedAccessView;
+
+        // Tier 1.1 support
+        struct
+        {
+            UINT RootParameterIndex;
+            UINT DestOffsetIn32BitValues;
+        } IncrementingConstant;
     };
 } D3D12_INDIRECT_ARGUMENT_DESC;
 
@@ -4154,6 +4342,55 @@ interface ID3D12StateObjectProperties
     void SetPipelineStackSize(UINT64 PipelineStackSizeInBytes);
 }
 
+typedef struct D3D12_PROGRAM_IDENTIFIER
+{
+    UINT64 OpaqueData[4];
+} D3D12_PROGRAM_IDENTIFIER;
+
+[uuid(460caac7-1d24-446a-a184-ca67db494138), object, local, pointer_default(unique)]
+interface ID3D12StateObjectProperties1
+    : ID3D12StateObjectProperties
+{
+    D3D12_PROGRAM_IDENTIFIER GetProgramIdentifier(LPCWSTR pProgramName);
+}
+
+typedef struct D3D12_NODE_ID
+{
+    LPCWSTR Name;
+    UINT    ArrayIndex;
+} D3D12_NODE_ID;
+
+typedef struct D3D12_WORK_GRAPH_MEMORY_REQUIREMENTS
+{
+    UINT64 MinSizeInBytes;
+    UINT64 MaxSizeInBytes;
+    UINT SizeGranularityInBytes;
+} D3D12_WORK_GRAPH_MEMORY_REQUIREMENTS;
+
+[uuid(065acf71-f863-4b89-82f4-02e4d5886757), object, local, pointer_default(unique)]
+interface ID3D12WorkGraphProperties : IUnknown
+{
+    UINT GetNumWorkGraphs();
+    LPCWSTR GetProgramName(UINT WorkGraphIndex);
+    UINT GetWorkGraphIndex(LPCWSTR pProgramName);
+
+    UINT GetNumNodes(UINT WorkGraphIndex);
+    D3D12_NODE_ID GetNodeID(UINT WorkGraphIndex, UINT NodeIndex);
+    UINT GetNodeIndex(UINT WorkGraphIndex, D3D12_NODE_ID NodeID);
+    UINT GetNodeLocalRootArgumentsTableIndex(UINT WorkGraphIndex, UINT NodeIndex);
+
+    UINT GetNumEntrypoints(UINT WorkGraphIndex);
+    D3D12_NODE_ID GetEntrypointID(UINT WorkGraphIndex, UINT EntrypointIndex);
+    UINT GetEntrypointIndex(UINT WorkGraphIndex, D3D12_NODE_ID NodeID);
+    UINT GetEntrypointRecordSizeInBytes(UINT WorkGraphIndex, UINT EntrypointIndex);
+
+    void GetWorkGraphMemoryRequirements(
+        UINT WorkGraphIndex,
+        [annotation("_Out_")] D3D12_WORK_GRAPH_MEMORY_REQUIREMENTS* pWorkGraphMemoryRequirements);
+
+    UINT GetEntrypointRecordAlignmentInBytes(UINT WorkGraphIndex, UINT EntrypointIndex);
+}
+
 typedef enum D3D12_STATE_SUBOBJECT_TYPE
 {
     D3D12_STATE_SUBOBJECT_TYPE_STATE_OBJECT_CONFIG = 0, // D3D12_STATE_OBJECT_CONFIG
@@ -4169,6 +4406,25 @@ typedef enum D3D12_STATE_SUBOBJECT_TYPE
     D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG = 10,  // D3D12_RAYTRACING_PIPELINE_CONFIG
     D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP = 11,  // D3D12_HIT_GROUP_DESC
     D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG1 = 12,  // D3D12_RAYTRACING_PIPELINE_CONFIG1
+    D3D12_STATE_SUBOBJECT_TYPE_WORK_GRAPH = 13, // D3D12_WORK_GRAPH_DESC
+    D3D12_STATE_SUBOBJECT_TYPE_STREAM_OUTPUT = 14,  // D3D12_STREAM_OUTPUT_DESC
+    D3D12_STATE_SUBOBJECT_TYPE_BLEND = 15,  // D3D12_BLEND_DESC
+    D3D12_STATE_SUBOBJECT_TYPE_SAMPLE_MASK = 16,  // UINT
+    D3D12_STATE_SUBOBJECT_TYPE_RASTERIZER = 17,  // D3D12_RASTERIZER_DESC2
+    D3D12_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL = 18,  // D3D12_DEPTH_STENCIL_DESC
+    D3D12_STATE_SUBOBJECT_TYPE_INPUT_LAYOUT = 19,  // D3D12_INPUT_LAYOUT_DESC
+    D3D12_STATE_SUBOBJECT_TYPE_IB_STRIP_CUT_VALUE = 20,  // D3D12_INDEX_BUFFER_STRIP_CUT_VALUE
+    D3D12_STATE_SUBOBJECT_TYPE_PRIMITIVE_TOPOLOGY = 21,  // D3D12_PRIMITIVE_TOPOLOGY_TYPE
+    D3D12_STATE_SUBOBJECT_TYPE_RENDER_TARGET_FORMATS = 22,  // D3D12_RT_FORMAT_ARRAY
+    D3D12_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL_FORMAT = 23,  // DXGI_FORMAT
+    D3D12_STATE_SUBOBJECT_TYPE_SAMPLE_DESC = 24,  // DXGI_SAMPLE_DESC
+    // 25 is unused
+    D3D12_STATE_SUBOBJECT_TYPE_FLAGS = 26,  // D3D12_PIPELINE_STATE_FLAGS
+    D3D12_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL1 = 27, // D3D12_DEPTH_STENCIL_DESC1
+    D3D12_STATE_SUBOBJECT_TYPE_VIEW_INSTANCING = 28, // D3D12_VIEW_INSTANCING_DESC
+    D3D12_STATE_SUBOBJECT_TYPE_GENERIC_PROGRAM = 29, // D3D12_GENERIC_PROGRAM_DESC
+    D3D12_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL2 = 30, // D3D12_DEPTH_STENCIL_DESC2
+
     D3D12_STATE_SUBOBJECT_TYPE_MAX_VALID,
 } D3D12_STATE_SUBOBJECT_TYPE;
 
@@ -4207,6 +4463,26 @@ typedef struct D3D12_NODE_MASK
     UINT NodeMask;
 } D3D12_NODE_MASK;
 
+typedef struct D3D12_SAMPLE_MASK
+{
+    UINT SampleMask;
+} D3D12_SAMPLE_MASK;
+
+typedef struct D3D12_IB_STRIP_CUT_VALUE
+{
+    D3D12_INDEX_BUFFER_STRIP_CUT_VALUE IndexBufferStripCutValue;
+} D3D12_IB_STRIP_CUT_VALUE;
+
+typedef struct D3D12_PRIMITIVE_TOPOLOGY_DESC
+{
+    D3D12_PRIMITIVE_TOPOLOGY_TYPE PrimitiveTopology;
+} D3D12_PRIMITIVE_TOPOLOGY_DESC;
+
+typedef struct D3D12_DEPTH_STENCIL_FORMAT
+{
+    DXGI_FORMAT DepthStencilFormat;
+} D3D12_DEPTH_STENCIL_FORMAT;
+
 typedef enum D3D12_EXPORT_FLAGS
 {
     D3D12_EXPORT_FLAG_NONE = 0x0,
@@ -4224,14 +4500,14 @@ typedef struct D3D12_DXIL_LIBRARY_DESC
 {
     D3D12_SHADER_BYTECODE  DXILLibrary;
     UINT NumExports; // Optional, if 0 all exports in the library/collection will be surfaced
-    [annotation("_In_reads_(NumExports)")] D3D12_EXPORT_DESC* pExports;
+    [annotation("_In_reads_(NumExports)")] const D3D12_EXPORT_DESC* pExports;
 } D3D12_DXIL_LIBRARY_DESC;
 
 typedef struct D3D12_EXISTING_COLLECTION_DESC
 {
     ID3D12StateObject* pExistingCollection;
     UINT NumExports; // Optional, if 0 all exports in the library/collection will be surfaced
-    [annotation("_In_reads_(NumExports)")] D3D12_EXPORT_DESC* pExports;
+    [annotation("_In_reads_(NumExports)")] const D3D12_EXPORT_DESC* pExports;
 } D3D12_EXISTING_COLLECTION_DESC;
 
 typedef struct D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION
@@ -4288,12 +4564,124 @@ typedef struct D3D12_RAYTRACING_PIPELINE_CONFIG1
     D3D12_RAYTRACING_PIPELINE_FLAGS Flags;
 } D3D12_RAYTRACING_PIPELINE_CONFIG1;
 
+typedef struct D3D12_NODE_OUTPUT_OVERRIDES
+{
+    UINT                     OutputIndex;
+    [annotation("_In_opt_")] const D3D12_NODE_ID* pNewName;
+    [annotation("_In_opt_")] const BOOL* pAllowSparseNodes;
+    [annotation("_In_opt_")] const UINT* pMaxRecords;
+    [annotation("_In_opt_")] const UINT* pMaxRecordsSharedWithOutputIndex;
+} D3D12_NODE_OUTPUT_OVERRIDES;
+
+typedef struct D3D12_BROADCASTING_LAUNCH_OVERRIDES
+{
+    [annotation("_In_opt_")] const UINT* pLocalRootArgumentsTableIndex;
+    [annotation("_In_opt_")] const BOOL* pProgramEntry;
+    [annotation("_In_opt_")] const D3D12_NODE_ID* pNewName;
+    [annotation("_In_opt_ ")] const D3D12_NODE_ID* pShareInputOf;
+    [annotation("_In_reads_opt_(3)")] const UINT* pDispatchGrid;
+    [annotation("_In_reads_opt_(3)")] const UINT* pMaxDispatchGrid;
+    UINT          NumOutputOverrides;
+    [annotation("_In_reads_opt_(NumOutputOverrides)")] const D3D12_NODE_OUTPUT_OVERRIDES* pOutputOverrides;
+} D3D12_BROADCASTING_LAUNCH_OVERRIDES;
+
+typedef struct D3D12_COALESCING_LAUNCH_OVERRIDES
+{
+    [annotation("_In_opt_")] const UINT* pLocalRootArgumentsTableIndex; 
+    [annotation("_In_opt_")] const BOOL* pProgramEntry;
+    [annotation("_In_opt_")] const D3D12_NODE_ID* pNewName;
+    [annotation("_In_opt_")] const D3D12_NODE_ID* pShareInputOf;
+    UINT          NumOutputOverrides; 
+    [annotation("_In_reads_opt_(NumOutputOverrides)")] const D3D12_NODE_OUTPUT_OVERRIDES* pOutputOverrides;
+} D3D12_COALESCING_LAUNCH_OVERRIDES;
+
+typedef struct D3D12_THREAD_LAUNCH_OVERRIDES
+{
+    [annotation("_In_opt_")] const UINT* pLocalRootArgumentsTableIndex; 
+    [annotation("_In_opt_")] const BOOL* pProgramEntry;
+    [annotation("_In_opt_")] const D3D12_NODE_ID* pNewName;
+    [annotation("_In_opt_")] const D3D12_NODE_ID* pShareInputOf;
+    UINT          NumOutputOverrides; 
+    [annotation("_In_reads_opt_(NumOutputOverrides)")] const D3D12_NODE_OUTPUT_OVERRIDES* pOutputOverrides;
+} D3D12_THREAD_LAUNCH_OVERRIDES;
+
+typedef struct D3D12_COMMON_COMPUTE_NODE_OVERRIDES
+{
+    [annotation("_In_opt_")] const UINT* pLocalRootArgumentsTableIndex;
+    [annotation("_In_opt_")] const BOOL* pProgramEntry;
+    [annotation("_In_opt_")] const D3D12_NODE_ID* pNewName;
+    [annotation("_In_opt_")] const D3D12_NODE_ID* pShareInputOf;
+    UINT          NumOutputOverrides;
+    [annotation("_In_reads_opt_(NumOutputOverrides)")] const D3D12_NODE_OUTPUT_OVERRIDES* pOutputOverrides;
+} D3D12_COMMON_COMPUTE_NODE_OVERRIDES;
+
+typedef enum D3D12_NODE_OVERRIDES_TYPE
+{
+    D3D12_NODE_OVERRIDES_TYPE_NONE = 0,
+    D3D12_NODE_OVERRIDES_TYPE_BROADCASTING_LAUNCH = 1,
+    D3D12_NODE_OVERRIDES_TYPE_COALESCING_LAUNCH = 2,
+    D3D12_NODE_OVERRIDES_TYPE_THREAD_LAUNCH = 3,
+    D3D12_NODE_OVERRIDES_TYPE_COMMON_COMPUTE = 4,
+} D3D12_NODE_OVERRIDES_TYPE;
+
+typedef struct D3D12_SHADER_NODE
+{
+    LPCWSTR                   Shader; 
+    D3D12_NODE_OVERRIDES_TYPE OverridesType;
+    union
+    {
+        const D3D12_BROADCASTING_LAUNCH_OVERRIDES* pBroadcastingLaunchOverrides;
+        const D3D12_COALESCING_LAUNCH_OVERRIDES* pCoalescingLaunchOverrides;
+        const D3D12_THREAD_LAUNCH_OVERRIDES* pThreadLaunchOverrides;
+        const D3D12_COMMON_COMPUTE_NODE_OVERRIDES* pCommonComputeNodeOverrides;
+    };
+} D3D12_SHADER_NODE;
+
+typedef enum D3D12_NODE_TYPE
+{
+    D3D12_NODE_TYPE_SHADER = 0x0
+} D3D12_NODE_TYPE;
+
+typedef struct D3D12_NODE
+{
+    D3D12_NODE_TYPE NodeType;
+    union
+    {
+        D3D12_SHADER_NODE Shader; // D3D12_NODE_TYPE_SHADER
+    };
+} D3D12_NODE;
+
+typedef enum D3D12_WORK_GRAPH_FLAGS
+{
+    D3D12_WORK_GRAPH_FLAG_NONE = 0x0,
+    D3D12_WORK_GRAPH_FLAG_INCLUDE_ALL_AVAILABLE_NODES = 0x1,
+} D3D12_WORK_GRAPH_FLAGS;
+cpp_quote("DEFINE_ENUM_FLAG_OPERATORS( D3D12_WORK_GRAPH_FLAGS );")
+
+typedef struct D3D12_WORK_GRAPH_DESC
+{
+    LPCWSTR                ProgramName;
+    D3D12_WORK_GRAPH_FLAGS Flags;
+    UINT                   NumEntrypoints;
+    [annotation("_In_reads_opt_(NumEntrypoints)")] const D3D12_NODE_ID* pEntrypoints;
+    UINT    NumExplicitlyDefinedNodes;
+    [annotation("_In_reads_opt_(NumExplicitlyDefinedNodes)")] const D3D12_NODE* pExplicitlyDefinedNodes; 
+} D3D12_WORK_GRAPH_DESC;
+
+typedef struct D3D12_GENERIC_PROGRAM_DESC
+{
+    LPCWSTR ProgramName;
+    UINT NumExports;
+    [annotation("_In_reads_(NumExports)")] LPCWSTR* pExports;
+    UINT    NumSubobjects;
+    [annotation("_In_reads_opt_(NumSubobjects)")] const D3D12_STATE_SUBOBJECT* const* ppSubobjects;
+} D3D12_GENERIC_PROGRAM_DESC;
+
 typedef enum D3D12_STATE_OBJECT_TYPE
 {
     D3D12_STATE_OBJECT_TYPE_COLLECTION = 0,
-    //    D3D12_STATE_OBJECT_TYPE_COMPUTE_PIPELINE = 1,
-    //    D3D12_STATE_OBJECT_TYPE_GRAPHICS_PIPELINE = 2,
     D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE = 3,
+    D3D12_STATE_OBJECT_TYPE_EXECUTABLE = 4
 } D3D12_STATE_OBJECT_TYPE;
 
 typedef struct D3D12_STATE_OBJECT_DESC
@@ -4606,24 +4994,24 @@ interface ID3D12Device5
 
 typedef enum D3D12_AUTO_BREADCRUMB_OP
 {
-    D3D12_AUTO_BREADCRUMB_OP_SETMARKER   = 0,
-    D3D12_AUTO_BREADCRUMB_OP_BEGINEVENT  = 1,
-    D3D12_AUTO_BREADCRUMB_OP_ENDEVENT    = 2,
+    D3D12_AUTO_BREADCRUMB_OP_SETMARKER = 0,
+    D3D12_AUTO_BREADCRUMB_OP_BEGINEVENT = 1,
+    D3D12_AUTO_BREADCRUMB_OP_ENDEVENT = 2,
     D3D12_AUTO_BREADCRUMB_OP_DRAWINSTANCED = 3,
     D3D12_AUTO_BREADCRUMB_OP_DRAWINDEXEDINSTANCED = 4,
     D3D12_AUTO_BREADCRUMB_OP_EXECUTEINDIRECT = 5,
-    D3D12_AUTO_BREADCRUMB_OP_DISPATCH    = 6,
+    D3D12_AUTO_BREADCRUMB_OP_DISPATCH = 6,
     D3D12_AUTO_BREADCRUMB_OP_COPYBUFFERREGION = 7,
     D3D12_AUTO_BREADCRUMB_OP_COPYTEXTUREREGION = 8,
     D3D12_AUTO_BREADCRUMB_OP_COPYRESOURCE = 9,
-    D3D12_AUTO_BREADCRUMB_OP_COPYTILES   = 10,
+    D3D12_AUTO_BREADCRUMB_OP_COPYTILES = 10,
     D3D12_AUTO_BREADCRUMB_OP_RESOLVESUBRESOURCE = 11,
     D3D12_AUTO_BREADCRUMB_OP_CLEARRENDERTARGETVIEW = 12,
     D3D12_AUTO_BREADCRUMB_OP_CLEARUNORDEREDACCESSVIEW = 13,
     D3D12_AUTO_BREADCRUMB_OP_CLEARDEPTHSTENCILVIEW = 14,
     D3D12_AUTO_BREADCRUMB_OP_RESOURCEBARRIER = 15,
     D3D12_AUTO_BREADCRUMB_OP_EXECUTEBUNDLE = 16,
-    D3D12_AUTO_BREADCRUMB_OP_PRESENT     = 17,
+    D3D12_AUTO_BREADCRUMB_OP_PRESENT = 17,
     D3D12_AUTO_BREADCRUMB_OP_RESOLVEQUERYDATA = 18,
     D3D12_AUTO_BREADCRUMB_OP_BEGINSUBMISSION = 19,
     D3D12_AUTO_BREADCRUMB_OP_ENDSUBMISSION = 20,
@@ -4651,6 +5039,10 @@ typedef enum D3D12_AUTO_BREADCRUMB_OP
     D3D12_AUTO_BREADCRUMB_OP_DISPATCHMESH = 42,
     D3D12_AUTO_BREADCRUMB_OP_ENCODEFRAME = 43,
     D3D12_AUTO_BREADCRUMB_OP_RESOLVEENCODEROUTPUTMETADATA = 44,
+    D3D12_AUTO_BREADCRUMB_OP_BARRIER = 45,
+    D3D12_AUTO_BREADCRUMB_OP_BEGIN_COMMAND_LIST = 46,
+    D3D12_AUTO_BREADCRUMB_OP_DISPATCHGRAPH = 47,
+    D3D12_AUTO_BREADCRUMB_OP_SETPROGRAM = 48,
 } D3D12_AUTO_BREADCRUMB_OP;
 
 typedef struct D3D12_AUTO_BREADCRUMB_NODE
@@ -5062,13 +5454,22 @@ typedef enum D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE
     D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD,
     D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE,
     D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR,
-    D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_NO_ACCESS
+    D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_NO_ACCESS,
+    D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE_LOCAL_RENDER,
+    D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE_LOCAL_SRV,
+    D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE_LOCAL_UAV
 } D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE;
 
 typedef struct D3D12_RENDER_PASS_BEGINNING_ACCESS_CLEAR_PARAMETERS
 {
     D3D12_CLEAR_VALUE ClearValue;
 } D3D12_RENDER_PASS_BEGINNING_ACCESS_CLEAR_PARAMETERS;
+
+typedef struct D3D12_RENDER_PASS_BEGINNING_ACCESS_PRESERVE_LOCAL_PARAMETERS
+{
+    UINT AdditionalWidth;
+    UINT AdditionalHeight;
+} D3D12_RENDER_PASS_BEGINNING_ACCESS_PRESERVE_LOCAL_PARAMETERS;
 
 typedef struct D3D12_RENDER_PASS_BEGINNING_ACCESS
 {
@@ -5077,6 +5478,7 @@ typedef struct D3D12_RENDER_PASS_BEGINNING_ACCESS
     union
     {
         D3D12_RENDER_PASS_BEGINNING_ACCESS_CLEAR_PARAMETERS Clear;
+        D3D12_RENDER_PASS_BEGINNING_ACCESS_PRESERVE_LOCAL_PARAMETERS PreserveLocal;
     };
 } D3D12_RENDER_PASS_BEGINNING_ACCESS;
 
@@ -5086,7 +5488,10 @@ typedef enum D3D12_RENDER_PASS_ENDING_ACCESS_TYPE
     D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD,
     D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE,
     D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE,
-    D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_NO_ACCESS
+    D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_NO_ACCESS,
+    D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE_LOCAL_RENDER,
+    D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE_LOCAL_SRV,
+    D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE_LOCAL_UAV
 } D3D12_RENDER_PASS_ENDING_ACCESS_TYPE;
 
 typedef struct D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS
@@ -5116,6 +5521,12 @@ typedef struct D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_PARAMETERS
 
 } D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_PARAMETERS;
 
+typedef struct D3D12_RENDER_PASS_ENDING_ACCESS_PRESERVE_LOCAL_PARAMETERS
+{
+    UINT AdditionalWidth;
+    UINT AdditionalHeight;
+} D3D12_RENDER_PASS_ENDING_ACCESS_PRESERVE_LOCAL_PARAMETERS;
+
 typedef struct D3D12_RENDER_PASS_ENDING_ACCESS
 {
     D3D12_RENDER_PASS_ENDING_ACCESS_TYPE Type;
@@ -5123,6 +5534,7 @@ typedef struct D3D12_RENDER_PASS_ENDING_ACCESS
     union
     {
         D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_PARAMETERS Resolve;
+        D3D12_RENDER_PASS_ENDING_ACCESS_PRESERVE_LOCAL_PARAMETERS PreserveLocal;
     };
 } D3D12_RENDER_PASS_ENDING_ACCESS;
 
@@ -5149,13 +5561,14 @@ typedef struct D3D12_RENDER_PASS_DEPTH_STENCIL_DESC
 
 } D3D12_RENDER_PASS_DEPTH_STENCIL_DESC;
 
-// UAV Access Mode
 typedef enum D3D12_RENDER_PASS_FLAGS
 {
-    D3D12_RENDER_PASS_FLAG_NONE                = 0x0,
-    D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES    = 0x1,
-    D3D12_RENDER_PASS_FLAG_SUSPENDING_PASS     = 0x2,
-    D3D12_RENDER_PASS_FLAG_RESUMING_PASS       = 0x4
+    D3D12_RENDER_PASS_FLAG_NONE                   = 0x0,
+    D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES       = 0x1,
+    D3D12_RENDER_PASS_FLAG_SUSPENDING_PASS        = 0x2,
+    D3D12_RENDER_PASS_FLAG_RESUMING_PASS          = 0x4,
+    D3D12_RENDER_PASS_FLAG_BIND_READ_ONLY_DEPTH   = 0x8,
+    D3D12_RENDER_PASS_FLAG_BIND_READ_ONLY_STENCIL = 0x10
 } D3D12_RENDER_PASS_FLAGS;
 cpp_quote("DEFINE_ENUM_FLAG_OPERATORS( D3D12_RENDER_PASS_FLAGS );")
 
@@ -5175,6 +5588,97 @@ typedef struct D3D12_DISPATCH_RAYS_DESC
     UINT Height;
     UINT Depth;
 } D3D12_DISPATCH_RAYS_DESC;
+
+typedef enum D3D12_SET_WORK_GRAPH_FLAGS
+{
+    D3D12_SET_WORK_GRAPH_FLAG_NONE       = 0x0,
+    D3D12_SET_WORK_GRAPH_FLAG_INITIALIZE = 0x1, 
+} D3D12_SET_WORK_GRAPH_FLAGS;
+cpp_quote( "DEFINE_ENUM_FLAG_OPERATORS( D3D12_SET_WORK_GRAPH_FLAGS );" )
+
+typedef struct D3D12_SET_WORK_GRAPH_DESC
+{  
+    D3D12_PROGRAM_IDENTIFIER ProgramIdentifier;
+    D3D12_SET_WORK_GRAPH_FLAGS Flags;
+    D3D12_GPU_VIRTUAL_ADDRESS_RANGE BackingMemory;
+    D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE NodeLocalRootArgumentsTable;
+} D3D12_SET_WORK_GRAPH_DESC;
+
+typedef struct D3D12_SET_RAYTRACING_PIPELINE_DESC
+{  
+    D3D12_PROGRAM_IDENTIFIER ProgramIdentifier;
+} D3D12_SET_RAYTRACING_PIPELINE_DESC;
+
+typedef struct D3D12_SET_GENERIC_PIPELINE_DESC
+{  
+    D3D12_PROGRAM_IDENTIFIER ProgramIdentifier;
+} D3D12_SET_GENERIC_PIPELINE_DESC;
+
+typedef enum D3D12_PROGRAM_TYPE
+{
+    D3D12_PROGRAM_TYPE_GENERIC_PIPELINE = 1,
+    D3D12_PROGRAM_TYPE_RAYTRACING_PIPELINE = 4,
+    D3D12_PROGRAM_TYPE_WORK_GRAPH = 5
+} D3D12_PROGRAM_TYPE;
+
+typedef struct D3D12_SET_PROGRAM_DESC
+{
+    D3D12_PROGRAM_TYPE Type;
+    union
+    {
+        D3D12_SET_GENERIC_PIPELINE_DESC     GenericPipeline;
+        D3D12_SET_RAYTRACING_PIPELINE_DESC  RaytracingPipeline;
+        D3D12_SET_WORK_GRAPH_DESC           WorkGraph; 
+    };
+} D3D12_SET_PROGRAM_DESC;
+
+typedef enum D3D12_DISPATCH_MODE
+{
+    D3D12_DISPATCH_MODE_NODE_CPU_INPUT = 0, // D3D12_NODE_CPU_INPUT
+    D3D12_DISPATCH_MODE_NODE_GPU_INPUT = 1, // D3D12_NODE_GPU_INPUT in GPU memory
+    D3D12_DISPATCH_MODE_MULTI_NODE_CPU_INPUT = 2, // D3D12_MULTI_NODE_CPU_INPUT
+    D3D12_DISPATCH_MODE_MULTI_NODE_GPU_INPUT = 3 // D3D12_MULTI_NODE_GPU_INPUT in GPU memory
+} D3D12_DISPATCH_MODE;
+
+typedef struct D3D12_NODE_CPU_INPUT
+{
+    UINT EntrypointIndex;
+    UINT NumRecords;
+    const void* pRecords;
+    UINT64 RecordStrideInBytes;
+} D3D12_NODE_CPU_INPUT;
+
+typedef struct D3D12_NODE_GPU_INPUT
+{
+    UINT EntrypointIndex;
+    UINT NumRecords;
+    D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE Records;
+} D3D12_NODE_GPU_INPUT;
+
+typedef struct D3D12_MULTI_NODE_CPU_INPUT
+{
+    UINT NumNodeInputs;
+    const D3D12_NODE_CPU_INPUT* pNodeInputs;
+    UINT64 NodeInputStrideInBytes;
+} D3D12_MULTI_NODE_CPU_INPUT;
+
+typedef struct D3D12_MULTI_NODE_GPU_INPUT
+{
+    UINT NumNodeInputs;
+    D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE NodeInputs; // D3D12_GPU_NODE_INPUT array
+} D3D12_MULTI_NODE_GPU_INPUT;
+
+typedef struct D3D12_DISPATCH_GRAPH_DESC
+{
+    D3D12_DISPATCH_MODE Mode;
+    union
+    {
+        D3D12_NODE_CPU_INPUT       NodeCPUInput;
+        D3D12_GPU_VIRTUAL_ADDRESS  NodeGPUInput;
+        D3D12_MULTI_NODE_CPU_INPUT MultiNodeCPUInput;
+        D3D12_GPU_VIRTUAL_ADDRESS  MultiNodeGPUInput;
+    };    
+} D3D12_DISPATCH_GRAPH_DESC;
 
 [uuid(8754318e-d3a9-4541-98cf-645b50dc4874), object, local, pointer_default(unique)]
 interface ID3D12GraphicsCommandList4 : ID3D12GraphicsCommandList3
@@ -5474,15 +5978,6 @@ interface ID3D12Device9
     );
 };
 
-[uuid(5405c344-d457-444e-b4dd-2366e45aee39), object, local, pointer_default(unique)]
-interface ID3D12Device11
-    : ID3D12Device10
-{
-    void CreateSampler2(
-        [annotation("_In_")] const D3D12_SAMPLER_DESC2* pDesc,
-        [annotation("_In_")] D3D12_CPU_DESCRIPTOR_HANDLE DestDescriptor);
-};
-
 [uuid(517f8718-aa66-49f9-b02b-a7ab89c06031), object, local, pointer_default(unique)]
 interface ID3D12Device10
     : ID3D12Device9
@@ -5495,7 +5990,7 @@ interface ID3D12Device10
         [annotation("_In_opt_")] const D3D12_CLEAR_VALUE* pOptimizedClearValue,
         [annotation("_In_opt_")] ID3D12ProtectedResourceSession* pProtectedSession,
         UINT32 NumCastableFormats,
-        [annotation("_In_opt_count_(NumCastableFormats)")] DXGI_FORMAT *pCastableFormats,
+        [annotation("_In_opt_count_(NumCastableFormats)")] const DXGI_FORMAT *pCastableFormats,
         [in] REFIID riidResource, // Expected: ID3D12Resource1*
         [out, iid_is(riidResource), annotation("_COM_Outptr_opt_")] void** ppvResource);
 
@@ -5506,7 +6001,7 @@ interface ID3D12Device10
         D3D12_BARRIER_LAYOUT InitialLayout,
         [annotation("_In_opt_")] const D3D12_CLEAR_VALUE* pOptimizedClearValue,
         UINT32 NumCastableFormats,
-        [annotation("_In_opt_count_(NumCastableFormats)")] DXGI_FORMAT *pCastableFormats,
+        [annotation("_In_opt_count_(NumCastableFormats)")] const DXGI_FORMAT *pCastableFormats,
         [in] REFIID riid, // Expected: ID3D12Resource*
         [out, iid_is(riid), annotation("_COM_Outptr_opt_")] void** ppvResource);
 
@@ -5516,10 +6011,56 @@ interface ID3D12Device10
         [annotation("_In_opt_")] const D3D12_CLEAR_VALUE* pOptimizedClearValue,
         [annotation("_In_opt_")] ID3D12ProtectedResourceSession *pProtectedSession,
         UINT32 NumCastableFormats,
-        [annotation("_In_opt_count_(NumCastableFormats)")] DXGI_FORMAT *pCastableFormats,
+        [annotation("_In_opt_count_(NumCastableFormats)")] const DXGI_FORMAT *pCastableFormats,
         [in] REFIID riid, // Expected: ID3D12Resource1*
         [out, iid_is(riid), annotation("_COM_Outptr_opt_")] void** ppvResource
     );
+};
+
+[uuid(5405c344-d457-444e-b4dd-2366e45aee39), object, local, pointer_default(unique)]
+interface ID3D12Device11
+    : ID3D12Device10
+{
+    void CreateSampler2(
+        [annotation("_In_")] const D3D12_SAMPLER_DESC2* pDesc,
+        [annotation("_In_")] D3D12_CPU_DESCRIPTOR_HANDLE DestDescriptor);
+};
+
+[uuid(5af5c532-4c91-4cd0-b541-15a405395fc5), object, local, pointer_default(unique)]
+interface ID3D12Device12
+    : ID3D12Device11
+{
+    D3D12_RESOURCE_ALLOCATION_INFO GetResourceAllocationInfo3(
+        UINT visibleMask,
+        UINT numResourceDescs,
+        [annotation("_In_reads_(numResourceDescs)")] const D3D12_RESOURCE_DESC1* pResourceDescs,
+        [annotation("_In_opt_count_(numResourceDescs)")] const UINT32* pNumCastableFormats,
+        [annotation("_In_opt_count_(numResourceDescs)")] const DXGI_FORMAT *const *ppCastableFormats,
+        [annotation("_Out_writes_opt_(numResourceDescs)")] D3D12_RESOURCE_ALLOCATION_INFO1* pResourceAllocationInfo1);
+};
+
+[uuid(14eecffc-4df8-40f7-a118-5c816f45695e), object, local, pointer_default(unique)]
+interface ID3D12Device13
+    : ID3D12Device12
+{
+    HRESULT OpenExistingHeapFromAddress1(
+        [annotation("_In_")] const void* pAddress,
+        SIZE_T size,
+        [in] REFIID riid, // Expected: ID3D12Heap
+        [out, iid_is(riid), annotation("_COM_Outptr_")] void** ppvHeap
+    );
+};
+
+[uuid(5f6e592d-d895-44c2-8e4a-88ad4926d323), object, local, pointer_default(unique)]
+interface ID3D12Device14 : ID3D12Device13
+{
+    HRESULT CreateRootSignatureFromSubobjectInLibrary(
+        [annotation("_In_")] UINT nodeMask,
+        [annotation("_In_reads_(blobLengthInBytes)")] const void* pLibraryBlob,
+        [annotation("_In_")] SIZE_T blobLengthInBytes,
+        [annotation("_In_opt_")] LPCWSTR subobjectName,
+        [in] REFIID riid, // Expected ID3D12RootSignature
+        [out, iid_is(riid), annotation("_COM_Outptr_")] void** ppvRootSignature);
 };
 
 [uuid(bc66d368-7373-4943-8757-fc87dc79e476), object, local, pointer_default(unique)]
@@ -5539,7 +6080,6 @@ interface ID3D12VirtualizationGuestDevice
 };
 
 
-
 [uuid(7071e1f0-e84b-4b33-974f-12fa49de65c5), object, local, pointer_default(unique)]
 interface ID3D12Tools
     : IUnknown
@@ -5547,6 +6087,8 @@ interface ID3D12Tools
     void EnableShaderInstrumentation(BOOL bEnable);
     BOOL ShaderInstrumentationEnabled();
 }
+
+
 
 typedef struct D3D12_SUBRESOURCE_DATA
 {
@@ -5796,6 +6338,18 @@ interface ID3D12DeviceConfiguration
         [annotation("_COM_Outptr_")] void **ppvDeserializer);
 };
 
+[uuid(ed342442-6343-4e16-bb82-a3a577874e56), object, local, pointer_default(unique)]
+interface ID3D12DeviceConfiguration1
+    : ID3D12DeviceConfiguration
+{
+    HRESULT CreateVersionedRootSignatureDeserializerFromSubobjectInLibrary(
+        [annotation("_In_reads_bytes_(Size)")] const void* pLibraryBlob,
+        SIZE_T Size,
+        LPCWSTR RootSignatureSubobjectName,
+        REFIID riid,
+        [annotation("_COM_Outptr_")] void** ppvDeserializer);
+};
+
 
 typedef enum D3D12_AXIS_SHADING_RATE
 {
@@ -5893,6 +6447,31 @@ interface ID3D12GraphicsCommandList9 : ID3D12GraphicsCommandList8
     );
 };
 
+[uuid(7013c015-d161-4b63-a08c-238552dd8acc), object, local, pointer_default(unique)]
+interface ID3D12GraphicsCommandList10 : ID3D12GraphicsCommandList9
+{
+    void SetProgram([annotation("_In_")] const D3D12_SET_PROGRAM_DESC* pDesc);
+    void DispatchGraph([annotation("_In_")] const D3D12_DISPATCH_GRAPH_DESC* pDesc);
+};
+
+
+
+[uuid(597985ab-9b75-4dbb-be23-0761195bebee), object, local, pointer_default(unique)]
+interface ID3D12GBVDiagnostics
+    : IUnknown
+{
+    HRESULT GetGBVEntireSubresourceStatesData( [annotation("_In_")] ID3D12Resource* pResource, [annotation("_Out_writes_bytes_(DataSize)")] int *pData, UINT DataSize );
+    HRESULT GetGBVSubresourceState( [annotation("_In_")] ID3D12Resource* pResource, UINT Subresource, [annotation("_Out_")] int *pData );
+    HRESULT GetGBVResourceUniformState( [annotation("_In_")] ID3D12Resource* pResource, [annotation("_Out_")] int *pData );
+    HRESULT GetGBVResourceInfo( [annotation("_In_")] ID3D12Resource* pResource, 
+                               [annotation("_In_opt_")] D3D12_RESOURCE_DESC* pResourceDesc,
+                               [annotation("_In_opt_")] UINT32* pResourceHash,
+                               [annotation("_In_opt_")] UINT32* pSubresourceStatesByteOffset );
+
+    void GBVReserved0();
+
+    void GBVReserved1();
+}
 
 //----------------------------------------------------------------------------------------------------------
 // Old types which are still supported by the runtime for app-compat
@@ -5934,6 +6513,8 @@ cpp_quote( "DEFINE_GUID(IID_ID3D12SwapChainAssistant,0xf1df64b6,0x57fd,0x49cd,0x
 cpp_quote( "DEFINE_GUID(IID_ID3D12LifetimeTracker,0x3fd03d36,0x4eb1,0x424a,0xa5,0x82,0x49,0x4e,0xcb,0x8b,0xa8,0x13);" )
 cpp_quote( "DEFINE_GUID(IID_ID3D12StateObject,0x47016943,0xfca8,0x4594,0x93,0xea,0xaf,0x25,0x8b,0x55,0x34,0x6d);" )
 cpp_quote( "DEFINE_GUID(IID_ID3D12StateObjectProperties,0xde5fa827,0x9bf9,0x4f26,0x89,0xff,0xd7,0xf5,0x6f,0xde,0x38,0x60);" )
+cpp_quote( "DEFINE_GUID(IID_ID3D12StateObjectProperties1,0x460caac7,0x1d24,0x446a,0xa1,0x84,0xca,0x67,0xdb,0x49,0x41,0x38);" )
+cpp_quote( "DEFINE_GUID(IID_ID3D12WorkGraphProperties,0x065acf71,0xf863,0x4b89,0x82,0xf4,0x02,0xe4,0xd5,0x88,0x67,0x57);" )
 cpp_quote( "DEFINE_GUID(IID_ID3D12Device5,0x8b4f173b,0x2fea,0x4b80,0x8f,0x58,0x43,0x07,0x19,0x1a,0xb9,0x5d);" )
 cpp_quote( "DEFINE_GUID(IID_ID3D12DeviceRemovedExtendedDataSettings,0x82BC481C,0x6B9B,0x4030,0xAE,0xDB,0x7E,0xE3,0xD1,0xDF,0x1E,0x63);" )
 cpp_quote( "DEFINE_GUID(IID_ID3D12DeviceRemovedExtendedDataSettings1,0xDBD5AE51,0x3317,0x4F0A,0xAD,0xF9,0x1D,0x7C,0xED,0xCA,0xAE,0x0B);" )
@@ -5955,14 +6536,20 @@ cpp_quote( "DEFINE_GUID(IID_ID3D12ShaderCacheSession,0x28e2495d,0x0f64,0x4ae4,0x
 cpp_quote( "DEFINE_GUID(IID_ID3D12Device9,0x4c80e962,0xf032,0x4f60,0xbc,0x9e,0xeb,0xc2,0xcf,0xa1,0xd8,0x3c);" )
 cpp_quote( "DEFINE_GUID(IID_ID3D12Device10,0x517f8718,0xaa66,0x49f9,0xb0,0x2b,0xa7,0xab,0x89,0xc0,0x60,0x31);" )
 cpp_quote( "DEFINE_GUID(IID_ID3D12Device11,0x5405c344,0xd457,0x444e,0xb4,0xdd,0x23,0x66,0xe4,0x5a,0xee,0x39);" )
+cpp_quote( "DEFINE_GUID(IID_ID3D12Device12,0x5af5c532,0x4c91,0x4cd0,0xb5,0x41,0x15,0xa4,0x05,0x39,0x5f,0xc5);" )
+cpp_quote( "DEFINE_GUID(IID_ID3D12Device13,0x14eecffc,0x4df8,0x40f7,0xa1,0x18,0x5c,0x81,0x6f,0x45,0x69,0x5e);" )
+cpp_quote( "DEFINE_GUID(IID_ID3D12Device14,0x5f6e592d,0xd895,0x44c2,0x8e,0x4a,0x88,0xad,0x49,0x26,0xd3,0x23);" )
 cpp_quote( "DEFINE_GUID(IID_ID3D12VirtualizationGuestDevice,0xbc66d368,0x7373,0x4943,0x87,0x57,0xfc,0x87,0xdc,0x79,0xe4,0x76);" )
 cpp_quote( "DEFINE_GUID(IID_ID3D12Tools,0x7071e1f0,0xe84b,0x4b33,0x97,0x4f,0x12,0xfa,0x49,0xde,0x65,0xc5);" )
 cpp_quote( "DEFINE_GUID(IID_ID3D12SDKConfiguration,0xe9eb5314,0x33aa,0x42b2,0xa7,0x18,0xd7,0x7f,0x58,0xb1,0xf1,0xc7);" )
 cpp_quote( "DEFINE_GUID(IID_ID3D12SDKConfiguration1,0x8aaf9303,0xad25,0x48b9,0x9a,0x57,0xd9,0xc3,0x7e,0x00,0x9d,0x9f);" )
 cpp_quote( "DEFINE_GUID(IID_ID3D12DeviceFactory,0x61f307d3,0xd34e,0x4e7c,0x83,0x74,0x3b,0xa4,0xde,0x23,0xcc,0xcb);" )
 cpp_quote( "DEFINE_GUID(IID_ID3D12DeviceConfiguration,0x78dbf87b,0xf766,0x422b,0xa6,0x1c,0xc8,0xc4,0x46,0xbd,0xb9,0xad);" )
+cpp_quote( "DEFINE_GUID(IID_ID3D12DeviceConfiguration1,0xed342442,0x6343,0x4e16,0xbb,0x82,0xa3,0xa5,0x77,0x87,0x4e,0x56);" )
 cpp_quote( "DEFINE_GUID(IID_ID3D12GraphicsCommandList5,0x55050859,0x4024,0x474c,0x87,0xf5,0x64,0x72,0xea,0xee,0x44,0xea);" )
 cpp_quote( "DEFINE_GUID(IID_ID3D12GraphicsCommandList6,0xc3827890,0xe548,0x4cfa,0x96,0xcf,0x56,0x89,0xa9,0x37,0x0f,0x80);" )
 cpp_quote( "DEFINE_GUID(IID_ID3D12GraphicsCommandList7,0xdd171223,0x8b61,0x4769,0x90,0xe3,0x16,0x0c,0xcd,0xe4,0xe2,0xc1);" )
 cpp_quote( "DEFINE_GUID(IID_ID3D12GraphicsCommandList8,0xee936ef9,0x599d,0x4d28,0x93,0x8e,0x23,0xc4,0xad,0x05,0xce,0x51);" )
 cpp_quote( "DEFINE_GUID(IID_ID3D12GraphicsCommandList9,0x34ed2808,0xffe6,0x4c2b,0xb1,0x1a,0xca,0xbd,0x2b,0x0c,0x59,0xe1);" )
+cpp_quote( "DEFINE_GUID(IID_ID3D12GraphicsCommandList10,0x7013c015,0xd161,0x4b63,0xa0,0x8c,0x23,0x85,0x52,0xdd,0x8a,0xcc);" )
+cpp_quote( "DEFINE_GUID(IID_ID3D12GBVDiagnostics,0x597985ab,0x9b75,0x4dbb,0xbe,0x23,0x07,0x61,0x19,0x5b,0xeb,0xee);" )

@@ -1,13 +1,14 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
-//
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
+// furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
@@ -26,7 +27,6 @@
 #define FFX_CLASSIFIER_CLASSIFICATION_HW_RAYTRACING_ENABLED
 
 #include "ffx_classifier_reflections_common.h"
-#include "../reflection-dnsr/ffx_denoiser_reflections_common.h"
 
 FfxFloat32x2 Hash22(FfxFloat32x2 p)
 {
@@ -131,7 +131,7 @@ void ClassifyTiles(FfxUInt32x2  dispatch_thread_id,
                    FfxBoolean   enable_hw_ray_tracing)
 {
     FfxUInt32  flat_group_thread_id  = group_thread_id.x + group_thread_id.y * 8;
-    FfxBoolean is_first_lane_of_wave = AWaveIsFirstLane();
+    FfxBoolean is_first_lane_of_wave = ffxWaveIsFirstLane();
 
     if (group_thread_id.x == 0 && group_thread_id.y == 0)
     {
@@ -227,7 +227,7 @@ void ClassifyTiles(FfxUInt32x2  dispatch_thread_id,
         }
 #endif  // FFX_HYBRID_REFLECTIONS
     }
-    FFX_GROUP_MEMORY_BARRIER();
+    FFX_GROUP_MEMORY_BARRIER;
 
     // First we figure out on a per thread basis if we need to shoot a reflection ray
     FfxBoolean is_on_screen = (dispatch_thread_id.x < screen_size.x) && (dispatch_thread_id.y < screen_size.y);
@@ -262,9 +262,9 @@ void ClassifyTiles(FfxUInt32x2  dispatch_thread_id,
     FfxBoolean require_copy =
         !needs_ray && needs_denoiser;  // Our pixel only requires a copy if we want to run a denoiser on it but don't want to shoot a ray for it.
     
-    FfxBoolean copy_horizontal = FfxBoolean(AWaveXorU1(FfxUInt32(require_copy), 1)) && (samples_per_quad != 4) && is_base_ray;  // QuadReadAcrossX
-    FfxBoolean copy_vertical   = FfxBoolean(AWaveXorU1(FfxUInt32(require_copy), 2)) && (samples_per_quad == 1) && is_base_ray;  // QuadReadAcrossY
-    FfxBoolean copy_diagonal   = FfxBoolean(AWaveXorU1(FfxUInt32(require_copy), 3)) && (samples_per_quad == 1) && is_base_ray;  // QuadReadAcrossDiagonal
+    FfxBoolean copy_horizontal = FfxBoolean(ffxWaveXorU1(FfxUInt32(require_copy), 1)) && (samples_per_quad != 4) && is_base_ray;  // QuadReadAcrossX
+    FfxBoolean copy_vertical   = FfxBoolean(ffxWaveXorU1(FfxUInt32(require_copy), 2)) && (samples_per_quad == 1) && is_base_ray;  // QuadReadAcrossY
+    FfxBoolean copy_diagonal   = FfxBoolean(ffxWaveXorU1(FfxUInt32(require_copy), 3)) && (samples_per_quad == 1) && is_base_ray;  // QuadReadAcrossDiagonal
 
     FfxBoolean needs_sw_ray = true;
 
@@ -281,13 +281,13 @@ void ClassifyTiles(FfxUInt32x2  dispatch_thread_id,
     }
 #endif  // FFX_CLASSIFIER_CLASSIFICATION_HW_RAYTRACING_ENABLED
 
-    FfxUInt32 local_ray_index_in_wave_sw = AWavePrefixCountBits(needs_sw_ray);
+    FfxUInt32 local_ray_index_in_wave_sw = ffxWavePrefixCountBits(needs_sw_ray);
     FfxUInt32 wave_ray_offset_in_group_sw;
-    FfxUInt32 wave_ray_count_sw = AWaveActiveCountBits(needs_sw_ray);
+    FfxUInt32 wave_ray_count_sw = ffxWaveActiveCountBits(needs_sw_ray);
 
 #ifdef FFX_CLASSIFIER_CLASSIFICATION_HW_RAYTRACING_ENABLED
-    FfxUInt32 local_ray_index_in_wave_hw = AWavePrefixCountBits(needs_hw_ray);
-    FfxUInt32 wave_ray_count_hw          = AWaveActiveCountBits(needs_hw_ray);
+    FfxUInt32 local_ray_index_in_wave_hw = ffxWavePrefixCountBits(needs_hw_ray);
+    FfxUInt32 wave_ray_count_hw          = ffxWaveActiveCountBits(needs_hw_ray);
     FfxUInt32 base_ray_index_hw          = 0;
 #endif  // FFX_CLASSIFIER_CLASSIFICATION_HW_RAYTRACING_ENABLED
 
@@ -308,17 +308,17 @@ void ClassifyTiles(FfxUInt32x2  dispatch_thread_id,
 #endif  // FFX_CLASSIFIER_CLASSIFICATION_HW_RAYTRACING_ENABLED
     }
     
-    base_ray_index_hw           = AWaveReadLaneFirstU1(base_ray_index_hw);
-    wave_ray_offset_in_group_sw = AWaveReadLaneFirstU1(wave_ray_offset_in_group_sw);
+    base_ray_index_hw           = ffxWaveReadLaneFirstU1(base_ray_index_hw);
+    wave_ray_offset_in_group_sw = ffxWaveReadLaneFirstU1(wave_ray_offset_in_group_sw);
 
-    FFX_GROUP_MEMORY_BARRIER();
+    FFX_GROUP_MEMORY_BARRIER;
     if (flat_group_thread_id == 0 && g_SWCount > 0)
     {
         // [IMPORTANT] We need to round up to the multiple of 32 for software rays, because of the atomic increment coalescing optimization
         g_SWCountTotal = g_SWCount < 32 ? 32 : (g_SWCount > 32 ? 64 : 32);
         IncrementRayCounterSW(g_SWCountTotal, g_base_ray_index_sw);
     }
-    FFX_GROUP_MEMORY_BARRIER();
+    FFX_GROUP_MEMORY_BARRIER;
 
     if (needs_sw_ray)
     {
@@ -352,7 +352,7 @@ void ClassifyTiles(FfxUInt32x2  dispatch_thread_id,
         FFX_ATOMIC_ADD(g_TileCount, 1);
     }
 
-    FFX_GROUP_MEMORY_BARRIER();  // Wait until all waves wrote into g_TileCount
+    FFX_GROUP_MEMORY_BARRIER;  // Wait until all waves wrote into g_TileCount
 
     if (g_TileCount > 0)
     {

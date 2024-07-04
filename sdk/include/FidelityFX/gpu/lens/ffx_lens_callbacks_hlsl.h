@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #include "ffx_lens_resources.h"
@@ -31,12 +31,10 @@
 #ifdef __hlsl_dx_compiler
 #pragma dxc diagnostic pop
 #endif //__hlsl_dx_compiler
-#endif // #if defined(FFX_GPU)
 
-#if defined(FFX_GPU)
 #ifndef FFX_PREFER_WAVE64
 #define FFX_PREFER_WAVE64
-#endif
+#endif // #ifndef FFX_PREFER_WAVE64
 
 #pragma warning(disable: 3205)  // conversion from larger type to smaller
 
@@ -75,7 +73,7 @@
 #define FFX_LENS_ROOTSIG_STR(p) #p
 #define FFX_LENS_ROOTSIG [RootSignature( "DescriptorTable(UAV(u0, numDescriptors = " FFX_LENS_ROOTSIG_STRINGIFY(FFX_LENS_RESOURCE_IDENTIFIER_COUNT) ")), " \
                                     "DescriptorTable(SRV(t0, numDescriptors = " FFX_LENS_ROOTSIG_STRINGIFY(FFX_LENS_RESOURCE_IDENTIFIER_COUNT) ")), " \
-                                    "RootConstants(num32BitConstants=" FFX_LENS_ROOTSIG_STRINGIFY(FFX_LENS_CONSTANT_BUFFER_1_SIZE) ", b0), " \
+                                    "CBV(b0), " \
                                     "StaticSampler(s0, filter = FILTER_MIN_MAG_MIP_LINEAR, " \
                                                       "addressU = TEXTURE_ADDRESS_CLAMP, " \
                                                       "addressV = TEXTURE_ADDRESS_CLAMP, " \
@@ -135,77 +133,63 @@ SamplerState s_LinearClamp : register(s0);
 
 #if FFX_HALF
 
+#if defined(LENS_BIND_SRV_INPUT_TEXTURE)
 FfxFloat16 FfxLensSampleR(FfxFloat32x2 fPxPos)
 {
-#if defined(LENS_BIND_SRV_INPUT_TEXTURE) 
     return FfxFloat16(r_input_texture.SampleLevel(s_LinearClamp, fPxPos, 0).r);
-#else
-    return 0.0;
-#endif // defined(LENS_BIND_SRV_INPUT_TEXTURE) 
 }
-    
+#endif // defined(LENS_BIND_SRV_INPUT_TEXTURE)
+ 
+#if defined(LENS_BIND_SRV_INPUT_TEXTURE)
 FfxFloat16 FfxLensSampleG(FfxFloat32x2 fPxPos)
 {
-#if defined(LENS_BIND_SRV_INPUT_TEXTURE) 
     return FfxFloat16(r_input_texture.SampleLevel(s_LinearClamp, fPxPos, 0).g);
-#else
-    return 0.0;
-#endif // defined(LENS_BIND_SRV_INPUT_TEXTURE) 
 }
-    
+#endif // defined(LENS_BIND_SRV_INPUT_TEXTURE)
+ 
+#if defined(LENS_BIND_SRV_INPUT_TEXTURE)
 FfxFloat16 FfxLensSampleB(FfxFloat32x2 fPxPos)
 {
-#if defined(LENS_BIND_SRV_INPUT_TEXTURE) 
     return FfxFloat16(r_input_texture.SampleLevel(s_LinearClamp, fPxPos, 0).b);
-#else
-    return 0.0;
-#endif // defined(LENS_BIND_SRV_INPUT_TEXTURE) 
 }
-    
+#endif // defined(LENS_BIND_SRV_INPUT_TEXTURE)
+ 
+#if defined(LENS_BIND_UAV_OUTPUT_TEXTURE)
 void StoreLensOutput(FfxInt32x2 iPxPos, FfxFloat16x3 fColor)
 {
-#if defined(LENS_BIND_UAV_OUTPUT_TEXTURE) 
     rw_output_texture[iPxPos] = FfxFloat32x4(fColor, 1.0);
-#else
-#endif // defined(LENS_BIND_UAV_OUTPUT_TEXTURE) 
 }
+#endif // defined(LENS_BIND_UAV_OUTPUT_TEXTURE)
 
 #else // FFX_HALF
 
+#if defined(LENS_BIND_SRV_INPUT_TEXTURE)
 FfxFloat32 FfxLensSampleR(FfxFloat32x2 fPxPos)
 {
-#if defined(LENS_BIND_SRV_INPUT_TEXTURE) 
     return r_input_texture.SampleLevel(s_LinearClamp, fPxPos, 0).r;
-#else
-    return 0.0;
-#endif // defined(LENS_BIND_SRV_INPUT_TEXTURE) 
 }
-    
+#endif // defined(LENS_BIND_SRV_INPUT_TEXTURE)
+ 
+#if defined(LENS_BIND_SRV_INPUT_TEXTURE)
 FfxFloat32 FfxLensSampleG(FfxFloat32x2 fPxPos)
 {
-#if defined(LENS_BIND_SRV_INPUT_TEXTURE) 
     return r_input_texture.SampleLevel(s_LinearClamp, fPxPos, 0).g;
-#else
-    return 0.0;
-#endif // defined(LENS_BIND_SRV_INPUT_TEXTURE) 
 }
-    
+#endif // defined(LENS_BIND_SRV_INPUT_TEXTURE)
+ 
+#if defined(LENS_BIND_SRV_INPUT_TEXTURE)
 FfxFloat32 FfxLensSampleB(FfxFloat32x2 fPxPos)
 {
-#if defined(LENS_BIND_SRV_INPUT_TEXTURE) 
     return r_input_texture.SampleLevel(s_LinearClamp, fPxPos, 0).b;
-#else
-    return 0.0;
-#endif // defined(LENS_BIND_SRV_INPUT_TEXTURE) 
 }
-    
+#endif // defined(LENS_BIND_SRV_INPUT_TEXTURE)
+ 
+#if defined(LENS_BIND_UAV_OUTPUT_TEXTURE)
 void StoreLensOutput(FfxInt32x2 iPxPos, FfxFloat32x3 fColor)
 {
-#if defined(LENS_BIND_UAV_OUTPUT_TEXTURE) 
     rw_output_texture[iPxPos] = FfxFloat32x4(fColor, 1.0);
-#else
-#endif // defined(LENS_BIND_UAV_OUTPUT_TEXTURE) 
 }
+#endif // defined(LENS_BIND_UAV_OUTPUT_TEXTURE)
 
 #endif // FFX_HALF
 

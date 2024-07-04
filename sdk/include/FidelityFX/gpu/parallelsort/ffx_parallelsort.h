@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 /// @defgroup FfxGPUParallelSort FidelityFX Parallel Sort
@@ -158,7 +158,7 @@
             gs_FFX_PARALLELSORT_Histogram[(i * FFX_PARALLELSORT_THREADGROUP_SIZE) + localID] = 0;
 
         // Wait for everyone to catch up
-        FFX_GROUP_MEMORY_BARRIER();
+        FFX_GROUP_MEMORY_BARRIER;
 
         // Data is processed in blocks, and how many we process can changed based on how much data we are processing
         // versus how many thread groups we are processing with
@@ -189,10 +189,10 @@
 
             // Pre-load the key values in order to hide some of the read latency
             FfxUInt32 srcKeys[FFX_PARALLELSORT_ELEMENTS_PER_THREAD];
-            srcKeys[0] = FfxLoadKey(DataIndex);
-            srcKeys[1] = FfxLoadKey(DataIndex + FFX_PARALLELSORT_THREADGROUP_SIZE);
-            srcKeys[2] = FfxLoadKey(DataIndex + (FFX_PARALLELSORT_THREADGROUP_SIZE * 2));
-            srcKeys[3] = FfxLoadKey(DataIndex + (FFX_PARALLELSORT_THREADGROUP_SIZE * 3));
+            srcKeys[0] = (DataIndex < NumKeys ? FfxLoadKey(DataIndex) : 0xffffffff);
+            srcKeys[1] = (DataIndex + FFX_PARALLELSORT_THREADGROUP_SIZE < NumKeys ? FfxLoadKey(DataIndex + FFX_PARALLELSORT_THREADGROUP_SIZE) : 0xffffffff);
+            srcKeys[2] = (DataIndex + FFX_PARALLELSORT_THREADGROUP_SIZE * 2 < NumKeys ? FfxLoadKey(DataIndex + FFX_PARALLELSORT_THREADGROUP_SIZE * 2) : 0xffffffff);
+            srcKeys[3] = (DataIndex + FFX_PARALLELSORT_THREADGROUP_SIZE * 3 < NumKeys ? FfxLoadKey(DataIndex + FFX_PARALLELSORT_THREADGROUP_SIZE * 3) : 0xffffffff);
 
             for (FfxUInt32 i = 0; i < FFX_PARALLELSORT_ELEMENTS_PER_THREAD; i++)
             {
@@ -207,7 +207,7 @@
 
         // Even though our LDS layout guarantees no collisions, our thread group size is greater than a wave
         // so we need to make sure all thread groups are done counting before we start tallying up the results
-        FFX_GROUP_MEMORY_BARRIER();
+        FFX_GROUP_MEMORY_BARRIER;
 
         if (localID < FFX_PARALLELSORT_SORT_BIN_COUNT)
         {
@@ -234,7 +234,7 @@
             gs_FFX_PARALLELSORT_LDSSums[waveID] = waveReduced;
 
         // Wait for everyone to catch up
-        FFX_GROUP_MEMORY_BARRIER();
+        FFX_GROUP_MEMORY_BARRIER;
 
         // First wave worth of threads sum up wave reductions
         if (!waveID)
@@ -251,7 +251,7 @@
             gs_FFX_PARALLELSORT_LDSSums[waveID] = waveReduced;
 
         // Wait for everyone to catch up
-        FFX_GROUP_MEMORY_BARRIER();
+        FFX_GROUP_MEMORY_BARRIER;
 
         // First wave worth of threads sum up wave reductions
         if (waveID == 0)
@@ -310,14 +310,14 @@
             gs_FFX_PARALLELSORT_LDSSums[waveID] = wavePrefixed + localSum;
 
         // Wait for everyone to catch up
-        FFX_GROUP_MEMORY_BARRIER();
+        FFX_GROUP_MEMORY_BARRIER;
 
         // First wave prefixes partial sums
         if (!waveID)
             gs_FFX_PARALLELSORT_LDSSums[localID] = WavePrefixSum(gs_FFX_PARALLELSORT_LDSSums[localID]);
 
         // Wait for everyone to catch up
-        FFX_GROUP_MEMORY_BARRIER();
+        FFX_GROUP_MEMORY_BARRIER;
 
         // Add the partial sums back to each wave prefix
         wavePrefixed += gs_FFX_PARALLELSORT_LDSSums[waveID];
@@ -336,14 +336,14 @@
             gs_FFX_PARALLELSORT_LDSSums[waveID] = wavePrefixed + localSum;
 
         // Wait for everyone to catch up
-        FFX_GROUP_MEMORY_BARRIER();
+        FFX_GROUP_MEMORY_BARRIER;
 
         // First wave prefixes partial sums
         if (waveID == 0)
             gs_FFX_PARALLELSORT_LDSSums[localID] = subgroupExclusiveAdd(gs_FFX_PARALLELSORT_LDSSums[localID]);
 
         // Wait for everyone to catch up
-        FFX_GROUP_MEMORY_BARRIER();
+        FFX_GROUP_MEMORY_BARRIER;
 
         // Add the partial sums back to each wave prefix
         wavePrefixed += gs_FFX_PARALLELSORT_LDSSums[waveID];
@@ -369,7 +369,7 @@
         }
 
         // Wait for everyone to catch up
-        FFX_GROUP_MEMORY_BARRIER();
+        FFX_GROUP_MEMORY_BARRIER;
 
         FfxUInt32 threadgroupSum = 0;
         // Calculate the local scan-prefix for current thread
@@ -397,7 +397,7 @@
             gs_FFX_PARALLELSORT_LDS[i][localID] += threadgroupSum;
 
         // Wait for everyone to catch up
-        FFX_GROUP_MEMORY_BARRIER();
+        FFX_GROUP_MEMORY_BARRIER;
 
         // Perform coalesced writes to scan dst
         for (FfxUInt32 i = 0; i < FFX_PARALLELSORT_ELEMENTS_PER_THREAD; i++)
@@ -431,7 +431,7 @@
             gs_FFX_PARALLELSORT_BinOffsetCache[localID] = FfxLoadSum(localID * NumThreadGroups + groupID);
 
         // Wait for everyone to catch up
-        FFX_GROUP_MEMORY_BARRIER();
+        FFX_GROUP_MEMORY_BARRIER;
 
         // Data is processed in blocks, and how many we process can changed based on how much data we are processing
         // versus how many thread groups we are processing with
@@ -458,17 +458,19 @@
 
             // Pre-load the key values in order to hide some of the read latency
             FfxUInt32 srcKeys[FFX_PARALLELSORT_ELEMENTS_PER_THREAD];
-            srcKeys[0] = FfxLoadKey(DataIndex);
-            srcKeys[1] = FfxLoadKey(DataIndex + FFX_PARALLELSORT_THREADGROUP_SIZE);
-            srcKeys[2] = FfxLoadKey(DataIndex + (FFX_PARALLELSORT_THREADGROUP_SIZE * 2));
-            srcKeys[3] = FfxLoadKey(DataIndex + (FFX_PARALLELSORT_THREADGROUP_SIZE * 3));
+            srcKeys[0] = (DataIndex < NumKeys ? FfxLoadKey(DataIndex) : 0xffffffff);
+            srcKeys[1] = (DataIndex + FFX_PARALLELSORT_THREADGROUP_SIZE < NumKeys ? FfxLoadKey(DataIndex + FFX_PARALLELSORT_THREADGROUP_SIZE) : 0xffffffff);
+            srcKeys[2] = (DataIndex + FFX_PARALLELSORT_THREADGROUP_SIZE * 2 < NumKeys ? FfxLoadKey(DataIndex + FFX_PARALLELSORT_THREADGROUP_SIZE * 2) : 0xffffffff);
+            srcKeys[3] = (DataIndex + FFX_PARALLELSORT_THREADGROUP_SIZE * 3 < NumKeys ? FfxLoadKey(DataIndex + FFX_PARALLELSORT_THREADGROUP_SIZE * 3) : 0xffffffff);
+
 
 #ifdef FFX_PARALLELSORT_COPY_VALUE
             FfxUInt32 srcValues[FFX_PARALLELSORT_ELEMENTS_PER_THREAD];
-            srcValues[0] = FfxLoadPayload(DataIndex);
-            srcValues[1] = FfxLoadPayload(DataIndex + FFX_PARALLELSORT_THREADGROUP_SIZE);
-            srcValues[2] = FfxLoadPayload(DataIndex + (FFX_PARALLELSORT_THREADGROUP_SIZE * 2));
-            srcValues[3] = FfxLoadPayload(DataIndex + (FFX_PARALLELSORT_THREADGROUP_SIZE * 3));
+            srcValues[0] = (DataIndex < NumKeys ? FfxLoadPayload(DataIndex) : 0);
+            srcValues[1] = (DataIndex + FFX_PARALLELSORT_THREADGROUP_SIZE < NumKeys ? FfxLoadPayload(DataIndex + FFX_PARALLELSORT_THREADGROUP_SIZE) : 0);
+            srcValues[2] = (DataIndex + FFX_PARALLELSORT_THREADGROUP_SIZE * 2 < NumKeys ? FfxLoadPayload(DataIndex + FFX_PARALLELSORT_THREADGROUP_SIZE * 2) : 0);
+            srcValues[3] = (DataIndex + FFX_PARALLELSORT_THREADGROUP_SIZE * 3 < NumKeys ? FfxLoadPayload(DataIndex + FFX_PARALLELSORT_THREADGROUP_SIZE * 3) : 0);
+
 #endif // FFX_PARALLELSORT_COPY_VALUE
 
             for (int i = 0; i < FFX_PARALLELSORT_ELEMENTS_PER_THREAD; i++)
@@ -477,9 +479,9 @@
                 if (localID < FFX_PARALLELSORT_SORT_BIN_COUNT)
                     gs_FFX_PARALLELSORT_LocalHistogram[localID] = 0;
 
-                FfxUInt32 localKey = (DataIndex < NumKeys ? srcKeys[i] : 0xffffffff);
+                FfxUInt32 localKey = srcKeys[i];
 #ifdef FFX_PARALLELSORT_COPY_VALUE
-                FfxUInt32 localValue = (DataIndex < NumKeys ? srcValues[i] : 0);
+                FfxUInt32 localValue = srcValues[i];
 #endif // FFX_PARALLELSORT_COPY_VALUE
 
                 // Sort the keys locally in LDS
@@ -501,7 +503,7 @@
                         gs_FFX_PARALLELSORT_LDSScratch[0] = localSum + packedHistogram;
 
                     // Wait for everyone to catch up
-                    FFX_GROUP_MEMORY_BARRIER();
+                    FFX_GROUP_MEMORY_BARRIER;
 
                     // Load the sums value for the thread group
                     packedHistogram = gs_FFX_PARALLELSORT_LDSScratch[0];
@@ -517,20 +519,20 @@
 
                     // Re-arrange the keys (store, sync, load)
                     gs_FFX_PARALLELSORT_LDSSums[keyOffset] = localKey;
-                    FFX_GROUP_MEMORY_BARRIER();
+                    FFX_GROUP_MEMORY_BARRIER;
                     localKey = gs_FFX_PARALLELSORT_LDSSums[localID];
 
                     // Wait for everyone to catch up
-                    FFX_GROUP_MEMORY_BARRIER();
+                    FFX_GROUP_MEMORY_BARRIER;
 
 #ifdef FFX_PARALLELSORT_COPY_VALUE
                     // Re-arrange the values if we have them (store, sync, load)
                     gs_FFX_PARALLELSORT_LDSSums[keyOffset] = localValue;
-                    FFX_GROUP_MEMORY_BARRIER();
+                    FFX_GROUP_MEMORY_BARRIER;
                     localValue = gs_FFX_PARALLELSORT_LDSSums[localID];
 
                     // Wait for everyone to catch up
-                    FFX_GROUP_MEMORY_BARRIER();
+                    FFX_GROUP_MEMORY_BARRIER;
 #endif // FFX_PARALLELSORT_COPY_VALUE
                 }
 
@@ -541,7 +543,7 @@
                 FFX_ATOMIC_ADD(gs_FFX_PARALLELSORT_LocalHistogram[keyIndex], 1);
 
                 // Wait for everyone to catch up
-                FFX_GROUP_MEMORY_BARRIER();
+                FFX_GROUP_MEMORY_BARRIER;
 
                 // Prefix histogram
 #if defined(FFX_HLSL)
@@ -558,7 +560,7 @@
                 FfxUInt32 globalOffset = gs_FFX_PARALLELSORT_BinOffsetCache[keyIndex];
 
                 // Wait for everyone to catch up
-                FFX_GROUP_MEMORY_BARRIER();
+                FFX_GROUP_MEMORY_BARRIER;
 
                 // Get the local offset (at this point the keys are all in increasing order from 0 -> num bins in localID 0 -> thread group size)
                 FfxUInt32 localOffset = localID - gs_FFX_PARALLELSORT_LDSScratch[keyIndex];
@@ -576,7 +578,7 @@
                 }
 
                 // Wait for everyone to catch up
-                FFX_GROUP_MEMORY_BARRIER();
+                FFX_GROUP_MEMORY_BARRIER;
 
                 // Update the cached histogram for the next set of entries
                 if (localID < FFX_PARALLELSORT_SORT_BIN_COUNT)

@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -30,9 +30,6 @@
 
 #include "ffx_cacao_private.h"
 
-// Define symbol to enable DirectX debug markers created using Cauldron
-#define FFX_CACAO_ENABLE_CAULDRON_DEBUG
-
 #define FFX_CACAO_ASSERT(exp)                assert(exp)
 #define FFX_CACAO_ARRAY_SIZE(xs)             (sizeof(xs) / sizeof(xs[0]))
 #define FFX_CACAO_COS(x)                     cosf(x)
@@ -44,13 +41,13 @@
 #define MATRIX_ROW_MAJOR_ORDER 1
 #define MAX_BLUR_PASSES 8
 
-static const FfxCacaoMat4x4 FFX_CACAO_IDENTITY_MATRIX = {
-    {
-        {1.0f, 0.0f, 0.0f, 0.0f}, 
-        {0.0f, 1.0f, 0.0f, 0.0f}, 
-        {0.0f, 0.0f, 1.0f, 0.0f}, 
-        {0.0f, 0.0f, 0.0f, 1.0f}
-    }
+static const FfxFloat32x4x4 FFX_CACAO_IDENTITY_MATRIX = {
+    
+    1.0f, 0.0f, 0.0f, 0.0f,
+    0.0f, 1.0f, 0.0f, 0.0f,
+    0.0f, 0.0f, 1.0f, 0.0f,
+    0.0f, 0.0f, 0.0f, 1.0f
+    
 };
 
 
@@ -155,8 +152,8 @@ void ffxCacaoUpdateBufferSizeInfo(const uint32_t width, const uint32_t height, c
 void ffxCacaoUpdateConstants(FfxCacaoConstants*            consts,
                              const FfxCacaoSettings*       settings,
                              const FfxCacaoBufferSizeInfo* bufferSizeInfo,
-                             const FfxCacaoMat4x4*         proj,
-                             const FfxCacaoMat4x4*         normalsToView,
+                             const FfxFloat32x4x4*         proj,
+                             const FfxFloat32x4x4*         normalsToView,
                              const float                   NormalUnPackMul,
                              const float                   NormalUnPackAdd)
 {
@@ -165,28 +162,27 @@ void ffxCacaoUpdateConstants(FfxCacaoConstants*            consts,
 
     if (settings->generateNormals)
     {
-        consts->NormalsWorldToViewspaceMatrix = FFX_CACAO_IDENTITY_MATRIX;
+        memcpy(consts->NormalsWorldToViewspaceMatrix, FFX_CACAO_IDENTITY_MATRIX, sizeof(consts->NormalsWorldToViewspaceMatrix));
     }
     else
     {
-        consts->NormalsWorldToViewspaceMatrix = *normalsToView;
+        memcpy(consts->NormalsWorldToViewspaceMatrix, *normalsToView, sizeof(consts->NormalsWorldToViewspaceMatrix));
     }
-
     // used to get average load per pixel; 9.0 is there to compensate for only doing every 9th InterlockedAdd in PSPostprocessImportanceMapB for performance reasons
     consts->LoadCounterAvgDiv = 9.0f / (float)(bufferSizeInfo->importanceMapWidth * bufferSizeInfo->importanceMapHeight * 255.0);
 
-    const float depthLinearizeMul = (MATRIX_ROW_MAJOR_ORDER) ? (-proj->elements[3][2])
-                                                       : (-proj->elements[2][3]);  // float depthLinearizeMul = ( clipFar * clipNear ) / ( clipFar - clipNear );
-    float depthLinearizeAdd = (MATRIX_ROW_MAJOR_ORDER) ? (proj->elements[2][2]) 
-                                                       : (proj->elements[2][2]);  // float depthLinearizeAdd = clipFar / ( clipFar - clipNear );
+    const float depthLinearizeMul = (MATRIX_ROW_MAJOR_ORDER) ? (-(*proj)[14])
+                                                       : (-(*proj)[11]);  // float depthLinearizeMul = ( clipFar * clipNear ) / ( clipFar - clipNear );
+    float depthLinearizeAdd = (MATRIX_ROW_MAJOR_ORDER) ? ((*proj)[10]) 
+                                                       : ((*proj)[10]);  // float depthLinearizeAdd = clipFar / ( clipFar - clipNear );
     // correct the handedness issue. need to make sure this below is correct, but I think it is.
     if (depthLinearizeMul * depthLinearizeAdd < 0)
         depthLinearizeAdd = -depthLinearizeAdd;
     consts->DepthUnpackConsts[0] = depthLinearizeMul;
     consts->DepthUnpackConsts[1] = depthLinearizeAdd;
 
-    const float tanHalfFOVY           = 1.0f / proj->elements[1][1];  // = tanf( drawContext.Camera.GetYFOV( ) * 0.5f );
-    const float tanHalfFOVX           = 1.0F / proj->elements[0][0];  // = tanHalfFOVY * drawContext.Camera.GetAspect( );
+    const float tanHalfFOVY           = 1.0f / (*proj)[5];  // = tanf( drawContext.Camera.GetYFOV( ) * 0.5f );
+    const float tanHalfFOVX           = 1.0F / (*proj)[0];  // = tanHalfFOVY * drawContext.Camera.GetAspect( );
     consts->CameraTanHalfFOV[0] = tanHalfFOVX;
     consts->CameraTanHalfFOV[1] = tanHalfFOVY;
 
@@ -465,14 +461,14 @@ static FfxErrorCode createPipelineStates(FfxCacaoContext_Private* context)
     context->contextDescription.backendInterface.fpGetDeviceCapabilities(&context->contextDescription.backendInterface, &capabilities);
 
     // Setup a few options used to determine permutation flags
-    const bool haveShaderModel66 = capabilities.minimumSupportedShaderModel >= FFX_SHADER_MODEL_6_6;
+    const bool haveShaderModel66 = capabilities.maximumSupportedShaderModel >= FFX_SHADER_MODEL_6_6;
     const bool supportedFP16     = capabilities.fp16Supported;
 
     bool canForceWave64 = false;
 
     const uint32_t waveLaneCountMin = capabilities.waveLaneCountMin;
     const uint32_t waveLaneCountMax = capabilities.waveLaneCountMax;
-    if (waveLaneCountMin == 32 && waveLaneCountMax == 64)
+    if (waveLaneCountMin <= 64 && waveLaneCountMax >= 64)
     {
         canForceWave64 = haveShaderModel66;
     }
@@ -602,12 +598,16 @@ static FfxErrorCode cacaoCreate(FfxCacaoContext_Private* context, const FfxCacao
     memset(context, 0, sizeof(FfxCacaoContext_Private));
     context->device = contextDescription->backendInterface.device;
     memcpy(&context->contextDescription, contextDescription, sizeof(FfxCacaoContextDescription));
+
+    // Check version info - make sure we are linked with the right backend version
+    FfxVersionNumber version = context->contextDescription.backendInterface.fpGetSDKVersion(&context->contextDescription.backendInterface);
+    FFX_RETURN_ON_ERROR(version == FFX_SDK_MAKE_VERSION(1, 1, 0), FFX_ERROR_INVALID_VERSION);
     
     context->constantBuffer.num32BitEntries = sizeof(FfxCacaoConstants) / sizeof(uint32_t);
 
     // Create the device
     FfxErrorCode errorCode =
-        context->contextDescription.backendInterface.fpCreateBackendContext(&context->contextDescription.backendInterface, &context->effectContextId);
+        context->contextDescription.backendInterface.fpCreateBackendContext(&context->contextDescription.backendInterface, nullptr, &context->effectContextId);
     FFX_RETURN_ON_ERROR(errorCode == FFX_OK, errorCode);
 
 #ifdef FFX_CACAO_ENABLE_PROFILING
@@ -628,76 +628,70 @@ static FfxErrorCode cacaoCreate(FfxCacaoContext_Private* context, const FfxCacao
     const FfxInternalResourceDescription internalSurfaceDesc[] = {
 
         {FFX_CACAO_RESOURCE_IDENTIFIER_DEINTERLEAVED_DEPTHS,
-         context->useDownsampledSsao
-         ? L"CACAO_Deinterleaved_Depths_Downsampled"
-         : L"CACAO_DeInterleaved_Depths",
+         context->useDownsampledSsao ? L"CACAO_Deinterleaved_Depths_Downsampled" : L"CACAO_DeInterleaved_Depths",
          FFX_RESOURCE_TYPE_TEXTURE2D,
          FFX_RESOURCE_USAGE_UAV,
          FFX_SURFACE_FORMAT_R16_FLOAT,
          bsi->deinterleavedDepthBufferWidth,
          bsi->deinterleavedDepthBufferHeight,
          4,
-         FFX_RESOURCE_FLAGS_ALIASABLE},
+         FFX_RESOURCE_FLAGS_ALIASABLE,
+         {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
 
         {FFX_CACAO_RESOURCE_IDENTIFIER_DEINTERLEAVED_NORMALS,
-         context->useDownsampledSsao 
-         ? L"CACAO_DeInterleaved_Normals_Downsampled"
-         : L"CACAO_DeInterleaved_Normals",
+         context->useDownsampledSsao ? L"CACAO_DeInterleaved_Normals_Downsampled" : L"CACAO_DeInterleaved_Normals",
          FFX_RESOURCE_TYPE_TEXTURE2D,
          FFX_RESOURCE_USAGE_UAV,
          FFX_SURFACE_FORMAT_R8G8B8A8_SNORM,
          bsi->ssaoBufferWidth,
          bsi->ssaoBufferHeight,
          1,
-         FFX_RESOURCE_FLAGS_ALIASABLE},
+         FFX_RESOURCE_FLAGS_ALIASABLE,
+         {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
 
         {FFX_CACAO_RESOURCE_IDENTIFIER_SSAO_BUFFER_PING,
-         context->useDownsampledSsao 
-         ? L"CACAO_Ssao_Buffer_Ping_Downsampled" 
-         : L"CACAO_Ssao_Buffer_Ping",
+         context->useDownsampledSsao ? L"CACAO_Ssao_Buffer_Ping_Downsampled" : L"CACAO_Ssao_Buffer_Ping",
          FFX_RESOURCE_TYPE_TEXTURE2D,
          FFX_RESOURCE_USAGE_UAV,
          FFX_SURFACE_FORMAT_R8G8_UNORM,
          bsi->ssaoBufferWidth,
          bsi->ssaoBufferHeight,
          1,
-         FFX_RESOURCE_FLAGS_ALIASABLE},
+         FFX_RESOURCE_FLAGS_ALIASABLE,
+         {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
 
         {FFX_CACAO_RESOURCE_IDENTIFIER_SSAO_BUFFER_PONG,
-         context->useDownsampledSsao 
-         ? L"CACAO_Ssao_Buffer_Pong_Downsampled" 
-         : L"CACAO_Ssao_Buffer_Pong",
+         context->useDownsampledSsao ? L"CACAO_Ssao_Buffer_Pong_Downsampled" : L"CACAO_Ssao_Buffer_Pong",
          FFX_RESOURCE_TYPE_TEXTURE2D,
          FFX_RESOURCE_USAGE_UAV,
          FFX_SURFACE_FORMAT_R8G8_UNORM,
          bsi->ssaoBufferWidth,
          bsi->ssaoBufferHeight,
          1,
-         FFX_RESOURCE_FLAGS_ALIASABLE},
+         FFX_RESOURCE_FLAGS_ALIASABLE,
+         {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
 
         {FFX_CACAO_RESOURCE_IDENTIFIER_IMPORTANCE_MAP,
-         context->useDownsampledSsao 
-         ? L"CACAO_Importance_Map_Downsampled" 
-         : L"CACAO_Importance_Map",
+         context->useDownsampledSsao ? L"CACAO_Importance_Map_Downsampled" : L"CACAO_Importance_Map",
          FFX_RESOURCE_TYPE_TEXTURE2D,
          FFX_RESOURCE_USAGE_UAV,
          FFX_SURFACE_FORMAT_R8_UNORM,
          bsi->importanceMapWidth,
          bsi->importanceMapHeight,
          1,
-         FFX_RESOURCE_FLAGS_ALIASABLE},
+         FFX_RESOURCE_FLAGS_ALIASABLE,
+         {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
 
         {FFX_CACAO_RESOURCE_IDENTIFIER_IMPORTANCE_MAP_PONG,
-         context->useDownsampledSsao
-         ? L"CACAO_Importance_Map_Pong_Downsampled" 
-         : L"CACAO_Importance_Map_Pong",
+         context->useDownsampledSsao ? L"CACAO_Importance_Map_Pong_Downsampled" : L"CACAO_Importance_Map_Pong",
          FFX_RESOURCE_TYPE_TEXTURE2D,
          FFX_RESOURCE_USAGE_UAV,
          FFX_SURFACE_FORMAT_R8_UNORM,
          bsi->importanceMapWidth,
          bsi->importanceMapHeight,
          1,
-         FFX_RESOURCE_FLAGS_ALIASABLE},
+         FFX_RESOURCE_FLAGS_ALIASABLE,
+         {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
     };
 
     const uint32_t surfaceDepths[] = {
@@ -715,9 +709,7 @@ static FfxErrorCode cacaoCreate(FfxCacaoContext_Private* context, const FfxCacao
     // Create load counter
     {
         const FfxInternalResourceDescription internalSurfaceDesc = {FFX_CACAO_RESOURCE_IDENTIFIER_LOAD_COUNTER_BUFFER,
-                                                                    context->useDownsampledSsao
-                                                                    ? L"CACAO::m_loadCounterDownsampled"
-                                                                    : L"CACAO::m_loadCounter",
+                                                                    context->useDownsampledSsao ? L"CACAO::m_loadCounterDownsampled" : L"CACAO::m_loadCounter",
                                                                     FFX_RESOURCE_TYPE_TEXTURE1D,
                                                                     FFX_RESOURCE_USAGE_UAV,
                                                                     FFX_SURFACE_FORMAT_UNKNOWN,
@@ -725,17 +717,15 @@ static FfxErrorCode cacaoCreate(FfxCacaoContext_Private* context, const FfxCacao
                                                                     sizeof(uint32_t),
                                                                     1,
                                                                     FFX_RESOURCE_FLAGS_NONE,
-                                                                    0,
-                                                                    0};
+                                                                    {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}};
 
         const FfxResourceDescription resourceDescription = {FFX_RESOURCE_TYPE_TEXTURE1D, FFX_SURFACE_FORMAT_R32_UINT, 1, 1, 1, 1, FFX_RESOURCE_FLAGS_NONE, internalSurfaceDesc.usage};
         const FfxCreateResourceDescription createResourceDescription = {FFX_HEAP_TYPE_DEFAULT,
                                                                         resourceDescription,
                                                                         FFX_RESOURCE_STATE_UNORDERED_ACCESS,
-                                                                        internalSurfaceDesc.initDataSize,
-                                                                        internalSurfaceDesc.initData,
                                                                         internalSurfaceDesc.name,
-                                                                        internalSurfaceDesc.id};
+                                                                        internalSurfaceDesc.id,
+                                                                        internalSurfaceDesc.initData};
         FFX_VALIDATE(contextDescription->backendInterface.fpCreateResource(&context->contextDescription.backendInterface,
                                                                            &createResourceDescription,
                                                                            context->effectContextId,
@@ -758,10 +748,9 @@ static FfxErrorCode cacaoCreate(FfxCacaoContext_Private* context, const FfxCacao
         const FfxCreateResourceDescription    createResourceDescription = {FFX_HEAP_TYPE_DEFAULT,
                                                                            resourceDescription,
                                                                            initialState,
-                                                                           currentSurfaceDescription->initDataSize,
-                                                                           currentSurfaceDescription->initData,
                                                                            currentSurfaceDescription->name,
-                                                                           currentSurfaceDescription->id};
+                                                                           currentSurfaceDescription->id,
+                                                                           currentSurfaceDescription->initData};
 
         FFX_VALIDATE(context->contextDescription.backendInterface.fpCreateResource(&context->contextDescription.backendInterface,
                                                                                    &createResourceDescription,
@@ -828,7 +817,7 @@ static FfxErrorCode cacaoRelease(FfxCacaoContext_Private* context)
 
     for (uint32_t i = 0; i < FFX_CACAO_RESOURCE_IDENTIFIER_COUNT; ++i)
     {
-        ffxSafeReleaseResource(&context->contextDescription.backendInterface, context->textures[i]);
+        ffxSafeReleaseResource(&context->contextDescription.backendInterface, context->textures[i], context->effectContextId);
     }
 
     // Destroy the context
@@ -841,6 +830,7 @@ static void scheduleDispatch(
     FfxCacaoContext_Private* context, const FfxPipelineState* pipeline, const uint32_t dispatchX, const uint32_t dispatchY, const uint32_t dispatchZ, const uint32_t flags = 0)
 {
     FfxGpuJobDescription dispatchJob = {FFX_GPU_JOB_COMPUTE};
+    wcscpy_s(dispatchJob.jobLabel, pipeline->name);
     const size_t size                      = sizeof(dispatchJob);
 
     for (uint32_t currentShaderResourceViewIndex = 0; currentShaderResourceViewIndex < pipeline->srvTextureCount; ++currentShaderResourceViewIndex)
@@ -853,31 +843,30 @@ static void scheduleDispatch(
             currentResource = context->textures[FFX_CACAO_RESOURCE_IDENTIFIER_SSAO_BUFFER_PONG];
         }
 
-        dispatchJob.computeJobDescriptor.srvTextures[currentShaderResourceViewIndex] = currentResource;
-        wcscpy_s(dispatchJob.computeJobDescriptor.srvTextureNames[currentShaderResourceViewIndex],
+        dispatchJob.computeJobDescriptor.srvTextures[currentShaderResourceViewIndex].resource = currentResource;
+#ifdef FFX_DEBUG
+        wcscpy_s(dispatchJob.computeJobDescriptor.srvTextures[currentShaderResourceViewIndex].name,
                  pipeline->srvTextureBindings[currentShaderResourceViewIndex].name);
+#endif
     }
 
     uint32_t uavEntry = 0;  // Uav resource offset (accounts for uav arrays)
     for (uint32_t currentUnorderedAccessViewIndex = 0; currentUnorderedAccessViewIndex < pipeline->uavTextureCount; ++currentUnorderedAccessViewIndex)
     {
-        uint32_t       numBindings       = pipeline->uavTextureBindings[currentUnorderedAccessViewIndex].bindCount;
+        uint32_t       bindEntry         = pipeline->uavTextureBindings[currentUnorderedAccessViewIndex].arrayIndex;
         const uint32_t currentResourceId = pipeline->uavTextureBindings[currentUnorderedAccessViewIndex].resourceIdentifier;
-        wcscpy_s(dispatchJob.computeJobDescriptor.uavTextureNames[currentUnorderedAccessViewIndex],
+#ifdef FFX_DEBUG
+        wcscpy_s(dispatchJob.computeJobDescriptor.uavTextures[currentUnorderedAccessViewIndex].name,
                  pipeline->uavTextureBindings[currentUnorderedAccessViewIndex].name);
-
+#endif
         if (currentResourceId == FFX_CACAO_RESOURCE_IDENTIFIER_DOWNSAMPLED_DEPTH_MIPMAP_0)
         {
             const FfxResourceInternal currentResource = context->textures[FFX_CACAO_RESOURCE_IDENTIFIER_DEINTERLEAVED_DEPTHS];
 
-            for (uint32_t bindEntry = 0; bindEntry < pipeline->uavTextureBindings[currentUnorderedAccessViewIndex].bindCount; ++bindEntry)
-            {
-                // Don't over-subscribe mips (default to mip 0 once we've exhausted min mip)
-                const FfxResourceDescription resDesc =
-                    context->contextDescription.backendInterface.fpGetResourceDescription(&context->contextDescription.backendInterface, currentResource);
-                dispatchJob.computeJobDescriptor.uavTextures[uavEntry] = currentResource;
-                dispatchJob.computeJobDescriptor.uavTextureMips[uavEntry++] = (bindEntry < resDesc.mipCount) ? bindEntry : 0;
-            }
+            // Don't over-subscribe mips (default to mip 0 once we've exhausted min mip)
+            const FfxResourceDescription resDesc = context->contextDescription.backendInterface.fpGetResourceDescription(&context->contextDescription.backendInterface, currentResource);
+            dispatchJob.computeJobDescriptor.uavTextures[uavEntry].resource = currentResource;
+            dispatchJob.computeJobDescriptor.uavTextures[uavEntry++].mip    = (bindEntry < resDesc.mipCount) ? bindEntry : 0;
         }
         else
         {
@@ -887,8 +876,8 @@ static void scheduleDispatch(
                 currentResource = context->textures[FFX_CACAO_RESOURCE_IDENTIFIER_SSAO_BUFFER_PONG];
             }
 
-            dispatchJob.computeJobDescriptor.uavTextures[uavEntry] = currentResource;
-            dispatchJob.computeJobDescriptor.uavTextureMips[uavEntry++] = 0;
+            dispatchJob.computeJobDescriptor.uavTextures[uavEntry].resource = currentResource;
+            dispatchJob.computeJobDescriptor.uavTextures[uavEntry++].mip = 0;
         }
     }
 
@@ -897,8 +886,9 @@ static void scheduleDispatch(
     dispatchJob.computeJobDescriptor.dimensions[2] = dispatchZ;
     dispatchJob.computeJobDescriptor.pipeline      = *pipeline;
 
-
+#ifdef FFX_DEBUG
     wcscpy_s(dispatchJob.computeJobDescriptor.cbNames[0], pipeline->constantBufferBindings[0].name);
+#endif
     dispatchJob.computeJobDescriptor.cbs[0] = context->constantBuffer;
 
     context->contextDescription.backendInterface.fpScheduleGpuJob(&context->contextDescription.backendInterface, &dispatchJob);
@@ -912,8 +902,8 @@ static FfxErrorCode cacaoDispatch(FfxCacaoContext_Private* context,
                                   FfxResource              depthBuffer,
                                   FfxResource              normalBuffer,
                                   FfxResource              outputBuffer,
-                                  const FfxCacaoMat4x4*    proj,
-                                  const FfxCacaoMat4x4*    normalsToView,
+                                  const FfxFloat32x4x4*    proj,
+                                  const FfxFloat32x4x4*    normalsToView,
                                   const float              normalUnPackMul,
                                   const float              normalUnPackAdd)
 {
@@ -944,18 +934,19 @@ static FfxErrorCode cacaoDispatch(FfxCacaoContext_Private* context,
     // clear load counter
     {
         FfxGpuJobDescription clearJob      = {FFX_GPU_JOB_CLEAR_FLOAT};
+        wcscpy_s(clearJob.jobLabel, L"Clear Load Counter");
         uint32_t             clearValues[] = {0, 0, 0, 0};
         memcpy(clearJob.clearJobDescriptor.color, clearValues, sizeof(uint32_t) * FFX_CACAO_ARRAY_SIZE(clearJob.clearJobDescriptor.color));
         clearJob.clearJobDescriptor.target = context->textures[FFX_CACAO_RESOURCE_IDENTIFIER_LOAD_COUNTER_BUFFER];
         context->contextDescription.backendInterface.fpScheduleGpuJob(&context->contextDescription.backendInterface, &clearJob);
     }
-    context->contextDescription.backendInterface.fpExecuteGpuJobs(&context->contextDescription.backendInterface, commandList);
+    context->contextDescription.backendInterface.fpExecuteGpuJobs(&context->contextDescription.backendInterface, commandList, context->effectContextId);
     // upload constant buffers
     ffxCacaoUpdateConstants(&context->constants, &context->settings, bsi, proj, normalsToView, normalUnPackMul, normalUnPackAdd);
-    memcpy(&context->constantBuffer.data,
-           &context->constants,
-           sizeof(FfxCacaoConstants));
-
+    
+    context->contextDescription.backendInterface.fpStageConstantBufferDataFunc(
+        &context->contextDescription.backendInterface, &context->constants, sizeof(FfxCacaoConstants), &context->constantBuffer);
+    
     // prepare depths, normals and mips
     {
         USER_MARKER("Prepare downsampled depths, normals and mips");
@@ -1177,7 +1168,7 @@ static FfxErrorCode cacaoDispatch(FfxCacaoContext_Private* context,
     }
 
     // Execute all the work for the frame
-    context->contextDescription.backendInterface.fpExecuteGpuJobs(&context->contextDescription.backendInterface, commandList);
+    context->contextDescription.backendInterface.fpExecuteGpuJobs(&context->contextDescription.backendInterface, commandList, context->effectContextId);
 
     context->contextDescription.backendInterface.fpUnregisterResources(&context->contextDescription.backendInterface, commandList, context->effectContextId);
 
@@ -1215,6 +1206,7 @@ FfxErrorCode ffxCacaoContextCreate(FfxCacaoContext* context, const FfxCacaoConte
     FFX_RETURN_ON_ERROR(contextDescription, FFX_ERROR_INVALID_POINTER);
 
     // validate that all callbacks are set for the interface
+    FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpGetSDKVersion, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpGetDeviceCapabilities, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpCreateBackendContext, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpDestroyBackendContext, FFX_ERROR_INCOMPLETE_INTERFACE);
@@ -1270,10 +1262,15 @@ FfxErrorCode ffxCacaoUpdateSettings(FfxCacaoContext* context, const FfxCacaoSett
 {
     FFX_RETURN_ON_ERROR(context, FFX_ERROR_INVALID_POINTER);
     FFX_RETURN_ON_ERROR(settings, FFX_ERROR_INVALID_POINTER);
-
+    
     FfxCacaoContext_Private* contextPrivate = (FfxCacaoContext_Private*)(context);
     contextPrivate->useDownsampledSsao      = useDownsampledSsao;
     memcpy(&contextPrivate->settings, settings, sizeof(*settings));
 
     return FFX_OK;
+}
+
+FFX_API FfxVersionNumber ffxCacaoGetEffectVersion()
+{
+    return FFX_SDK_MAKE_VERSION(FFX_CACAO_VERSION_MAJOR, FFX_CACAO_VERSION_MINOR, FFX_CACAO_VERSION_PATCH);
 }

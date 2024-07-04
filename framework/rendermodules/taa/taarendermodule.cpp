@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -51,10 +51,8 @@ void TAARenderModule::Init(const json& initData)
 
     // UI
     // Register UI for Tone mapping as part of post processing
-    m_UISection.SectionName = "TAA";
-
-    m_UISection.AddCheckBox("Enable TAA", &m_bEnableTaa);
-    GetUIManager()->RegisterUIElements(m_UISection);
+    m_UISection = GetUIManager()->RegisterUIElements("TAA");
+    m_UISection->RegisterUIElement<UICheckBox>("Enable TAA", m_bEnableTaa);
 
     // We are now ready for use
     SetModuleReady(true);
@@ -76,16 +74,17 @@ void TAARenderModule::Execute(double deltaTime, cauldron::CommandList* pCmdList)
     if (!m_bEnableTaa)
     {
         // Disable Jitter
-        GetScene()->GetCurrentCamera()->SetJitterValues({0, 0});
+        //GetScene()->GetCurrentCamera()->SetJitterValues({0, 0});
+        
 
         m_bFirst = true;
         return;
     }
-    else
+    /*else
     {
         Vec2 jitterValues = CalculateJitterOffsets(m_pTAAOutputBuffer->GetDesc().Width, m_pTAAOutputBuffer->GetDesc().Height, s_Seed);
         GetScene()->GetCurrentCamera()->SetJitterValues(jitterValues);
-    }
+    }*/
 
     GPUScopedProfileCapture tonemappingMarker(pCmdList, L"TAA");
 
@@ -123,8 +122,8 @@ void TAARenderModule::Execute(double deltaTime, cauldron::CommandList* pCmdList)
     }
 
 
-    uint32_t ThreadGroupCountX = DivideRoundingUp(m_pTAAOutputBuffer->GetDesc().Width, 16);
-    uint32_t ThreadGroupCountY = DivideRoundingUp(m_pTAAOutputBuffer->GetDesc().Height, 16);
+    uint32_t ThreadGroupCountX = DivideRoundingUp(taaCB.RenderWidth, 16);
+    uint32_t ThreadGroupCountY = DivideRoundingUp(taaCB.RenderHeight, 16);
     Dispatch(pCmdList, ThreadGroupCountX, ThreadGroupCountY, 1);
 
 
@@ -147,8 +146,8 @@ void TAARenderModule::Execute(double deltaTime, cauldron::CommandList* pCmdList)
     SetPipelineState(pCmdList, m_pPostPipelineObj);
 
 
-    ThreadGroupCountX = DivideRoundingUp(m_pTAAOutputBuffer->GetDesc().Width, 8);
-    ThreadGroupCountY = DivideRoundingUp(m_pTAAOutputBuffer->GetDesc().Height, 8);
+    ThreadGroupCountX = DivideRoundingUp(taaCB.RenderWidth, 8);
+    ThreadGroupCountY = DivideRoundingUp(taaCB.RenderHeight, 8);
     Dispatch(pCmdList, ThreadGroupCountX, ThreadGroupCountY, 1);
 
     {
@@ -168,18 +167,22 @@ void TAARenderModule::EnableModule(bool enabled)
 
     if (enabled)
     {
-        Vec2 jitterValues = CalculateJitterOffsets(m_pTAAOutputBuffer->GetDesc().Width, m_pTAAOutputBuffer->GetDesc().Height, s_Seed);
-        GetScene()->GetCurrentCamera()->SetJitterValues(jitterValues);
-        m_bFirst = true;
+        // Set the jitter callback to use 
+        CameraJitterCallback jitterCallback = [this](Vec2& values) {
+                values = CalculateJitterOffsets(m_pTAAOutputBuffer->GetDesc().Width, m_pTAAOutputBuffer->GetDesc().Height, s_Seed);
+            };
+        CameraComponent::SetJitterCallbackFunc(jitterCallback);
 
-        // Re-enable UI
-        GetUIManager()->RegisterUIElements(m_UISection);
+        /*Vec2 jitterValues = CalculateJitterOffsets(m_pTAAOutputBuffer->GetDesc().Width, m_pTAAOutputBuffer->GetDesc().Height, s_Seed);
+        GetScene()->GetCurrentCamera()->SetJitterValues(jitterValues);*/
+        m_bFirst = true;
     }
     else
     {
-        // Disable the UI
-        GetUIManager()->UnRegisterUIElements(m_UISection);
+        CameraComponent::SetJitterCallbackFunc(nullptr);
     }
+
+    m_UISection->Show(enabled);
 }
 
 void TAARenderModule::OnResize(const ResolutionInfo& resInfo)

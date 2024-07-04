@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C)2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
 //
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -29,17 +29,17 @@ FFX_GROUPSHARED FfxInt32 g_FFX_DNSR_Shadows_false_count;
 FfxBoolean FFX_DNSR_Shadows_ThreadGroupAllTrue(FfxBoolean val)
 {
     const FfxUInt32 lane_count_in_thread_group = 64;
-    if (WaveLaneCount() == lane_count_in_thread_group)
+    if (ffxWaveLaneCount() == lane_count_in_thread_group)
     {
-        return WaveAllTrue(val);
+        return ffxWaveAllTrue(val);
     }
     else
     {
-        FFX_GROUP_MEMORY_BARRIER();
+        FFX_GROUP_MEMORY_BARRIER;
         g_FFX_DNSR_Shadows_false_count = 0;
-        FFX_GROUP_MEMORY_BARRIER();
+        FFX_GROUP_MEMORY_BARRIER;
         if (!val) g_FFX_DNSR_Shadows_false_count = 1;
-        FFX_GROUP_MEMORY_BARRIER();
+        FFX_GROUP_MEMORY_BARRIER;
         return g_FFX_DNSR_Shadows_false_count == 0;
     }
 }
@@ -139,8 +139,8 @@ FfxFloat32x2 FFX_DNSR_Shadows_GetClosestVelocity(FfxInt32x2 did, FfxFloat32 dept
     FfxFloat32x2 closest_velocity = LoadVelocity(did);
     FfxFloat32 closest_depth = depth;
 
-    FfxFloat32 new_depth = QuadReadX(closest_depth);
-    FfxFloat32x2 new_velocity = QuadReadX(closest_velocity);
+    FfxFloat32 new_depth = ffxQuadReadX(closest_depth);
+    FfxFloat32x2 new_velocity = ffxQuadReadX(closest_velocity);
 
 #if FFX_DENOISER_OPTION_INVERTED_DEPTH
     if (new_depth > closest_depth)
@@ -152,8 +152,8 @@ FfxFloat32x2 FFX_DNSR_Shadows_GetClosestVelocity(FfxInt32x2 did, FfxFloat32 dept
         closest_velocity = new_velocity;
     }
 
-    new_depth = QuadReadY(closest_depth);
-    new_velocity = QuadReadY(closest_velocity);
+    new_depth = ffxQuadReadY(closest_depth);
+    new_velocity = ffxQuadReadY(closest_velocity);
 
 #if FFX_DENOISER_OPTION_INVERTED_DEPTH
     if (new_depth > closest_depth)
@@ -180,7 +180,7 @@ FfxFloat32 FFX_DNSR_Shadows_KernelWeight(FfxFloat32 i)
     {
         kernel_weights_sum += 2 * KERNEL_WEIGHT(c); // Add other half of the kernel to the sum
     }
-    FfxFloat32 inv_kernel_weights_sum = rcp(kernel_weights_sum);
+    FfxFloat32 inv_kernel_weights_sum = ffxReciprocal(kernel_weights_sum);
 
     // The only runtime code in this function
     return KERNEL_WEIGHT(i) * inv_kernel_weights_sum;
@@ -270,7 +270,7 @@ FfxFloat32 FFX_DNSR_Shadows_ComputeLocalNeighborhood(FfxInt32x2 did, FfxInt32x2 
     g_FFX_DNSR_Shadows_neighborhood[gtid.x][gtid.y + 8] = center;
     g_FFX_DNSR_Shadows_neighborhood[gtid.x][gtid.y + 16] = lower;
 
-    FFX_GROUP_MEMORY_BARRIER();
+    FFX_GROUP_MEMORY_BARRIER;
 
     // First combine the own values.
     // KERNEL_RADIUS pixels up is own upper and KERNEL_RADIUS pixels down is own lower value

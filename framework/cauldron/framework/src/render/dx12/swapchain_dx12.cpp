@@ -1,17 +1,20 @@
-// AMD Cauldron code
+// This file is part of the FidelityFX SDK.
 //
-// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sub-license, and / or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -36,7 +39,6 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb/stb_image_write.h"
 
-using namespace Microsoft::WRL;
 using namespace std::experimental;
 
 namespace cauldron
@@ -72,34 +74,39 @@ namespace cauldron
         // Set primaries based on display mode
         PopulateHDRMetadataBasedOnDisplayMode();
 
-        ComPtr<IDXGIFactory6> pFactory;
+        MSComPtr<IDXGIFactory6> pFactory;
         CauldronThrowOnFail(CreateDXGIFactory1(IID_PPV_ARGS(&pFactory)));
 
         // Setup swap chain description
-        m_SwapChainDesc = {};
-        m_SwapChainDesc.BufferCount = pConfig->BackBufferCount;
-        m_SwapChainDesc.Width = pConfig->Width;
-        m_SwapChainDesc.Height = pConfig->Height;
-        m_SwapChainDesc.Format = GetDXGIFormat(m_SwapChainFormat);
-        m_SwapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        m_SwapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD; // use most optimized mode
-        m_SwapChainDesc.SampleDesc.Count = 1;
+        m_SwapChainDesc1 = {};
+        m_SwapChainDesc1.BufferCount = pConfig->BackBufferCount;
+        m_SwapChainDesc1.Width = pConfig->Width;
+        m_SwapChainDesc1.Height = pConfig->Height;
+        m_SwapChainDesc1.Format = GetDXGIFormat(m_SwapChainFormat);
+        m_SwapChainDesc1.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+        m_SwapChainDesc1.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD; // use most optimized mode
+        m_SwapChainDesc1.SampleDesc.Count = 1;
 
         // Query tearing support
         CauldronWarnOnFail(pFactory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &m_TearingSupported, sizeof(BOOL))); // Must use sizeof(BOOL) or will not query properly
-        m_SwapChainDesc.Flags = (m_TearingSupported) ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
+        m_SwapChainDesc1.Flags = (m_TearingSupported) ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
 
         // Set VSync status
         m_VSyncEnabled = pConfig->Vsync;
 
         // Create the swap chain with the given parameters
         SwapChainCreationParams creationParams;
-        creationParams.DX12Desc = m_SwapChainDesc;
-        creationParams.WndHandle = GetFramework()->GetInternal()->GetHWND();
+        creationParams.DX12Desc = m_SwapChainDesc1;
+        creationParams.WndHandle = GetFramework()->GetImpl()->GetHWND();
         creationParams.pFactory = pFactory;
 
         SwapChain* pSwapChain = this;
         GetDevice()->CreateSwapChain(pSwapChain, creationParams, CommandQueue::Graphics);
+
+        // Retrieve various desc structs now that swapchain has been created
+        m_pSwapChain->GetDesc(&m_SwapChainDesc);
+        m_pSwapChain->GetDesc1(&m_SwapChainDesc1);
+        m_pSwapChain->GetFullscreenDesc(&m_FullscreenDesc);
 
         SetHDRMetadataAndColorspace();
 
@@ -117,9 +124,9 @@ namespace cauldron
         DestroySwapChainRenderTargets();
 
         // Resize
-        m_SwapChainDesc.Width = width;
-        m_SwapChainDesc.Height = height;
-        CauldronThrowOnFail(m_pSwapChain->ResizeBuffers(m_SwapChainDesc.BufferCount, width, height, GetDXGIFormat(m_SwapChainFormat), m_SwapChainDesc.Flags));
+        m_SwapChainDesc1.Width = width;
+        m_SwapChainDesc1.Height = height;
+        CauldronThrowOnFail(m_pSwapChain->ResizeBuffers(m_SwapChainDesc1.BufferCount, width, height, GetDXGIFormat(m_SwapChainFormat), m_SwapChainDesc1.Flags));
 
         // Always remember to re set metadata when swapchain is recreated
         SetHDRMetadataAndColorspace();
@@ -146,13 +153,13 @@ namespace cauldron
 
     void SwapChainInternal::EnumerateOutputs()
     {
-        const ComPtr<IDXGIAdapter> adapter = GetDevice()->GetImpl()->GetAdapter();
+        const MSComPtr<IDXGIAdapter> adapter = GetDevice()->GetImpl()->GetAdapter();
 
-        ComPtr<IDXGIOutput> pOutput = nullptr;
+        MSComPtr<IDXGIOutput> pOutput = nullptr;
 
         for (UINT outputIndex = 0; adapter->EnumOutputs(outputIndex, &pOutput) != DXGI_ERROR_NOT_FOUND; outputIndex++)
         {
-            ComPtr<IDXGIOutput6> pOutput6;
+            MSComPtr<IDXGIOutput6> pOutput6;
             CauldronThrowOnFail(pOutput->QueryInterface(__uuidof(IDXGIOutput6), (void**)&pOutput6));
             m_pAttachedOutputs.push_back(pOutput6);
         }
@@ -228,7 +235,7 @@ namespace cauldron
 
     void SwapChainInternal::FindCurrentOutput()
     {
-        const HWND hWnd = GetFramework()->GetInternal()->GetHWND();
+        const HWND hWnd = GetFramework()->GetImpl()->GetHWND();
         RECT windowRect;
         GetWindowRect(hWnd, &windowRect);
 
@@ -296,7 +303,7 @@ namespace cauldron
                 {
                     // Find display, app window is rendering to in ags display list
                     // Unfortunately we cannot use m_pCurrentOutput
-                    const HWND hWnd = GetFramework()->GetInternal()->GetHWND();
+                    const HWND hWnd = GetFramework()->GetImpl()->GetHWND();
                     int        displayIndexAGS   = -1;
                     float      bestIntersectArea = -1.0f;
                     for (int j = 0; j < device.numDisplays; j++)
@@ -332,8 +339,8 @@ namespace cauldron
     {
         // Create render targets backed by the swap chain buffers
         std::vector<GPUResource*> resourceArray;
-        resourceArray.reserve(m_SwapChainDesc.BufferCount);
-        for (uint32_t i = 0; i < m_SwapChainDesc.BufferCount; i++)
+        resourceArray.reserve(m_SwapChainDesc1.BufferCount);
+        for (uint32_t i = 0; i < m_SwapChainDesc1.BufferCount; i++)
         {
             ID3D12Resource* pBackBuffer;
             CauldronThrowOnFail(m_pSwapChain->GetBuffer(i, IID_PPV_ARGS(&pBackBuffer)));
@@ -350,17 +357,17 @@ namespace cauldron
             resourceArray.push_back(GPUResource::CreateGPUResource(name.c_str(), nullptr, ResourceState::Present, &initParams, true));
         }
 
-        TextureDesc rtDesc = TextureDesc::Tex2D(SwapChain::s_SwapChainRTName, ToGamma(m_SwapChainFormat), m_SwapChainDesc.Width, m_SwapChainDesc.Height, 1, 0, ResourceFlags::AllowRenderTarget);
+        TextureDesc rtDesc = TextureDesc::Tex2D(SwapChain::s_SwapChainRTName, m_SwapChainFormat, m_SwapChainDesc1.Width, m_SwapChainDesc1.Height, 1, 0, ResourceFlags::AllowRenderTarget);
         if (m_pRenderTarget == nullptr)
             m_pRenderTarget = new SwapChainRenderTarget(&rtDesc, resourceArray);
         else
             m_pRenderTarget->Update(&rtDesc, resourceArray);
 
         // Map the RTVs
-        CauldronAssert(ASSERT_CRITICAL, m_pSwapChainRTV == nullptr || m_pSwapChainRTV->GetCount() == m_SwapChainDesc.BufferCount, L"SwapChain RTV has a wrong size");
+        CauldronAssert(ASSERT_CRITICAL, m_pSwapChainRTV == nullptr || m_pSwapChainRTV->GetCount() == m_SwapChainDesc1.BufferCount, L"SwapChain RTV has a wrong size");
         if (m_pSwapChainRTV == nullptr)
-            GetResourceViewAllocator()->AllocateCPURenderViews(&m_pSwapChainRTV, m_SwapChainDesc.BufferCount);
-        for (uint32_t i = 0; i < m_SwapChainDesc.BufferCount; ++i)
+            GetResourceViewAllocator()->AllocateCPURenderViews(&m_pSwapChainRTV, m_SwapChainDesc1.BufferCount);
+        for (uint32_t i = 0; i < m_SwapChainDesc1.BufferCount; ++i)
             m_pSwapChainRTV->BindTextureResource(m_pRenderTarget->GetResource(i), m_pRenderTarget->GetDesc(), ResourceViewType::RTV, ViewDimension::Texture2D, 0, 1, 0, i);
     }
 
@@ -441,6 +448,147 @@ namespace cauldron
             case DisplayMode::DISPLAYMODE_HDR10_SCRGB:
                 CauldronThrowOnFail(m_pSwapChain->SetColorSpace1(DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709));
                 break;
+        }
+    }
+
+    #include <dwmapi.h>
+    #pragma comment(lib, "Dwmapi.lib")
+
+    RECT clientRectToScreenSpace(HWND const hWnd)
+    {
+        RECT rc{0};
+        if (GetClientRect(hWnd, &rc) == TRUE)
+        {
+                if (MapWindowPoints(hWnd, nullptr, reinterpret_cast<POINT*>(&rc), 2) == 0)
+                {
+                }
+        }
+
+        return rc;
+    }
+
+    bool isDirectFlip(IDXGISwapChain* swapChain, RECT monitorExtents)
+    {
+        bool bResult = false;
+
+        IDXGIOutput* dxgiOutput = nullptr;
+        if (SUCCEEDED(swapChain->GetContainingOutput(&dxgiOutput)))
+        {
+            IDXGIOutput6* dxgiOutput6 = nullptr;
+            if (SUCCEEDED(dxgiOutput->QueryInterface(IID_PPV_ARGS(&dxgiOutput6))))
+            {
+                UINT hwSupportFlags = 0;
+                if (SUCCEEDED(dxgiOutput6->CheckHardwareCompositionSupport(&hwSupportFlags)))
+                {
+                    // check support in fullscreen mode
+                    if (hwSupportFlags & DXGI_HARDWARE_COMPOSITION_SUPPORT_FLAG_FULLSCREEN)
+                    {
+                        DXGI_SWAP_CHAIN_DESC desc{};
+                        if (SUCCEEDED(swapChain->GetDesc(&desc)))
+                        {
+                            RECT windowExtents = clientRectToScreenSpace(desc.OutputWindow);
+                            bResult |= memcmp(&windowExtents, &monitorExtents, sizeof(windowExtents)) == 0;
+                        }
+                    }
+
+                    // check support in windowed mode
+                    if (hwSupportFlags & DXGI_HARDWARE_COMPOSITION_SUPPORT_FLAG_WINDOWED)
+                    {
+                        bResult |= true;
+                    }
+                }
+
+                dxgiOutput6->Release();
+            }
+
+            dxgiOutput->Release();
+        }
+        return bResult;
+    }
+    void SwapChainInternal::GetRefreshRate(double* outRefreshRate)
+    {
+        double dwsRate  = 1000.0;
+        *outRefreshRate = 1000.0;
+
+        bool         bIsPotentialDirectFlip = false;
+        IDXGIOutput* dxgiOutput             = nullptr;
+        BOOL         isFullscreen           = false;
+        m_pSwapChain->GetFullscreenState(&isFullscreen, &dxgiOutput);
+
+        if (!isFullscreen)
+        {
+            DWM_TIMING_INFO compositionTimingInfo{};
+            compositionTimingInfo.cbSize = sizeof(DWM_TIMING_INFO);
+            double  monitorRefreshRate   = 0.0f;
+            HRESULT hr                   = DwmGetCompositionTimingInfo(nullptr, &compositionTimingInfo);
+            if (SUCCEEDED(hr))
+            {
+                dwsRate = double(compositionTimingInfo.rateRefresh.uiNumerator) / compositionTimingInfo.rateRefresh.uiDenominator;
+            }
+            m_pSwapChain->GetContainingOutput(&dxgiOutput);
+        }
+
+        // if FS this should be the monitor used for FS, in windowed the window containing the main portion of the output
+        if (dxgiOutput)
+        {
+            IDXGIOutput1* dxgiOutput1 = nullptr;
+            if (SUCCEEDED(dxgiOutput->QueryInterface(IID_PPV_ARGS(&dxgiOutput1))))
+            {
+                DXGI_OUTPUT_DESC outputDes{};
+                if (SUCCEEDED(dxgiOutput->GetDesc(&outputDes)))
+                {
+                    MONITORINFOEXW info{};
+                    info.cbSize = sizeof(info);
+                    if (GetMonitorInfoW(outputDes.Monitor, &info) != 0)
+                    {
+                        bIsPotentialDirectFlip = isDirectFlip(m_pSwapChain.Get(), info.rcMonitor);
+
+                        UINT32 numPathArrayElements, numModeInfoArrayElements;
+                        if (GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, &numPathArrayElements, &numModeInfoArrayElements) == ERROR_SUCCESS)
+                        {
+                            std::vector<DISPLAYCONFIG_PATH_INFO> pathArray(numPathArrayElements);
+                            std::vector<DISPLAYCONFIG_MODE_INFO> modeInfoArray(numModeInfoArrayElements);
+                            if (QueryDisplayConfig(
+                                    QDC_ONLY_ACTIVE_PATHS, &numPathArrayElements, pathArray.data(), &numModeInfoArrayElements, modeInfoArray.data(), nullptr) ==
+                                ERROR_SUCCESS)
+                            {
+                                bool rateFound = false;
+                                // iterate through all the paths until find the exact source to match
+                                for (size_t i = 0; i < pathArray.size() && !rateFound; i++)
+                                {
+                                    const DISPLAYCONFIG_PATH_INFO&   path = pathArray[i];
+                                    DISPLAYCONFIG_SOURCE_DEVICE_NAME sourceName;
+                                    sourceName.header = {
+                                        DISPLAYCONFIG_DEVICE_INFO_GET_SOURCE_NAME, sizeof(sourceName), path.sourceInfo.adapterId, path.sourceInfo.id};
+
+                                    if (DisplayConfigGetDeviceInfo(&sourceName.header) == ERROR_SUCCESS)
+                                    {
+                                        if (wcscmp(info.szDevice, sourceName.viewGdiDeviceName) == 0)
+                                        {
+                                            const DISPLAYCONFIG_RATIONAL& rate = path.targetInfo.refreshRate;
+                                            if (rate.Denominator > 0)
+                                            {
+                                                double refrate  = (double)rate.Numerator / (double)rate.Denominator;
+                                                *outRefreshRate = refrate;
+
+                                                // we found a valid rate?
+                                                rateFound = (refrate > 0.0);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                dxgiOutput1->Release();
+            }
+            dxgiOutput->Release();
+
+            if (!bIsPotentialDirectFlip)
+            {
+                *outRefreshRate = std::min(*outRefreshRate, dwsRate);
+            }
         }
     }
 

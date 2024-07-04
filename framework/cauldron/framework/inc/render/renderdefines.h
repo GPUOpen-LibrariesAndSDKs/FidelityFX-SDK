@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -26,6 +26,7 @@
 
 #include <cstdint>
 #include <map>
+#include <vector>
 #include <xstring>
 
 #define MAX_SHADING_RATES 9
@@ -38,13 +39,18 @@ namespace cauldron
     /// @ingroup CauldronRender
     enum class DeviceFeature
     {
-        None        = 0,         ///< No device features. Used for initialization.
-        FP16        = 1 << 0,    ///< Does the device support FP16 capabilities.
-        VRSTier1    = 1 << 1,    ///< Does the device support VRS Tier 1 capabilities.
-        VRSTier2    = 1 << 2,    ///< Does the device support VRS Tier 2 capabilities.
-        RT_1_0      = 1 << 3,    ///< Does the device support RT 1.0 capabilities.
-        RT_1_1      = 1 << 4,    ///< Does the device support RT 1.1 capabilities.
-        WaveSize    = 1 << 5,    ///< Does the device support wave size control capabilities.
+        None              = 0,         ///< No device features. Used for initialization.
+        FP16              = 1 << 0,    ///< Does the device support FP16 capabilities.
+        VRSTier1          = 1 << 1,    ///< Does the device support VRS Tier 1 capabilities.
+        VRSTier2          = 1 << 2,    ///< Does the device support VRS Tier 2 capabilities.
+        RT_1_0            = 1 << 3,    ///< Does the device support RT 1.0 capabilities.
+        RT_1_1            = 1 << 4,    ///< Does the device support RT 1.1 capabilities.
+        WaveSize          = 1 << 5,    ///< Does the device support wave size control capabilities.
+        CoherentMemoryAMD = 1 << 6,    ///< Does the device support coherent memory from AMD extension.
+        DedicatedAllocs   = 1 << 7,    ///< Does the device support dedicated allocations for resources.
+        BufferMarkerAMD   = 1 << 8,    ///< Does the device support buffer markers from AMD extension.
+        ExtendedSync      = 1 << 9,    ///< Does the device support extended synchronization methods.
+        ShaderStorageBufferArrayNonUniformIndexing = 1 << 10, ///< Does the device support shader storage buffer array non uniform indexing (always supported for DX12, device dependent for Vulkan).
     };
     ENUM_FLAG_OPERATORS(DeviceFeature)
 
@@ -78,6 +84,7 @@ namespace cauldron
         SM6_6,      ///< New Atomic operations, Dynamic Resources, Helper Lane Detection, Compute derivatives,
                     ///< new Pack/Unpack intrinsics, WaveSize, RT payload access qualifiers.
         SM6_7,      ///< Expanded texture fetching, quad querying, and wave capabilities.
+        SM6_8,      ///< Work Graphs.
     };
 
     /// An enumeration for command queue types
@@ -172,6 +179,7 @@ namespace cauldron
         Weights1,       ///< Weights1 (blend weights) vertex attribute.
         Joints0,        ///< Joint0 (blend indices) vertex attribute.
         Joints1,        ///< Joint1 (blend indices) vertex attribute.
+        PreviousPosition, ///< PreviousPosition vertex attribute.
         Count           ///< Vertex attribute count.
     };
 
@@ -191,6 +199,7 @@ namespace cauldron
         VertexAttributeFlag_Weights1 = 0x1 << static_cast<uint32_t>(VertexAttributeType::Weights1),
         VertexAttributeFlag_Joints0 = 0x1 << static_cast<uint32_t>(VertexAttributeType::Joints0),
         VertexAttributeFlag_Joints1 = 0x1 << static_cast<uint32_t>(VertexAttributeType::Joints1),
+        VertexAttributeFlag_PreviousPosition = 0x1 << static_cast<uint32_t>(VertexAttributeType::PreviousPosition),
     };
 
     /// An enumeration for Resource formats
@@ -230,7 +239,6 @@ namespace cauldron
         RGBA8_TYPELESS,     ///< 4-Component (RGBA) 32-bit (typeless) type.
         BGRA8_TYPELESS,     ///< 4-Component (BGRA) 32-bit (typeless) type.
         RGB10A2_UNORM,      ///< 4-Component (RGBA) 32-bit (unsigned normalized) type.
-        BGR10A2_UNORM,      ///< 4-Component (BGRA) 32-bit (unsigned normalized) type.
         RG11B10_FLOAT,      ///< 3-Component (RGB) 32-bit (floating point) type.
         RG16_SINT,          ///< 2-Component (RG) 32-bit (signed int) type.
         RG16_UINT,          ///< 2-Component (RG) 32-bit (unsigned int) type.
@@ -319,11 +327,12 @@ namespace cauldron
         AllowRenderTarget       = 0x1 << 0,     ///< Allow resource to be used as rasterization target.
         AllowDepthStencil       = 0x1 << 1,     ///< Allow resource to be used as depth/stencil target.
         AllowUnorderedAccess    = 0x1 << 3,     ///< Allow unordered access to resource.
-        DenyShaderResource      = 0x1 << 4,     ///< Prevents the resource from having an SRV created for it. 
+        DenyShaderResource      = 0x1 << 4,     ///< Prevents the resource from having an SRV created for it.
         AllowSimultaneousAccess = 0x1 << 6,     ///< Allow resource to be accessed from different queues simultaneously.
         AllowShadingRate        = 0x1 << 7,     ///< Allow resource to be a shading rate resource.
         AllowIndirect           = 0x1 << 8,     ///< Allow resource to be an indirect argument.
         AllowConstantBuffer     = 0x1 << 9,     ///< All resource to be used as a constant buffer
+        BreadcrumbsBuffer       = 0x1 << 10,    ///< Special purpose buffer for holding AMD FidelityFX Breadcrumbs Library markers.
     };
     ENUM_FLAG_OPERATORS(ResourceFlags)
 
@@ -334,19 +343,19 @@ namespace cauldron
     {
         Zero = 0,       ///< Blend factor zero.
         One,            ///< Blend factor one.
-                        
+
         SrcColor,       ///< Blend factor source color.
         DstColor,       ///< Blend factor destination color.
         InvSrcColor,    ///< Blend factor 1 - source color.
         InvDstColor,    ///< Blend factor 1 - destination color.
-                        
+
         SrcAlpha,       ///< Blend factor source alpha.
         DstAlpha,       ///< Blend factor destination alpha.
         InvSrcAlpha,    ///< Blend factor 1 - source alpha.
         InvDstAlpha,    ///< Blend factor 1 - destination alpha.
-                        
+
         SrcAlphaSat,    ///< Blend factor is (f, f, f, 1) where f = min(source alpha, 1 - destination alpha).
-                        
+
         BlendFactor,    ///< Blend factor is a custom value.
         InvBlendFactor, ///< Blend factor is 1 - custom value.
     };
@@ -474,7 +483,7 @@ namespace cauldron
         Invalid = 0xffffffff    ///< Invalid resource view type (used for initializations)
     };
 
-    
+
     /// An enumeration for binding types.
     /// Used to bind parameters to root signatures and parameter sets.
     ///
@@ -530,26 +539,26 @@ namespace cauldron
     /// @ingroup CauldronRender
     enum class FilterFunc
     {
-        MinMagMipPoint,                             
-        MinMagPointMipLinear,                       
-        MinPointMagLinearMipPoint,                  
-        MinPointMagMipLinear,                       
-        MintMagPointMipLinear,                      
-        MinLinearMagMipPoint,                       
-        MinLinearMagPointMipLinear,                 
-        MinMagLinearMipPoint,                       
-        MinMagMipLinear,                            
-        Anisotropic,                                
-        ComparisonMinMagMipPoint,                   
-        ComparisonMinMagPointMipLinear,             
-        ComparisonMinPointMagLinearMipPoint,        
-        ComparisonMinPointMagMipLinear,             
-        ComparisonMintMagPointMipLinear,            
-        ComparisonMinLinearMagMipPoint,             
-        ComparisonMinLinearMagPointMipLinear,       
-        ComparisonMinMagLinearMipPoint,             
-        ComparisonMinMagMipLinear,                  
-        ComparisonAnisotropic                       
+        MinMagMipPoint,
+        MinMagPointMipLinear,
+        MinPointMagLinearMipPoint,
+        MinPointMagMipLinear,
+        MintMagPointMipLinear,
+        MinLinearMagMipPoint,
+        MinLinearMagPointMipLinear,
+        MinMagLinearMipPoint,
+        MinMagMipLinear,
+        Anisotropic,
+        ComparisonMinMagMipPoint,
+        ComparisonMinMagPointMipLinear,
+        ComparisonMinPointMagLinearMipPoint,
+        ComparisonMinPointMagMipLinear,
+        ComparisonMintMagPointMipLinear,
+        ComparisonMinLinearMagMipPoint,
+        ComparisonMinLinearMagPointMipLinear,
+        ComparisonMinMagLinearMipPoint,
+        ComparisonMinMagMipLinear,
+        ComparisonAnisotropic
     };
 
     /// An enumeration for uv addressing mode.
@@ -578,7 +587,7 @@ namespace cauldron
         float MaxContentLightLevel;         ///< HDR maximum content light level.
         float MaxFrameAverageLightLevel;    ///< HDR maximum average light level.
     };
-    
+
     /// A structure holding resolution information.
     ///
     /// @ingroup CauldronRender
@@ -587,6 +596,8 @@ namespace cauldron
         // Core information
         uint32_t RenderWidth;       ///< The current render width.
         uint32_t RenderHeight;      ///< The current render height.
+        uint32_t UpscaleWidth;       ///< The current upscaled width.
+        uint32_t UpscaleHeight;      ///< The current upscaled height.
         uint32_t DisplayWidth;      ///< The current display width.
         uint32_t DisplayHeight;     ///< The current display height.
 
@@ -709,6 +720,23 @@ namespace cauldron
         ShadingRateCombiner Combiners;                                  ///< Number of combiners.
         uint32_t            MinTileSize[2];                             ///< Minimum tile size (x, y).
         uint32_t            MaxTileSize[2];                             ///< Maximum tile size (x, y).
+    };
+
+    /// A structure holding in flight GPU jobs to be deleted once clear of the GPU.
+    ///
+    /// @ingroup CauldronRender
+    class CommandList;
+    struct GPUExecutionPacket
+    {
+        std::vector<CommandList*> CmdLists;
+        uint64_t                  CompletionID;
+
+        GPUExecutionPacket(std::vector<CommandList*>& cmdLists, uint64_t completionID)
+            : CmdLists(std::move(cmdLists))
+            , CompletionID(completionID)
+        {
+        }
+        GPUExecutionPacket() = delete;
     };
 
 } // namespace cauldron

@@ -1,27 +1,27 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #if FFX_HALF
-#if FFX_HLSL_6_2
+#if FFX_HLSL_SM >= 62
 /// A define value for 16bit positive infinity.
 ///
 /// @ingroup GPUCore
@@ -41,7 +41,7 @@
 ///
 /// @ingroup GPUCore
 #define FFX_NEGATIVE_INFINITY_HALF FFX_TO_FLOAT16(0xfc00u)
-#endif // FFX_HLSL_6_2
+#endif // #if FFX_HLSL_SM>=62
 
 /// Compute the min of two values.
 ///
@@ -2936,10 +2936,12 @@ FfxFloat16x3 ffxLinearFromSrgbHalf(FfxFloat16x3 c)
 
 /// A remapping of 64x1 to 8x8 imposing rotated 2x2 pixel quads in quad linear.
 /// 
-///  543210
-///  ======
-///  ..xxx.
-///  yy...y
+/// Remap illustration:
+///
+///     543210
+///     ~~~~~~
+///     ..xxx.
+///     yy...y
 /// 
 /// @param [in] a       The input 1D coordinates to remap.
 ///
@@ -2949,7 +2951,7 @@ FfxFloat16x3 ffxLinearFromSrgbHalf(FfxFloat16x3 c)
 /// @ingroup GPUCore
 FfxUInt16x2 ffxRemapForQuadHalf(FfxUInt32 a)
 {
-    return FfxUInt16x2(bitfieldExtract(a, 1u, 3u), bitfieldInsertMask(bitfieldExtract(a, 3u, 3u), a, 1u));
+    return FfxUInt16x2(ffxBitfieldExtract(a, 1u, 3u), ffxBitfieldInsertMask(ffxBitfieldExtract(a, 3u, 3u), a, 1u));
 }
 
 /// A helper function performing a remap 64x1 to 8x8 remapping which is necessary for 2D wave reductions.
@@ -2973,7 +2975,7 @@ FfxUInt16x2 ffxRemapForQuadHalf(FfxUInt32 a)
 /// @ingroup GPUCore
 FfxUInt16x2 ffxRemapForWaveReductionHalf(FfxUInt32 a)
 {
-    return FfxUInt16x2(bitfieldInsertMask(bitfieldExtract(a, 2u, 3u), a, 1u), bitfieldInsertMask(bitfieldExtract(a, 3u, 3u), bitfieldExtract(a, 1u, 2u), 2u));
+    return FfxUInt16x2(ffxBitfieldInsertMask(ffxBitfieldExtract(a, 2u, 3u), a, 1u), ffxBitfieldInsertMask(ffxBitfieldExtract(a, 3u, 3u), ffxBitfieldExtract(a, 1u, 2u), 2u));
 }
 
 #endif  // FFX_HALF

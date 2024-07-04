@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #include "ffx_lpm_resources.h"
@@ -31,16 +31,12 @@
 #ifdef __hlsl_dx_compiler
 #pragma dxc diagnostic pop
 #endif //__hlsl_dx_compiler
-#endif // #if defined(FFX_GPU)
 
-#if defined(FFX_GPU)
 #ifndef FFX_PREFER_WAVE64
 #define FFX_PREFER_WAVE64
-#endif // #if defined(FFX_GPU)
+#endif // #ifndef FFX_PREFER_WAVE64
 
-#if defined(FFX_GPU)
 #pragma warning(disable: 3205)  // conversion from larger type to smaller
-#endif // #if defined(FFX_GPU)
 
 #define DECLARE_SRV_REGISTER(regIndex)  t##regIndex
 #define DECLARE_UAV_REGISTER(regIndex)  u##regIndex
@@ -59,7 +55,8 @@
         FfxBoolean con2;
         FfxBoolean clip;
         FfxBoolean scaleOnly;
-        FfxUInt32x2 pad;
+        FfxUInt32  displayMode;
+        FfxUInt32  pad;
         #define FFX_LPM_CONSTANT_BUFFER_1_SIZE 32 // Number of 32-bit values. This must be kept in sync with the cbLPM size.
     };
 #else
@@ -70,6 +67,7 @@
     #define con2 0
     #define clip 0
     #define scaleOnly 0
+    #define displayMode 0
     #define pad 0
 #endif
 
@@ -78,7 +76,7 @@
 #define FFX_LPM_ROOTSIG_STR(p) #p
 #define FFX_LPM_ROOTSIG [RootSignature( "DescriptorTable(UAV(u0, numDescriptors = " FFX_LPM_ROOTSIG_STRINGIFY(FFX_LPM_RESOURCE_IDENTIFIER_COUNT) ")), " \
                                     "DescriptorTable(SRV(t0, numDescriptors = " FFX_LPM_ROOTSIG_STRINGIFY(FFX_LPM_RESOURCE_IDENTIFIER_COUNT) ")), " \
-                                    "RootConstants(num32BitConstants=" FFX_LPM_ROOTSIG_STRINGIFY(FFX_LPM_CONSTANT_BUFFER_1_SIZE) ", b0), " \
+                                    "CBV(b0), " \
                                     "StaticSampler(s0, filter = FILTER_MIN_MAG_MIP_LINEAR, " \
                                                       "addressU = TEXTURE_ADDRESS_CLAMP, " \
                                                       "addressV = TEXTURE_ADDRESS_CLAMP, " \
@@ -128,6 +126,51 @@ FfxBoolean GetScaleOnly()
     return scaleOnly;
 }
 
+FfxUInt32 GetMonitorDisplayMode()
+{
+    return displayMode;
+}
+
+#if FFX_HALF
+FfxFloat16x3 ApplyGamma(FfxFloat16x3 color)
+{
+    color = ffxPow(color, FfxFloat16(1.0f / 2.2f));
+    return color;
+}
+
+FfxFloat16x3 ApplyPQ(FfxFloat16x3 color)
+{
+    // Apply ST2084 curve
+    FfxFloat16 m1 = 2610.0 / 4096.0 / 4;
+    FfxFloat16 m2 = 2523.0 / 4096.0 * 128;
+    FfxFloat16 c1 = 3424.0 / 4096.0;
+    FfxFloat16 c2 = 2413.0 / 4096.0 * 32;
+    FfxFloat16 c3 = 2392.0 / 4096.0 * 32;
+    FfxFloat16x3 cp = ffxPow(abs(color.xyz), m1);
+    color.xyz = ffxPow((c1 + c2 * cp) / (1 + c3 * cp), m2);
+    return color;
+}
+#else
+FfxFloat32x3 ApplyGamma(FfxFloat32x3 color)
+{
+    color = ffxPow(color, 1.0f / 2.2f);
+    return color;
+}
+
+FfxFloat32x3 ApplyPQ(FfxFloat32x3 color)
+{
+    // Apply ST2084 curve
+    FfxFloat32 m1 = 2610.0 / 4096.0 / 4;
+    FfxFloat32 m2 = 2523.0 / 4096.0 * 128;
+    FfxFloat32 c1 = 3424.0 / 4096.0;
+    FfxFloat32 c2 = 2413.0 / 4096.0 * 32;
+    FfxFloat32 c3 = 2392.0 / 4096.0 * 32;
+    FfxFloat32x3 cp = ffxPow(abs(color.xyz), m1);
+    color.xyz = ffxPow((c1 + c2 * cp) / (1 + c3 * cp), m2);
+    return color;
+}
+#endif
+
 SamplerState s_LinearClamp : register(s0);
 
 #if FFX_HALF
@@ -145,18 +188,18 @@ SamplerState s_LinearClamp : register(s0);
         RWTexture2D<ColorFormat>           rw_output_color     : FFX_LPM_DECLARE_UAV(LPM_BIND_UAV_OUTPUT_COLOR);
     #endif
 
+#if defined(LPM_BIND_SRV_INPUT_COLOR)
 ColorFormat LoadInput(FfxUInt32x2 iPxPos)
 {
-    #if defined(LPM_BIND_SRV_INPUT_COLOR) 
-        return r_input_color[iPxPos];
-    #endif // defined(LPM_BIND_SRV_INPUT_COLOR) 
-        return 0.f;
+    return r_input_color[iPxPos];
 }
+#endif // defined(LPM_BIND_SRV_INPUT_COLOR)
 
+#if defined(LPM_BIND_UAV_OUTPUT_COLOR)
 void StoreOutput(FfxUInt32x2 iPxPos, ColorFormat fColor)
 {
-    #if defined(LPM_BIND_UAV_OUTPUT_COLOR) 
-        rw_output_color[iPxPos] = fColor;
-    #endif // defined(LPM_BIND_UAV_OUTPUT_COLOR) 
+    rw_output_color[iPxPos] = fColor;
 }
+#endif // defined(LPM_BIND_UAV_OUTPUT_COLOR)
+
 #endif // #if defined(FFX_GPU)

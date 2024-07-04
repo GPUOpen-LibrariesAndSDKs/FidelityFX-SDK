@@ -1,17 +1,20 @@
-// AMD Cauldron code
+// This file is part of the FidelityFX SDK.
 //
-// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sub-license, and / or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -23,6 +26,8 @@
 
 #include "core/framework.h"
 #include "misc/assert.h"
+#include "FidelityFX/host/ffx_types.h"
+#include <memoryapi.h> // for VirtualAlloc
 
 namespace cauldron
 {
@@ -34,6 +39,8 @@ namespace cauldron
         case GPUResourceType::Texture:
         case GPUResourceType::Buffer:
             return new GPUResourceInternal(pParams->resourceDesc, pParams->heapType, initialState, resourceName, pOwner, resizable);
+        case GPUResourceType::BufferBreadcrumbs:
+            return new GPUResourceInternal(pParams->resourceDesc, pOwner, initialState, resourceName);
         case GPUResourceType::Swapchain:
             return new GPUResourceInternal(pParams->pResource, resourceName, initialState, resizable);
         default:
@@ -42,6 +49,57 @@ namespace cauldron
         }
 
         return nullptr;
+    }
+
+    GPUResource* GPUResource::GetWrappedResourceFromSDK(const wchar_t* name, void* pSDKResource, const TextureDesc* pDesc, ResourceState initialState)
+    {
+        ID3D12Resource* pDX12SDKResource = (ID3D12Resource*)pSDKResource;
+        pDX12SDKResource->AddRef();  // Deleting the resource will decrease the ref count, so make sure to up it here
+
+        GPUResource* pNewGPUResource = new GPUResourceInternal(pDX12SDKResource, name, initialState, false);
+
+        // Tag the resource correctly
+        switch (pDX12SDKResource->GetDesc().Dimension)
+        {
+        case D3D12_RESOURCE_DIMENSION_TEXTURE1D:
+        case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
+        case D3D12_RESOURCE_DIMENSION_TEXTURE3D:
+            pNewGPUResource->m_OwnerType = OwnerType::Texture;
+            break;
+
+        default:
+            CauldronCritical(L"GetWrappedResourceFromSDK only supports Texture or Buffer resources.");
+            break;
+        }
+
+        return pNewGPUResource;
+    }
+
+    GPUResource* GPUResource::GetWrappedResourceFromSDK(const wchar_t* name, void* pSDKResource, const BufferDesc* pDesc, ResourceState initialState)
+    {
+        ID3D12Resource* pDX12SDKResource = (ID3D12Resource*)pSDKResource;
+        pDX12SDKResource->AddRef();  // Deleting the resource will decrease the ref count, so make sure to up it here
+
+        GPUResource* pNewGPUResource = new GPUResourceInternal(pDX12SDKResource, name, initialState, false);
+
+        // Tag the resource correctly
+        switch (pDX12SDKResource->GetDesc().Dimension)
+        {
+        case D3D12_RESOURCE_DIMENSION_BUFFER:
+            pNewGPUResource->m_OwnerType = OwnerType::Buffer;
+            break;
+
+        default:
+            CauldronCritical(L"GetWrappedResourceFromSDK only supports Texture or Buffer resources.");
+            break;
+        }
+
+        return pNewGPUResource;
+    }
+
+    void GPUResource::ReleaseWrappedResource(GPUResource* pResource)
+    {
+        delete pResource;
     }
 
     GPUResourceInternal::GPUResourceInternal(ID3D12Resource* pResource, const wchar_t* resourceName, ResourceState initialState, bool resizable) :
@@ -56,7 +114,45 @@ namespace cauldron
         InitSubResourceCount(m_ResourceDesc.DepthOrArraySize * m_ResourceDesc.MipLevels);
     }
 
-    GPUResourceInternal::GPUResourceInternal(D3D12_RESOURCE_DESC& resourceDesc, D3D12_HEAP_TYPE heapType, ResourceState initialState, const wchar_t* resourceName,  void* pOwner, bool resizable) :
+    GPUResourceInternal::GPUResourceInternal(D3D12_RESOURCE_DESC& resourceDesc, void* pExternalOwner, ResourceState initialState, const wchar_t* resourceName) :
+        GPUResource(resourceName, nullptr, initialState, false),
+        m_ResourceDesc(resourceDesc)
+    {
+        m_OwnerType = OwnerType::BufferBreadcrumbs;
+        FfxBreadcrumbsBlockData* blockData = (FfxBreadcrumbsBlockData*)pExternalOwner;
+
+        ID3D12Device* dev = GetDevice()->GetImpl()->DX12Device();
+        ID3D12Device3* dev3 = nullptr;
+        if (SUCCEEDED(dev->QueryInterface(IID_PPV_ARGS(&dev3))))
+        {
+            CreateBreadcrumbsBufferVirtualAlloc(dev3, m_ResourceDesc, pExternalOwner);
+            dev3->Release();
+        }
+        // If VirtualAlloc path failed, try standard CreateCommittedResource().
+        if (m_pResource == nullptr)
+        {
+            m_ResourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+            D3D12_HEAP_PROPERTIES heapProps = {};
+            heapProps.Type = D3D12_HEAP_TYPE_READBACK;
+            CauldronThrowOnFail(dev->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &m_ResourceDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&m_pResource)));
+
+            const D3D12_RANGE range = {};
+            HRESULT hr = m_pResource->Map(0, &range, &blockData->memory);
+            if (FAILED(hr))
+            {
+                // Cannot map breadcrumbs buffer!
+                m_pResource->Release();
+                CauldronThrowOnFail(hr);
+            }
+            m_pResource->SetName(L"Buffer for Breadcrumbs - committed");
+        }
+        blockData->baseAddress = (uint64_t)m_pResource->GetGPUVirtualAddress();
+
+        // Setup sub-resource states
+        InitSubResourceCount(m_ResourceDesc.DepthOrArraySize * m_ResourceDesc.MipLevels);
+    }
+
+    GPUResourceInternal::GPUResourceInternal(D3D12_RESOURCE_DESC& resourceDesc, D3D12_HEAP_TYPE heapType, ResourceState initialState, const wchar_t* resourceName, void* pOwner, bool resizable) :
         GPUResource(resourceName, pOwner, initialState, resizable),
         m_ResourceDesc(resourceDesc)
     {
@@ -79,8 +175,6 @@ namespace cauldron
                     // Update the texture desc after creation (as some parameters can auto-generate info (i.e. mip levels)
                     m_ResourceDesc.MipLevels = DX12Desc().MipLevels;
                 }
-
-                    
             }
         }
         // Setup sub-resource states
@@ -89,12 +183,50 @@ namespace cauldron
 
     GPUResourceInternal::~GPUResourceInternal()
     {
-        // Only release the resource if we have an allocation (swapchain resources are backed by swapchain)
-        if (m_pAllocation)
+        if (m_OwnerType == OwnerType::BufferBreadcrumbs && m_pOwner)
         {
-            m_pAllocation->Release();
+            FfxBreadcrumbsBlockData* blockData = (FfxBreadcrumbsBlockData*)m_pOwner;
+
+            if (m_pResource && !blockData->heap)
+            {
+                // CreateCommittedResource() path
+                if (blockData->memory)
+                {
+                    m_pResource->Unmap(0, nullptr);
+                    blockData->memory = nullptr;
+                }
+                m_pResource->Release();
+                blockData->buffer = nullptr;
+            }
+            else
+            {
+                // VirutalAlloc() path
+                if (m_pResource)
+                {
+                    m_pResource->Release();
+                    blockData->buffer = nullptr;
+                }
+                if (blockData->heap)
+                {
+                    ((ID3D12Heap*)blockData->heap)->Release();
+                    blockData->heap = nullptr;
+                }
+                if (blockData->memory)
+                {
+                    VirtualFree(blockData->memory, 0, MEM_RELEASE);
+                    blockData->memory = nullptr;
+                }
+            }
         }
-        m_pResource->Release();
+        else
+        {
+            // Only release the resource if we have an allocation (swapchain resources are backed by swapchain)
+            if (m_pAllocation)
+            {
+                m_pAllocation->Release();
+            }
+            m_pResource->Release();
+        }
     }
 
     void GPUResourceInternal::SetOwner(void* pOwner)
@@ -102,7 +234,7 @@ namespace cauldron
         m_pOwner = pOwner;
 
         // What type of resource is this?
-        if (m_pOwner)
+        if (m_pOwner && m_OwnerType != OwnerType::BufferBreadcrumbs)
         {
             if (m_pAllocation && m_pAllocation->GetHeap()->GetDesc().Properties.Type == D3D12_HEAP_TYPE_UPLOAD)
                 m_OwnerType = OwnerType::Memory;
@@ -135,6 +267,36 @@ namespace cauldron
         // Setup sub-resource states
         InitSubResourceCount(m_ResourceDesc.DepthOrArraySize * m_ResourceDesc.MipLevels);
         CreateResourceInternal(heapType, initialState);
+    }
+
+    // VirtualAlloc() + OpenExistingHeapFromAddress() + CreatePlacedResource() path, ensures that Breadcrumb buffer survives TDR.
+    void GPUResourceInternal::CreateBreadcrumbsBufferVirtualAlloc(ID3D12Device3* dev, const D3D12_RESOURCE_DESC& resDesc, void* pBlockData)
+    {
+        CauldronAssert(ASSERT_CRITICAL, m_OwnerType == OwnerType::BufferBreadcrumbs, L"This way of allocating only supported by Breadcrumbs!");
+
+        D3D12_FEATURE_DATA_EXISTING_HEAPS existingHeaps = {};
+        if (SUCCEEDED(dev->CheckFeatureSupport(D3D12_FEATURE_EXISTING_HEAPS, &existingHeaps, sizeof(existingHeaps))) && existingHeaps.Supported)
+        {
+            FfxBreadcrumbsBlockData* blockData = (FfxBreadcrumbsBlockData*)pBlockData;
+            blockData->memory = VirtualAlloc(nullptr, resDesc.Width, MEM_COMMIT, PAGE_READWRITE);
+            if (blockData->memory != nullptr)
+            {
+                ID3D12Heap* heap = nullptr;
+                if (SUCCEEDED(dev->OpenExistingHeapFromAddress(blockData->memory, IID_PPV_ARGS(&heap))))
+                {
+                    if (SUCCEEDED(dev->CreatePlacedResource(heap, 0, &resDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&m_pResource))))
+                    {
+                        m_pResource->SetName(L"Buffer for Breadcrumbs - placed in VirtualAlloc, OpenExistingHeapFromAddress");
+                        blockData->heap = (void*)heap;
+                        return;
+                    }
+                    heap->Release();
+                }
+                const BOOL status = VirtualFree(blockData->memory, 0, MEM_RELEASE);
+                CauldronAssert(ASSERT_ERROR, status != 0, L"Error while releasing Breadcrumb memory!");
+                blockData->memory = nullptr;
+            }
+        }
     }
 
     void GPUResourceInternal::CreateResourceInternal(D3D12_HEAP_TYPE heapType, ResourceState initialState)
@@ -470,6 +632,8 @@ namespace cauldron
             resourceFlags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
         if (static_cast<bool>(flags & ResourceFlags::AllowSimultaneousAccess))
             resourceFlags |= D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS;
+        if (static_cast<bool>(flags & ResourceFlags::BreadcrumbsBuffer))
+            resourceFlags |= D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER;
 
         return resourceFlags;
     }

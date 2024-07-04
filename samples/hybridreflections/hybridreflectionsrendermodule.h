@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -23,6 +23,7 @@
 #pragma once
 
 #include "core/contentmanager.h"
+#include "core/uimanager.h"
 #include "render/rendermodule.h"
 #include "shaders/declarations.h"
 #include "shaders/common_types.h"
@@ -47,7 +48,7 @@ namespace cauldron
     class IndirectWorkload;
 }  // namespace cauldron
 
-/// @defgroup FfxHybridReflectionsSample FidelityFX Hybrid Reflections Sample
+/// @defgroup FfxHybridReflectionsSample FidelityFX Hybrid Reflections sample
 /// Sample documentation for FidelityFX Hybrid Reflections
 ///
 /// @ingroup SDKEffects
@@ -62,7 +63,9 @@ namespace cauldron
  * @class HybridReflectionsRenderModule
  *
  * HybridReflectionsRenderModule creates reflections effect by using ffx_classifier, ffx_spd ffx_denoiser
- * techniques. There are 3 main passes:
+ * techniques. 
+ *
+ * There are 3 main passes:
  *      - classification
  *      - intersection
  *      - denoising
@@ -92,6 +95,12 @@ public:
      * @param resInfo New resolution info.
      */
     void OnResize(const cauldron::ResolutionInfo& resInfo) override;
+    
+    /**
+     * Update the Debug Option UI element.
+     */
+    void UpdateUI(double deltaTime) override;
+    
     /**
      * Dispatch all the shaders.
      */
@@ -107,7 +116,10 @@ public:
     virtual void OnContentUnloaded(cauldron::ContentBlock* pContentBlock) override;
 
 private:
-    void ResetBakckendContext();
+    void CreateFfxContexts();
+    void DestroyFfxContexts();
+
+    void ResetBackendContext();
     void CreateBackendContext();
 
     /**
@@ -118,6 +130,7 @@ private:
 
     void ShowDebugTarget();
     void SelectDebugOption();
+    void ToggleHybridReflection();
     void ToggleHalfResGBuffer();
     void UpdateReflectionResolution();
 
@@ -184,6 +197,7 @@ private:
     float    m_RTRoughnessThreshold                 = 0.22f;
     bool     m_DisableReshading                     = false;
     bool     m_EnableHybridReflection               = true;
+    bool     m_IsEnableHybridReflectionChanged      = false;
     bool     m_EnableHalfResGBuffer                 = false;
     bool     m_ShowDebugTarget                      = false;
     uint32_t m_ReflectionWidth                      = 128;
@@ -320,6 +334,8 @@ private:
     cauldron::ParameterSet*   m_pCopyDepthParameters    = nullptr;
 
     FrameInfo m_FrameInfoConstants;
+
+    cauldron::UICombo* m_UIDebugOption = nullptr; // weak ptr
 
 /// @}
 };

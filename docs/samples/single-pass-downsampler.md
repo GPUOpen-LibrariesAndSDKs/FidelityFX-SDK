@@ -10,7 +10,9 @@ For details on the technique that underpin the FidelityFX SPD effect, you can re
 
 <h2>Requirements</h2>
 
-`Windows` `DirectX(R)12` `Vulkan(R)`
+ - Windows
+ - DirectX(R)12
+ - Vulkan(R)
 
 <h2>UI elements</h2>
 
@@ -78,7 +80,7 @@ For performance considerations, the sample compiles these options into the multi
 * FP32-wave-ops-linear-sampler (spd_integration_linear_sampler.hlsl only)
 * FP32-no-wave-ops-linear-sampler (SPD_NO_WAVE_OPERATION=1 with spd_integration_linear_sampler.hlsl)
 
-<h3>FidelityFX SPD Usage</h3>
+<h3>FidelityFX SPD usage</h3>
 
 SPD can be used in 2 ways:
 
@@ -86,9 +88,9 @@ SPD can be used in 2 ways:
 
 2. High level usage - use the effect component as in `host\ffx_spd.h`, which will automatically downsample a given texture acording to passed in options with a simple dispatch call.
 
-<h2>Sample Controls and Configurations</h2>
+<h2>Sample controls and configurations</h2>
 
-For sample controls, configuration and Cauldron UI element details, please see [Running the samples](../getting-started/running-samples.md)
+For sample controls, configuration, and FidelityFX Cauldron Framework UI element details, see [Running the samples](../getting-started/running-samples.md).
 
 <h2>See also</h2>
 

@@ -53,7 +53,7 @@ AMD FidelityFX Super Resolution 2 (FSR2) is an open source, high-quality solutio
 
 **FidelityFX Super Resolution 2** (or **FSR2** for short) is a cutting-edge upscaling technique developed from the ground up to produce high resolution frames from lower resolution inputs.
 
-![alt text](media/super-resolution-temporal/overview.svg "A diagram showing the input resources to the temporal super resolution algorithm.")
+![invert](media/super-resolution-temporal/overview.svg "A diagram showing the input resources to the temporal super resolution algorithm.")
 
 FSR2 uses temporal feedback to reconstruct high-resolution images while maintaining and even improving image quality compared to native rendering.
 
@@ -71,7 +71,15 @@ FSR2 can enable "practical performance" for costly render operations, such as ha
 
 To use FSR2 you should follow the steps below:
 
-1. Double click [`BuildAllNativeEffectsSolution.bat`](../../BuildAllNativeEffectsSolution.bat) in the [`samples`](samples) directory.
+1. Generate Visual Studio solution:
+
+    ```bash
+    > <installation path>\BuildSamplesSolution.bat
+    ```
+	
+	The batch file will inquire if the solution should build the SDK as a DLL (builds as a statically linked library if no ('n') is provided) and which samples should be included. Please use '1' to build a solution with all samples included or '8' to only include the FSR sample.
+  
+    This will generate a `build\` directory where you will find the solution for the SDK samples (`FidelityFX SDK Samples.sln`).
 
 2. Open the solution and build it.
 
@@ -190,7 +198,9 @@ It is strongly recommended that an inverted, infinite depth buffer is used with 
 <h4>Space</h4>
 A key part of a temporal algorithm (be it antialiasing or upscaling) is the provision of motion vectors. FSR2 accepts motion vectors in 2D which encode the motion from a pixel in the current frame to the position of that same pixel in the previous frame. FSR2 expects that motion vectors are provided by the application in [**<-width, -height>**..**<width, height>**] range; this matches screenspace. For example, a motion vector for a pixel in the upper-left corner of the screen with a value of <width, height> would represent a motion that traversed the full width and height of the input surfaces, originating from the bottom-right corner.
 
-![alt text](media/super-resolution-temporal/motion-vectors.svg "A diagram showing a 2D motion vector.")
+
+![invert](media/super-resolution-temporal/motion-vectors.svg "A diagram showing a 2D motion vector.")
+
 
 If your application computes motion vectors in another space - for example normalized device coordinate space - then you may use the [`motionVectorScale`](../../sdk/include/FidelityFX/host/ffx_fsr2.h#L183) field of the [`FfxFsr2DispatchDescription`](../../sdk/include/FidelityFX/host/ffx_fsr2.h#L172) structure to instruct FSR2 to adjust them to match the expected range for FSR2. The code examples below illustrate how motion vectors may be scaled to screen space. The example HLSL and C++ code below illustrates how NDC-space motion vectors can be scaled using the FSR2 host API.
 
@@ -272,7 +282,9 @@ float ComputeAutoExposureFromAverageLog(float averageLogLuminance)
 
 The primary goal of FSR2 is to improve application rendering performance by using a temporal upscaling algorithm relying on a number of inputs. Therefore, its placement in the pipeline is key to ensuring the right balance between the highest quality visual quality and great performance.
 
-![alt text](media/super-resolution-temporal/pipeline-placement.svg "A diagram showing the placement of temporal FidelityFX Super Resolution in the wider rendering pipeline.")
+
+![invert](media/super-resolution-temporal/pipeline-placement.svg "A diagram showing the placement of temporal FidelityFX Super Resolution in the wider rendering pipeline.")
+
 
 With any image upscaling approach is it important to understand how to place other image-space algorithms with respect to the upscaling algorithm. Placing these other image-space effects before the upscaling has the advantage that they run at a lower resolution, which of course confers a performance advantage onto the application. However, it may not be appropriate for some classes of image-space techniques. For example, many applications may introduce noise or grain into the final image, perhaps to simulate a physical camera. Doing so before an upscaler might cause the upscaler to amplify the noise, causing undesirable artifacts in the resulting upscaled image. The following table divides common real-time image-space techniques into two columns. 'Post processing A' contains all the techniques which typically would run before FSR2's upscaling, meaning they would all run at render resolution. Conversely, the 'Post processing B' column contains all the techniques which are recommend to run after FSR2, meaning they would run at the larger, presentation resolution.
 
@@ -323,7 +335,9 @@ For more exhaustive documentation of the FSR2 API, you can refer to the API refe
 <h3>Modular backend</h3>
 The design of the FSR2 API means that the core implementation of the FSR2 algorithm is unaware upon which rendering API it sits. Instead, FSR2 calls functions provided to it through an interface, allowing different backends to be used with FSR2. This design also allows for applications integrating FSR2 to provide their own backend implementation, meaning that platforms which FSR2 does not currently support may be targeted by implementing a handful of functions. Moreover, applications which have their own rendering abstractions can also implement their own backend, taking control of all aspects of FSR2's underlying function, including memory management, resource creation, shader compilation, shader resource bindings, and the submission of FSR2 workloads to the graphics device.
 
-![alt text](media/super-resolution-temporal/api-architecture.svg "A diagram showing the high-level architecture of the FSR2 API.")
+
+![invert](media/super-resolution-temporal/api-architecture.svg "A diagram showing the high-level architecture of the FSR2 API.")
+
 
 Out of the box, the FSR2 API will compile into multiple libraries following the separation already outlined between the core API and the backends. This means if you wish to use the backends provided with FSR2 you should link both the core FSR2 API lib as well the backend matching your requirements.
 
@@ -375,9 +389,14 @@ FfxErrorCode ffxFsr2GetJitterOffset(float* outX, float* outY, int32_t jitterPhas
 
 Internally, these function implement a Halton[2,3] sequence [[Halton](#references)]. The goal of the Halton sequence is to provide spatially separated points, which cover the available space.
 
-![alt text](media/super-resolution-temporal/jitter-space.svg "A diagram showing how to map sub-pixel jitter offsets to projection offsets.")
+![invert](media/super-resolution-temporal/jitter-space.svg "A diagram showing how to map sub-pixel jitter offsets to projection offsets.")
+
 
 It is important to understand that the values returned from the [`ffxFsr2GetJitterOffset`](../../sdk/include/FidelityFX/host/ffx_fsr2.h#L492) are in unit pixel space, and in order to composite this correctly into a projection matrix we must convert them into projection offsets. The diagram above shows a single pixel in unit pixel space, and in projection space. The code listing below shows how to correctly composite the sub-pixel jitter offset value into a projection matrix.
+
+Depending on the transformation concatenation convention (in other words, the order of matrix multiplication) used in the game engine, there are two ways to calculate ``jitteredProjectionMatrix``:
+
+* Pre-multiplication order (DirectXMath style math).
 
 ``` CPP
 const int32_t jitterPhaseCount = ffxFsr2GetJitterPhaseCount(renderWidth, displayWidth);
@@ -392,6 +411,24 @@ const float jitterY = -2.0f * jitterY / (float)renderHeight;
 const Matrix4 jitterTranslationMatrix = translateMatrix(Matrix3::identity, Vector3(jitterX, jitterY, 0));
 const Matrix4 jitteredProjectionMatrix = jitterTranslationMatrix * projectionMatrix;
 ```
+
+* Post-multiplication order (OpenGL® style math).
+
+``` CPP
+const int32_t jitterPhaseCount = ffxFsr2GetJitterPhaseCount(renderWidth, displayWidth);
+
+float jitterX = 0;
+float jitterY = 0;
+ffxFsr2GetJitterOffset(&jitterX, &jitterY, index, jitterPhaseCount);
+
+// Calculate the jittered projection matrix.
+const float jitterX = 2.0f * jitterX / (float)renderWidth;
+const float jitterY = -2.0f * jitterY / (float)renderHeight;
+const Matrix4 jitterTranslationMatrix = translateMatrix(Matrix3::identity, Vector3(jitterX, jitterY, 0));
+const Matrix4 jitteredProjectionMatrix = projectionMatrix * jitterTranslationMatrix;
+```
+
+For more information on this topic, see [Matrix Compendium](https://gpuopen.com/learn/matrix-compendium/matrix-compendium-intro/), where you can find the final form of ``jitteredProjectionMatrix`` for all possible convection used in Computer Graphics.
 
 Jitter should be applied to *all* rendering. This includes opaque, alpha transparent, and raytraced objects. For rasterized objects, the sub-pixel jittering values calculated by the [`ffxFsr2GetJitterOffset`](../../sdk/include/FidelityFX/host/ffx_fsr2.h#L492) function can be applied to the camera projection matrix which is ultimately used to perform transformations during vertex shading. For raytraced rendering, the sub-pixel jitter should be applied to the ray's origin - often the camera's position.
 
@@ -450,7 +487,7 @@ FSR2 was designed to take advantage of half precision (FP16) hardware accelerati
 
 It is recommended to use the FP16 version of FSR2 on all hardware which supports it. You can query your graphics card's level of support for FP16 by querying the [`D3D12_FEATURE_DATA_SHADER_MIN_PRECISION_SUPPORT`](https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_shader_min_precision_support) capability in DirectX(R)12 - you should check that the `D3D[11/12]_SHADER_MIN_PRECISION_16_BIT` is set, and if it is not, fallback to the FP32 version of FSR2. For Vulkan, if [`VkPhysicalDeviceFloat16Int8FeaturesKHR::shaderFloat16`](https://khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceShaderFloat16Int8FeaturesKHR.html) is not set, then you should fallback to the FP32 version of FSR2. Similarly, if [`VkPhysicalDevice16BitStorageFeatures::storageBuffer16BitAccess`](https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkPhysicalDevice16BitStorageFeatures.html) is not set, you should also fallback to the FP32 version of FSR2.
 
-To enable the FP32 path in the FSR2 shader source code, you should define `FFX_HALF` to be `1`. In order to share the majority of the algorithm's source code between both FP16 and FP32 (ensuring a high level of code sharing to support ongoing maintenance), you will notice that the FSR2 shader source code uses a set of type macros which facilitate easy switching between 16-bit and 32-bit base types in the shader source.
+To enable the FP32 path in the FSR2 shader source code, you should define `FFX_HALF` to be `0`. In order to share the majority of the algorithm's source code between both FP16 and FP32 (ensuring a high level of code sharing to support ongoing maintenance), you will notice that the FSR2 shader source code uses a set of type macros which facilitate easy switching between 16-bit and 32-bit base types in the shader source.
 
 | FidelityFX type | FP32        | FP16            |
 |-----------------|-------------|-----------------|
@@ -492,7 +529,9 @@ The FSR2 algorithm is implemented in a series of stages, which are as follows:
 
 Each pass stage of the algorithm is laid out in the sections following this one, but the data flow for the complete FSR2 algorithm is shown in the diagram below.
 
-![alt text](media/super-resolution-temporal/algorithm-structure.svg "A diagram showing all passes in the FSR2 algorithm.")
+
+![invert](media/super-resolution-temporal/algorithm-structure.svg "A diagram showing all passes in the FSR2 algorithm.")
+
 
 <h3>Compute luminance pyramid</h3>
 
@@ -518,13 +557,14 @@ The following table contains all resources produced or modified by the [Compute 
 
 | Name                        | Temporal layer  | Resolution       |  Format                 | Type      | Notes                                        |  
 | ----------------------------|-----------------|------------------|-------------------------|-----------|----------------------------------------------|
-| Exposure                    | Current frame   | 1x1              | `R32_FLOAT`             | Texture   | A 1x1 texture containing the exposure value computed for the current frame. This resource is optional, and may be omitted if the [`FFX_FSR2_ENABLE_AUTO_EXPOSURE`](../../sdk/include/FidelityFX/host/ffx_fsr2.h#L136) flag is set in the [`flags`](../../sdk/include/FidelityFX/host/ffx_fsr2.h#L161) field of the [`FfxFsr2ContextDescription`](../../sdk/include/FidelityFX/host/ffx_fsr2.h#L159) structure when creating the [`FfxFsr2Context`](../../sdk/include/FidelityFX/host/ffx_fsr2.h#L233).  |
+| Exposure                    | Current frame   | 1x1              | `R32_FLOAT`             | Texture   | A 1x1 texture containing the exposure value computed for the current frame. This resource is optional, and may be omitted unless the [`FFX_FSR2_ENABLE_AUTO_EXPOSURE`](../../sdk/include/FidelityFX/host/ffx_fsr2.h#L136) flag is set in the [`flags`](../../sdk/include/FidelityFX/host/ffx_fsr2.h#L161) field of the [`FfxFsr2ContextDescription`](../../sdk/include/FidelityFX/host/ffx_fsr2.h#L159) structure when creating the [`FfxFsr2Context`](../../sdk/include/FidelityFX/host/ffx_fsr2.h#L233).  |
 | Current luminance           | Current frame   | `Render * 0.5` + MipChain  | `R16_FLOAT`             | Texture   | A texture at 50% of render resolution texture which contains the luminance of the current frame. A full mip chain is allocated. |
 
 <h4>Description</h4>
 The [Compute luminance pyramid](#compute-luminance-pyramid) stage is implemented using FidelityFX [Single Pass Downsampler](https://github.com/GPUOpen-Effects/FidelityFX-SPD), an optimized technique for producing mipmap chains using a single compute shader dispatch. Instead of the conventional (full) pyramidal approach, SPD provides a mechanism to produce a specific set of mipmap levels for an arbitrary input texture, as well as performing arbitrary calculations on that data as we store it to the target location in memory. In FSR2, we are interested in producing in upto two intermediate resources depending on the configuration of the [`FfxFsr2Context`](../../sdk/include/FidelityFX/host/ffx_fsr2.h#L166). The first resource is a low-resolution representation of the current luminance, this is used later in FSR2 to attempt to detect shading changes. The second is the exposure value, and while it is always computed, it is only used by subsequent stages if the [`FFX_FSR2_ENABLE_AUTO_EXPOSURE`](../../sdk/include/FidelityFX/host/ffx_fsr2.h#L136) flag is set in the [`flags`](../../sdk/include/FidelityFX/host/ffx_fsr2.h#L161) field of the [`FfxFsr2ContextDescription`](../../sdk/include/FidelityFX/host/ffx_fsr2.h#L159) structure upon context creation. The exposure value - either from the application, or the [Compute luminance pyramid](#compute-luminance-pyramid) stage - is used in the [Adjust input color](#adjust-input-color) stage of FSR2, as well as by the [Reproject & Accumulate](#project-and-accumulate) stage.
 
-![alt text](media/super-resolution-temporal/auto-exposure.svg "A diagram showing the mipmap levels written by auto-exposure.")
+
+![invert](media/super-resolution-temporal/auto-exposure.svg "A diagram showing the mipmap levels written by auto-exposure.")
 
 As used by FSR2, SPD is configured to write only to the 2nd (half resolution) and last (1x1) mipmap level. Moreover, different calculations are applied at each of these levels to calculate the quantities required by subsequent stages of the FSR2 algorithm. This means the rest of the mipmap chain is not required to be backed by GPU local memory (or indeed any type of memory).
 
@@ -553,8 +593,9 @@ float ComputeAutoExposureFromAverageLog(float averageLogLuminance)
 
 <h3>Reconstruct and dilate</h3>
 The reconstruct & dilate stage consumes the applications depth buffer and motion vectors, and produces a reconstructed and dilated depth buffer for the previous frame, together with a dilated set of motion vectors in UV space. The stage runs at render resolution.
- 
-![alt text](media/super-resolution-temporal/vector-dilation.svg "A diagram showing how a motion vector is dilated based on the depth value.")
+
+![invert](media/super-resolution-temporal/vector-dilation.svg "A diagram showing how a motion vector is dilated based on the depth value.")
+
 
 <h4>Resource inputs</h4>
 The following table contains all of the resources which are required by the reconstruct & dilate stage.
@@ -596,7 +637,8 @@ dispatchParams.motionVectorScale.y = renderHeight;
 
 With the dilated motion vectors, we can now move to the second part of the [Reconstruct & dilate](#reconstruct-and-dilate) stage, which is to estimate the position of each pixel in the current frame's depth buffer in the previous frame. This is done by applying the dilated motion vector computed for a pixel, to its depth buffer value. As it is possible for many pixels to reproject into the same pixel in the previous depth buffer, atomic operations are used in order to resolve the value of the nearest depth value for each pixel. This is done using the [`InterlockedMax`](https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/interlockedmax) or [`InterlockedMin`](https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/interlockedmin) operation (the choice depending on if the application's depth buffer is inverted or not). The use of cumulative operations to resolve the contents of the previous depth buffer implies that the reconstructed depth buffer resource must always be cleared to a known value, which is performed in the [Reproject & accumulate](#reproject-accumulate) stage. This is performed on frame N for frame N + 1.
 
-![alt text](media/super-resolution-temporal/reconstruct-previous-depth.svg "A diagram showing a dilated motion vector being applied to a depth value.")
+![invert](media/super-resolution-temporal/reconstruct-previous-depth.svg "A diagram showing a dilated motion vector being applied to a depth value.")
+
 
 When using the FSR2 API, the application's depth buffer and the application's velocity buffer must be specified as separate resources as per the [Resource inputs](#resource-inputs) table above. However, if you are undertaking a bespoke integration into your application, this constraint may be relaxed. Take care that the performance characteristics of this pass do not change if moving to a format for the motion vector texture which is more sparse, e.g.: as part of a packed g-buffer in a deferred renderer.
 
@@ -637,11 +679,13 @@ The following table contains all the resources which are produced by the [Depth 
 
 To generate the disocclusion mask, the depth value must be computed for each pixel from the previous camera's position and the new camera's position.  In the diagram below, you can see a camera moving from an initial position (labelled P0) to a new position (labelled P1). As it does so, the shaded area behind the sphere becomes disoccluded - that is it becomes visible from the camera at P1 and was previously occluded from the point of view of P0.
 
-![alt text](media/super-resolution-temporal/disocclusion.svg "A diagram showing a disoccluded area as a camera moves from position 0 to position 1.")
+![invert](media/super-resolution-temporal/disocclusion.svg "A diagram showing a disoccluded area as a camera moves from position 0 to position 1.")
+
 
 With both values depth values, we can compare the delta between them against the Akeley separation value [[Akeley-06](#references)]. Intuitively, the Akeley separation constant provides a minimum distance between two objects represented in a floating point depth buffer which allow you to say - with a high degree of certainty - that the objects were originally distinct from one another. In the diagram below you can see that the mid-grey and dark-grey objects have a delta which is larger than the `kSep` value which has been computed for the application's depth buffer configuration. However, the distance from the light-gray object to the mid-grey object does not exceed the computed `kSep` value, and therefore we are unable to conclude if this object is distinct.
 
-![alt text](media/super-resolution-temporal/k-sep.svg "A diagram showing the concept behind the constant of separation.")
+
+![invert](media/super-resolution-temporal/k-sep.svg "A diagram showing the concept behind the constant of separation.")
 
 The value stored in the disocclusion mask is in the range [0..1], where 1 maps to a value greater than or equal to the Akeley separation value.
 
@@ -702,13 +746,13 @@ The following table contain all resources required by the [Reproject & accumulat
 | Name                                | Temporal layer  | Resolution   |  Format                | Type      | Notes                                  |  
 | ------------------------------------|-----------------|--------------|------------------------|-----------|----------------------------------------|
 | Exposure                    | Current frame   | 1x1              | `R32_FLOAT`             | Texture   | A 1x1 texture containing the exposure value computed for the current frame. This resource is optional, and may be omitted if the [`FFX_FSR2_ENABLE_AUTO_EXPOSURE`](../../sdk/include/FidelityFX/host/ffx_fsr2.h#L135) flag is set in the [`flags`](../../sdk/include/FidelityFX/host/ffx_fsr2.h#L161) field of the [`FfxFsr2ContextDescription`](../../sdk/include/FidelityFX/host/ffx_fsr2.h#L159) structure when creating the [`FfxFsr2Context`](../../sdk/include/FidelityFX/host/ffx_fsr2.h#L233).  |
-| Dilated motion vectors              | Current frame   | Render       | `R16G16_FLOAT`         | Texture   | A texture containing dilated motion vectors computed from the application's velocity buffer. The red and green channel contains the two-dimensional motion vectors in UV space. |
-| Dilated reactive mask                       | Current frame   | Render       | `R8G8_UNORM`             | Texture   | Dilated reactive masks.  |
-| Upscaled buffer               | Previous frame  | Presentation | ``R16G16B16A16_FLOAT``  | Texture   | The output buffer produced by the FSR2 algorithm running in the previous frame. Please note: This buffer is used internally by FSR2, and is distinct from the presentation buffer which is derived from the output buffer, and has [RCAS](#robust-contrast-adpative-sharpening-rcas) applied. Please note: This texture is part of an array of two textures along with the Output buffer texture which is produced by the [Reproject & accumulate](#reproject-accumulate) stage. The selection of which texture in the array is used for input and output is swapped each frame. |
-| Current luminance                     | Current frame   | `Render * 0.5`   | `R16_FLOAT`             | Texture   | A texture at 50% of render resolution texture which contains the luminance of the current frame. |
-| Luminance history                     | Many frames     | Render       | `R8G8B8A8_UNORM`        | Texture   | A texture containing three frames of luminance history, as well as a stability factor encoded in the alpha channel. |
-| Adjusted color buffer                 | Current frame   | Render       | `R16G16B16A16_FLOAT`    | Texture   | A texture containing the adjusted version of the application's color buffer. The tonemapping operator may not be the same as any tonemapping operator included in the application, and is instead a local, reversible operator used throughout FSR2. This buffer is stored in YCoCg format. Alpha channel contains disocclusion mask.|
-| Lock status                         | Previous frame  | Presentation | `R16G16_FLOAT`         | Texture   | A mask which indicates not to perform color clipping on a pixel, can be thought of as a lock on the pixel to stop clipping removing the detail.  For a more detailed description of the pixel locking mechanism please refer to the [Create locks](#create-locks) stage. Please note: This texture is part of an array of two textures along with the Lock status texture which is used as an output from this stage. The selection of which texture in the array is used for input and output is swapped each frame. |
+| Dilated motion vectors      | Current frame   | Render       | `R16G16_FLOAT`         | Texture   | A texture containing dilated motion vectors computed from the application's velocity buffer. The red and green channel contains the two-dimensional motion vectors in UV space. |
+| Dilated reactive mask       | Current frame   | Render       | `R8G8_UNORM`             | Texture   | Dilated reactive masks.  |
+| Upscaled buffer             | Previous frame  | Presentation | ``R16G16B16A16_FLOAT``  | Texture   | The output buffer produced by the FSR2 algorithm running in the previous frame. Please note: This buffer is used internally by FSR2, and is distinct from the presentation buffer which is derived from the output buffer, and has [RCAS](#robust-contrast-adpative-sharpening-rcas) applied. Please note: This texture is part of an array of two textures along with the Output buffer texture which is produced by the [Reproject & accumulate](#reproject-accumulate) stage. The selection of which texture in the array is used for input and output is swapped each frame. |
+| Current luminance           | Current frame   | `Render * 0.5`   | `R16_FLOAT`             | Texture   | A texture at 50% of render resolution texture which contains the luminance of the current frame. |
+| Luminance history           | Many frames     | Presentation | `R8G8B8A8_UNORM`        | Texture   | A texture containing three frames of luminance history, as well as a stability factor encoded in the alpha channel. |
+| Adjusted color buffer       | Current frame   | Render       | `R16G16B16A16_FLOAT`    | Texture   | A texture containing the adjusted version of the application's color buffer. The tonemapping operator may not be the same as any tonemapping operator included in the application, and is instead a local, reversible operator used throughout FSR2. This buffer is stored in YCoCg format. Alpha channel contains disocclusion mask.|
+| Lock status                 | Previous frame  | Presentation | `R16G16_FLOAT`         | Texture   | A mask which indicates not to perform color clipping on a pixel, can be thought of as a lock on the pixel to stop clipping removing the detail.  For a more detailed description of the pixel locking mechanism please refer to the [Create locks](#create-locks) stage. Please note: This texture is part of an array of two textures along with the Lock status texture which is used as an output from this stage. The selection of which texture in the array is used for input and output is swapped each frame. |
 | New lock mask               | Current frame   | Presentation | `R8_UNORM`          | Texture   | A mask which indicates whether or not to perform color rectification on a pixel, can be thought of as a lock on the pixel to stop rectification from removing the detail. Please note: This texture is part of an array of two textures along with the Lock status texture which is used as an input to this stage. The selection of which texture in the array is used for input and output is swapped each frame. The red channel contains the time remaining on the pixel lock, and the Y channel contains the luminance of the pixel at the time when the lock was created. The [Create locks](#create-locks) stage updates only a subset of this resource. |
 
 
@@ -720,10 +764,10 @@ This table contains the resources produced by the [Reproject & accumulate](#repr
 
 | Name                        | Temporal layer  | Resolution   |  Format                 | Type      | Notes                                        |  
 | ----------------------------|-----------------|--------------|-------------------------|-----------|----------------------------------------------|
-| Upscaled buffer               | Current frame   | Presentation | `R16G16B16A16_FLOAT`    | Texture   | The output buffer produced by the [Reproject & accumulate](#reproject-accumulate) stage for the current frame. Please note: This buffer is used internally by FSR2, and is distinct from the presentation buffer which is produced as an output from this stage after applying RCAS. Please note: This texture is part of an array of two textures along with the Output buffer texture which is consumed by the [Reproject & accumulate](#reproject-accumulate) stage. The selection of which texture in the array is used for input and output is swapped each frame. |
-| Reprojected locks           | Current frame   | Render       | `R16G16_FLOAT`          | Texture   | The reprojected lock status texture. |
-| Luminance history                     | Many frames     | Render       | `R8G8B8A8_UNORM`        | Texture   | A texture containing three frames of luminance history, as well as a stability factor encoded in the alpha channel. |
-| New lock mask               | Next frame   | Presentation | `R8_UNORM`          | Texture   | This is cleared for next frame. |
+| Upscaled buffer             | Current frame   | Presentation | `R16G16B16A16_FLOAT`    | Texture   | The output buffer produced by the [Reproject & accumulate](#reproject-accumulate) stage for the current frame. Please note: This buffer is used internally by FSR2, and is distinct from the presentation buffer which is produced as an output from this stage after applying RCAS. Please note: This texture is part of an array of two textures along with the Output buffer texture which is consumed by the [Reproject & accumulate](#reproject-accumulate) stage. The selection of which texture in the array is used for input and output is swapped each frame. |
+| Reprojected locks           | Current frame   | Presentation | `R16G16_FLOAT`          | Texture   | The reprojected lock status texture. |
+| Luminance history           | Many frames     | Presentation | `R8G8B8A8_UNORM`        | Texture   | A texture containing three frames of luminance history, as well as a stability factor encoded in the alpha channel. |
+| New lock mask               | Next frame      | Presentation | `R8_UNORM`              | Texture   | This is cleared for next frame. |
 
 <h4>Description</h4>
 
@@ -731,24 +775,30 @@ The reproject & accumulate stage of FSR2 is the most complicated and expensive s
 
 The first step of the [Reproject & accumulate](#reproject-accumulate) stage is to assess each pixel for changes in its shading. If we are in a locked area, the luminance at the time the lock was created is compared to FSR2's shading change threshold. In a non-locked area, both the current frame and historical luminance values are used to make this determination. Shading change determination is a key part of FSR2's [Reproject & accumulate](#reproject-accumulate) stage, and feeds into many of the other parts of this stage.
 
-![alt text](media/super-resolution-temporal/upsample-with-lanczos.svg "A diagram showing upsampling of the current frame's input using Lanczos.")
+
+![invert](media/super-resolution-temporal/upsample-with-lanczos.svg "A diagram showing upsampling of the current frame's input using Lanczos.")
 
 Next we must upsample the adjusted color. To perform upsampling, the adjusted color's pixel position serves as the center of a 5x5 Lanczos resampling kernel [[Lanczos]](#references). In the diagram above, you can see that the Lanczos functions are centered around the display resolution sample `S`. The point in each pixel - labelled `P` - denotes the render resolution jittered sample position for which we calculate the Lanczos weights. Looking above and to the right of the 5x5 pixel neighbourhood, you can see the `Lanczos(x, 2)` resampling kernel being applied to the render resolution samples in the 5x5 grid of pixels surrounding the pixel position. It is worth noting that while conceptually the neighbourhood is 5x5, in the implementation only a 4x4 is actually sampled, due to the zero weighted contributions of those pixels on the periphery of the neighbourhood. The implementation of the Lanczos kernel may vary by GPU product. On RDNA2-based products, we use a look-up-table (LUT) to encode the `sinc(x)` function. This helps to produce a more harmonious balance between ALU and memory in the [Reproject & accumulate](#reproject-accumulate) stage. As the upsample step has access to the 5x5 neighbourhood of pixels, it makes sense from an efficiency point of view to also calculate the YCoCg bounding box - which is used during color rectification - at this point. The diagram below shows a 2D YCo bounding box being constructed from a 3x3 neighbourhood around the current pixel, in reality the bounding box also has a third dimension for Cg.
 
-![alt text](media/super-resolution-temporal/calculate-bounding-box.svg "A diagram showing how a YCoCg bounding box is computed from the current frame's adjust color samples.")
+
+![invert](media/super-resolution-temporal/calculate-bounding-box.svg "A diagram showing how a YCoCg bounding box is computed from the current frame's adjust color samples.")
 
 Reprojection is another key part of the [Reproject & accumulate](#reproject-accumulate) stage. To perform reprojection, the dilated motion vectors produced by the [Reconstruct & dilate](#reconstruct-and-dilate) stage are sampled and then applied to the output buffer from the previous frame's execution of FSR2. The left of the diagram below shows two-dimensional motion vector **M** being applied to the current pixel position. On the right, you can see the `Lanczos(x, 2)` resampling kernel being applied to the 5x5 grid of pixels surrounding the translated pixel position. As with the upsampling step, the implementation of the Lanczos kernel may vary by GPU product. The result of the reprojection is a presentation resolution image which contains all the data from the previous frame that could be mapped into the current frame. However, it is not just the previous frame's output color that is reprojected. As FSR2 relies on a mechanism whereby each pixel may be locked to enhance its temporal stability, the locks must also be reprojected from the previous frame into the current frame. This is done in much the same way as the reprojection of the color data, but also combines the results of the shading change detection step we performed on the various luminance values, both current and historical. 
 
-![alt text](media/super-resolution-temporal/reproject-mvs.svg "A diagram showing the 5x5 Lanczos sampling kernel applied to a pixel position determined by translating the current pixel position by the motion vectors.")
+
+![invert](media/super-resolution-temporal/reproject-mvs.svg "A diagram showing the 5x5 Lanczos sampling kernel applied to a pixel position determined by translating the current pixel position by the motion vectors.")
+
 
 It is now time to update our locks. The first task for update locks is to look for locks which were created during this frame's [Create locks](#create-locks) stage that are not reprojected, and instead have the luminance value of the current frame written to the green channel of the reprojected locks texture. All that remains then is to discern which locks are trustworthy for the current frame and pass those on to the color rectification step. The truthworthiness determination is done by comparing the luminance values within a neighbourhood of pixels in the current luminance texture. If the luminance separation between these values is large, then we should not trust the lock.
 
 With our lock updates applied and their trustworthiness determined, we can move on to color rectification which is the next crucial step of FSR2's [Reproject & accumulate](#reproject-accumulate) stage. During this stage, a final color is determined from the pixel's historical data which will then be blended with the current frame's upsampled color in order to form the final accumulated super-resolution color. The determination of the final historical color and its contribution is chiefly controlled by two things:
 
 1. Reducing the influence of the historical samples for areas which are disoccluded. This is undertaken by modulating the color value by the disocclusion mask.
-2. Reducing the influence of the historical samples (marked S<sub>h</sub> in the diagram below) are far from the current frame color's bounding box (computed during the upsampling phase of the [Reproject & accumulate](#reproject-accumulate) stage).
+2. Reducing the influence of the historical samples (marked $S_h$ in the diagram below) are far from the current frame color's bounding box (computed during the upsampling phase of the [Reproject & accumulate](#reproject-accumulate) stage).
 
-![alt text](media/super-resolution-temporal/clamp-to-box.svg "A diagram showing a historical color sample being clamped to the YCoCg bounding box for the current frame.")
+
+![invert](media/super-resolution-temporal/clamp-to-box.svg "A diagram showing a historical color sample being clamped to the YCoCg bounding box for the current frame.")
+
 
 The final step of the [Reproject & accumulate](#reproject-accumulate) stage is to accumulate the current frame's upsampled color with the rectified historical color data. By default, FSR2 will typically blend the current frame with a relatively low linear interpolation factor - that is relatively little of the current frame will be included in the final output. However, this can be altered based on the contents of the application provided reactivity mask. See the [reactive mask](#reactive-mask) section for further details.
 
@@ -779,7 +829,7 @@ This table contains the resources consumed by the [Robust Contrast Adaptive Shar
 
 RCAS operates on data sampled using a 5-tap filter configured in a cross pattern. See the diagram below.
 
-![alt text](media/super-resolution-temporal/rcas-weights.svg "A diagram showing the weights RCAS applies to neighbourhood pixels.")
+![invert](media/super-resolution-temporal/rcas-weights.svg "A diagram showing the weights RCAS applies to neighbourhood pixels.")
 
 With the samples retreived, RCAS then chooses the 'w' which results in no clipping, limits 'w', and multiplies by the 'sharp' amount. The solution above has issues with MSAA input as the steps along the gradient cause edge detection issues. To help stabilize the results of RCAS, it uses 4x the maximum and 4x the minimum (depending on equation) in place of the individual taps, as well as switching from 'm' to either the minimum or maximum (depending on side), to help in energy conservation.
 
@@ -795,12 +845,15 @@ To build the FSR2 sample, please follow the following instructions:
 - [Windows 10 SDK 10.0.18362.0](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk)
 - [Git 2.32.0](https://git-scm.com/downloads)
 
-2) Generate the solutions:
+2) Generate Visual Studio solution:
 
-```
-> cd samples
-> BuildAllNativeEffectsSolution.bat
-```
+    ```bash
+    > <installation path>\BuildSamplesSolution.bat
+    ```
+	
+	The batch file will inquire if the solution should build the SDK as a DLL (builds as a statically linked library if no ('n') is provided) and which samples should be included. Please use '1' to build a solution with all samples included or provide the list of samples to be included (using the corresponding number of the samples with spaces in between).
+  
+    This will generate a `build\` directory where you will find the solution for the SDK samples (`FidelityFX SDK Samples.sln`).
 
 3) Open the solution, compile and run.
 

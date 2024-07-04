@@ -1,9 +1,9 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
@@ -12,9 +12,9 @@
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -55,6 +55,9 @@
 #include "render/rendermodules/swapchain/swapchainrendermodule.h"
 #include "render/rendermodules/tonemapping/tonemappingrendermodule.h"
 #include "render/rendermodules/ui/uirendermodule.h"
+#include "render/rendermodules/skinning/skinningrendermodule.h"
+#include "render/rendermodules/raytracing/raytracingrendermodule.h"
+#include "render/rendermodules/runtimeshaderrecompiler/runtimeshaderrecompilerrendermodule.h"
 #include "render/shaderbuilder.h"
 
 #include <fstream>
@@ -223,17 +226,16 @@ namespace cauldron
         delete m_pImpl;
     }
 
-    int32_t Framework::Init()
+    void Framework::Init()
     {
         // The main thread ID
         m_MainThreadID = std::this_thread::get_id();
 
-        if (0 != m_pImpl->Init()) {
-            return -1;
-        }
+        // Initialize implementation
+        m_pImpl->Init();
 
         // Set width and height accordingly to what's been specified in config/command line
-        m_ResolutionInfo = { m_Config.Width, m_Config.Height, m_Config.Width, m_Config.Height };
+        m_ResolutionInfo = {m_Config.Width, m_Config.Height, m_Config.Width, m_Config.Height, m_Config.Width, m_Config.Height};
 
         // Init RenderDoc
         if(m_Config.EnableRenderDocCapture)
@@ -261,67 +263,69 @@ namespace cauldron
         // Initialize the device, resource allocator, and swap chain
         Log::Write(LOGLEVEL_TRACE, L"Initializing graphics device.");
         m_pDevice = Device::CreateDevice();
-        if (!m_pDevice) return -1;
+        CauldronAssert(ASSERT_CRITICAL, m_pDevice, L"Could not initialize graphics device.");
 
         Log::Write(LOGLEVEL_TRACE, L"Initializing graphics resource view allocator.");
         m_pResourceViewAllocator = ResourceViewAllocator::CreateResourceViewAllocator();
-        if (!m_pResourceViewAllocator) return -1;
+        CauldronAssert(ASSERT_CRITICAL, m_pResourceViewAllocator, L"Could not initialize resource view allocator.");
 
         Log::Write(LOGLEVEL_TRACE, L"Initializing raster view allocator.");
         m_pRasterViewAllocator = new RasterViewAllocator();
-        if (!m_pRasterViewAllocator) return -1;
+        CauldronAssert(ASSERT_CRITICAL, m_pRasterViewAllocator, L"Could not initialize raster view allocator.");
 
         Log::Write(LOGLEVEL_TRACE, L"Initializing graphics dynamic resource pool.");
         m_pDynamicResourcePool = new DynamicResourcePool();
-        if (!m_pDynamicResourcePool) return -1;
+        CauldronAssert(ASSERT_CRITICAL, m_pDynamicResourcePool, L"Could not initialize dynamic resource pool.");
 
         Log::Write(LOGLEVEL_TRACE, L"Initializing graphics shadow map resource pool.");
         m_pShadowMapResourcePool = new ShadowMapResourcePool();
-        if (!m_pShadowMapResourcePool) return -1;
+        CauldronAssert(ASSERT_CRITICAL, m_pShadowMapResourcePool, L"Could not initialize shadow map resource pool.");
 
         Log::Write(LOGLEVEL_TRACE, L"Initializing graphics swap chain.");
         m_pSwapChain = SwapChain::CreateSwapchain();
-        if (!m_pSwapChain) return -1;
+        CauldronAssert(ASSERT_CRITICAL, m_pSwapChain, L"Could not initialize swap chain.");
 
         Log::Write(LOGLEVEL_TRACE, L"Initializing requested render resources.");
-        if (-1 == CreateRenderResources()) return -1;
+        int32_t result = CreateRenderResources();
+        CauldronAssert(ASSERT_CRITICAL, result >= 0, L"Could not create render resources.");
 
         Log::Write(LOGLEVEL_TRACE, L"Initializing profiler.");
         m_pProfiler = Profiler::CreateProfiler();
-        if (!m_pProfiler) return -1;
+        CauldronAssert(ASSERT_CRITICAL, m_pProfiler, L"Could not initialize profiler.");
 
         // Initialize upload heap and constant buffer pool
         Log::Write(LOGLEVEL_TRACE, L"Initializing graphics upload heap.");
         m_pUploadHeap = UploadHeap::CreateUploadHeap();
-        if (!m_pUploadHeap) return -1;
+        CauldronAssert(ASSERT_CRITICAL, m_pUploadHeap, L"Could not initialize upload heap.");
 
         Log::Write(LOGLEVEL_TRACE, L"Initializing graphics constant buffer pool.");
         m_pDynamicBufferPool = DynamicBufferPool::CreateDynamicBufferPool();
-        if (!m_pDynamicBufferPool) return -1;
+        CauldronAssert(ASSERT_CRITICAL, m_pDynamicBufferPool, L"Could not initialize dynamic buffer pool.");
 
         // Initialize shader compile system
         Log::Write(LOGLEVEL_TRACE, L"Initializing shader compiler.");
-        if (InitShaderCompileSystem() < 0) return -1;
+        result = InitShaderCompileSystem();
+        CauldronAssert(ASSERT_CRITICAL, result >= 0, L"Could not initialize shader compiler.");
 
         // Initialize input manager
         Log::Write(LOGLEVEL_TRACE, L"Initializing input manager.");
         m_pInputManager = InputManager::CreateInputManager();
-        if (!m_pInputManager) return -1;
+        CauldronAssert(ASSERT_CRITICAL, m_pInputManager, L"Could not initialize input manager.");
 
         // Initialize UI manager
         Log::Write(LOGLEVEL_TRACE, L"Initializing UI manager.");
         m_pUIManager = new UIManager();
-        if (!m_pUIManager) return -1;
+        CauldronAssert(ASSERT_CRITICAL, m_pUIManager, L"Could not initialize ui manager.");
 
         // Create the scene
         Log::Write(LOGLEVEL_TRACE, L"Initializing scene");
         m_pScene = new Scene();
-        if (!m_pScene) return -1;
+        CauldronAssert(ASSERT_CRITICAL, m_pScene, L"Could not initialize scene.");
 
         // Initialize the ContentManager (which is partially dependent on everything above)
         Log::Write(LOGLEVEL_TRACE, L"Initializing content manager.");
         m_pContentManager = new ContentManager();
-        if (!m_pContentManager) return -1;
+        CauldronAssert(ASSERT_CRITICAL, m_pContentManager, L"Could not initialize content manager.");
 
         // Do all necessary registrations of software modules
         RegisterComponentsAndModules();
@@ -338,6 +342,7 @@ namespace cauldron
 
             // Push the default execution callback
             std::pair<RenderModule*, ExecuteCallback> defaultCallback = std::make_pair(pRMInstance, [pRMInstance](double deltaTime, CommandList* pCmdList) {
+                pRMInstance->UpdateUI(deltaTime);
                 pRMInstance->Execute(deltaTime, pCmdList);
                 });
             m_ExecutionCallbacks.push_back(std::make_pair(pRMInstance->GetName(), defaultCallback));
@@ -359,12 +364,10 @@ namespace cauldron
 
         // Initialize the sample side (and quit now if something goes wrong)
         Log::Write(LOGLEVEL_TRACE, L"Initializing sample.");
-        if ( DoSampleInit() < 0 ) return -1;
-
-        return 0;
+        DoSampleInit();
     }
 
-    int32_t Framework::PreRun()
+    void Framework::PreRun()
     {
         // Initialize internal scene content (which may get tracked by various RMs)
         m_pScene->InitSceneContent();
@@ -393,8 +396,6 @@ namespace cauldron
 
         // Initialize time last right before running so we don't hit a spike on the first frame
         m_LastFrameTime = std::chrono::system_clock::now();
-
-        return 0;
     }
 
     // In case we need it later
@@ -512,6 +513,58 @@ namespace cauldron
             const auto GetMs = [](std::chrono::nanoseconds ns) -> double {
                 return (double)ns.count() / 1000000.0;
             };
+            // refine the perf stats
+            {
+                const auto refinePerfStats = [this](std::vector<PerfStats>& perfStats)
+                {
+                    for (auto& curPerfStat : perfStats)
+                    {
+
+                        // incremental variance
+                        // mean(n) = mean(n-1) + (x(n) - mean(n-1))/n
+                        // let s = n * variance
+                        // s(n) = s(n-1) + (x(n) - mean(n-1))(x(n) - mean(n))
+                        double       incrementalMean     = .0;
+                        double       incrementalS        = .0;
+                        const size_t timingsSize         = curPerfStat.timings.size();
+                        size_t       incrementalI        = 1;
+                        for (const auto& t : curPerfStat.timings)
+                        {
+                            const double previousMean             = incrementalMean;
+                            const double currentMinusPreviousMean = t.count() - previousMean;
+                            incrementalMean                       = previousMean + currentMinusPreviousMean / incrementalI;
+                            incrementalS                          = incrementalS + currentMinusPreviousMean * (t.count() - incrementalMean);
+                            incrementalI++;
+                        }
+                        const double incrementalVariance = incrementalS / timingsSize;
+
+                        const double                                stdDeviation = std::sqrt(incrementalVariance);
+                        std::vector<std::chrono::nanoseconds>       refinedTiming;
+                        const double                                min = incrementalMean - m_Config.BenchmarkDeviationFilterFactor * stdDeviation;
+                        const double                                max = incrementalMean + m_Config.BenchmarkDeviationFilterFactor * stdDeviation;
+                        for (const auto& t : curPerfStat.timings)
+                        {
+                            if (t.count() >= min && t.count() <= max)
+                            {
+                                refinedTiming.push_back(t);
+                            }
+                        }
+                        if (refinedTiming.size() == 0)
+                            continue;
+
+                        curPerfStat.min = curPerfStat.max = refinedTiming[0];
+                        curPerfStat.refinedSize = refinedTiming.size();
+                        for (const auto& rt : refinedTiming)
+                        {
+                            curPerfStat.total += rt;
+                            curPerfStat.min = std::min(curPerfStat.min, rt);
+                            curPerfStat.max = std::max(curPerfStat.max, rt);
+                        }
+                    }
+                };
+                refinePerfStats(m_CpuPerfStats);
+                refinePerfStats(m_GpuPerfStats);
+            }
             if (m_Config.BenchmarkJson)
             {
                 if (m_Config.BenchmarkAppend && !hasHeader)
@@ -548,7 +601,7 @@ namespace cauldron
                         {"min_ns", ps.min.count()},
                         {"max_ms", GetMs(ps.max)},
                         {"max_ns", ps.max.count()},
-                        {"avg_ms", GetMs(ps.total) / (double)m_PerfFrameCount},
+                        {"avg_ms", GetMs(ps.total) / (double)ps.refinedSize},
                         {"total_ns", ps.total.count()},
                     });
                 };
@@ -603,15 +656,17 @@ namespace cauldron
                     file << runtime << ',' << (double)m_PerfFrameCount / runtime << ',';
 
                     // get min/max/avg from first label
-                    file << GetMs(m_GpuPerfStats[0].min) << ',' << GetMs(m_GpuPerfStats[0].max) << ',' << GetMs(m_GpuPerfStats[0].total) / (double)m_PerfFrameCount << ',';
-                    file << GetMs(m_CpuPerfStats[0].min) << ',' << GetMs(m_CpuPerfStats[0].max) << ',' << GetMs(m_CpuPerfStats[0].total) / (double)m_PerfFrameCount;
+                    file << GetMs(m_GpuPerfStats[0].min) << ',' << GetMs(m_GpuPerfStats[0].max) << ','
+                         << GetMs(m_GpuPerfStats[0].total) / (double)m_GpuPerfStats[0].refinedSize << ',';
+                    file << GetMs(m_CpuPerfStats[0].min) << ',' << GetMs(m_CpuPerfStats[0].max) << ','
+                         << GetMs(m_CpuPerfStats[0].total) / (double)m_CpuPerfStats[0].refinedSize;
 
                     // go through all labels
                     for (const auto& ps : m_GpuPerfStats)
-                        file << ',' << GetMs(ps.total) / (double)m_PerfFrameCount;
+                        file << ',' << GetMs(ps.total) / (double)ps.refinedSize;
 
                     for (const auto& ps : m_CpuPerfStats)
-                        file << ',' << GetMs(ps.total) / (double)m_PerfFrameCount;
+                        file << ',' << GetMs(ps.total) / (double)ps.refinedSize;
 
                     // Dump the screenshot name associate with this benchmark if we've got one
                     file << ',' << (m_Config.ScreenShotFileName.empty() ? "" : WStringToString(m_Config.ScreenShotFileName.c_str()).c_str());
@@ -636,11 +691,11 @@ namespace cauldron
                     file << L"CPU/GPU,Label,Min [ms],Max [ms],Mean [ms]\n";
                     for (const auto& ps : m_CpuPerfStats)
                     {
-                        file << "CPU," << ps.Label << ',' << GetMs(ps.min) << ',' << GetMs(ps.max) << ',' << GetMs(ps.total) / (double)m_PerfFrameCount << '\n';
+                        file << "CPU," << ps.Label << ',' << GetMs(ps.min) << ',' << GetMs(ps.max) << ',' << GetMs(ps.total) / (double)ps.refinedSize << '\n';
                     }
                     for (const auto& ps : m_GpuPerfStats)
                     {
-                        file << "GPU," << ps.Label << ',' << GetMs(ps.min) << ',' << GetMs(ps.max) << ',' << GetMs(ps.total) / (double)m_PerfFrameCount << '\n';
+                        file << "GPU," << ps.Label << ',' << GetMs(ps.min) << ',' << GetMs(ps.max) << ',' << GetMs(ps.total) / (double)ps.refinedSize << '\n';
                     }
 
                     // Dump the screenshot name associate with this benchmark if we've got one
@@ -701,6 +756,7 @@ namespace cauldron
             m_Config.RT_1_0         = featuresConfig.value("RT1.0", m_Config.RT_1_0);
             m_Config.RT_1_1         = featuresConfig.value("RT1.1", m_Config.RT_1_1);
             m_Config.FP16           = featuresConfig.value("FP16", m_Config.FP16);
+            m_Config.ShaderStorageBufferArrayNonUniformIndexing = featuresConfig.value("ShaderStorageBufferArrayNonUniformIndexing", m_Config.ShaderStorageBufferArrayNonUniformIndexing);
             m_Config.MinShaderModel = featuresConfig.value<ShaderModel>("ShaderModel", m_Config.MinShaderModel);
         }
 
@@ -727,6 +783,15 @@ namespace cauldron
             m_Config.CPUResourceViewCount  = allocationsConfig.value("CPUResourceViewCount", m_Config.CPUResourceViewCount);
             m_Config.CPURenderViewCount    = allocationsConfig.value("CPURenderViewCount", m_Config.CPURenderViewCount);
             m_Config.CPUDepthViewCount     = allocationsConfig.value("CPUDepthViewCount", m_Config.CPUDepthViewCount);
+        }
+
+        // Initialize frame limiter configuration
+        if (configData.find("FPSLimiter") != configData.end())
+        {
+            json limiterConfig = configData["FPSLimiter"];
+            m_Config.LimitFPS = limiterConfig.value("Enable", m_Config.LimitFPS);
+            m_Config.GPULimitFPS = limiterConfig.value("UseGPULimiter", m_Config.GPULimitFPS);
+            m_Config.LimitedFrameRate = limiterConfig.value("TargetFPS", m_Config.LimitedFrameRate);
         }
 
         // Initialize render resources
@@ -766,8 +831,6 @@ namespace cauldron
         }
 
         // Initialize other settings
-        m_Config.DeveloperMode         = configData.value("DevelopmentMode", m_Config.DeveloperMode);
-        m_Config.DebugShaders          = configData.value("DebugShaders", m_Config.DebugShaders);
         m_Config.FontSize              = configData.value("FontSize", m_Config.FontSize);
         m_Config.AGSEnabled            = configData.value("AGSEnabled", m_Config.AGSEnabled);
         m_Config.StablePowerState      = configData.value("StablePowerState", m_Config.StablePowerState);
@@ -819,6 +882,10 @@ namespace cauldron
             if (loadingContent.find("SkyMap") != loadingContent.end())
             {
                 m_Config.StartupContent.SkyMap = StringToWString(loadingContent["SkyMap"]);
+            }
+            if (loadingContent.find("IBLFactor") != loadingContent.end())
+            {
+                m_Config.StartupContent.IBLFactor = loadingContent.value("IBLFactor", m_Config.StartupContent.IBLFactor);
             }
 
             // Check for particle spawners
@@ -895,7 +962,7 @@ namespace cauldron
                 }
 
                 const std::string logMessage("Could not parse dependencies for " + m_Config.RenderModules.back().Name);
-                CauldronAssert(ASSERT_CRITICAL, AreDependeciesPresent(rmDependencies, rmAvailable), std::wstring(logMessage.begin(), logMessage.end()).c_str());
+                CauldronAssert(ASSERT_CRITICAL, AreDependenciesPresent(rmDependencies, rmAvailable), std::wstring(logMessage.begin(), logMessage.end()).c_str());
             }
         }
 
@@ -989,6 +1056,7 @@ namespace cauldron
             m_Config.EnableBenchmark = benchmarkConfig.value("Enabled", m_Config.EnableBenchmark);
             m_Config.BenchmarkFrameDuration = benchmarkConfig.value("FrameDuration", m_Config.BenchmarkFrameDuration);
             m_Config.BenchmarkPath = benchmarkConfig.value("Path", m_Config.BenchmarkPath);
+            m_Config.BenchmarkDeviationFilterFactor = benchmarkConfig.value("DeviationFilterFactor", m_Config.BenchmarkDeviationFilterFactor);
         }
 
         // Validate that the information are correct
@@ -1008,7 +1076,7 @@ namespace cauldron
         m_PerfFrameCount = -static_cast<int64_t>(m_Config.BackBufferCount);
     }
 
-    void Framework::EnableUpscaling(bool enabled, ResolutionUpdateFunc func/*=nullptr*/)
+    void Framework::EnableUpscaling(bool enabled, ResolutionUpdateFunc func /*=nullptr*/)
     {
         m_UpscalerEnabled = enabled;
         CauldronAssert(ASSERT_WARNING, !enabled || func, L"Upscaler enabled without resolution update function, there may be some unintended side effects");
@@ -1016,14 +1084,28 @@ namespace cauldron
         // Set or clear the resolution updater
         m_ResolutionUpdaterFn = (m_UpscalerEnabled) ? func : nullptr;
 
+        auto oldResolutionInfo = m_ResolutionInfo;
         // Need to update the resolution info
         if (m_ResolutionUpdaterFn)
             m_ResolutionInfo = m_ResolutionUpdaterFn(m_ResolutionInfo.DisplayWidth, m_ResolutionInfo.DisplayHeight);
         else
-            m_ResolutionInfo = { m_ResolutionInfo.DisplayWidth, m_ResolutionInfo.DisplayHeight, m_ResolutionInfo.DisplayWidth, m_ResolutionInfo.DisplayHeight };
+            m_ResolutionInfo = {m_ResolutionInfo.DisplayWidth,
+                                m_ResolutionInfo.DisplayHeight,
+                                m_ResolutionInfo.DisplayWidth,
+                                m_ResolutionInfo.DisplayHeight,
+                                m_ResolutionInfo.DisplayWidth,
+                                m_ResolutionInfo.DisplayHeight};
 
         // Flush the GPU as this may have implications on resource creations
-        ResizeEvent();
+        if (oldResolutionInfo.DisplayHeight != m_ResolutionInfo.DisplayHeight || oldResolutionInfo.DisplayWidth != m_ResolutionInfo.DisplayWidth)
+        {
+            ResizeEvent();
+        }
+    }
+
+    void Framework::EnableFrameInterpolation(bool enabled)
+    {
+        m_FrameInterpolationEnabled = enabled;
     }
 
     void Framework::ResizeEvent()
@@ -1049,6 +1131,24 @@ namespace cauldron
         DoSampleResize(m_ResolutionInfo);
     }
 
+    void Framework::FocusLostEvent()
+    {
+        for (auto compMgrIter = m_ComponentManagers.begin(); compMgrIter != m_ComponentManagers.end(); ++compMgrIter)
+            compMgrIter->second->OnFocusLost();
+
+        for (auto& rm : m_RenderModules)
+            rm->OnFocusLost();
+    }
+
+    void Framework::FocusGainedEvent()
+    {
+        for (auto compMgrIter = m_ComponentManagers.begin(); compMgrIter != m_ComponentManagers.end(); ++compMgrIter)
+            compMgrIter->second->OnFocusGained();
+
+        for (auto& rm : m_RenderModules)
+            rm->OnFocusGained();
+    }
+
     void Framework::ParseConfigFile(const wchar_t* configFileName)
     {
         Log::Write(LOGLEVEL_TRACE, L"Parsing cauldron config file.");
@@ -1064,6 +1164,7 @@ namespace cauldron
         m_Config.RT_1_0                = false;
         m_Config.RT_1_1                = true;
         m_Config.FP16                  = true;
+        m_Config.ShaderStorageBufferArrayNonUniformIndexing = false;
         m_Config.Vsync                 = false;
         m_Config.Fullscreen            = false;
         m_Config.DeveloperMode         = false;
@@ -1085,14 +1186,32 @@ namespace cauldron
         // Get the Cauldron configuration
         json cauldronConfig = jsonConfigFile["Cauldron"];
 
+        // Add the RuntimeShaderRecompilerRenderModule first so that its button is visible without scrolling.
+        // Note that when runtime shader recompile support is disabled then this rendermodule does not draw a UI.
+        RenderModuleInfo runtimeShaderRecompilerInfo = {"RuntimeShaderRecompilerRenderModule", {}};
+        m_Config.RenderModules.push_back(runtimeShaderRecompilerInfo);
+
+        // Second RenderModule is the Skinning one
+        RenderModuleInfo csRMInfo = {"SkinningRenderModule", {}};
+        m_Config.RenderModules.push_back(csRMInfo);
+
         // Parse the data for cauldron
         ParseConfigData(cauldronConfig);
 
         // Do sample-side configuration loading
         ParseSampleConfig();
 
-        // Append UI, FPSLimiter, and Swap chain render modules which are integral to cauldron's functionality
-        // Defining here instead of thorugh config file to make use of numeric_limits to get largest priorities
+        // Add the RayTracing RenderModule only if is desired by the application
+        RenderModuleInfo rtRMInfo = {"RayTracingRenderModule", {}};
+        if (m_Config.BuildRayTracingAccelerationStructure)
+        {
+            auto skinningRmIterator = m_Config.RenderModules.begin() + 1;
+            // Add the RM after Compute Skinning
+            m_Config.RenderModules.insert(skinningRmIterator, rtRMInfo);
+        }
+
+        // Append UI, FPSLimiter, Swap chain render modules which are integral to cauldron's functionality
+        // Defining here instead of through config file to make use of numeric_limits to get largest priorities
         // Cauldron's render resources are defined in the config file
         RenderModuleInfo uiRMInfo        = {"UIRenderModule", {}};
         RenderModuleInfo fpsLimitRMInfo  = {"FPSLimiterRenderModule", {}};
@@ -1268,6 +1387,25 @@ namespace cauldron
                 continue;
             }
 
+            // Override scene IBL factor
+            if (command == L"-iblfactor")
+            {
+                CauldronAssert(ASSERT_CRITICAL, argCount - currentArg > 1 && pArgList[currentArg + 1][0] != L'-', L"-iblfactor requires a floating point IBL factor be provided (usage: -iblfactor <value>");
+                try
+                {
+                    float iblfactor = std::stof(pArgList[currentArg + 1]);
+                    m_Config.StartupContent.IBLFactor = iblfactor;
+                }
+
+                catch (std::invalid_argument const&)
+                {
+                    CauldronCritical(L"Could not convert provided command line IBL factor to numerical value.");
+                }
+
+                currentArg++;
+                continue;
+            }
+
             // Override camera
             if (command == L"-camera")
             {
@@ -1412,6 +1550,9 @@ namespace cauldron
         RenderModuleFactory::RegisterModule<UIRenderModule>("UIRenderModule");
         RenderModuleFactory::RegisterModule<FPSLimiterRenderModule>("FPSLimiterRenderModule");
         RenderModuleFactory::RegisterModule<SwapChainRenderModule>("SwapChainRenderModule");
+        RenderModuleFactory::RegisterModule<SkinningRenderModule>("SkinningRenderModule");
+        RenderModuleFactory::RegisterModule<RayTracingRenderModule>("RayTracingRenderModule");
+        RenderModuleFactory::RegisterModule<RuntimeShaderRecompilerRenderModule>("RuntimeShaderRecompilerRenderModule");
 
         // Register all Component Managers we know about
         RegisterComponentManager<CameraComponentMgr>();
@@ -1424,7 +1565,7 @@ namespace cauldron
         RegisterSampleModules();
     }
 
-    bool Framework::AreDependeciesPresent(const std::set<std::string>& dependencies, const std::set<std::string>& available)
+    bool Framework::AreDependenciesPresent(const std::set<std::string>& dependencies, const std::set<std::string>& available) const
     {
         uint32_t count = 0;
 
@@ -1451,6 +1592,14 @@ namespace cauldron
         {
             CPUScopedProfileCapture marker(L"SampleUpdates");
             DoSampleUpdates(m_DeltaTime);
+        }
+
+        {
+            for (auto pRenderModule : m_RenderModules)
+            {
+                if (pRenderModule->ModuleEnabled())
+                    pRenderModule->OnPreFrame();
+            }
         }
 
         // Begin Frame
@@ -1482,13 +1631,17 @@ namespace cauldron
                 compMgrIter->second->UpdateComponents(m_DeltaTime);
         }
 
+        // This can be closed out, new cmd lists will be opened after
+        CloseCmdList(m_pCmdListForFrame);
+        m_vecCmdListsForFrame.push_back(m_pCmdListForFrame);
+
         // If the scene is not yet ready, skip to end frame
         if (m_pScene->IsReady())
         {
             // Do any scene updates (setup scene info for the frame, etc.)
             {
                 CPUScopedProfileCapture marker(L"UpdateScene");
-                m_pScene->UpdateScene(m_DeltaTime, m_pCmdListForFrame);
+                m_pScene->UpdateScene(m_DeltaTime);
             }
 
             // Call all registered render modules
@@ -1497,10 +1650,19 @@ namespace cauldron
                 for (auto& callback : m_ExecutionCallbacks)
                 {
                     if (callback.second.first->ModuleEnabled() && callback.second.first->ModuleReady())
+                    {
+                        m_pCmdListForFrame = m_pDevice->CreateCommandList(L"RenderModuleGraphicsCmdList", CommandQueue::Graphics);
+                        SetAllResourceViewHeaps(m_pCmdListForFrame);
+
                         callback.second.second(m_DeltaTime, m_pCmdListForFrame);
+                        CloseCmdList(m_pCmdListForFrame);
+                        m_vecCmdListsForFrame.push_back(m_pCmdListForFrame);
+                    }
                 }
             }
         }
+
+        m_pCmdListForFrame = m_pDeviceCmdListForFrame;
 
         // EndFrame will close and submit all active command lists and
         // kick off the work for execution before performing a Present()
@@ -1527,8 +1689,7 @@ namespace cauldron
 
         if (m_Config.EnableBenchmark)
         {
-            if (!m_pContentManager->IsCurrentlyLoading()
-                && std::all_of(m_RenderModules.begin(), m_RenderModules.end(), [](const auto& it) { return it->ModuleReady(); }))
+            if (!m_pContentManager->IsCurrentlyLoading())
             {
                 if (m_PerfFrameCount == 0)
                 {
@@ -1568,15 +1729,15 @@ namespace cauldron
                         m_CpuPerfStats.reserve(cpuTimings.size());
                         for (const auto& ti : cpuTimings)
                         {
-                            std::chrono::nanoseconds dur = ti.GetDuration();
-                            m_CpuPerfStats.emplace_back(PerfStats{ ti.Label, dur, dur, dur });
+                            m_CpuPerfStats.push_back({ti.Label});
+                            m_CpuPerfStats.back().timings.reserve(m_Config.BenchmarkFrameDuration);
                         }
                         m_GpuPerfStats.clear();
                         m_GpuPerfStats.reserve(gpuTimings.size());
                         for (const auto& ti : gpuTimings)
                         {
-                            std::chrono::nanoseconds dur = ti.GetDuration();
-                            m_GpuPerfStats.emplace_back(PerfStats{ ti.Label, dur, dur, dur });
+                            m_GpuPerfStats.push_back({ti.Label});
+                            m_GpuPerfStats.back().timings.reserve(m_Config.BenchmarkFrameDuration);
                         }
                         m_PerfFrameCount = 1;
                     }
@@ -1585,17 +1746,11 @@ namespace cauldron
                         // update stats
                         for (size_t i = 0; i < cpuTimings.size(); i++)
                         {
-                            std::chrono::nanoseconds dur = cpuTimings[i].GetDuration();
-                            m_CpuPerfStats[i].min = std::min(dur, m_CpuPerfStats[i].min);
-                            m_CpuPerfStats[i].max = std::max(dur, m_CpuPerfStats[i].max);
-                            m_CpuPerfStats[i].total += dur;
+                            m_CpuPerfStats[i].timings.push_back(cpuTimings[i].GetDuration());
                         }
                         for (size_t i = 0; i < gpuTimings.size(); i++)
                         {
-                            std::chrono::nanoseconds dur = gpuTimings[i].GetDuration();
-                            m_GpuPerfStats[i].min = std::min(dur, m_GpuPerfStats[i].min);
-                            m_GpuPerfStats[i].max = std::max(dur, m_GpuPerfStats[i].max);
-                            m_GpuPerfStats[i].total += dur;
+                            m_GpuPerfStats[i].timings.push_back(gpuTimings[i].GetDuration());
                         }
                         m_PerfFrameCount++;
                     }
@@ -1610,7 +1765,11 @@ namespace cauldron
         m_pSwapChain->WaitForSwapChain();
 
         // Refresh the command list pool
-        m_pCmdListForFrame = m_pDevice->BeginFrame();
+        m_pDeviceCmdListForFrame = m_pDevice->BeginFrame();
+
+        // create a commandlist to use
+        m_pCmdListForFrame = m_pDevice->CreateCommandList(L"BeginFrameGraphicsCmdList", CommandQueue::Graphics);
+        SetAllResourceViewHeaps(m_pCmdListForFrame);
 
         // Start GPU counters now that we have a cmd list
         m_pProfiler->BeginGPUFrame(m_pCmdListForFrame);
@@ -1622,9 +1781,6 @@ namespace cauldron
         // Transition swapchain to expected state for render module usage
         Barrier presentBarrier = Barrier::Transition(m_pSwapChain->GetBackBufferRT()->GetCurrentResource(), ResourceState::Present, ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource);
         ResourceBarrier(m_pCmdListForFrame, 1, &presentBarrier);
-
-        // Get the Dynamic Buffer pool ready for frame
-        m_pDynamicBufferPool->BeginFrame();
 
         // Update frame time (so that it is in seconds)
         std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
@@ -1657,14 +1813,35 @@ namespace cauldron
         CPUScopedProfileCapture marker(L"EndFrame");
 
         // Transition swapchain from expected state for render module usage to present
-        Barrier presentBarrier = Barrier::Transition(m_pSwapChain->GetBackBufferRT()->GetCurrentResource(), ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource, ResourceState::Present);
-        ResourceBarrier(m_pCmdListForFrame, 1, &presentBarrier);
+        bool transitionToPresent = true;
+#if defined(_VK)
+        // In vulkan, when using a frame interpolation swapchain, we shouldn't go to a present state as the backbuffer isn't a presentable image
+        transitionToPresent = !m_pSwapChain->IsFrameInterpolation();
+#endif
+        if (transitionToPresent)
+        {
+            Barrier presentBarrier = Barrier::Transition(m_pSwapChain->GetBackBufferRT()->GetCurrentResource(),
+                                                         ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource,
+                                                         ResourceState::Present);
+            ResourceBarrier(m_pCmdListForFrame, 1, &presentBarrier);
+        }
+        else
+        {
+            // resource should be in ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource state before passing it to present
+            // we still need to set its internal state to Present for the next time this resource will be used
+            m_pSwapChain->GetBackBufferRT()->GetCurrentResource()->SetCurrentResourceState(ResourceState::Present);
+        }
+
+        // Submit all of the command lists we've accumulated over the render module executions this frame
+        m_pDevice->SubmitCmdListBatch(m_vecCmdListsForFrame, CommandQueue::Graphics, true);
 
         // End the frame of the profiler
         m_pProfiler->EndFrame(m_pCmdListForFrame);
 
         // Can't be referenced until next time BeginFrame is called
+        m_pDeviceCmdListForFrame = nullptr;
         m_pCmdListForFrame = nullptr;
+        m_vecCmdListsForFrame.clear();
 
         // Closes all command lists
         m_pDevice->EndFrame();
@@ -1675,6 +1852,9 @@ namespace cauldron
         // If we are doing GPU Validation, flush every frame
         if (m_Config.GPUValidationEnabled)
             m_pDevice->FlushAllCommandQueues();
+
+        // Commit dynamic buffer pool memory for the frame
+        m_pDynamicBufferPool->EndFrame();
 
         // Reset the RenderDoc capture
         if(m_RenderDocApi && (m_RenderDocCaptureState == FrameCaptureState::CaptureStarted))
@@ -1827,6 +2007,16 @@ namespace cauldron
             m_ResourceResizedListeners.erase(it);
     }
 
+    void Framework::ConfigureRuntimeShaderRecompiler(
+        std::function<void(void)> preReloadCallback,
+        std::function<void(void)> postReloadCallback)
+    {
+        RuntimeShaderRecompilerRenderModule* pRuntimeShaderRecompiler =
+            dynamic_cast<RuntimeShaderRecompilerRenderModule*>(GetRenderModule("RuntimeShaderRecompilerRenderModule"));
+        if (pRuntimeShaderRecompiler && pRuntimeShaderRecompiler->ModuleEnabled())
+            pRuntimeShaderRecompiler->AddReloadCallbacks(preReloadCallback, postReloadCallback);
+    }
+
     int Framework::CreateRenderResources()
     {
         std::map<std::wstring, RenderResourceInformation>::iterator iter = m_Config.RenderResources.begin();
@@ -1859,7 +2049,7 @@ namespace cauldron
                 desc.Width =  m_ResolutionInfo.RenderWidth;
                 desc.Height = m_ResolutionInfo.RenderHeight;
 
-                const Texture* pRenderTarget = GetDynamicResourcePool()->CreateRenderTexture(
+                const Texture* pRenderTarget = m_pDynamicResourcePool->CreateRenderTexture(
                     &desc, [](TextureDesc& desc, uint32_t displayWidth, uint32_t displayHeight, uint32_t renderingWidth, uint32_t renderingHeight) {
                         desc.Width  = renderingWidth;
                         desc.Height = renderingHeight;
@@ -1872,7 +2062,7 @@ namespace cauldron
             else
             {
                 // Always use full display width/height for resizing of auto-resources. We can control what viewport to use with the frame work
-                const Texture* pRenderTarget = GetDynamicResourcePool()->CreateRenderTexture(
+                const Texture* pRenderTarget = m_pDynamicResourcePool->CreateRenderTexture(
                     &desc, [](TextureDesc& desc, uint32_t displayWidth, uint32_t displayHeight, uint32_t renderingWidth, uint32_t renderingHeight) {
                         desc.Width  = displayWidth;
                         desc.Height = displayHeight;
@@ -1887,6 +2077,24 @@ namespace cauldron
             ++iter;
         }
 
+        // Create internal resources needed for UI/Swapchain handling -- these resources are dependent on the swapchain format
+        TextureDesc uiTextureDesc = m_pSwapChain->GetBackBufferRT()->GetDesc();
+        uiTextureDesc.MipLevels = 1;
+        uiTextureDesc.Flags = ResourceFlags::AllowUnorderedAccess | ResourceFlags::AllowRenderTarget;
+
+        DynamicResourcePool::TextureResizeFunction resizeFunc = [](TextureDesc& desc, uint32_t displayWidth, uint32_t displayHeight, uint32_t renderingWidth, uint32_t renderingHeight) {
+            desc.Width = displayWidth;
+            desc.Height = displayHeight;
+            };
+
+        std::vector<std::wstring> uiTexNames = { L"SwapChainProxy",L"UITarget0", L"UITarget1", L"HudlessTarget0", L"HudlessTarget1" };
+        for (auto texName : uiTexNames)
+        {
+            uiTextureDesc.Name = texName;
+            const Texture* pRenderTarget = m_pDynamicResourcePool->CreateRenderTexture(&uiTextureDesc, resizeFunc);
+            CauldronAssert(ASSERT_CRITICAL, pRenderTarget, L"Could not create render target %ls", texName.c_str());
+        }
+        
         return 0;
     }
 
@@ -2031,13 +2239,11 @@ namespace cauldron
 
         // Initialize the framework (and quit now if something goes wrong)
         Log::Write(LOGLEVEL_TRACE, L"Initializing framework components.");
-        if (pFramework->Init() < 0)
-            return -1;
+        pFramework->Init();
 
         // Do any pre-run setup that needs to happen
         // i.e. things we don't want to do before DoSampleInit because it might take long to happen
-        if (pFramework->PreRun() < 0)
-            return -1;
+        pFramework->PreRun();
 
         // Run the framework (won't return until we are done
         int32_t result = pFramework->Run();

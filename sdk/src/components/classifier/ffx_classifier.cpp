@@ -1,13 +1,14 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
-//
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
+// furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
@@ -71,7 +72,6 @@ static const ResourceBinding uavBufferBindingTable[] =
 static const ResourceBinding uavTextureBindingTable[] =
 {
     {FFX_CLASSIFIER_RESOURCE_IDENTIFIER_OUTPUT_RAY_HIT,               L"rwt2d_rayHitResults"},
-    {FFX_CLASSIFIER_RESOURCE_IDENTIFIER_OUTPUT_COLOR,                 L"rwt2d_output"},
     {FFX_CLASSIFIER_RESOURCE_IDENTIFIER_RADIANCE,                     L"rw_radiance"},
     {FFX_CLASSIFIER_RESOURCE_IDENTIFIER_EXTRACTED_ROUGHNESS,          L"rw_extracted_roughness"},
     {FFX_CLASSIFIER_RESOURCE_IDENTIFIER_HIT_COUNTER,                  L"rw_hit_counter"},
@@ -192,14 +192,14 @@ static FfxErrorCode createShadowsPipelineStates(FfxClassifierContext_Private* co
     pipelineDescription.rootConstants = &rootConstants[0];
 
     // Setup a few options used to determine permutation flags
-    bool haveShaderModel66 = context->deviceCapabilities.minimumSupportedShaderModel >= FFX_SHADER_MODEL_6_6;
+    bool haveShaderModel66 = context->deviceCapabilities.maximumSupportedShaderModel >= FFX_SHADER_MODEL_6_6;
     bool supportedFP16 = context->deviceCapabilities.fp16Supported;
-    
+
     bool canForceWave64 = false;
 
     const uint32_t waveLaneCountMin = context->deviceCapabilities.waveLaneCountMin;
     const uint32_t waveLaneCountMax = context->deviceCapabilities.waveLaneCountMax;
-    if (waveLaneCountMin == 32 && waveLaneCountMax == 64)
+    if (waveLaneCountMin <= 64 && waveLaneCountMax >= 64)
         canForceWave64 = haveShaderModel66;
     else
         canForceWave64 = false;
@@ -233,42 +233,42 @@ static void scheduleDispatchShadow(FfxClassifierContext_Private* context, const 
 
     for (uint32_t currentShaderResourceViewIndex = 0; currentShaderResourceViewIndex < pipeline->srvTextureCount; ++currentShaderResourceViewIndex)
     {
-        uint32_t currentResourceId = pipeline->srvTextureBindings[currentShaderResourceViewIndex].resourceIdentifier;
+        const FfxResourceBinding binding = pipeline->srvTextureBindings[currentShaderResourceViewIndex];
 
-        for (uint32_t bindNum = 0; bindNum < pipeline->srvTextureBindings[currentShaderResourceViewIndex].bindCount; ++bindNum)
-        {
-            uint32_t currResId = currentResourceId + bindNum;
-            uint32_t currShaderResourceViewIndex = currentShaderResourceViewIndex + bindNum;
+        uint32_t currentResourceId = binding.resourceIdentifier;
 
-            const FfxResourceInternal currentResource                 = context->srvResources[currResId];
+        uint32_t currResId                   = currentResourceId + binding.arrayIndex;
 
-            if (currentResource.internalIndex == 0)
-                break;
-            jobDescriptor.srvTextures[currShaderResourceViewIndex] = currentResource;
-            wcscpy_s(jobDescriptor.srvTextureNames[currShaderResourceViewIndex], pipeline->srvTextureBindings[currShaderResourceViewIndex].name);
-        }
+        const FfxResourceInternal currentResource = context->srvResources[currResId];
 
-
+        if (currentResource.internalIndex == 0)
+            break;
+        jobDescriptor.srvTextures[currentShaderResourceViewIndex].resource = currentResource;
+#ifdef FFX_DEBUG
+        wcscpy_s(jobDescriptor.srvTextures[currentShaderResourceViewIndex].name, pipeline->srvTextureBindings[currentShaderResourceViewIndex].name);
+#endif
     }
 
     uint32_t uavEntry = 0;
     for (uint32_t currentUnorderedAccessViewIndex = 0; currentUnorderedAccessViewIndex < pipeline->uavTextureCount; ++currentUnorderedAccessViewIndex)
     {
         const uint32_t currentResourceId = pipeline->uavTextureBindings[currentUnorderedAccessViewIndex].resourceIdentifier;
-        wcscpy_s(jobDescriptor.uavTextureNames[currentUnorderedAccessViewIndex], pipeline->uavTextureBindings[currentUnorderedAccessViewIndex].name);
-
+#ifdef FFX_DEBUG
+        wcscpy_s(jobDescriptor.uavTextures[currentUnorderedAccessViewIndex].name, pipeline->uavTextureBindings[currentUnorderedAccessViewIndex].name);
+#endif
         const FfxResourceInternal currentResource = context->uavResources[currentResourceId];
-        jobDescriptor.uavTextures[uavEntry] = currentResource;
-        jobDescriptor.uavTextureMips[uavEntry++] = 0;
+        jobDescriptor.uavTextures[uavEntry].resource = currentResource;
+        jobDescriptor.uavTextures[uavEntry++].mip = 0;
     }
 
     for (uint32_t currentUnorderedAccessViewIndex = 0; currentUnorderedAccessViewIndex < pipeline->uavBufferCount; ++currentUnorderedAccessViewIndex)
     {
         const uint32_t currentResourceId = pipeline->uavBufferBindings[currentUnorderedAccessViewIndex].resourceIdentifier;
-        wcscpy_s(jobDescriptor.uavBufferNames[currentUnorderedAccessViewIndex], pipeline->uavBufferBindings[currentUnorderedAccessViewIndex].name);
-
-        const FfxResourceInternal currentResource                       = context->uavResources[currentResourceId];
-        jobDescriptor.uavBuffers[currentUnorderedAccessViewIndex]       = currentResource;
+#ifdef FFX_DEBUG
+        wcscpy_s(jobDescriptor.uavBuffers[currentUnorderedAccessViewIndex].name, pipeline->uavBufferBindings[currentUnorderedAccessViewIndex].name);
+#endif
+        const FfxResourceInternal currentResource                          = context->uavResources[currentResourceId];
+        jobDescriptor.uavBuffers[currentUnorderedAccessViewIndex].resource = currentResource;
     }
 
     jobDescriptor.dimensions[0] = dispatchX;
@@ -277,10 +277,13 @@ static void scheduleDispatchShadow(FfxClassifierContext_Private* context, const 
     jobDescriptor.pipeline      = *pipeline;
 
     // Only one constant buffer
+#ifdef FFX_DEBUG
     wcscpy_s(jobDescriptor.cbNames[0], pipeline->constantBufferBindings[0].name);
+#endif
     jobDescriptor.cbs[0] = context->classifierConstants;
 
     FfxGpuJobDescription dispatchJob = {FFX_GPU_JOB_COMPUTE};
+    wcscpy_s(dispatchJob.jobLabel, pipeline->name);
     dispatchJob.computeJobDescriptor = jobDescriptor;
 
     context->contextDescription.backendInterface.fpScheduleGpuJob(&context->contextDescription.backendInterface, &dispatchJob);
@@ -305,12 +308,6 @@ static FfxErrorCode shadowClassifierDispatch(FfxClassifierContext_Private* conte
 
     context->contextDescription.backendInterface.fpRegisterResource(&context->contextDescription.backendInterface, &params->workQueueCount, context->effectContextId, &context->uavResources[FFX_CLASSIFIER_RESOURCE_IDENTIFIER_OUTPUT_WORK_QUEUE_COUNTER]);
     context->contextDescription.backendInterface.fpRegisterResource(&context->contextDescription.backendInterface, &params->rayHitTexture, context->effectContextId, &context->uavResources[FFX_CLASSIFIER_RESOURCE_IDENTIFIER_OUTPUT_RAY_HIT]);
-
-    // Debug Tiles
-    context->contextDescription.backendInterface.fpRegisterResource(&context->contextDescription.backendInterface,
-                                                                    &params->outputColor,
-                                                                    context->effectContextId,
-                                                                    &context->uavResources[FFX_CLASSIFIER_RESOURCE_IDENTIFIER_OUTPUT_COLOR]);
 
     context->contextDescription.backendInterface.fpRegisterResource(&context->contextDescription.backendInterface,
                                                                     &params->workQueue,
@@ -350,13 +347,13 @@ static FfxErrorCode shadowClassifierDispatch(FfxClassifierContext_Private* conte
     memcpy(&classifierConstants.lightView, &params->lightView, sizeof(params->lightView));
     memcpy(&classifierConstants.inverseLightView, &params->inverseLightView, sizeof(params->inverseLightView));
 
-    memcpy(&context->classifierConstants.data,
-        &classifierConstants,
-        sizeof(classifierConstants));
+    context->contextDescription.backendInterface.fpStageConstantBufferDataFunc(
+        &context->contextDescription.backendInterface, &classifierConstants, sizeof(classifierConstants), &context->classifierConstants);
+    
     scheduleDispatchShadow(context, params, &context->shadowClassifierPipeline, FFX_DIVIDE_ROUNDING_UP(context->contextDescription.resolution.width, k_tileSizeX), FFX_DIVIDE_ROUNDING_UP(context->contextDescription.resolution.height, k_tileSizeY));
 
     // Execute all the work for the frame
-    context->contextDescription.backendInterface.fpExecuteGpuJobs(&context->contextDescription.backendInterface, commandList);
+    context->contextDescription.backendInterface.fpExecuteGpuJobs(&context->contextDescription.backendInterface, commandList, context->effectContextId);
 
     // Release dynamic resources
     context->contextDescription.backendInterface.fpUnregisterResources(&context->contextDescription.backendInterface, commandList, context->effectContextId);
@@ -390,13 +387,13 @@ static FfxErrorCode createReflectionsPipelineStates(FfxClassifierContext_Private
     context->contextDescription.backendInterface.fpGetDeviceCapabilities(&context->contextDescription.backendInterface, &capabilities);
 
     // Setup a few options used to determine permutation flags
-    bool haveShaderModel66 = capabilities.minimumSupportedShaderModel >= FFX_SHADER_MODEL_6_6;
+    bool haveShaderModel66 = capabilities.maximumSupportedShaderModel >= FFX_SHADER_MODEL_6_6;
     bool supportedFP16 = capabilities.fp16Supported;
     bool canForceWave64 = false;
 
     const uint32_t waveLaneCountMin = capabilities.waveLaneCountMin;
     const uint32_t waveLaneCountMax = capabilities.waveLaneCountMax;
-    if (waveLaneCountMin == 32 && waveLaneCountMax == 64)
+    if (waveLaneCountMin <= 64 && waveLaneCountMax >= 64)
     {
         canForceWave64 = haveShaderModel66;
     }
@@ -428,13 +425,15 @@ static FfxErrorCode classifierCreate(FfxClassifierContext_Private* context, cons
 
     memcpy(&context->contextDescription, contextDescription, sizeof(FfxClassifierContextDescription));
 
+    // Check version info - make sure we are linked with the right backend version
+    FfxVersionNumber version = context->contextDescription.backendInterface.fpGetSDKVersion(&context->contextDescription.backendInterface);
+    FFX_RETURN_ON_ERROR(version == FFX_SDK_MAKE_VERSION(1, 1, 0), FFX_ERROR_INVALID_VERSION);
+
     context->classifierConstants.num32BitEntries = sizeof(ClassifierConstants) / sizeof(uint32_t);
     context->reflectionsConstants.num32BitEntries = sizeof(ClassifierReflectionsConstants) / sizeof(uint32_t);
 
     // Create the context.
-    FFX_VALIDATE(context->contextDescription.backendInterface.fpCreateBackendContext(
-        &context->contextDescription.backendInterface,
-        &context->effectContextId));
+    FFX_VALIDATE(context->contextDescription.backendInterface.fpCreateBackendContext(&context->contextDescription.backendInterface, nullptr, &context->effectContextId));
 
     // Call out for device caps.
     FFX_VALIDATE(context->contextDescription.backendInterface.fpGetDeviceCapabilities(
@@ -476,13 +475,12 @@ static FfxErrorCode ClassifierRelease(FfxClassifierContext_Private* context)
         context->uavResources[FFX_CLASSIFIER_RESOURCE_IDENTIFIER_WORK_QUEUE] = { FFX_CLASSIFIER_RESOURCE_IDENTIFIER_NULL };
         context->uavResources[FFX_CLASSIFIER_RESOURCE_IDENTIFIER_OUTPUT_WORK_QUEUE_COUNTER] = { FFX_CLASSIFIER_RESOURCE_IDENTIFIER_NULL };
         context->uavResources[FFX_CLASSIFIER_RESOURCE_IDENTIFIER_OUTPUT_RAY_HIT] = { FFX_CLASSIFIER_RESOURCE_IDENTIFIER_NULL };
-        context->uavResources[FFX_CLASSIFIER_RESOURCE_IDENTIFIER_OUTPUT_COLOR] = { FFX_CLASSIFIER_RESOURCE_IDENTIFIER_NULL };
     }
 
     if (context->contextDescription.flags & FFX_CLASSIFIER_REFLECTION) {
         ffxSafeReleasePipeline(&context->contextDescription.backendInterface, &context->reflectionsClassifierPipeline, context->effectContextId);
 
-        // unregister resources not created internally 
+        // unregister resources not created internally
         context->srvResources[FFX_CLASSIFIER_RESOURCE_IDENTIFIER_INPUT_DEPTH] = { FFX_CLASSIFIER_RESOURCE_IDENTIFIER_NULL };
         context->srvResources[FFX_CLASSIFIER_RESOURCE_IDENTIFIER_INPUT_MOTION_VECTORS] = { FFX_CLASSIFIER_RESOURCE_IDENTIFIER_NULL };
         context->srvResources[FFX_CLASSIFIER_RESOURCE_IDENTIFIER_INPUT_NORMAL] = { FFX_CLASSIFIER_RESOURCE_IDENTIFIER_NULL };
@@ -520,6 +518,7 @@ FfxErrorCode ffxClassifierContextCreate(FfxClassifierContext* context, const Ffx
         FFX_ERROR_INVALID_POINTER);
 
     // Validate that all callbacks are set for the interface
+    FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpGetSDKVersion, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpGetDeviceCapabilities, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpCreateBackendContext, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpDestroyBackendContext, FFX_ERROR_INCOMPLETE_INTERFACE);
@@ -546,26 +545,27 @@ static void populateComputeJobResources(FfxClassifierContext_Private* context, c
 
         const uint32_t currentResourceId = pipeline->srvTextureBindings[currentShaderResourceViewIndex].resourceIdentifier;
         const FfxResourceInternal currentResource = context->srvResources[currentResourceId];
-        jobDescriptor->srvTextures[currentShaderResourceViewIndex] = currentResource;
-        wcscpy_s(jobDescriptor->srvTextureNames[currentShaderResourceViewIndex], pipeline->srvTextureBindings[currentShaderResourceViewIndex].name);
+        jobDescriptor->srvTextures[currentShaderResourceViewIndex].resource = currentResource;
+#ifdef FFX_DEBUG
+        wcscpy_s(jobDescriptor->srvTextures[currentShaderResourceViewIndex].name, pipeline->srvTextureBindings[currentShaderResourceViewIndex].name);
+#endif
     }
 
     uint32_t uavEntry = 0;  // Uav resource offset (accounts for uav arrays)
     for (uint32_t currentUnorderedAccessViewIndex = 0; currentUnorderedAccessViewIndex < pipeline->uavTextureCount; ++currentUnorderedAccessViewIndex) {
 
-        wcscpy_s(jobDescriptor->uavTextureNames[currentUnorderedAccessViewIndex], pipeline->uavTextureBindings[currentUnorderedAccessViewIndex].name);
+        const FfxResourceBinding binding = pipeline->uavTextureBindings[currentUnorderedAccessViewIndex];
+#ifdef FFX_DEBUG
+        wcscpy_s(jobDescriptor->uavTextures[currentUnorderedAccessViewIndex].name, binding.name);
+#endif
+        const uint32_t            bindEntry         = binding.arrayIndex;
+        const uint32_t            currentResourceId = binding.resourceIdentifier;
+        const FfxResourceInternal currentResource   = context->uavResources[currentResourceId];
 
-        const uint32_t numBindings = pipeline->uavTextureBindings[currentUnorderedAccessViewIndex].bindCount;
-        const uint32_t currentResourceId = pipeline->uavTextureBindings[currentUnorderedAccessViewIndex].resourceIdentifier;
-        const FfxResourceInternal currentResource = context->uavResources[currentResourceId];
-
-        for (uint32_t bindEntry = 0; bindEntry < numBindings; ++bindEntry)
-        {
-            // Don't over-subscribe mips (default to mip 0 once we've exhausted min mip)
-            FfxResourceDescription resDesc = context->contextDescription.backendInterface.fpGetResourceDescription(&context->contextDescription.backendInterface, currentResource);
-            jobDescriptor->uavTextures[uavEntry] = currentResource;
-            jobDescriptor->uavTextureMips[uavEntry++] = (bindEntry < resDesc.mipCount) ? bindEntry : 0;
-        }
+        // Don't over-subscribe mips (default to mip 0 once we've exhausted min mip)
+        FfxResourceDescription resDesc = context->contextDescription.backendInterface.fpGetResourceDescription(&context->contextDescription.backendInterface, currentResource);
+        jobDescriptor->uavTextures[uavEntry].resource = currentResource;
+        jobDescriptor->uavTextures[uavEntry++].mip    = (bindEntry < resDesc.mipCount) ? bindEntry : 0;
     }
 
     // Buffer uav
@@ -573,12 +573,16 @@ static void populateComputeJobResources(FfxClassifierContext_Private* context, c
 
         const uint32_t currentResourceId = pipeline->uavBufferBindings[currentUnorderedAccessViewIndex].resourceIdentifier;
         const FfxResourceInternal currentResource = context->uavResources[currentResourceId];
-        jobDescriptor->uavBuffers[currentUnorderedAccessViewIndex] = currentResource;
-        wcscpy_s(jobDescriptor->uavBufferNames[currentUnorderedAccessViewIndex], pipeline->uavBufferBindings[currentUnorderedAccessViewIndex].name);
+        jobDescriptor->uavBuffers[currentUnorderedAccessViewIndex].resource = currentResource;
+#ifdef FFX_DEBUG
+        wcscpy_s(jobDescriptor->uavBuffers[currentUnorderedAccessViewIndex].name, pipeline->uavBufferBindings[currentUnorderedAccessViewIndex].name);
+#endif
     }
 
     // Only one constant buffer
+#ifdef FFX_DEBUG
     wcscpy_s(jobDescriptor->cbNames[0], pipeline->constantBufferBindings[0].name);
+#endif
     jobDescriptor->cbs[0] = context->reflectionsConstants;
 }
 
@@ -592,6 +596,7 @@ static void scheduleDispatch(FfxClassifierContext_Private* context, const FfxPip
     populateComputeJobResources(context, pipeline, &jobDescriptor);
 
     FfxGpuJobDescription dispatchJob = { FFX_GPU_JOB_COMPUTE };
+    wcscpy_s(dispatchJob.jobLabel, pipeline->name);
     dispatchJob.computeJobDescriptor = jobDescriptor;
     context->contextDescription.backendInterface.fpScheduleGpuJob(&context->contextDescription.backendInterface, &dispatchJob);
 }
@@ -652,14 +657,13 @@ static FfxErrorCode classifierDispatchReflections(FfxClassifierContext_Private* 
     reflectionsConstants.roughnessChannel = params->roughnessChannel;
     reflectionsConstants.isRoughnessPerceptual = params->isRoughnessPerceptual;
 
-    memcpy(&context->reflectionsConstants.data,
-        &reflectionsConstants,
-        sizeof(reflectionsConstants));
+    context->contextDescription.backendInterface.fpStageConstantBufferDataFunc(
+        &context->contextDescription.backendInterface, &reflectionsConstants, sizeof(reflectionsConstants), &context->reflectionsConstants);
 
     scheduleDispatch(context, &context->reflectionsClassifierPipeline, FFX_DIVIDE_ROUNDING_UP(width, 8u), FFX_DIVIDE_ROUNDING_UP(height, 8u));
 
     // Execute all jobs up to date so resources will be in the correct state when importing into the denoiser
-    context->contextDescription.backendInterface.fpExecuteGpuJobs(&context->contextDescription.backendInterface, commandList);
+    context->contextDescription.backendInterface.fpExecuteGpuJobs(&context->contextDescription.backendInterface, commandList, context->effectContextId);
 
     // release dynamic resources
     context->contextDescription.backendInterface.fpUnregisterResources(&context->contextDescription.backendInterface, commandList, context->effectContextId);
@@ -689,7 +693,7 @@ FfxErrorCode ffxClassifierContextDestroy(FfxClassifierContext* context)
     FFX_RETURN_ON_ERROR(
         context,
         FFX_ERROR_INVALID_POINTER);
-
+    
     // Destroy the context.
     FfxClassifierContext_Private* contextPrivate = reinterpret_cast<FfxClassifierContext_Private*>(context);
     return ClassifierRelease(contextPrivate);
@@ -708,4 +712,9 @@ FfxErrorCode ffxClassifierContextShadowDispatch(FfxClassifierContext* context, c
         FFX_ERROR_NULL_DEVICE);
 
     return shadowClassifierDispatch(contextPrivate, dispatchDescription);
+}
+
+FFX_API FfxVersionNumber ffxClassifierGetEffectVersion()
+{
+    return FFX_SDK_MAKE_VERSION(FFX_CLASSIFIER_VERSION_MAJOR, FFX_CLASSIFIER_VERSION_MINOR, FFX_CLASSIFIER_VERSION_PATCH);
 }

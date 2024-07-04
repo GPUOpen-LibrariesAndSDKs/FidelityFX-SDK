@@ -10,7 +10,9 @@ For details on the technique that underpins the FidelityFX Parallel Sort effect 
 
 <h2>Requirements</h2>
 
-`Windows` `DirectX(R)12` `Vulkan(R)`
+ - Windows
+ - DirectX(R)12
+ - Vulkan(R)
 
 <h2>UI elements</h2>
 
@@ -23,9 +25,9 @@ The sample contains various UI elements to help you explore the technique it dem
 | **Sort Playload**          | `Checked/Unchecked`               | Toggles whether we are only sorting keys, or also sorting an accompanying payload.                                                              |
 | **Use Indirect Execution** | `Checked/Unchecked`               | Toggles between direct and indirect compute execution of the sort algorithm.                                                                    |
 
-<h2>Sample Controls and Configurations</h2>
+<h2>Sample controls and configurations</h2>
 
-For sample controls, configuration and Cauldron UI element details, please see [Running the samples](../getting-started/running-samples.md)
+For sample controls, configuration, and FidelityFX Cauldron Framework UI element details, see [Running the samples](../getting-started/running-samples.md).
 
 <h2>See also</h2>
 

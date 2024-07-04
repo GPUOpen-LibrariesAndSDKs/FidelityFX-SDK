@@ -80,7 +80,7 @@ public:
     static UINT                                 GetWidthAlignment                           (DXGI_FORMAT Format);
     static UINT                                 GetHeightAlignment                          (DXGI_FORMAT Format);
     static UINT                                 GetDepthAlignment                           (DXGI_FORMAT Format);
-    static BOOL                                 Planar                                      (DXGI_FORMAT Format); 
+    static BOOL                                 Planar                                      (DXGI_FORMAT Format);
     static BOOL                                 NonOpaquePlanar                             (DXGI_FORMAT Format);
     static BOOL                                 YUV                                         (DXGI_FORMAT Format);
     static BOOL                                 Opaque                                      (DXGI_FORMAT Format);
@@ -110,7 +110,7 @@ public:
     static HRESULT                              CalculateResourceSize               (UINT width, UINT height, UINT depth, DXGI_FORMAT format, UINT mipLevels, UINT subresources, _Out_ SIZE_T& totalByteSize, _Out_writes_opt_(subresources) D3D12_MEMCPY_DEST* pDst = nullptr);
     static void                                 GetTileShape                        (D3D12_TILE_SHAPE* pTileShape, DXGI_FORMAT Format, D3D12_RESOURCE_DIMENSION Dimension, UINT SampleCount);
     static void                                 Get4KTileShape                      (D3D12_TILE_SHAPE* pTileShape, DXGI_FORMAT Format, D3D12_RESOURCE_DIMENSION Dimension, UINT SampleCount);
-    static void                                 GetMipDimensions                    (UINT8 mipSlice, _Inout_ UINT64* pWidth, _Inout_opt_ UINT64* pHeight = NULL, _Inout_opt_ UINT64* pDepth = NULL);
+    static void                                 GetMipDimensions                    (UINT8 mipSlice, _Inout_ UINT64* pWidth, _Inout_opt_ UINT64* pHeight = nullptr, _Inout_opt_ UINT64* pDepth = nullptr);
     static void                                 GetPlaneSubsampledSizeAndFormatForCopyableLayout(UINT PlaneSlice, DXGI_FORMAT Format, UINT Width, UINT Height, _Out_ DXGI_FORMAT& PlaneFormat, _Out_ UINT& MinPlanePitchWidth, _Out_ UINT& PlaneWidth, _Out_ UINT& PlaneHeight);
 
     static UINT                                 GetDetailTableIndex         (DXGI_FORMAT  Format);
@@ -120,4 +120,5 @@ private:
     static const FORMAT_DETAIL*                 GetFormatDetail             (DXGI_FORMAT  Format);
 
 };
+
 #endif

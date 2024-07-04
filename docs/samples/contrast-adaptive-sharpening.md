@@ -2,7 +2,7 @@
 
 <h1>FidelityFX Contrast Adaptive Sharpening</h1>
 
-![alt text](media/contrast-adaptive-sharpening/cas-sample.jpg "A screenshot of the CAS sample.")
+![alt text](media/contrast-adaptive-sharpening/cas-sample.png "A screenshot of the CAS sample.")
 
 This sample demonstrates the use of the FidelityFX Contrast Adaptive Sharpening (CAS) post process effect.
 
@@ -10,7 +10,9 @@ For details on the techniques that underpin the CAS effect you can refer to the 
 
 <h2>Requirements</h2>
 
-`Windows` `DirectX(R)12` `Vulkan(R)`
+ - Windows
+ - DirectX(R)12
+ - Vulkan(R)`
 
 <h2>UI elements</h2>
 
@@ -66,9 +68,9 @@ The CAS shader or more specifically the `CasFilter` function has a few different
 * FP32-sharpen-only
 * FP32-sharpen-and-upscale
 
-<h2>Sample Controls and Configurations</h2>
+<h2>Sample controls and configurations</h2>
 
-For sample controls, configuration and Cauldron UI element details, please see [Running the samples](../getting-started/running-samples.md)
+For sample controls, configuration, and FidelityFX Cauldron Framework UI element details, see [Running the samples](../getting-started/running-samples.md).
 
 <h2>See also</h2>
 

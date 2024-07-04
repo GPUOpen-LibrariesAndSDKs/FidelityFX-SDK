@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -35,7 +35,7 @@ using namespace cauldron;
 // Cauldron defaults may also be overridden at this point
 void CacaoSample::ParseSampleConfig()
 {
-     json sampleConfig;
+    json sampleConfig;
     CauldronAssert(ASSERT_CRITICAL, ParseJsonFile(L"configs/cacaoconfig.json", sampleConfig), L"Could not parse JSON file %ls", L"cacaoconfig.json");
 
     // Get the sample configuration
@@ -60,7 +60,7 @@ void CacaoSample::RegisterSampleModules()
 }
 
 // Sample initialization point
-int32_t CacaoSample::DoSampleInit()
+void CacaoSample::DoSampleInit()
 {
     m_pLightingRenderModule = static_cast<LightingRenderModule*>(GetFramework()->GetRenderModule("LightingRenderModule"));
     m_pCACAORenderModule    = static_cast<CACAORenderModule*>(GetFramework()->GetRenderModule("CACAORenderModule"));
@@ -71,16 +71,13 @@ int32_t CacaoSample::DoSampleInit()
     m_UIOutputCacaoDirectly    = true;
     m_UIUseCACAOEnabler        = true;
 
-    UISection uiSection;
-    uiSection.SectionName = "FFX CACAO";
-    uiSection.SectionType = UISectionType::Sample;
-
-    uiSection.AddCheckBox("Output CACAO Directly", &m_UIOutputCacaoDirectly);
-    uiSection.AddCheckBox("Use CACAO", &m_UIUseCACAO, nullptr, &m_UIUseCACAOEnabler);
-
-    GetUIManager()->RegisterUIElements(uiSection);
-
-    return 0;
+    UISection* uiSection = GetUIManager()->RegisterUIElements("FFX CACAO", UISectionType::Sample);
+    if (uiSection)
+    {
+        uiSection->RegisterUIElement<UICheckBox>("Output CACAO Directly", m_UIOutputCacaoDirectly);
+        uiSection->RegisterUIElement<UICheckBox>("Use CACAO", m_UIUseCACAO, m_UIUseCACAOEnabler);
+        m_pCACAORenderModule->InitUI(uiSection);
+    }
 }
 
 // Do any app-specific (global) updates here
@@ -101,7 +98,6 @@ void CacaoSample::DoSampleUpdates(double deltaTime)
         m_UIUseCACAOEnabler   = !m_UIOutputCacaoDirectly;
         m_pCACAORenderModule->SetOutputToCallbackTarget(!m_OutputCacaoDirectly);
         m_pLightingRenderModule->EnableModule(!m_OutputCacaoDirectly);
-        m_pToneMappingRenderModule->EnableModule(!m_OutputCacaoDirectly);
     }
 
     if (useStateChanged)

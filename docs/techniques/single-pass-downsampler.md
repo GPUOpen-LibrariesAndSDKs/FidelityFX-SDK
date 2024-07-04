@@ -56,7 +56,7 @@ The constant buffer needs to define the following parameters:
 
 - `workGroupOffset`: The offset for the thread groups to process only tiles in a specified subregion. `ffxSpdSetup` helps to compute the correct workGroupOffset.
 
-<h4>Global Atomic Counter</h4>
+<h4>Global atomic counter</h4>
 
 FidelityFX SPD expects one global atomic counter (uint) per slice. The counter needs to be initialized to 0. 
 
@@ -152,7 +152,7 @@ min16float2 spdIntermediateBA[16][16];
 
 You also need to define a counter in group shared memory. This counter is used to store the return value of the atomic add, so that each thread can determine whether it needs to terminate or continue.
 
-<h3>Callback Functions</h3>
+<h3>Callback functions</h3>
 
 FidelityFX SPD requires the following callback functions defined ([H] versions if FidelityFX SPD should work with half types):
 
@@ -192,7 +192,7 @@ Loads from the group shared buffer.
 
 Stores to the group shared buffer.
 
-<h3>Main Function</h3>
+<h3>Main function</h3>
 
 `SpdDownsample[H]` is called in the main function. The thread group size is
 `[numthreads(256,1,1)]`.

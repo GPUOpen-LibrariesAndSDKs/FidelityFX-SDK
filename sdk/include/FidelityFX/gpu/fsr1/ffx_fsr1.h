@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C)2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 /// @defgroup FfxGPUFsr1 FidelityFX FSR1
@@ -384,7 +384,7 @@ void ffxFsrEasuFloat(
     fsrEasuTapFloat(aC, aW, FfxFloat32x2(0.0, 2.0) - pp, dir, len2, lob, clp, FfxFloat32x3(zzonR.w, zzonG.w, zzonB.w));   // n
 
     // Normalize and dering.
-    pix = ffxMin(max4, max(min4, aC * ffxBroadcast3(rcp(aW))));
+    pix = ffxMin(max4, max(min4, aC * ffxBroadcast3(ffxReciprocal(aW))));
 }
 #endif // #if defined(FFX_GPU) && defined(FFX_FSR_EASU_FLOAT)
 
@@ -666,7 +666,7 @@ void FsrEasuH(
      sharpness = exp2(-sharpness);
      FfxFloat32x2 hSharp  = {sharpness, sharpness};
      con[0] = ffxAsUInt32(sharpness);
-     con[1] = packHalf2x16(hSharp);
+     con[1] = ffxPackHalf2x16(hSharp);
      con[2] = 0;
      con[3] = 0;
  }
@@ -748,12 +748,12 @@ void FsrEasuH(
      // Immediate constants for peak range.
      FfxFloat32x2 peakC = FfxFloat32x2(1.0, -1.0 * 4.0);
      // Limiters, these need to be high precision RCPs.
-     FfxFloat32 hitMinR = mn4R * rcp(FfxFloat32(4.0) * mx4R);
-     FfxFloat32 hitMinG = mn4G * rcp(FfxFloat32(4.0) * mx4G);
-     FfxFloat32 hitMinB = mn4B * rcp(FfxFloat32(4.0) * mx4B);
-     FfxFloat32 hitMaxR = (peakC.x - mx4R) * rcp(FfxFloat32(4.0) * mn4R + peakC.y);
-     FfxFloat32 hitMaxG = (peakC.x - mx4G) * rcp(FfxFloat32(4.0) * mn4G + peakC.y);
-     FfxFloat32 hitMaxB = (peakC.x - mx4B) * rcp(FfxFloat32(4.0) * mn4B + peakC.y);
+     FfxFloat32 hitMinR = mn4R * ffxReciprocal(FfxFloat32(4.0) * mx4R);
+     FfxFloat32 hitMinG = mn4G * ffxReciprocal(FfxFloat32(4.0) * mx4G);
+     FfxFloat32 hitMinB = mn4B * ffxReciprocal(FfxFloat32(4.0) * mx4B);
+     FfxFloat32 hitMaxR = (peakC.x - mx4R) * ffxReciprocal(FfxFloat32(4.0) * mn4R + peakC.y);
+     FfxFloat32 hitMaxG = (peakC.x - mx4G) * ffxReciprocal(FfxFloat32(4.0) * mn4G + peakC.y);
+     FfxFloat32 hitMaxB = (peakC.x - mx4B) * ffxReciprocal(FfxFloat32(4.0) * mn4B + peakC.y);
      FfxFloat32 lobeR   = max(-hitMinR, hitMaxR);
      FfxFloat32 lobeG   = max(-hitMinG, hitMaxG);
      FfxFloat32 lobeB   = max(-hitMinB, hitMaxB);
@@ -1052,10 +1052,10 @@ void FsrEasuH(
 #if defined(FFX_GPU)
  void FsrSrtmF(inout FfxFloat32x3 c)
  {
-     c *= ffxBroadcast3(rcp(ffxMax3(c.r, c.g, c.b) + FfxFloat32(1.0)));
+     c *= ffxBroadcast3(ffxReciprocal(ffxMax3(c.r, c.g, c.b) + FfxFloat32(1.0)));
  }
  // The extra max solves the c=1.0 case (which is a /0).
- void FsrSrtmInvF(inout FfxFloat32x3 c){c*=ffxBroadcast3(rcp(max(FfxFloat32(1.0/32768.0),FfxFloat32(1.0)-ffxMax3(c.r,c.g,c.b))));}
+ void FsrSrtmInvF(inout FfxFloat32x3 c){c*=ffxBroadcast3(ffxReciprocal(max(FfxFloat32(1.0/32768.0),FfxFloat32(1.0)-ffxMax3(c.r,c.g,c.b))));}
 #endif
 //==============================================================================================================================
 #if defined(FFX_GPU )&& FFX_HALF == 1

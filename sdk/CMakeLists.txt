@@ -1,53 +1,87 @@
 # This file is part of the FidelityFX SDK.
-#
-# Copyright © 2023 Advanced Micro Devices, Inc.
-#
+# 
+# Copyright (C) 2024 Advanced Micro Devices, Inc.
+# 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files(the “Software”), to deal
+# of this software and associated documentation files(the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions :
-#
+# 
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-cmake_minimum_required(VERSION 3.17)
+cmake_minimum_required(VERSION 3.23)
+
+if(POLICY CMP0147)
+	# parallel custom command builds (used for shader compilation)
+	cmake_policy(SET CMP0147 NEW)
+endif()
+
+# Clean a bit before
+unset(FFX_GDK CACHE)
+
+message(STATUS "FFX_API_BACKEND is ${FFX_API_BACKEND}")
+
+if(FFX_API_BACKEND STREQUAL VK_X64 OR 
+   FFX_API_BACKEND STREQUAL DX12_X64 OR 
+   FFX_API_BACKEND STREQUAL GDK_DESKTOP_X64 OR 
+   FFX_API_BACKEND STREQUAL GDK_SCARLETT_X64)
+	set(FFX_CUSTOM_API OFF)
+else()
+	set(FFX_CUSTOM_API ON)
+endif()
 
 # Set configuration types based on what we are building for
-if (NOT FFX_API_CUSTOM)
-	message(STATUS "Building FidelityFX SDK with DX12 & VK backends")
-	set(CMAKE_CONFIGURATION_TYPES Debug Release)
-	set(CMAKE_DEBUG_POSTFIX d)
-	set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-	
-	# Get warnings for everything
-if (CMAKE_COMPILER_IS_GNUCC)
-    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall")
-endif()
-if (MSVC)
-    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} /W3")
-endif()
+if (NOT FFX_CUSTOM_API)
 
-	option (FFX_API_DX12 "Build FidelityFX DX12 backend" ON)
-	option (FFX_API_VK "Build FidelityFX Vulkan backend" ON)
+	# Are we buiding the GDK?
+	if (FFX_API_BACKEND STREQUAL GDK_DESKTOP_X64 OR FFX_API_BACKEND STREQUAL GDK_SCARLETT_X64)
+		set(FFX_GDK ON)
+	endif()
+
+	# Pull in tool chain definitions
+	include(toolchain.cmake)
+	
+	# If we are NOT building the GDK, queue up DX12/VK solution for building
+	if (NOT FFX_GDK)
+		if (FFX_API_BACKEND STREQUAL DX12_X64)
+			message(STATUS "Building FidelityFX SDK with DX12 backend")
+		elseif(FFX_API_BACKEND STREQUAL VK_X64)
+			message(STATUS "Building FidelityFX SDK with VK backend")
+		endif()
+	else()
+		# List the API we are building for
+		if(FFX_API_BACKEND STREQUAL GDK_DESKTOP_X64)
+			message(STATUS "Building FidelityFX SDK with GDK Gaming.Desktop.x64 backend")
+		elseif(FFX_API_BACKEND STREQUAL GDK_SCARLETT_X64)
+			message(STATUS "Building FidelityFX SDK with GDK Gaming.Scarlett.x64 backend")
+		else()
+			message(FATAL_ERROR "Requesting unsupported GDK build of FidelityFX SDK!")
+		endif()
+	endif()
 endif()
 
 # Set platform
-if(CMAKE_GENERATOR_PLATFORM STREQUAL "x64" OR CMAKE_EXE_LINKER_FLAGS STREQUAL "/machine:x64")
+if(CMAKE_GENERATOR_PLATFORM STREQUAL "Gaming.Desktop.x64")
+	set(FFX_PLATFORM_NAME gdk_desktop_x64)
+elseif(CMAKE_GENERATOR_PLATFORM STREQUAL "Gaming.Xbox.Scarlett.x64")
+	set(FFX_PLATFORM_NAME gdk_scarlett_x64)
+elseif(CMAKE_GENERATOR_PLATFORM STREQUAL "x64" OR CMAKE_EXE_LINKER_FLAGS STREQUAL "/machine:x64")
     set(FFX_PLATFORM_NAME x64)
 elseif(CMAKE_GENERATOR_PLATFORM STREQUAL "Win32" OR CMAKE_EXE_LINKER_FLAGS STREQUAL "/machine:X86")
     set(FFX_PLATFORM_NAME x86)
 else()
-    message(FATAL_ERROR "Unsupported target platform - only supporting x64 and Win32 currently")
+    message(FATAL_ERROR "Unsupported target platform \"${CMAKE_GENERATOR_PLATFORM}\" - only supporting gdk, x64, and Win32 currently")
 endif()
 
 # Pre-compile shaders
@@ -71,15 +105,23 @@ elseif(CMAKE_GENERATOR STREQUAL "Visual Studio 17 2022")
 endif()
 
 # Set configuration types based on what we are building for
-if (NOT FFX_API_CUSTOM)
+if (NOT FFX_CUSTOM_API)
 
 	# Embed PDBs in the debug versions of the libs
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Z7")
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Z7 /Od")
 
 	# Write both debug and release versions of the static libs to the /bin folder as they are uniquely named
 	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_HOME_DIRECTORY}/bin/ffx_sdk/)
 	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_HOME_DIRECTORY}/bin/ffx_sdk/)
+	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_HOME_DIRECTORY}/bin/ffx_sdk/)
 
+	if (FFX_BUILD_AS_DLL)
+		# Write both debug and release versions of the dlls to the /bin folder as they are uniquely named
+		set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_HOME_DIRECTORY}/bin/ffx_sdk/)
+		set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_HOME_DIRECTORY}/bin/ffx_sdk/)
+		set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_HOME_DIRECTORY}/bin/ffx_sdk/)
+        set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS FFX_BUILD_AS_DLL)
+	endif()
 else()
 
 	# Ouput the static libs to the /bin folder as they are uniquely named
@@ -87,8 +129,20 @@ else()
 	foreach( OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES} )
 		string( TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG )
 		set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${BIN_OUTPUT}/ffx_sdk/ )
+		if (FFX_BUILD_AS_DLL)
+			# Write both debug and release versions of the dlls to the /bin folder as they are uniquely named
+			set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_HOME_DIRECTORY}/bin/ffx_sdk/)
+			set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_HOME_DIRECTORY}/bin/ffx_sdk/)
+			set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_HOME_DIRECTORY}/bin/ffx_sdk/)
+		endif()
 	endforeach( OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES )
 
+endif()
+
+if (FFX_FSR3)
+	option(FFX_FSR3UPSCALER "Build FFX FSR3 Upscaler API" ON)
+	option(FFX_FI "Build FFX Frame Interpolation API" ON)
+	option(FFX_OF "Build FFX Optical Flow API" ON)
 endif()
 
 # Add requred compile definitions
@@ -103,29 +157,14 @@ endif()
 # Setup common variables
 set(FFX_SC_EXECUTABLE ${CMAKE_CURRENT_SOURCE_DIR}/tools/binary_store/FidelityFX_SC.exe)
 set(FFX_INCLUDE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(FFX_LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/libs)
+set(FFX_BIN_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin/ffx_sdk)
 set(FFX_SHARED_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src/shared)
 set(FFX_HOST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/include/FidelityFX/host)
 set(FFX_GPU_PATH ${CMAKE_CURRENT_SOURCE_DIR}/include/FidelityFX/gpu)
 set(FFX_COMPONENTS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src/components)
 set(FFX_HOST_BACKENDS_PATH ${FFX_HOST_PATH}/backends)
-set(FFX_BACKENDS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src/backends)
 set(FFX_SRC_BACKENDS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src/backends)
-
-# Promote common variables up so the common code can also access it if needed
-if (FFX_API_CUSTOM)
-
-	set(FFX_PLATFORM_NAME ${FFX_PLATFORM_NAME} PARENT_SCOPE)
-	set(FFX_VS_VERSION ${FFX_VS_VERSION} PARENT_SCOPE)
-	set(FFX_SC_EXECUTABLE ${FFX_SC_EXECUTABLE} PARENT_SCOPE)
-	set(FFX_INCLUDE_PATH ${FFX_INCLUDE_PATH} PARENT_SCOPE)
-	set(FFX_SHARED_PATH ${FFX_SHARED_PATH} PARENT_SCOPE)
-	set(FFX_HOST_PATH ${FFX_HOST_PATH} PARENT_SCOPE)
-	set(FFX_GPU_PATH ${FFX_GPU_PATH} PARENT_SCOPE)
-	set(FFX_COMPONENTS_PATH ${FFX_COMPONENTS_PATH} PARENT_SCOPE)
-	set(FFX_HOST_BACKENDS_PATH ${FFX_HOST_BACKENDS_PATH} PARENT_SCOPE)
-	set(FFX_SRC_BACKENDS_PATH ${FFX_SRC_BACKENDS_PATH} PARENT_SCOPE)
-
-endif()
 
 # ------------------------------------------------------
 # Define common source groupings used by all effects
@@ -154,9 +193,28 @@ set(FFX_PUBLIC_SHADER_SOURCES
     "${FFX_GPU_PATH}/ffx_core_hlsl.h"
     "${FFX_GPU_PATH}/ffx_core_portability.h")
 
-project (FidelityFX-SDK)
+if (FFX_API_BACKEND STREQUAL DX12_X64)
+	message(STATUS "Creating project FidelityFX-SDK_DX12_x64")
+	project (FidelityFX-SDK_DX12_x64)
+elseif (FFX_API_BACKEND STREQUAL VK_X64)
+	message(STATUS "Creating project FidelityFX-SDK_VK_x64")
+	project (FidelityFX-SDK_VK_x64)
+elseif(FFX_API_BACKEND STREQUAL GDK_DESKTOP_X64)
+	message(STATUS "Creating project FidelityFX-SDK_GDK_Desktop_x64")
+	project (FidelityFX-SDK_GDK_Desktop_x64)
+elseif(FFX_API_BACKEND STREQUAL GDK_SCARLETT_X64)
+	message(STATUS "Creating project FidelityFX-SDK_GDK_Scarlett_x64")
+	project (FidelityFX-SDK_GDK_Scarlett_x64)
+else()
+	# This is likely a custom include
+	project (FidelityFX-SDK)
+endif()
 
 # Components
+add_subdirectory(${FFX_COMPONENTS_PATH}/opticalflow)
+add_subdirectory(${FFX_COMPONENTS_PATH}/frameinterpolation)
+add_subdirectory(${FFX_COMPONENTS_PATH}/fsr3)
+add_subdirectory(${FFX_COMPONENTS_PATH}/fsr3upscaler)
 add_subdirectory(${FFX_COMPONENTS_PATH}/fsr2)
 add_subdirectory(${FFX_COMPONENTS_PATH}/fsr1)
 add_subdirectory(${FFX_COMPONENTS_PATH}/spd)
@@ -170,13 +228,23 @@ add_subdirectory(${FFX_COMPONENTS_PATH}/lens)
 add_subdirectory(${FFX_COMPONENTS_PATH}/parallelsort)
 add_subdirectory(${FFX_COMPONENTS_PATH}/denoiser)
 add_subdirectory(${FFX_COMPONENTS_PATH}/sssr)
+add_subdirectory(${FFX_COMPONENTS_PATH}/brixelizer)
+add_subdirectory(${FFX_COMPONENTS_PATH}/brixelizergi)
 add_subdirectory(${FFX_COMPONENTS_PATH}/classifier)
+add_subdirectory(${FFX_COMPONENTS_PATH}/breadcrumbs)
 
 # Add appropriate graphics backend if requested
-if(FFX_API_DX12)
+if(FFX_API_BACKEND STREQUAL DX12_X64)
+	add_subdirectory(${FFX_LIB_PATH}/pix)
     add_subdirectory(${FFX_SRC_BACKENDS_PATH}/dx12)
 endif()
 
-if(FFX_API_VK)
-    add_subdirectory(${FFX_SRC_BACKENDS_PATH}/vk)
+if (FFX_API_BACKEND STREQUAL VK_X64)
+	add_subdirectory(${FFX_SRC_BACKENDS_PATH}/vk)
+endif()
+
+if(FFX_API_BACKEND STREQUAL GDK_DESKTOP_X64 OR FFX_API_BACKEND STREQUAL GDK_SCARLETT_X64)
+	# TODO when we have the right lib to include
+	#add_subdirectory(${FFX_LIB_PATH}/pix)
+	add_subdirectory(${FFX_SRC_BACKENDS_PATH}/gdk)
 endif()

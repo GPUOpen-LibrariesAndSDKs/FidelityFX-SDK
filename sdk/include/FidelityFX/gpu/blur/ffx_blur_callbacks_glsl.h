@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C)2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #include "ffx_blur_resources.h"
@@ -177,40 +177,40 @@ FFX_BLUR_KERNEL_TYPE FfxBlurLoadKernelWeight(FfxInt32 iKernelIndex)
 }
 
 #if FFX_HALF
+
+#if defined (FFX_BLUR_BIND_UAV_OUTPUT)
 void FfxBlurStoreOutput(FfxInt32x2 outPxCoord, FfxFloat16x3 color)
 {
-#if defined FFX_BLUR_BIND_UAV_OUTPUT
     imageStore(rw_output, outPxCoord, FfxFloat16x4(color, 1));
-#endif 
 }
+#endif // #if defined (FFX_BLUR_BIND_UAV_OUTPUT)
 
+#if defined (FFX_BLUR_BIND_SRV_INPUT_SRC)
 FfxFloat16x3 FfxBlurLoadInput(FfxInt16x2 inPxCoord)
 {
-#if defined FFX_BLUR_BIND_SRV_INPUT_SRC
     return FfxFloat16x3(texelFetch(r_input_src, inPxCoord, 0).rgb);
-#else
-    return FfxFloat16x3(0, 0, 0);
-#endif
 }
+#endif // #if defined FFX_BLUR_BIND_SRV_INPUT_SRC
 
 #else // FFX_HALF
+
+#if defined (FFX_BLUR_BIND_UAV_OUTPUT)
 void FfxBlurStoreOutput(FfxInt32x2 outPxCoord, FfxFloat32x3 color)
 {
-#if defined FFX_BLUR_BIND_UAV_OUTPUT
     imageStore(rw_output, outPxCoord, FfxFloat32x4(color, 1));
-#endif 
 }
+#endif // #if defined FFX_BLUR_BIND_UAV_OUTPUT
+
 // DXIL generates load/sync/store blocks for each channel, ticket open: https://ontrack-internal.amd.com/browse/SWDEV-303837
 // this is 10x times slower!!! 
 //void Blur_StoreOutput(FfxInt32x2 outPxCoord, FfxFloat32x3 color) { texColorOutput[outPxCoord].rgb = color;  }
+#if defined (FFX_BLUR_BIND_SRV_INPUT_SRC)
 FfxFloat32x3 FfxBlurLoadInput(FfxInt32x2 inPxCoord)
 {
-#if defined FFX_BLUR_BIND_SRV_INPUT_SRC
     return texelFetch(r_input_src, inPxCoord, 0).rgb;
-#else
-    return FfxFloat32x3(0, 0, 0);
-#endif
 }
+#endif // #if defined FFX_BLUR_BIND_SRV_INPUT_SRC
 
 #endif // !FFX_HALF
+
 #endif // #if defined(FFX_GPU)

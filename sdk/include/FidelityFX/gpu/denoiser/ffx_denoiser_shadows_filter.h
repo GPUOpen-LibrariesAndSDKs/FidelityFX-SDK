@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C)2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
 //
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -33,7 +33,7 @@ FFX_GROUPSHARED FfxUInt32 g_FFX_DNSR_Shadows_shared_normals_zw[16][16];
 #if FFX_HALF
 FfxUInt32 FFX_DNSR_Shadows_PackFloat16(FfxFloat16x2 v)
 {
-    return packHalf2x16(FfxFloat32x2(v));
+    return ffxPackHalf2x16(FfxFloat32x2(v));
 }
 
 FfxFloat16x2 FFX_DNSR_Shadows_UnpackFloat16(FfxUInt32 a)
@@ -129,7 +129,7 @@ FfxFloat32x2 FFX_DNSR_Shadows_UnpackFloat16(FfxUInt32 a){return FfxFloat32x2(0,0
 FfxFloat32x2 FFX_DNSR_Shadows_LoadInputFromGroupSharedMemory(FfxInt32x2 idx){return FfxFloat32x2(0,0);}
 FfxFloat32x3 FFX_DNSR_Shadows_LoadNormalsFromGroupSharedMemory(FfxInt32x2 idx){return FfxFloat32x3(0,0,0);}
 void         FFX_DNSR_Shadows_StoreInGroupSharedMemory(FfxInt32x2 idx, FfxFloat32x3 normals, FfxFloat32x2 inp, FfxFloat32 depth){}
-void         FFX_DNSR_Shadows_LoadWithOffset(FfxInt32x2 did, FfxInt32x2 offset, out FfxFloat32x3 normals, out FfxFloat32x2 inp, out FfxFloat32 depth){}
+void         FFX_DNSR_Shadows_LoadWithOffset(FfxInt32x2 did, FfxInt32x2 offset, out FfxFloat32x3 normals, out FfxFloat32x2 inp, out FfxFloat32 depth){depth = 0;}
 void         FFX_DNSR_Shadows_StoreWithOffset(FfxInt32x2 gtid, FfxInt32x2 offset, FfxFloat32x3 normals, FfxFloat32x2 inp, FfxFloat32 depth){}
 void FFX_DNSR_Shadows_InitializeGroupSharedMemory(FfxInt32x2 did, FfxInt32x2 gtid){}
 #endif
@@ -235,7 +235,7 @@ FfxFloat32x2 FFX_DNSR_Shadows_ApplyFilterWithPrecache(FfxUInt32x2 did, FfxUInt32
 
     FFX_DNSR_Shadows_InitializeGroupSharedMemory(FfxInt32x2(did), FfxInt32x2(gtid));
     FfxBoolean needs_denoiser = IsShadowReciever(did);
-    FFX_GROUP_MEMORY_BARRIER();
+    FFX_GROUP_MEMORY_BARRIER;
     if (needs_denoiser)
     {
         FfxFloat32 depth = LoadDepth(FfxInt32x2(did));

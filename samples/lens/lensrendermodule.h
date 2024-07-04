@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -27,7 +27,7 @@
 
 #include <FidelityFX/host/ffx_lens.h>
 
-/// @defgroup FfxLensSample FidelityFX Lens Sample
+/// @defgroup FfxLensSample FidelityFX Lens sample
 /// Sample documentation for FidelityFX Lens
 ///
 /// @ingroup SDKEffects
@@ -49,9 +49,10 @@ namespace cauldron
 } // namespace cauldron
 
 /**
- * @class LenSRenderModule
+ * @class LensRenderModule
+ * LensRenderModule handles a number of tasks related to Lens.
  *
- * LenSRenderModule takes care of:
+ * LensRenderModule takes care of:
  *      - creating UI section that enable users to switch between options of Lens
  *      - performing the lens effect and output to the color target
  */
@@ -87,6 +88,10 @@ public:
     void OnResize(const cauldron::ResolutionInfo& resInfo) override;
 
 private:
+
+    void InitFfxContext();
+
+    void DestroyFfxContext();
 
     /**
      * @brief   Destroy or re-create the FFX API Context.

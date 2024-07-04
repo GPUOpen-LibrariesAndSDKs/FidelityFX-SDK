@@ -1,9 +1,9 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
@@ -12,9 +12,9 @@
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -118,7 +118,7 @@ void LightingRenderModule::Init(const json& initData)
 
     // Setup the shaders to build on the pipeline object
     std::wstring shaderPath = L"lighting.hlsl";
-    psoDesc.AddShaderDesc(ShaderBuildDesc::Compute(shaderPath.c_str(), L"MainCS", ShaderModel::SM6_6, &defineList));
+    psoDesc.AddShaderDesc(ShaderBuildDesc::Compute(shaderPath.c_str(), L"MainCS", ShaderModel::SM6_0, &defineList));
 
     m_pPipelineObj = PipelineObject::CreatePipelineObject(L"LightingRenderModule_PipelineObj", psoDesc);
 
@@ -144,13 +144,17 @@ void LightingRenderModule::Init(const json& initData)
         m_pParameters->SetTextureSRV(pShadowMapResourcePool->GetRenderTarget(i), ViewDimension::Texture2D, 7 + i);
     }
 
-    m_IBLFactor = GetScene()->GetIBLFactor();
+    m_IBLFactor = GetConfig()->StartupContent.IBLFactor;
     // Register UI for Tone mapping as part of post processing
-    UISection uiSection;
-    uiSection.SectionName = "Lighting";
-    std::function<void(void*)> updateIBLFactorCallback = [this](void* pParams) { GetScene()->SetIBLFactor(this->m_IBLFactor); };
-    uiSection.AddFloatSlider("IBLFactor", &m_IBLFactor, 0.0f, 1.0f, updateIBLFactorCallback);
-    GetUIManager()->RegisterUIElements(uiSection);
+    UISection* uiSection = GetUIManager()->RegisterUIElements("Lighting");
+    if (uiSection)
+    {
+        uiSection->RegisterUIElement<UISlider<float>>(
+            "IBLFactor", m_IBLFactor, 0.0f, 1.0f,
+            [this](float cur, float old) {
+                GetScene()->SetIBLFactor(cur);
+            });
+    }
 
     // We are now ready for use
     SetModuleReady(true);
@@ -236,8 +240,8 @@ void LightingRenderModule::Execute(double deltaTime, CommandList* pCmdList)
     }
     else
     {
-        dispatchWidth = resInfo.DisplayWidth;
-        dispatchHeight = resInfo.DisplayHeight;
+        dispatchWidth = resInfo.UpscaleWidth;
+        dispatchHeight = resInfo.UpscaleHeight;
     }
 
     const uint32_t numGroupX = DivideRoundingUp(dispatchWidth, g_NumThreadX);

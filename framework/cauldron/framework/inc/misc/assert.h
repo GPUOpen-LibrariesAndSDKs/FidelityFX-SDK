@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -25,8 +25,6 @@
 #include "helpers.h"
 #include "log.h"
 
-#include <codecvt>
-#include <locale>
 #include <string>
 
 #if defined(_WINDOWS)
@@ -34,7 +32,7 @@
 #endif // #if defined(_WINDOWS)
 
 /// @defgroup CauldronAssert Assert
-/// <c><i>Cauldron</i></c>'s assert support.
+/// <c><i>FidelityFX Cauldron Framework</i></c>'s assert support.
 ///
 /// @ingroup CauldronMisc
 
@@ -156,11 +154,11 @@ namespace cauldron
     inline void CauldronWarning(const wchar_t* format, ...)
     {
         // Format the message string
-        wchar_t buffer[512];
+        wchar_t buffer[1024];
         
         va_list args;
         va_start(args, format);
-        vswprintf(buffer, 512, format, args);
+        vswprintf(buffer, 1024, format, args);
         va_end(args);
 
         Log::Write(LOGLEVEL_WARNING, buffer);
@@ -228,5 +226,7 @@ namespace cauldron
                 CauldronWarning(buffer);
         }
     }
+
+#define CAULDRON_ASSERT(condition)  cauldron::CauldronAssert(cauldron::ASSERT_CRITICAL, condition, L"Assertion Failed %ls - line %d", WFILE, __LINE__)
 
 } // namespace cauldron

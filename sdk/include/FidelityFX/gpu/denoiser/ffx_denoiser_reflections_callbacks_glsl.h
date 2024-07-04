@@ -1,35 +1,33 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C)2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #include "ffx_denoiser_resources.h"
 
 #if defined(FFX_GPU)
 #include "ffx_core.h"
-#endif // #if defined(FFX_GPU)
 
-#if defined(FFX_GPU)
 #ifndef FFX_PREFER_WAVE64
 #define FFX_PREFER_WAVE64
-#endif // #if defined(FFX_GPU)
+#endif // #ifndef FFX_PREFER_WAVE64
 
 #if defined(DENOISER_BIND_CB_DENOISER)
     layout (set = 0, binding = DENOISER_BIND_CB_DENOISER, std140) uniform cbDenoiserReflections_t
@@ -242,18 +240,16 @@ FfxFloat16 LoadVarianceH(FfxInt32x3 coordinate)
 #endif
 }
 
+#if defined (DENOISER_BIND_SRV_AVERAGE_RADIANCE)
 FfxFloat16x3 FFX_DNSR_Reflections_SampleAverageRadiance(FfxFloat32x2 uv)
 {
-#if defined (DENOISER_BIND_SRV_AVERAGE_RADIANCE) 
     return FfxFloat16x3(textureLod(sampler2D(r_average_radiance, s_LinearSampler), uv, 0.0f).xyz);
-#else
-    return FfxFloat16x3(0.0f);
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_AVERAGE_RADIANCE)
 
+#if defined (DENOISER_BIND_SRV_EXTRACTED_ROUGHNESS)
 FfxFloat16 FFX_DNSR_Reflections_LoadRoughness(FfxInt32x2 pixel_coordinate)
 {
-#if defined (DENOISER_BIND_SRV_EXTRACTED_ROUGHNESS) 
     FfxFloat16 rawRoughness = FfxFloat16(texelFetch(r_extracted_roughness, pixel_coordinate, 0).x);
     if (IsRoughnessPerceptual())
     {
@@ -261,10 +257,8 @@ FfxFloat16 FFX_DNSR_Reflections_LoadRoughness(FfxInt32x2 pixel_coordinate)
     }
 
     return rawRoughness;
-#else
-    return FfxFloat16(0.0f);
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_EXTRACTED_ROUGHNESS)
 
 void StoreRadianceH(FfxInt32x2 coordinate, FfxFloat16x4 radiance)
 {
@@ -292,64 +286,56 @@ void FFX_DNSR_Reflections_StoreTemporalAccumulation(FfxInt32x2 pixel_coordinate,
     StoreVarianceH(pixel_coordinate, variance.x);
 }
 
+#if defined (DENOISER_BIND_SRV_RADIANCE_HISTORY)
 FfxFloat16x3 FFX_DNSR_Reflections_LoadRadianceHistory(FfxInt32x2 pixel_coordinate)
 {
-#if defined (DENOISER_BIND_SRV_RADIANCE_HISTORY) 
     return FfxFloat16x3(texelFetch(r_radiance_history, pixel_coordinate, 0).xyz);
-#else
-    return FfxFloat16x3(0.0f);
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_RADIANCE_HISTORY)
 
+#if defined (DENOISER_BIND_SRV_RADIANCE_HISTORY)
 FfxFloat16x3 FFX_DNSR_Reflections_SampleRadianceHistory(FfxFloat32x2 uv)
 {
-#if defined (DENOISER_BIND_SRV_RADIANCE_HISTORY) 
     return FfxFloat16x3(textureLod(sampler2D(r_radiance_history, s_LinearSampler), uv, 0.0f).xyz);
-#else
-    return FfxFloat16x3(0.0f);
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_RADIANCE_HISTORY)
 
+#if defined (DENOISER_BIND_SRV_VARIANCE)
 FfxFloat16 FFX_DNSR_Reflections_SampleVarianceHistory(FfxFloat32x2 uv)
 {
-#if defined (DENOISER_BIND_SRV_VARIANCE) 
     return FfxFloat16(textureLod(sampler2D(r_variance, s_LinearSampler), uv, 0.0f).x);
-#else
-    return FfxFloat16(0.0f);
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_VARIANCE)
 
+#if defined (DENOISER_BIND_SRV_SAMPLE_COUNT)
 FfxFloat16 FFX_DNSR_Reflections_SampleNumSamplesHistory(FfxFloat32x2 uv)
 {
-#if defined (DENOISER_BIND_SRV_SAMPLE_COUNT) 
     return FfxFloat16(textureLod(sampler2D(r_sample_count, s_LinearSampler), uv, 0.0f).x);
-#else
-    return FfxFloat16(0.0f);
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_SAMPLE_COUNT)
 
+#if defined (DENOISER_BIND_UAV_REPROJECTED_RADIANCE)
 void FFX_DNSR_Reflections_StoreRadianceReprojected(FfxInt32x2 pixel_coordinate, FfxFloat16x3 value)
 {
-#if defined (DENOISER_BIND_UAV_REPROJECTED_RADIANCE) 
     imageStore(rw_reprojected_radiance, pixel_coordinate, FfxFloat16x4(value, 0.0f));
-#endif
 }
+#endif // #if defined (DENOISER_BIND_UAV_REPROJECTED_RADIANCE)
 
+#if defined (DENOISER_BIND_UAV_AVERAGE_RADIANCE)
 void FFX_DNSR_Reflections_StoreAverageRadiance(FfxInt32x2 pixel_coordinate, FfxFloat16x3 value)
 {
-#if defined (DENOISER_BIND_UAV_AVERAGE_RADIANCE) 
     imageStore(rw_average_radiance, pixel_coordinate, FfxFloat16x4(value, 0.0f));
-#endif
 }
+#endif // #if defined (DENOISER_BIND_UAV_AVERAGE_RADIANCE)
 
 FfxFloat16x3 FFX_DNSR_Reflections_LoadWorldSpaceNormal(FfxInt32x2 pixel_coordinate)
 {
     return FFX_DENOISER_LoadWorldSpaceNormalH(pixel_coordinate);
 }
 
+#if defined (DENOISER_BIND_SRV_ROUGHNESS_HISTORY)
 FfxFloat16 FFX_DNSR_Reflections_SampleRoughnessHistory(FfxFloat32x2 uv)
 {
-#if defined (DENOISER_BIND_SRV_ROUGHNESS_HISTORY) 
     FfxFloat16 rawRoughness = FfxFloat16(textureLod(sampler2D(r_roughness_history, s_LinearSampler), uv, 0.0f).x);
     if (IsRoughnessPerceptual())
     {
@@ -357,77 +343,65 @@ FfxFloat16 FFX_DNSR_Reflections_SampleRoughnessHistory(FfxFloat32x2 uv)
     }
 
     return rawRoughness;
-#else
-    return FfxFloat16(0.0f);
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_ROUGHNESS_HISTORY)
 
+#if defined (DENOISER_BIND_SRV_NORMAL_HISTORY)
 FfxFloat16x3 FFX_DNSR_Reflections_LoadWorldSpaceNormalHistory(FfxInt32x2 pixel_coordinate)
 {
-#if defined (DENOISER_BIND_SRV_NORMAL_HISTORY) 
     return normalize(FfxFloat16x3(NormalsUnpackMul() * texelFetch(r_normal_history, pixel_coordinate.xy, 0).xyz + NormalsUnpackAdd()));
-#else
-    return FfxFloat16x3(0.0f);
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_NORMAL_HISTORY)
 
+#if defined (DENOISER_BIND_SRV_NORMAL_HISTORY)
 FfxFloat16x3 FFX_DNSR_Reflections_SampleWorldSpaceNormalHistory(FfxFloat32x2 uv)
 {
-#if defined (DENOISER_BIND_SRV_NORMAL_HISTORY) 
     return normalize(FfxFloat16x3(NormalsUnpackMul() * textureLod(sampler2D(r_normal_history, s_LinearSampler), uv, 0.0f).xyz + NormalsUnpackAdd()));
-#else
-    return FfxFloat16x3(0.0f);
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_NORMAL_HISTORY)
 
+#if defined (DENOISER_BIND_SRV_RADIANCE)
 FfxFloat16 FFX_DNSR_Reflections_LoadRayLength(FfxInt32x2 pixel_coordinate)
 {
-#if defined (DENOISER_BIND_SRV_RADIANCE) 
     return FfxFloat16(texelFetch(r_radiance, pixel_coordinate, 0).w);
-#else
-    return FfxFloat16(0.0f);
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_RADIANCE)
 
 void FFX_DNSR_Reflections_StoreVariance(FfxInt32x2 pixel_coordinate, FfxFloat16 value)
 {
     StoreVarianceH(pixel_coordinate, value);
 }
 
+#if defined (DENOISER_BIND_UAV_SAMPLE_COUNT)
 void FFX_DNSR_Reflections_StoreNumSamples(FfxInt32x2 pixel_coordinate, FfxFloat16 value)
 {
-#if defined (DENOISER_BIND_UAV_SAMPLE_COUNT) 
     imageStore(rw_sample_count, pixel_coordinate, FfxFloat16x4(value));
-#endif
 }
+#endif // #if defined (DENOISER_BIND_UAV_SAMPLE_COUNT)
 
 FfxFloat16x3 FFX_DNSR_Reflections_LoadRadiance(FfxInt32x2 pixel_coordinate)
 {
     return LoadRadianceH(FfxInt32x3(pixel_coordinate, 0));
 }
 
+#if defined (DENOISER_BIND_SRV_REPROJECTED_RADIANCE)
 FfxFloat16x3 FFX_DNSR_Reflections_LoadRadianceReprojected(FfxInt32x2 pixel_coordinate)
 {
-#if defined (DENOISER_BIND_SRV_REPROJECTED_RADIANCE) 
     return FfxFloat16x3(texelFetch(r_reprojected_radiance, pixel_coordinate, 0).xyz);
-#else
-    return FfxFloat16x3(0.0f);
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_REPROJECTED_RADIANCE)
 
 FfxFloat16 FFX_DNSR_Reflections_LoadVariance(FfxInt32x2 pixel_coordinate)
 {
     return LoadVarianceH(FfxInt32x3(pixel_coordinate, 0));
 }
 
+#if defined (DENOISER_BIND_SRV_SAMPLE_COUNT)
 FfxFloat16 FFX_DNSR_Reflections_LoadNumSamples(FfxInt32x2 pixel_coordinate)
 {
-#if defined (DENOISER_BIND_SRV_SAMPLE_COUNT) 
     return FfxFloat16(texelFetch(r_sample_count, pixel_coordinate, 0).x);
-#else
-    return FfxFloat16(0.0f);
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_SAMPLE_COUNT)
 
 #else   // FFX_HALF
 
@@ -451,16 +425,16 @@ FfxFloat32 LoadVariance(FfxInt32x3 coordinate)
 
 FfxFloat32x3 FFX_DENOISER_LoadWorldSpaceNormal(FfxInt32x2 pixel_coordinate)
 {
-#if defined(DENOISER_BIND_SRV_INPUT_NORMAL) 
+#if defined(DENOISER_BIND_SRV_INPUT_NORMAL)
     return normalize(NormalsUnpackMul() * texelFetch(r_input_normal, pixel_coordinate, 0).xyz + NormalsUnpackAdd());
 #else
     return FfxFloat32x3(0.0f);
 #endif
 }
 
+#if defined (DENOISER_BIND_SRV_EXTRACTED_ROUGHNESS)
 FfxFloat32 FFX_DNSR_Reflections_LoadRoughness(FfxInt32x2 pixel_coordinate)
 {
-#if defined (DENOISER_BIND_SRV_EXTRACTED_ROUGHNESS) 
     FfxFloat32 rawRoughness = FfxFloat32(texelFetch(r_extracted_roughness, pixel_coordinate, 0).x);
     if (IsRoughnessPerceptual())
     {
@@ -468,10 +442,8 @@ FfxFloat32 FFX_DNSR_Reflections_LoadRoughness(FfxInt32x2 pixel_coordinate)
     }
 
     return rawRoughness;
-#else
-    return FfxFloat32(0.0f);
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_EXTRACTED_ROUGHNESS)
 
 void StoreRadiance(FfxInt32x2 coordinate, FfxFloat32x4 radiance)
 {
@@ -499,73 +471,63 @@ void FFX_DNSR_Reflections_StoreTemporalAccumulation(FfxInt32x2 pixel_coordinate,
     StoreVariance(pixel_coordinate, variance.x);
 }
 
+#if defined (DENOISER_BIND_SRV_AVERAGE_RADIANCE)
 FfxFloat32x3 FFX_DNSR_Reflections_SampleAverageRadiance(FfxFloat32x2 uv)
 {
-#if defined (DENOISER_BIND_SRV_AVERAGE_RADIANCE) 
     return FfxFloat32x3(textureLod(sampler2D(r_average_radiance, s_LinearSampler), uv, 0.0f).xyz);
-#else
-    return FfxFloat32x3(0.0f);
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_AVERAGE_RADIANCE)
 
+#if defined (DENOISER_BIND_SRV_RADIANCE_HISTORY)
 FfxFloat32x3 FFX_DNSR_Reflections_LoadRadianceHistory(FfxInt32x2 pixel_coordinate)
 {
-#if defined (DENOISER_BIND_SRV_RADIANCE_HISTORY) 
     return FfxFloat32x3(texelFetch(r_radiance_history, pixel_coordinate, 0).xyz);
-#else
-    return FfxFloat32x3(0.0f);
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_RADIANCE_HISTORY)
 
+#if defined (DENOISER_BIND_SRV_RADIANCE_HISTORY)
 FfxFloat32x3 FFX_DNSR_Reflections_SampleRadianceHistory(FfxFloat32x2 uv)
 {
-#if defined (DENOISER_BIND_SRV_RADIANCE_HISTORY) 
     return FfxFloat32x3(textureLod(sampler2D(r_radiance_history, s_LinearSampler), uv, 0.0f).xyz);
-#else
-    return FfxFloat32x3(0.0f);
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_RADIANCE_HISTORY)
 
+#if defined (DENOISER_BIND_SRV_VARIANCE)
 FfxFloat32 FFX_DNSR_Reflections_SampleVarianceHistory(FfxFloat32x2 uv)
 {
-#if defined (DENOISER_BIND_SRV_VARIANCE) 
     return FfxFloat32(textureLod(sampler2D(r_variance, s_LinearSampler), uv, 0.0f).x);
-#else
-    return FfxFloat32(0.0f);
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_VARIANCE)
 
+#if defined (DENOISER_BIND_SRV_SAMPLE_COUNT)
 FfxFloat32 FFX_DNSR_Reflections_SampleNumSamplesHistory(FfxFloat32x2 uv)
 {
-#if defined (DENOISER_BIND_SRV_SAMPLE_COUNT) 
     return FfxFloat32(textureLod(sampler2D(r_sample_count, s_LinearSampler), uv, 0.0f).x);
-#else
-    return FfxFloat32(0.0f);
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_SAMPLE_COUNT)
 
+#if defined (DENOISER_BIND_UAV_REPROJECTED_RADIANCE)
 void FFX_DNSR_Reflections_StoreRadianceReprojected(FfxInt32x2 pixel_coordinate, FfxFloat32x3 value)
 {
-#if defined (DENOISER_BIND_UAV_REPROJECTED_RADIANCE) 
     imageStore(rw_reprojected_radiance, pixel_coordinate, FfxFloat32x4(value, 0.0f));
-#endif
 }
+#endif // #if defined (DENOISER_BIND_UAV_REPROJECTED_RADIANCE)
 
+#if defined (DENOISER_BIND_UAV_AVERAGE_RADIANCE)
 void FFX_DNSR_Reflections_StoreAverageRadiance(FfxInt32x2 pixel_coordinate, FfxFloat32x3 value)
 {
-#if defined (DENOISER_BIND_UAV_AVERAGE_RADIANCE) 
     imageStore(rw_average_radiance, pixel_coordinate, FfxFloat32x4(value, 0.0f));
-#endif
 }
+#endif // #if defined (DENOISER_BIND_UAV_AVERAGE_RADIANCE)
 
 FfxFloat32x3 FFX_DNSR_Reflections_LoadWorldSpaceNormal(FfxInt32x2 pixel_coordinate)
 {
     return FFX_DENOISER_LoadWorldSpaceNormal(pixel_coordinate);
 }
 
+#if defined (DENOISER_BIND_SRV_ROUGHNESS_HISTORY)
 FfxFloat32 FFX_DNSR_Reflections_SampleRoughnessHistory(FfxFloat32x2 uv)
 {
-#if defined (DENOISER_BIND_SRV_ROUGHNESS_HISTORY) 
     FfxFloat32 rawRoughness = FfxFloat32(textureLod(sampler2D(r_roughness_history, s_LinearSampler), uv, 0.0f).x);
     if (IsRoughnessPerceptual())
     {
@@ -573,77 +535,65 @@ FfxFloat32 FFX_DNSR_Reflections_SampleRoughnessHistory(FfxFloat32x2 uv)
     }
 
     return rawRoughness;
-#else
-    return FfxFloat32(0.0f);
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_ROUGHNESS_HISTORY)
 
+#if defined (DENOISER_BIND_SRV_NORMAL_HISTORY)
 FfxFloat32x3 FFX_DNSR_Reflections_LoadWorldSpaceNormalHistory(FfxInt32x2 pixel_coordinate)
 {
-#if defined (DENOISER_BIND_SRV_NORMAL_HISTORY) 
     return normalize(FfxFloat32x3(NormalsUnpackMul() * texelFetch(r_normal_history, pixel_coordinate.xy, 0).xyz + NormalsUnpackAdd()));
-#else
-    return FfxFloat32x3(0.0f);
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_NORMAL_HISTORY)
 
+#if defined (DENOISER_BIND_SRV_NORMAL_HISTORY)
 FfxFloat32x3 FFX_DNSR_Reflections_SampleWorldSpaceNormalHistory(FfxFloat32x2 uv)
 {
-#if defined (DENOISER_BIND_SRV_NORMAL_HISTORY) 
     return normalize(FfxFloat32x3(NormalsUnpackMul() * textureLod(sampler2D(r_normal_history, s_LinearSampler), uv, 0.0f).xyz + NormalsUnpackAdd()));
-#else
-    return FfxFloat32x3(0.0f);
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_NORMAL_HISTORY)
 
+#if defined (DENOISER_BIND_SRV_RADIANCE)
 FfxFloat32 FFX_DNSR_Reflections_LoadRayLength(FfxInt32x2 pixel_coordinate)
 {
-#if defined (DENOISER_BIND_SRV_RADIANCE) 
     return FfxFloat32(texelFetch(r_radiance, pixel_coordinate, 0).w);
-#else
-    return FfxFloat32(0.0f);
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_RADIANCE)
 
 void FFX_DNSR_Reflections_StoreVariance(FfxInt32x2 pixel_coordinate, FfxFloat32 value)
 {
     StoreVariance(pixel_coordinate, value);
 }
 
+#if defined (DENOISER_BIND_UAV_SAMPLE_COUNT)
 void FFX_DNSR_Reflections_StoreNumSamples(FfxInt32x2 pixel_coordinate, FfxFloat32 value)
 {
-#if defined (DENOISER_BIND_UAV_SAMPLE_COUNT) 
     imageStore(rw_sample_count, pixel_coordinate, FfxFloat32x4(value));
-#endif
 }
+#endif // #if defined (DENOISER_BIND_UAV_SAMPLE_COUNT)
 
 FfxFloat32x3 FFX_DNSR_Reflections_LoadRadiance(FfxInt32x2 pixel_coordinate)
 {
     return LoadRadiance(FfxInt32x3(pixel_coordinate, 0));
 }
 
+#if defined (DENOISER_BIND_SRV_REPROJECTED_RADIANCE)
 FfxFloat32x3 FFX_DNSR_Reflections_LoadRadianceReprojected(FfxInt32x2 pixel_coordinate)
 {
-#if defined (DENOISER_BIND_SRV_REPROJECTED_RADIANCE) 
     return FfxFloat32x3(texelFetch(r_reprojected_radiance, pixel_coordinate, 0).xyz);
-#else
-    return FfxFloat32x3(0.0f);
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_REPROJECTED_RADIANCE)
 
 FfxFloat32 FFX_DNSR_Reflections_LoadVariance(FfxInt32x2 pixel_coordinate)
 {
     return LoadVariance(FfxInt32x3(pixel_coordinate, 0));
 }
 
+#if defined (DENOISER_BIND_SRV_SAMPLE_COUNT)
 FfxFloat32 FFX_DNSR_Reflections_LoadNumSamples(FfxInt32x2 pixel_coordinate)
 {
-#if defined (DENOISER_BIND_SRV_SAMPLE_COUNT) 
     return FfxFloat32(texelFetch(r_sample_count, pixel_coordinate, 0).x);
-#else
-    return FfxFloat32(0.0f);
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_SAMPLE_COUNT)
 
 #endif // #if defined(FFX_HALF)
 
@@ -656,45 +606,37 @@ FfxFloat32 FFX_DENOISER_LoadDepth(FfxInt32x2 pixel_coordinate, FfxInt32 mip)
 #endif
 }
 
+#if defined (DENOISER_BIND_UAV_DENOISER_TILE_LIST)
 FfxUInt32 GetDenoiserTile(FfxUInt32 group_id)
 {
-#if defined (DENOISER_BIND_UAV_DENOISER_TILE_LIST) 
     return rw_denoiser_tile_list.data[group_id];
-#else
-    return 0;
-#endif
 }
+#endif // #if defined (DENOISER_BIND_UAV_DENOISER_TILE_LIST)
 
+#if defined (DENOISER_BIND_SRV_INPUT_MOTION_VECTORS)
 FfxFloat32x2 FFX_DNSR_Reflections_LoadMotionVector(FfxInt32x2 pixel_coordinate)
 {
-#if defined (DENOISER_BIND_SRV_INPUT_MOTION_VECTORS) 
     return MotionVectorScale() * texelFetch(r_input_motion_vectors, pixel_coordinate, 0).xy;
-#else
-    return FfxFloat32x2(0.0f);
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_INPUT_MOTION_VECTORS)
 
 FfxFloat32 FFX_DNSR_Reflections_LoadDepth(FfxInt32x2 pixel_coordinate)
 {
     return FFX_DENOISER_LoadDepth(pixel_coordinate, 0);
 }
 
+#if defined (DENOISER_BIND_SRV_DEPTH_HISTORY)
 FfxFloat32 FFX_DNSR_Reflections_LoadDepthHistory(FfxInt32x2 pixel_coordinate)
 {
-#if defined (DENOISER_BIND_SRV_DEPTH_HISTORY) 
     return texelFetch(r_depth_history, pixel_coordinate, 0).x;
-#else
-    return 0.0f;
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_DEPTH_HISTORY)
 
+#if defined (DENOISER_BIND_SRV_DEPTH_HISTORY)
 FfxFloat32 FFX_DNSR_Reflections_SampleDepthHistory(FfxFloat32x2 uv)
 {
-#if defined (DENOISER_BIND_SRV_DEPTH_HISTORY) 
     return textureLod(sampler2D(r_depth_history, s_LinearSampler), uv, 0.0f).x;
-#else
-    return 0.0f;
-#endif
 }
+#endif // #if defined (DENOISER_BIND_SRV_DEPTH_HISTORY)
 
 #endif // #if defined(FFX_GPU)

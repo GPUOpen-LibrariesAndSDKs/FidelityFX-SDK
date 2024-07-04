@@ -7,8 +7,8 @@
    viewBox="0 0 297 176"
    version="1.1"
    id="svg5"
-   inkscape:version="1.2.2 (732a01da63, 2022-12-09)"
-   sodipodi:docname="fsr_2_2_dataflow.svg"
+   inkscape:version="1.3 (0e150ed6c4, 2023-07-21)"
+   sodipodi:docname="algorithm-structure.svg"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -24,15 +24,15 @@
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
      showgrid="false"
-     inkscape:zoom="0.74564394"
-     inkscape:cx="396.97231"
-     inkscape:cy="454.64059"
-     inkscape:window-width="1920"
-     inkscape:window-height="1017"
-     inkscape:window-x="1912"
-     inkscape:window-y="-8"
+     inkscape:zoom="2.1089995"
+     inkscape:cx="614.2723"
+     inkscape:cy="317.92326"
+     inkscape:window-width="3840"
+     inkscape:window-height="2054"
+     inkscape:window-x="-11"
+     inkscape:window-y="-11"
      inkscape:window-maximized="1"
-     inkscape:current-layer="layer1" />
+     inkscape:current-layer="g1361" />
   <defs
      id="defs2">
     <clipPath
@@ -750,8 +750,9 @@
          font-family="Calibri, Calibri_MSFontService, sans-serif"
          font-weight="400"
          font-size="8px"
-         transform="translate(771.509,578)"
-         id="text1101">Render resolution</text>
+         id="text1101"
+         x="760.95856"
+         y="578">Presentation resolution</text>
       <path
          d="m 693.015,561 35.932,0.263 -0.029,3.999 L 692.985,565 Z m 33.961,-3.752 11.956,6.088 -12.043,5.912 z"
          id="path1103" />
@@ -996,8 +997,9 @@
          font-family="Calibri, Calibri_MSFontService, sans-serif"
          font-weight="400"
          font-size="8px"
-         transform="translate(1094.83,230)"
-         id="text1179">Render resolution</text>
+         id="text1179"
+         x="1085.2843"
+         y="229.50114">Presentation resolution</text>
       <path
          d="m 0,-2 h 33.1991 v 31.77 l -2,-2 h 21.1991 v 4 H 29.1991 V 0 l 2,2 H 0 Z m 50.3982,25.77 12,6 -12,6 z"
          transform="matrix(1,0,0,-1,1002,235.77)"
@@ -1294,8 +1296,9 @@
          font-family="Calibri, Calibri_MSFontService, sans-serif"
          font-weight="400"
          font-size="8px"
-         transform="translate(918.757,689)"
-         id="text1269">Render resolution</text>
+         id="text1269"
+         x="912.22577"
+         y="689">Presentation resolution</text>
       <path
          d="m 921,265 h 101.32 v 64.155 l -2,-2 h 12.63 v 4 h -14.63 V 267 l 2,2 H 921 Z m 109.95,58.155 12,6 -12,6 z"
          id="path1271" />

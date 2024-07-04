@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -60,7 +60,7 @@ namespace cauldron
     /**
      * @class Surface
      *
-     * The <c><i>Cauldron</i></c> surface representation. A surface has a <c><i>Material</i></c> and is one of a
+     * The <c><i>FidelityFX Cauldron Framework</i></c> surface representation. A surface has a <c><i>Material</i></c> and is one of a
        number of surfaces that make up a <c><i>Mesh</i></c>.
      *
      * @ingroup CauldronRender
@@ -72,7 +72,12 @@ namespace cauldron
         /**
          * @brief   Construction.
          */
-        Surface();
+        Surface() = delete;
+
+        /**
+         * @brief   Constructor, sets the surfaceID [0,#surfaces in the mesh]
+         */
+        Surface(uint32_t surfaceID);
 
         /**
          * @brief   Destruction.
@@ -133,6 +138,11 @@ namespace cauldron
          */
         static void GetVertexAttributeDefines(uint32_t attributes, DefineList& defines);
 
+        /**
+         * @brief   Returns the ID of the surface in the Mesh.
+         */
+        const uint32_t GetSurfaceID() const { return m_surfaceID; }
+
     private:
         NO_COPY(Surface)
         NO_MOVE(Surface)
@@ -143,13 +153,17 @@ namespace cauldron
 
         IndexBufferInformation m_IndexBuffer;
         std::array<VertexBufferInformation, static_cast<uint32_t>(VertexAttributeType::Count)> m_VertexBuffers;
+
+        // The surface index inside the Mesh
+        uint32_t m_surfaceID = 0;
+
         const Material* m_pMaterial = nullptr;
     };
 
     /**
      * @class Mesh
      *
-     * The <c><i>Cauldron</i></c> mesh representation. Meshes are made up of a combination of <c><i>Surface</i></c>es.
+     * The <c><i>FidelityFX Cauldron Framework</i></c> mesh representation. Meshes are made up of a combination of <c><i>Surface</i></c>es.
      *
      * @ingroup CauldronRender
      */
@@ -181,11 +195,22 @@ namespace cauldron
         /**
          * @brief   Returns a point to the Bottom-Level Acceleration Structure (<c><i>BLAS</i></c>) for the mesh.
          */
-        BLAS* GetBlas() { return m_pBlas; }
-        const BLAS* GetBlas() const { return m_pBlas; }
+        BLAS* GetStaticBlas() { return m_pBlas; }
+        const BLAS* GetStaticBlas() const { return m_pBlas; }
 
+        /**
+         * @brief  Stores the index of this mesh.
+         */
         void setMeshIndex(uint32_t index) { m_Index = index; }
+
+        /**
+         * @brief  Returns the index of this mesh.
+         */
         const uint32_t GetMeshIndex() const { return m_Index; }
+
+        void setAnimatedBlas(bool animatedBlas) { m_bAnimatedBLAS = animatedBlas; }
+        const bool HasAnimatedBlas() const { return m_bAnimatedBLAS; }
+
     private:
         NO_COPY(Mesh)
         NO_MOVE(Mesh)
@@ -195,6 +220,7 @@ namespace cauldron
         BLAS*                   m_pBlas;
         uint32_t                m_Index;
         std::wstring            m_Name;
+        bool                    m_bAnimatedBLAS = false;
         std::vector<Surface*>   m_Surfaces;
     };
 }

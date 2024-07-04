@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 /// A define for a true value in a boolean expression.
@@ -124,10 +124,10 @@ FFX_STATIC FfxFloat32 ffxReciprocal(FfxFloat32 x)
 /// @ingroup CPUCore
 FFX_STATIC FfxFloat32 ffxSqrt(FfxFloat32 x)
 {
-    return sqrt(x);
+    return FfxFloat32(sqrt(x));
 }
 
-FFX_STATIC FfxUInt32 AShrSU1(FfxUInt32 a, FfxUInt32 b)
+FFX_STATIC FfxUInt32 ffxAShrSU1(FfxUInt32 a, FfxUInt32 b)
 {
     return FfxUInt32(FfxInt32(a) >> FfxInt32(b));
 }
@@ -144,7 +144,7 @@ FFX_STATIC FfxUInt32 AShrSU1(FfxUInt32 a, FfxUInt32 b)
 /// @ingroup CPUCore
 FFX_STATIC FfxFloat32 ffxFract(FfxFloat32 x)
 {
-    return x - floor(x);
+    return x - FfxFloat32(floor(x));
 }
 
 /// Compute the reciprocal square root of a value.
@@ -155,7 +155,7 @@ FFX_STATIC FfxFloat32 ffxFract(FfxFloat32 x)
 /// The reciprocal square root value of <c><i>x</i></c>.
 ///
 /// @ingroup CPUCore
-FFX_STATIC FfxFloat32 rsqrt(FfxFloat32 x)
+FFX_STATIC FfxFloat32 ffxRsqrt(FfxFloat32 x)
 {
     return ffxReciprocal(ffxSqrt(x));
 }
@@ -196,7 +196,7 @@ FFX_STATIC FfxFloat32 ffxSaturate(FfxFloat32 x)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-FFX_STATIC void opAAddOneF3(FfxFloat32x3 d, FfxFloat32x3 a, FfxFloat32 b)
+FFX_STATIC void ffxOpAAddOneF3(FfxFloat32x3 d, FfxFloat32x3 a, FfxFloat32 b)
 {
     d[0] = a[0] + b;
     d[1] = a[1] + b;
@@ -204,7 +204,7 @@ FFX_STATIC void opAAddOneF3(FfxFloat32x3 d, FfxFloat32x3 a, FfxFloat32 b)
     return;
 }
 
-FFX_STATIC void opACpyF3(FfxFloat32x3 d, FfxFloat32x3 a)
+FFX_STATIC void ffxOpACpyF3(FfxFloat32x3 d, FfxFloat32x3 a)
 {
     d[0] = a[0];
     d[1] = a[1];
@@ -212,7 +212,7 @@ FFX_STATIC void opACpyF3(FfxFloat32x3 d, FfxFloat32x3 a)
     return;
 }
 
-FFX_STATIC void opAMulF3(FfxFloat32x3 d, FfxFloat32x3 a, FfxFloat32x3 b)
+FFX_STATIC void ffxOpAMulF3(FfxFloat32x3 d, FfxFloat32x3 a, FfxFloat32x3 b)
 {
     d[0] = a[0] * b[0];
     d[1] = a[1] * b[1];
@@ -220,7 +220,7 @@ FFX_STATIC void opAMulF3(FfxFloat32x3 d, FfxFloat32x3 a, FfxFloat32x3 b)
     return;
 }
 
-FFX_STATIC void opAMulOneF3(FfxFloat32x3 d, FfxFloat32x3 a, FfxFloat32 b)
+FFX_STATIC void ffxOpAMulOneF3(FfxFloat32x3 d, FfxFloat32x3 a, FfxFloat32 b)
 {
     d[0] = a[0] * b;
     d[1] = a[1] * b;
@@ -228,7 +228,7 @@ FFX_STATIC void opAMulOneF3(FfxFloat32x3 d, FfxFloat32x3 a, FfxFloat32 b)
     return;
 }
 
-FFX_STATIC void opARcpF3(FfxFloat32x3 d, FfxFloat32x3 a)
+FFX_STATIC void ffxOpARcpF3(FfxFloat32x3 d, FfxFloat32x3 a)
 {
     d[0] = ffxReciprocal(a[0]);
     d[1] = ffxReciprocal(a[1]);
@@ -252,7 +252,7 @@ FFX_STATIC void opARcpF3(FfxFloat32x3 d, FfxFloat32x3 a)
 /// The closest 16bit floating point value to <c><i>f</i></c>.
 /// 
 /// @ingroup CPUCore
-FFX_STATIC FfxUInt32 f32tof16(FfxFloat32 f)
+FFX_STATIC FfxUInt32 ffxF32ToF16(FfxFloat32 f)
 {
     static FfxUInt16 base[512] = {
         0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
@@ -332,7 +332,7 @@ FFX_STATIC FfxUInt32 f32tof16(FfxFloat32 f)
 /// A packed 32bit value containing 2 16bit floating point values.
 ///
 /// @ingroup CPUCore
-FFX_STATIC FfxUInt32 packHalf2x16(FfxFloat32x2 x)
+FFX_STATIC FfxUInt32 ffxPackHalf2x16(FfxFloat32x2 x)
 {
-    return f32tof16(x[0]) + (f32tof16(x[1]) << 16);
+    return ffxF32ToF16(x[0]) + (ffxF32ToF16(x[1]) << 16);
 }

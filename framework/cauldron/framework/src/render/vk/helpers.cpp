@@ -1,21 +1,25 @@
-// AMD Cauldron code
+// This file is part of the FidelityFX SDK.
 //
-// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sub-license, and / or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 #include "helpers.h"
 #include "misc/assert.h"
 
@@ -84,8 +88,6 @@ namespace cauldron
             CauldronError(L"Implement typeless texture format support");
             return VK_FORMAT_B8G8R8A8_USCALED;
         case ResourceFormat::RGB10A2_UNORM:
-            return VK_FORMAT_A2R10G10B10_UNORM_PACK32;
-        case ResourceFormat::BGR10A2_UNORM:
             return VK_FORMAT_A2B10G10R10_UNORM_PACK32;
         case ResourceFormat::RG11B10_FLOAT:
             return VK_FORMAT_B10G11R11_UFLOAT_PACK32;
@@ -343,5 +345,262 @@ namespace cauldron
             CauldronCritical(L"Unsupported binding type");
             return VK_DESCRIPTOR_TYPE_MAX_ENUM;
         }
+    }
+
+    bool IsBCFormat(ResourceFormat format)
+    {
+        switch (format)
+        {
+        case ResourceFormat::BC1_UNORM:
+        case ResourceFormat::BC1_SRGB:
+        case ResourceFormat::BC2_UNORM:
+        case ResourceFormat::BC2_SRGB:
+        case ResourceFormat::BC3_UNORM:
+        case ResourceFormat::BC3_SRGB:
+        case ResourceFormat::BC4_UNORM:
+        case ResourceFormat::BC4_SNORM:
+        case ResourceFormat::BC5_UNORM:
+        case ResourceFormat::BC5_SNORM:
+        case ResourceFormat::BC6_UNSIGNED:
+        case ResourceFormat::BC6_SIGNED:
+        case ResourceFormat::BC7_UNORM:
+        case ResourceFormat::BC7_SRGB:
+            return true;
+
+        default:
+            return false;
+        };
+    }
+
+    VkImageType GetImageType(const TextureDesc& desc)
+    {
+        switch (desc.Dimension)
+        {
+        case TextureDimension::Texture1D:
+            return VK_IMAGE_TYPE_1D;
+        case TextureDimension::Texture2D:
+        case TextureDimension::CubeMap:
+            return VK_IMAGE_TYPE_2D;
+        case TextureDimension::Texture3D:
+            return VK_IMAGE_TYPE_3D;
+        default:
+            CauldronError(L"Incorrect texture dimension");
+            return VK_IMAGE_TYPE_MAX_ENUM;
+        }
+    }
+
+    VkImageUsageFlags GetUsage(ResourceFlags cauldronFlags)
+    {
+        uint32_t flags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+
+        if (static_cast<bool>(cauldronFlags & ResourceFlags::AllowRenderTarget))
+        {
+            // add color attachment flag
+            flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+            // keep transfer dest flag to clear
+        }
+        if (static_cast<bool>(cauldronFlags & ResourceFlags::AllowDepthStencil))
+        {
+            // add depth stencil attachment flag
+            flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+            // keep transfer dest flag to clear
+        }
+        if (static_cast<bool>(cauldronFlags & ResourceFlags::AllowUnorderedAccess))
+        {
+            flags |= VK_IMAGE_USAGE_STORAGE_BIT;
+        }
+        if (static_cast<bool>(cauldronFlags & ResourceFlags::DenyShaderResource))
+        {
+            flags &= ~(VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+        }
+        if (static_cast<bool>(cauldronFlags & ResourceFlags::AllowShadingRate))
+        {
+            flags |= VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
+        }
+
+        return static_cast<VkImageUsageFlags>(flags);
+    }
+
+    MipInformation GetMipInformation(uint32_t width, uint32_t height, ResourceFormat format)
+    {
+        MipInformation info;
+        VkDeviceSize   blockSize = GetBlockSize(format);
+        VkDeviceSize   lineSize  = 0;
+        VkDeviceSize   totalSize = 0;
+        if (IsBCFormat(format))
+        {
+            info.Stride    = blockSize * DivideRoundingUp(width, 4);
+            info.Rows      = DivideRoundingUp(height, 4);
+            info.TotalSize = info.Stride * info.Rows;
+        }
+        else
+        {
+            info.Stride    = blockSize * width;
+            info.Rows      = height;
+            info.TotalSize = info.Stride * info.Rows;
+        }
+        return info;
+    }
+
+    VkDeviceSize GetTotalTextureSize(uint32_t width, uint32_t height, ResourceFormat format, uint32_t mipCount)
+    {
+        VkDeviceSize totalSize = 0;
+        for (uint32_t i = 0; i < mipCount; ++i)
+        {
+            totalSize += GetMipInformation(width, height, format).TotalSize;
+            width /= 2;
+            height /= 2;
+        }
+        return totalSize;
+    }
+
+    uint32_t CalculateMipLevels(const TextureDesc& desc)
+    {
+        if (desc.MipLevels == 0)
+        {
+            if (desc.Dimension == TextureDimension::Texture1D)
+            {
+                uint32_t w        = desc.Width;
+                uint32_t mipCount = 1;
+                while (w > 1)
+                {
+                    w >>= 1;
+                    ++mipCount;
+                }
+                return mipCount;
+            }
+            else if (desc.Dimension == TextureDimension::Texture2D || desc.Dimension == TextureDimension::CubeMap)
+            {
+                uint32_t w        = desc.Width;
+                uint32_t h        = desc.Height;
+                uint32_t mipCount = 1;
+                while (w > 1 || h > 1)
+                {
+                    w >>= 1;
+                    h >>= 1;
+                    ++mipCount;
+                }
+                return mipCount;
+            }
+            else if (desc.Dimension == TextureDimension::Texture3D)
+            {
+                uint32_t w        = desc.Width;
+                uint32_t h        = desc.Height;
+                uint32_t d        = desc.DepthOrArraySize;
+                uint32_t mipCount = 1;
+                while (w > 1 || h > 1 || d > 1)
+                {
+                    w >>= 1;
+                    h >>= 1;
+                    d >>= 1;
+                    ++mipCount;
+                }
+                return mipCount;
+            }
+            else
+            {
+                CauldronCritical(L"Cannot calculate mip count for unknown texture dimension");
+                return 0;
+            }
+        }
+        else
+        {
+            return desc.MipLevels;
+        }
+    }
+
+    uint32_t CalculateSizeAtMipLevel(const uint32_t size, const uint32_t mipLevel)
+    {
+        return std::max(size >> mipLevel, 1u);
+    }
+
+    VkImageCreateInfo ConvertTextureDesc(const TextureDesc& desc)
+    {
+        VkImageType imageType = GetImageType(desc);
+
+        VkImageCreateInfo imageInfo = {};
+        imageInfo.sType             = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        imageInfo.imageType         = imageType;
+        imageInfo.extent.width      = desc.Width;
+        imageInfo.extent.height     = desc.Height;
+        imageInfo.extent.depth      = imageType == VK_IMAGE_TYPE_3D ? desc.DepthOrArraySize : 1;
+        imageInfo.mipLevels         = CalculateMipLevels(desc);
+        imageInfo.arrayLayers       = imageType == VK_IMAGE_TYPE_3D ? 1 : desc.DepthOrArraySize;
+        imageInfo.format            = GetVkFormat(desc.Format);
+        imageInfo.tiling            = VK_IMAGE_TILING_OPTIMAL;
+        imageInfo.initialLayout     = VK_IMAGE_LAYOUT_UNDEFINED;
+        imageInfo.usage             = GetUsage(desc.Flags);
+        imageInfo.sharingMode       = VK_SHARING_MODE_EXCLUSIVE;
+        imageInfo.samples           = VK_SAMPLE_COUNT_1_BIT;
+        imageInfo.flags             = 0;
+
+        if (desc.Dimension == TextureDimension::CubeMap)
+        {
+            CauldronAssert(ASSERT_CRITICAL, desc.DepthOrArraySize % 6 == 0, L"The number of slices of the cubemap texture isn't a mutiple of 6");
+            imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+        }
+
+        // if a sRGB texture will have a UAV view on it, we need to:
+        //  - use a non sRGB format for it
+        //  - use this format for UAV/storage view
+        //  - use sRGB view for SRV and RTV
+        if (static_cast<bool>(desc.Flags & ResourceFlags::AllowUnorderedAccess) && IsSRGB(desc.Format))
+        {
+            imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+            imageInfo.format = VKFromGamma(imageInfo.format);
+        }
+
+        return imageInfo;
+    }
+
+    VkBufferCreateInfo ConvertBufferDesc(const BufferDesc& desc)
+    {
+        VkBufferCreateInfo bufferInfo = {};
+        bufferInfo.sType              = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        bufferInfo.pNext              = nullptr;
+        bufferInfo.flags              = 0;
+        bufferInfo.size               = static_cast<VkDeviceSize>(desc.Size);
+        bufferInfo.usage              = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        switch (desc.Type)
+        {
+        case BufferType::Vertex:
+            bufferInfo.usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+                                VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+            break;
+        case BufferType::Index:
+            bufferInfo.usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+                                VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+            break;
+        case BufferType::Data:
+            bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+                                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
+            break;
+        case BufferType::AccelerationStructure:
+            bufferInfo.usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+            break;
+        case BufferType::Constant:
+            // Will support when needed
+            //    bufferInfo.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+            //    break;
+        default:
+            CauldronError(L"Unsupported buffer type.");
+            break;
+        }
+
+        // Check if this buffer was flagged for indirect argument usage
+        if (static_cast<bool>(desc.Flags & ResourceFlags::AllowIndirect))
+        {
+            bufferInfo.usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+        }
+        if (static_cast<bool>(desc.Flags & ResourceFlags::AllowConstantBuffer))
+        {
+            bufferInfo.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        }
+
+        bufferInfo.sharingMode           = VK_SHARING_MODE_EXCLUSIVE;
+        bufferInfo.queueFamilyIndexCount = 0;
+        bufferInfo.pQueueFamilyIndices   = nullptr;
+
+        return bufferInfo;
     }
 } // namespace cauldron

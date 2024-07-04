@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
 //
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -25,6 +25,11 @@
 ///
 /// @ingroup FfxGLSL
 
+/// A define for abstracting select functionality for pre/post HLSL 21
+///
+/// @ingroup GLSLCore
+#define FFX_SELECT(cond, arg1, arg2) cond ? arg1 : arg2
+
 /// A define for abstracting shared memory between shading languages.
 ///
 /// @ingroup GLSLCore
@@ -33,12 +38,32 @@
 /// A define for abstracting compute memory barriers between shading languages.
 ///
 /// @ingroup GLSLCore
-#define FFX_GROUP_MEMORY_BARRIER() groupMemoryBarrier(); barrier()
+#define FFX_GROUP_MEMORY_BARRIER groupMemoryBarrier(); barrier()
 
 /// A define for abstracting compute atomic additions between shading languages.
 ///
 /// @ingroup GLSLCore
 #define FFX_ATOMIC_ADD(x, y) atomicAdd(x, y)
+
+/// A define for abstracting compute atomic additions between shading languages.
+///
+/// @ingroup GLSLCore
+#define FFX_ATOMIC_ADD_RETURN(x, y, r) r = atomicAdd(x, y)
+
+/// A define for abstracting compute atomic OR between shading languages.
+///
+/// @ingroup GLSLCore
+#define FFX_ATOMIC_OR(x, y) atomicOr(x, y)
+
+/// A define for abstracting compute atomic min between shading languages.
+///
+/// @ingroup GLSLCore
+#define FFX_ATOMIC_MIN(x, y) atomicMin(x, y)
+
+/// A define for abstracting compute atomic max between shading languages.
+///
+/// @ingroup GLSLCore
+#define FFX_ATOMIC_MAX(x, y) atomicMax(x, y)
 
 /// A define added to accept static markup on functions to aid CPU/GPU portability of code.
 ///
@@ -344,6 +369,23 @@ FfxUInt32x4 ffxAsUInt32(FfxFloat32x4 x)
     return floatBitsToUint(x);
 }
 
+/// Pack 2x32-bit floating point values in a single 32bit value.
+///
+/// This function first converts each component of <c><i>value</i></c> into their nearest 16-bit floating
+/// point representation, and then stores the X and Y components in the lower and upper 16 bits of the
+/// 32bit unsigned integer respectively.
+///
+/// @param [in] value               A 2-dimensional floating point value to convert and pack.
+///
+/// @returns
+/// A packed 32bit value containing 2 16bit floating point values.
+///
+/// @ingroup GLSLCore
+FfxUInt32 ffxPackHalf2x16(FfxFloat32x2 value)
+{
+    return packHalf2x16(value);
+}
+
 /// Convert a 32bit IEEE 754 floating point value to its nearest 16bit equivalent.
 ///
 /// @param [in] value               The value to convert.
@@ -352,7 +394,7 @@ FfxUInt32x4 ffxAsUInt32(FfxFloat32x4 x)
 /// The nearest 16bit equivalent of <c><i>value</i></c>.
 ///
 /// @ingroup GLSLCore
-FfxUInt32 f32tof16(FfxFloat32 value)
+FfxUInt32 ffxF32ToF16(FfxFloat32 value)
 {
     return packHalf2x16(FfxFloat32x2(value, 0.0));
 }
@@ -477,7 +519,7 @@ FfxUInt32x4 ffxBroadcast4(FfxUInt32 value)
 ///
 ///
 /// @ingroup GLSLCore
-FfxUInt32 bitfieldExtract(FfxUInt32 src, FfxUInt32 off, FfxUInt32 bits)
+FfxUInt32 ffxBitfieldExtract(FfxUInt32 src, FfxUInt32 off, FfxUInt32 bits)
 {
     return bitfieldExtract(src, FfxInt32(off), FfxInt32(bits));
 }
@@ -485,7 +527,7 @@ FfxUInt32 bitfieldExtract(FfxUInt32 src, FfxUInt32 off, FfxUInt32 bits)
 ///
 ///
 /// @ingroup GLSLCore
-FfxUInt32 bitfieldInsert(FfxUInt32 src, FfxUInt32 ins, FfxUInt32 mask)
+FfxUInt32 ffxBitfieldInsert(FfxUInt32 src, FfxUInt32 ins, FfxUInt32 mask)
 {
     return (ins & mask) | (src & (~mask));
 }
@@ -494,7 +536,7 @@ FfxUInt32 bitfieldInsert(FfxUInt32 src, FfxUInt32 ins, FfxUInt32 mask)
 ///
 ///
 /// @ingroup GLSLCore
-FfxUInt32 bitfieldInsertMask(FfxUInt32 src, FfxUInt32 ins, FfxUInt32 bits)
+FfxUInt32 ffxBitfieldInsertMask(FfxUInt32 src, FfxUInt32 ins, FfxUInt32 bits)
 {
     return bitfieldInsert(src, ins, 0, FfxInt32(bits));
 }
@@ -1082,7 +1124,7 @@ FfxUInt32x4 ffxMin3(FfxUInt32x4 x, FfxUInt32x4 y, FfxUInt32x4 z)
 /// The reciprocal value of <c><i>x</i></c>.
 ///
 /// @ingroup GLSLCore
-FfxFloat32 rcp(FfxFloat32 x)
+FfxFloat32 ffxReciprocal(FfxFloat32 x)
 {
     return FfxFloat32(1.0) / x;
 }
@@ -1097,7 +1139,7 @@ FfxFloat32 rcp(FfxFloat32 x)
 /// The reciprocal value of <c><i>x</i></c>.
 ///
 /// @ingroup GLSLCore
-FfxFloat32x2 rcp(FfxFloat32x2 x)
+FfxFloat32x2 ffxReciprocal(FfxFloat32x2 x)
 {
     return ffxBroadcast2(1.0) / x;
 }
@@ -1112,7 +1154,7 @@ FfxFloat32x2 rcp(FfxFloat32x2 x)
 /// The reciprocal value of <c><i>x</i></c>.
 ///
 /// @ingroup GLSLCore
-FfxFloat32x3 rcp(FfxFloat32x3 x)
+FfxFloat32x3 ffxReciprocal(FfxFloat32x3 x)
 {
     return ffxBroadcast3(1.0) / x;
 }
@@ -1127,7 +1169,7 @@ FfxFloat32x3 rcp(FfxFloat32x3 x)
 /// The reciprocal value of <c><i>x</i></c>.
 ///
 /// @ingroup GLSLCore
-FfxFloat32x4 rcp(FfxFloat32x4 x)
+FfxFloat32x4 ffxReciprocal(FfxFloat32x4 x)
 {
     return ffxBroadcast4(1.0) / x;
 }
@@ -1142,7 +1184,7 @@ FfxFloat32x4 rcp(FfxFloat32x4 x)
 /// The reciprocal square root value of <c><i>x</i></c>.
 ///
 /// @ingroup GLSLCore
-FfxFloat32 rsqrt(FfxFloat32 x)
+FfxFloat32 ffxRsqrt(FfxFloat32 x)
 {
     return FfxFloat32(1.0) / ffxSqrt(x);
 }
@@ -1157,7 +1199,7 @@ FfxFloat32 rsqrt(FfxFloat32 x)
 /// The reciprocal square root value of <c><i>x</i></c>.
 ///
 /// @ingroup GLSLCore
-FfxFloat32x2 rsqrt(FfxFloat32x2 x)
+FfxFloat32x2 ffxRsqrt(FfxFloat32x2 x)
 {
     return ffxBroadcast2(1.0) / ffxSqrt(x);
 }
@@ -1172,7 +1214,7 @@ FfxFloat32x2 rsqrt(FfxFloat32x2 x)
 /// The reciprocal square root value of <c><i>x</i></c>.
 ///
 /// @ingroup GLSLCore
-FfxFloat32x3 rsqrt(FfxFloat32x3 x)
+FfxFloat32x3 ffxRsqrt(FfxFloat32x3 x)
 {
     return ffxBroadcast3(1.0) / ffxSqrt(x);
 }
@@ -1320,7 +1362,59 @@ FfxFloat32x4 ffxFract(FfxFloat32x4 x)
     return fract(x);
 }
 
-FfxUInt32 AShrSU1(FfxUInt32 a, FfxUInt32 b)
+/// Rounds to the nearest integer. In case the fractional part is 0.5, it will round to the nearest even integer.
+///
+/// @param [in] x               The value to be rounded.
+///
+/// @returns
+/// The nearest integer from <c><i>x</i></c>. The nearest even integer from <c><i>x</i></c> if equidistant from 2 integer.
+///
+/// @ingroup GLSLCore
+FfxFloat32 ffxRound(FfxFloat32 x)
+{
+    return roundEven(x);
+}
+
+/// Rounds to the nearest integer. In case the fractional part is 0.5, it will round to the nearest even integer.
+///
+/// @param [in] x               The value to be rounded.
+///
+/// @returns
+/// The nearest integer from <c><i>x</i></c>. The nearest even integer from <c><i>x</i></c> if equidistant from 2 integer.
+///
+/// @ingroup GLSLCore
+FfxFloat32x2 ffxRound(FfxFloat32x2 x)
+{
+    return roundEven(x);
+}
+
+/// Rounds to the nearest integer. In case the fractional part is 0.5, it will round to the nearest even integer.
+///
+/// @param [in] x               The value to be rounded.
+///
+/// @returns
+/// The nearest integer from <c><i>x</i></c>. The nearest even integer from <c><i>x</i></c> if equidistant from 2 integer.
+///
+/// @ingroup GLSLCore
+FfxFloat32x3 ffxRound(FfxFloat32x3 x)
+{
+    return roundEven(x);
+}
+
+/// Rounds to the nearest integer. In case the fractional part is 0.5, it will round to the nearest even integer.
+///
+/// @param [in] x               The value to be rounded.
+///
+/// @returns
+/// The nearest integer from <c><i>x</i></c>. The nearest even integer from <c><i>x</i></c> if equidistant from 2 integer.
+///
+/// @ingroup GLSLCore
+FfxFloat32x4 ffxRound(FfxFloat32x4 x)
+{
+    return roundEven(x);
+}
+
+FfxUInt32 ffxAShrSU1(FfxUInt32 a, FfxUInt32 b)
 {
     return FfxUInt32(FfxInt32(a) >> FfxInt32(b));
 }
@@ -1331,6 +1425,14 @@ FfxUInt32 ffxPackF32(FfxFloat32x2 v){
 
 FfxFloat32x2 ffxUnpackF32(FfxUInt32 u){
     return unpackHalf2x16(u);
+}
+
+FfxUInt32x2 ffxPackF32x2(FfxFloat32x4 v){
+	return FfxUInt32x2(ffxPackF32(v.xy), ffxPackF32(v.zw));
+}
+
+FfxFloat32x4 ffxUnpackF32x2(FfxUInt32x2 a){
+    return FfxFloat32x4(ffxUnpackF32(a.x), ffxUnpackF32(a.y));
 }
 
 /// @brief Inverts the value while avoiding division by zero. If the value is zero, zero is returned.
@@ -1673,97 +1775,121 @@ FfxUInt16x4 ffxBitShiftRightHalf(FfxUInt16x4 a, FfxUInt16x4 b)
 
 #if defined(FFX_WAVE)
 // Where 'x' must be a compile time literal.
-FfxFloat32 AWaveXorF1(FfxFloat32 v, FfxUInt32 x)
+FfxFloat32 ffxWaveXorF1(FfxFloat32 v, FfxUInt32 x)
 {
     return subgroupShuffleXor(v, x);
 }
-FfxFloat32x2 AWaveXorF2(FfxFloat32x2 v, FfxUInt32 x)
+FfxFloat32x2 ffxWaveXorF2(FfxFloat32x2 v, FfxUInt32 x)
 {
     return subgroupShuffleXor(v, x);
 }
-FfxFloat32x3 AWaveXorF3(FfxFloat32x3 v, FfxUInt32 x)
+FfxFloat32x3 ffxWaveXorF3(FfxFloat32x3 v, FfxUInt32 x)
 {
     return subgroupShuffleXor(v, x);
 }
-FfxFloat32x4 AWaveXorF4(FfxFloat32x4 v, FfxUInt32 x)
+FfxFloat32x4 ffxWaveXorF4(FfxFloat32x4 v, FfxUInt32 x)
 {
     return subgroupShuffleXor(v, x);
 }
-FfxUInt32 AWaveXorU1(FfxUInt32 v, FfxUInt32 x)
+FfxUInt32 ffxWaveXorU1(FfxUInt32 v, FfxUInt32 x)
 {
     return subgroupShuffleXor(v, x);
 }
-FfxUInt32x2 AWaveXorU2(FfxUInt32x2 v, FfxUInt32 x)
+FfxUInt32x2 ffxWaveXorU2(FfxUInt32x2 v, FfxUInt32 x)
 {
     return subgroupShuffleXor(v, x);
 }
-FfxUInt32x3 AWaveXorU3(FfxUInt32x3 v, FfxUInt32 x)
+FfxUInt32x3 ffxWaveXorU3(FfxUInt32x3 v, FfxUInt32 x)
 {
     return subgroupShuffleXor(v, x);
 }
-FfxUInt32x4 AWaveXorU4(FfxUInt32x4 v, FfxUInt32 x)
+FfxUInt32x4 ffxWaveXorU4(FfxUInt32x4 v, FfxUInt32 x)
 {
     return subgroupShuffleXor(v, x);
 }
-FfxBoolean AWaveIsFirstLane()
+FfxBoolean ffxWaveIsFirstLane()
 {
     return subgroupElect();
 }
-FfxUInt32 AWaveLaneIndex()
+FfxUInt32 ffxWaveLaneIndex()
 {
     return gl_SubgroupInvocationID;
 }
-FfxBoolean AWaveReadAtLaneIndexB1(FfxBoolean v, FfxUInt32 x )
+FfxBoolean ffxWaveReadAtLaneIndexB1(FfxBoolean v, FfxUInt32 x )
 {
     return subgroupShuffle(v, x);
 }
-FfxUInt32 AWavePrefixCountBits(FfxBoolean v)
+FfxUInt32 ffxWavePrefixCountBits(FfxBoolean v)
 {
     return subgroupBallotExclusiveBitCount(subgroupBallot(v));
 }
-FfxUInt32 AWaveActiveCountBits(FfxBoolean v)
+FfxUInt32 ffxWaveActiveCountBits(FfxBoolean v)
 {
     return subgroupBallotBitCount(subgroupBallot(v));
 }
-FfxUInt32 AWaveReadLaneFirstU1(FfxUInt32 v)
+FfxUInt32 ffxWaveReadLaneFirstU1(FfxUInt32 v)
 {
     return subgroupBroadcastFirst(v);
 }
-FfxUInt32 WaveOr(FfxUInt32 a)
+FfxUInt32x2 ffxWaveReadLaneFirstU2(FfxUInt32x2 v)
+{
+    return subgroupBroadcastFirst(v);
+}
+FfxBoolean ffxWaveReadLaneFirstB1(FfxBoolean v)
+{
+    return subgroupBroadcastFirst(v);
+}
+FfxUInt32 ffxWaveOr(FfxUInt32 a)
 {
     return subgroupOr(a);
 }
-FfxFloat32 WaveMin(FfxFloat32 a)
+FfxUInt32 ffxWaveMin(FfxUInt32 a)
 {
     return subgroupMin(a);
 }
-FfxFloat32 WaveMax(FfxFloat32 a)
+FfxFloat32 ffxWaveMin(FfxFloat32 a)
+{
+    return subgroupMin(a);
+}
+FfxUInt32 ffxWaveMax(FfxUInt32 a)
 {
     return subgroupMax(a);
 }
-FfxUInt32 WaveLaneCount()
+FfxFloat32 ffxWaveMax(FfxFloat32 a)
+{
+    return subgroupMax(a);
+}
+FfxUInt32 ffxWaveSum(FfxUInt32 a)
+{
+    return subgroupAdd(a);
+}
+FfxFloat32 ffxWaveSum(FfxFloat32 a)
+{
+    return subgroupAdd(a);
+}
+FfxUInt32 ffxWaveLaneCount()
 {
     return gl_SubgroupSize;
 }
 #if defined(FFX_WAVE_ALL_TRUE)
-FfxBoolean WaveAllTrue(FfxBoolean v)
+FfxBoolean ffxWaveAllTrue(FfxBoolean v)
 {
     return subgroupAll(v);
 }
 #endif
-FfxFloat32 QuadReadX(FfxFloat32 v)
+FfxFloat32 ffxQuadReadX(FfxFloat32 v)
 {
     return subgroupQuadSwapHorizontal(v);
 }
-FfxFloat32x2 QuadReadX(FfxFloat32x2 v)
+FfxFloat32x2 ffxQuadReadX(FfxFloat32x2 v)
 {
     return subgroupQuadSwapHorizontal(v);
 }
-FfxFloat32 QuadReadY(FfxFloat32 v)
+FfxFloat32 ffxQuadReadY(FfxFloat32 v)
 {
     return subgroupQuadSwapVertical(v);
 }
-FfxFloat32x2 QuadReadY(FfxFloat32x2 v)
+FfxFloat32x2 ffxQuadReadY(FfxFloat32x2 v)
 {
     return subgroupQuadSwapVertical(v);
 }

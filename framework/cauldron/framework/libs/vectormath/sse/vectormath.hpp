@@ -615,6 +615,14 @@ public:
     //
     inline Vector4 & operator /= (const FloatInVec & scalar);
 
+    // Perform equality comparison
+    //
+    inline const bool operator == (const Vector4& vec);
+
+    // Perform equality comparison
+    //
+    inline const bool operator != (const Vector4& vec);
+
     // Negate all elements of a 4-D vector
     //
     inline const Vector4 operator - () const;

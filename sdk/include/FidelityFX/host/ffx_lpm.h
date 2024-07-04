@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 // @defgroup LPM
@@ -40,7 +40,7 @@
 /// FidelityFX Luma Preserving Mapper 1.3 minor version.
 ///
 /// @ingroup FfxLpm
-#define FFX_LPM_VERSION_MINOR (3)
+#define FFX_LPM_VERSION_MINOR (4)
 
 /// FidelityFX Luma Preserving Mapper 1.3 patch version.
 ///
@@ -57,7 +57,7 @@
 /// The size of the context specified in 32bit values.
 ///
 /// @ingroup FfxLpm
-#define FFX_LPM_CONTEXT_SIZE (16536)
+#define FFX_LPM_CONTEXT_SIZE (9300)
 
 #if defined(__cplusplus)
 extern "C" {
@@ -125,8 +125,8 @@ typedef enum FfxLpmInitializationFlagBits
 /// @ingroup FfxLpm
 typedef struct FfxLpmContextDescription
 {
-    uint32_t flags;
-    FfxInterface backendInterface;  ///< A set of pointers to the backend implementation for LPM.
+    uint32_t                    flags;
+    FfxInterface                backendInterface;       ///< A set of pointers to the backend implementation for LPM.
 } FfxLpmContextDescription;
 
 /// A structure encapsulating the parameters for dispatching the various passes
@@ -206,6 +206,7 @@ typedef struct FfxLpmContext
 /// @ingroup FfxLpm
 FFX_API FfxErrorCode ffxLpmContextCreate(FfxLpmContext* pContext, const FfxLpmContextDescription* pContextDescription);
 
+/// Dispatches work to the FidelityFX LPM context
 /// @param [out] pContext                A pointer to a <c><i>FfxLpmContext</i></c> structure to populate.
 /// @param [in]  pDispatchDescription    A pointer to a <c><i>FfxLpmDispatchDescription</i></c> structure.
 ///
@@ -258,6 +259,14 @@ FFX_API FfxErrorCode FfxPopulateLpmConsts(bool      incon,
                                           uint32_t& outcon2,
                                           uint32_t& outclip,
                                           uint32_t& outscaleOnly);
+
+/// Queries the effect version number.
+///
+/// @returns
+/// The SDK version the effect was built with.
+///
+/// @ingroup FfxLpm
+FFX_API FfxVersionNumber ffxLpmGetEffectVersion();
 
 #if defined(__cplusplus)
 }

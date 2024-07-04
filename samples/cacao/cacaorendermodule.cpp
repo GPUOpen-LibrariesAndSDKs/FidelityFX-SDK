@@ -1,28 +1,28 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this softwareand associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright noticeand this permission notice shall be included in
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #include "cacaorendermodule.h"
-#include "validation_remap.h"
 
+#include "core/backend_interface.h"
 #include "core/framework.h"
 #include "core/components/cameracomponent.h"
 #include "core/loaders/textureloader.h"
@@ -90,10 +90,11 @@ void CACAORenderModule::Init(const json& initData)
     m_pParamSet->SetTextureSRV(m_pColorTarget, ViewDimension::Texture2D, 0);
 
     // Initialize cacao context.
-    InitContext();
+    InitSdkContexts();
 
-    // Build UI
-    InitUI();
+    GetFramework()->ConfigureRuntimeShaderRecompiler(
+        [this](void) { DestroyCacaoContexts(); },
+        [this](void) { InitSdkContexts(); });
 
     // Start disabled as this will be enabled externally
     SetModuleEnabled(true);
@@ -106,14 +107,25 @@ CACAORenderModule::~CACAORenderModule()
 {
     // Protection
     if (ModuleEnabled())
-        EnableModule(false);    // Destroy FSR context
+        EnableModule(false);    // Destroy FSR context, Unregister all elements
+
+    DestroyCacaoContexts();
+
+    // Destroy the FidelityFX interface memory
+    free(m_FfxInterface.scratchBuffer);
+
+    delete m_pPrepareOutputRS;
+    delete m_pPrepareOutputPipeline;
+}
+
+void CACAORenderModule::DestroyCacaoContexts()
+{
+    // Flush anything out of the pipes before destroying the context
+    GetDevice()->FlushAllCommandQueues();
 
     // Destroy CACAO Contexts
     ffxCacaoContextDestroy(&m_CacaoContext);
     ffxCacaoContextDestroy(&m_CacaoDownsampledContext);
-
-    // Destroy the FidelityFX interface memory
-    free(m_FfxInterface.scratchBuffer);
 }
 
 void CACAORenderModule::OnResize(const ResolutionInfo& resInfo)
@@ -121,9 +133,8 @@ void CACAORenderModule::OnResize(const ResolutionInfo& resInfo)
     if (!ModuleEnabled())
         return;
 
-    ffxCacaoContextDestroy(&m_CacaoContext);
-    ffxCacaoContextDestroy(&m_CacaoDownsampledContext);
-    CreateContext(resInfo);
+    DestroyCacaoContexts();
+    CreateCacaoContexts(resInfo);
 }
 
 void CACAORenderModule::Execute(double deltaTime, CommandList* pCmdList)
@@ -131,14 +142,14 @@ void CACAORenderModule::Execute(double deltaTime, CommandList* pCmdList)
     GPUScopedProfileCapture sampleMarker(pCmdList, L"CACAO");
 
     CameraComponent* pCamera = GetScene()->GetCurrentCamera();
-    FfxCacaoMat4x4 proj, normalsWorldToView;
+    FfxFloat32x4x4 proj, normalsWorldToView;
     {
-        FFX_ASSERT_MESSAGE(
-            sizeof(FfxCacaoMat4x4) == sizeof(math::Matrix4),
-            "Cannot memcpy math::Matrix4 type into FfxCacaoMat4x4 type due to size mismatch.");  //If untrue => cannot memcpy as the precision or structure must've changed.
+        CauldronAssert(ASSERT_CRITICAL,
+            sizeof(FfxFloat32x4x4) == sizeof(math::Matrix4),
+            L"Cannot memcpy math::Matrix4 type into FfxFloat32x4x4 type due to size mismatch.");  //If untrue => cannot memcpy as the precision or structure must've changed.
 
         //Set projection matrix.
-        memcpy(proj.elements, &pCamera->GetProjection(), sizeof(FfxCacaoMat4x4));
+        memcpy(proj, &pCamera->GetProjection(), sizeof(FfxFloat32x4x4));
 
         //Set normalsWorldToView matrix.
         const math::Matrix4 zFlipMat = math::Matrix4(
@@ -150,7 +161,7 @@ void CACAORenderModule::Execute(double deltaTime, CommandList* pCmdList)
 
         math::Matrix4 xNormalsWorldToView = zFlipMat * math::transpose(math::inverse(pCamera->GetView()));
             
-        memcpy(normalsWorldToView.elements, &math::transpose(xNormalsWorldToView), sizeof(FfxCacaoMat4x4));
+        memcpy(normalsWorldToView, &math::transpose(xNormalsWorldToView), sizeof(FfxFloat32x4x4));
     }
 
     m_CacaoSettings.generateNormals = m_GenerateNormals;
@@ -158,10 +169,10 @@ void CACAORenderModule::Execute(double deltaTime, CommandList* pCmdList)
     CauldronAssert(ASSERT_CRITICAL, errorCode == FFX_OK, L"Error returned from ffxCacaoUpdateSettings");
 
     FfxCacaoDispatchDescription dispatchDescription = {};
-    dispatchDescription.commandList = ffxGetCommandList(pCmdList);
-    dispatchDescription.depthBuffer = ffxGetResource(m_pDepthTarget->GetResource(), L"CacaoInputDepth", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    dispatchDescription.normalBuffer = ffxGetResource(m_pNormalTarget->GetResource(), L"CacaoInputNormal", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    dispatchDescription.outputBuffer    = ffxGetResource((m_pColorTarget->GetResource()), L"CacaoInputOutput", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchDescription.commandList = SDKWrapper::ffxGetCommandList(pCmdList);
+    dispatchDescription.depthBuffer = SDKWrapper::ffxGetResource(m_pDepthTarget->GetResource(), L"CacaoInputDepth", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchDescription.normalBuffer = SDKWrapper::ffxGetResource(m_pNormalTarget->GetResource(), L"CacaoInputNormal", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchDescription.outputBuffer    = SDKWrapper::ffxGetResource((m_pColorTarget->GetResource()), L"CacaoInputOutput", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
     dispatchDescription.proj = &proj;
     dispatchDescription.normalsToView = &normalsWorldToView;
     dispatchDescription.normalUnpackMul = 2;
@@ -188,6 +199,7 @@ void CACAORenderModule::Execute(double deltaTime, CommandList* pCmdList)
         SetViewport(pCmdList, &vp);
         Rect scissorRect = {0, 0, resInfo.RenderWidth, resInfo.RenderHeight};
         SetScissorRects(pCmdList, 1, &scissorRect);
+        SetPrimitiveTopology(pCmdList, PrimitiveTopology::TriangleList);
 
         SetPipelineState(pCmdList, m_pPrepareOutputPipeline);
         DrawInstanced(pCmdList, 3);
@@ -200,31 +212,45 @@ void CACAORenderModule::Execute(double deltaTime, CommandList* pCmdList)
     }
 }
 
-void CACAORenderModule::InitContext()
+void CACAORenderModule::InitSdkContexts()
 {
-    const size_t scratchBufferSize = ffxGetScratchMemorySize(FFX_CACAO_CONTEXT_COUNT * 2);
-    void* scratchBuffer            = malloc(scratchBufferSize);
-    FfxErrorCode errorCode         = ffxGetInterface(&m_FfxInterface, GetDevice(), scratchBuffer, 
+    if (m_FfxInterface.scratchBuffer)
+    {
+        free(m_FfxInterface.scratchBuffer);
+        m_FfxInterface.scratchBuffer = nullptr;
+    }
+
+    const size_t scratchBufferSize = SDKWrapper::ffxGetScratchMemorySize(FFX_CACAO_CONTEXT_COUNT * 2);
+    void* scratchBuffer            = calloc(scratchBufferSize, 1u);
+    FfxErrorCode errorCode         = SDKWrapper::ffxGetInterface(&m_FfxInterface, GetDevice(), scratchBuffer, 
                                                      scratchBufferSize, FFX_CACAO_CONTEXT_COUNT * 2);
     CauldronAssert(ASSERT_CRITICAL, errorCode == FFX_OK, L"Could not initialize FidelityFX SDK backend context.");
+    CauldronAssert(ASSERT_CRITICAL, m_FfxInterface.fpGetSDKVersion(&m_FfxInterface) == FFX_SDK_MAKE_VERSION(1, 1, 0),
+        L"FidelityFX CACAO 2.1 sample requires linking with a 1.1 version SDK backend");
+    CauldronAssert(ASSERT_CRITICAL, ffxCacaoGetEffectVersion() == FFX_SDK_MAKE_VERSION(1, 4, 0),
+                       L"FidelityFX Cacao 2.1 sample requires linking with a 1.4 version FidelityFX Cacao library");
+                       
+    m_FfxInterface.fpRegisterConstantBufferAllocator(&m_FfxInterface, SDKWrapper::ffxAllocateConstantBuffer);
 
-    CreateContext(GetFramework()->GetResolutionInfo());
+    CreateCacaoContexts(GetFramework()->GetResolutionInfo());
 }
 
-void CACAORenderModule::InitUI()
+void CACAORenderModule::InitUI(cauldron::UISection* uiSection)
 {
-    m_UISection.SectionName = "FFX CACAO";
-    m_UISection.SectionType = UISectionType::Sample;
-
-    std::function<void(void*)> PresetCallback = [this](void* pParams) {
-        if (m_PresetId < FFX_CACAO_ARRAY_SIZE(s_FfxCacaoPresets))
-        {
-            m_CacaoSettings      = s_FfxCacaoPresets[m_PresetId].settings;
-            m_UseDownsampledSSAO = s_FfxCacaoPresets[m_PresetId].useDownsampledSsao;
+    m_UIElements.emplace_back(uiSection->RegisterUIElement<UICombo>(
+        "Preset",
+        m_PresetId,
+        s_FfxCacaoPresetNames,
+        [this](int32_t cur, int32_t old) {
+            if (cur < FFX_CACAO_ARRAY_SIZE(s_FfxCacaoPresets))
+            {
+                m_CacaoSettings      = s_FfxCacaoPresets[m_PresetId].settings;
+                m_UseDownsampledSSAO = s_FfxCacaoPresets[m_PresetId].useDownsampledSsao;
+            }
         }
-    };
-    m_UISection.AddCombo("Preset", &m_PresetId, &s_FfxCacaoPresetNames, PresetCallback);
-    std::function<void(void*)> StateChangeCallback = [this](void* pParams) {
+    ));
+
+    std::function<void(float, float)> StateChangeCallback = [this](float, float) {
         if (m_PresetId < FFX_CACAO_ARRAY_SIZE(s_FfxCacaoPresets) &&
             (memcmp(&m_CacaoSettings, &s_FfxCacaoPresets[m_PresetId].settings, sizeof(m_CacaoSettings)) ||
              m_UseDownsampledSSAO != s_FfxCacaoPresets[m_PresetId].useDownsampledSsao))
@@ -233,50 +259,44 @@ void CACAORenderModule::InitUI()
         }
     };
 
-    FfxCacaoSettings* settings = &m_CacaoSettings;
-    m_UISection.AddFloatSlider("Radius", &settings->radius, 0.0f, 10.0f, StateChangeCallback);
-    m_UISection.AddFloatSlider("Shadow Multiplier", &settings->shadowMultiplier, 0.0f, 5.0f, StateChangeCallback);
-    m_UISection.AddFloatSlider("Shadow Power", &settings->shadowPower, 0.5f, 5.0f, StateChangeCallback);
-    m_UISection.AddFloatSlider("Shadow Clamp", &settings->shadowClamp, 0.0f, 1.0f, StateChangeCallback);
-    m_UISection.AddFloatSlider("Horizon Angle Threshold", &settings->horizonAngleThreshold, 0.0f, 0.2f, StateChangeCallback);
-    m_UISection.AddFloatSlider("Fade Out From", &settings->fadeOutFrom, 1.0f, 20.0f, StateChangeCallback);
-    m_UISection.AddFloatSlider("Fade Out To", &settings->fadeOutTo, 1.0f, 40.0f, StateChangeCallback);
+    std::function<void(int32_t, int32_t)> StateChangeCallbackInt = [this, StateChangeCallback](int32_t, int32_t) { StateChangeCallback(0, 0); };
+    std::function<void(bool, bool)> StateChangeCallbackBool  = [this, StateChangeCallback](bool, bool) { StateChangeCallback(true, true); };
 
-    const char*              qualityLevel[] = {"Lowest", "Low", "Medium", "High", "Highest"};
-    std::vector<std::string> qualityLevelComboOptions;
-    for (int32_t i = 0; i < FFX_CACAO_ARRAY_SIZE(qualityLevel); ++i)
-        qualityLevelComboOptions.push_back(qualityLevel[i]);
-    m_UISection.AddCombo("Quality Level", (int*)&settings->qualityLevel, &qualityLevelComboOptions, StateChangeCallback);
+    m_UIElements.emplace_back(uiSection->RegisterUIElement<UISlider<float>>("Radius", m_CacaoSettings.radius, 0.0f, 10.0f, StateChangeCallback));
+    m_UIElements.emplace_back(uiSection->RegisterUIElement<UISlider<float>>("Shadow Multiplier", m_CacaoSettings.shadowMultiplier, 0.0f, 5.0f, StateChangeCallback));
+    m_UIElements.emplace_back(uiSection->RegisterUIElement<UISlider<float>>("Shadow Power", m_CacaoSettings.shadowPower, 0.5f, 5.0f, StateChangeCallback));
+    m_UIElements.emplace_back(uiSection->RegisterUIElement<UISlider<float>>("Shadow Clamp", m_CacaoSettings.shadowClamp, 0.0f, 1.0f, StateChangeCallback));
+    m_UIElements.emplace_back(uiSection->RegisterUIElement<UISlider<float>>("Horizon Angle Threshold", m_CacaoSettings.horizonAngleThreshold, 0.0f, 0.2f, StateChangeCallback));
+    m_UIElements.emplace_back(uiSection->RegisterUIElement<UISlider<float>>("Fade Out From", m_CacaoSettings.fadeOutFrom, 1.0f, 20.0f, StateChangeCallback));
+    m_UIElements.emplace_back(uiSection->RegisterUIElement<UISlider<float>>("Fade Out To", m_CacaoSettings.fadeOutTo, 1.0f, 40.0f, StateChangeCallback));
 
-    if (settings->qualityLevel == FFX_CACAO_QUALITY_HIGHEST)
+    std::vector<const char*> qualityLevelComboOptions = {"Lowest", "Low", "Medium", "High", "Highest"};
+    m_UIElements.emplace_back(uiSection->RegisterUIElement<UICombo>("Quality Level", (int32_t&)m_CacaoSettings.qualityLevel, qualityLevelComboOptions, StateChangeCallbackInt));
+
+    if (m_CacaoSettings.qualityLevel == FFX_CACAO_QUALITY_HIGHEST)
     {
-        m_UISection.AddFloatSlider("Adaptive Quality Limit", &settings->adaptiveQualityLimit, 0.5f, 1.0f, StateChangeCallback);
+        m_UIElements.emplace_back(uiSection->RegisterUIElement<UISlider<float>>("Adaptive Quality Limit", m_CacaoSettings.adaptiveQualityLimit, 0.5f, 1.0f, StateChangeCallback));
     }
-    m_UISection.AddIntSlider("Blur Pass Count", (int*)&settings->blurPassCount, 0, 8, StateChangeCallback);
-    m_UISection.AddFloatSlider("Sharpness", &settings->sharpness, 0.0f, 1.0f, StateChangeCallback);
-    m_UISection.AddFloatSlider("Detail Shadow Strength", &settings->detailShadowStrength, 0.0f, 5.0f, StateChangeCallback);
+    m_UIElements.emplace_back(uiSection->RegisterUIElement<UISlider<int32_t>>("Blur Pass Count", (int32_t&)m_CacaoSettings.blurPassCount, 0, 8, StateChangeCallbackInt));
+    m_UIElements.emplace_back(uiSection->RegisterUIElement<UISlider<float>>("Sharpness", m_CacaoSettings.sharpness, 0.0f, 1.0f, StateChangeCallback));
+    m_UIElements.emplace_back(uiSection->RegisterUIElement<UISlider<float>>("Detail Shadow Strength", m_CacaoSettings.detailShadowStrength, 0.0f, 5.0f, StateChangeCallback));
 
-    m_UISection.AddCheckBox("Generate Normal Buffer From Depth Buffer", &m_GenerateNormals, StateChangeCallback);
-
-    std::function<void(void*)> DownsampleCallback = [this, StateChangeCallback](void* pParams) {
-        StateChangeCallback(pParams);
-    };
-    m_UISection.AddCheckBox("Use Downsampled SSAO", &m_UseDownsampledSSAO, DownsampleCallback);
-    m_UISection.AddFloatSlider("Bilateral Sigma Squared", &settings->bilateralSigmaSquared, 0.0f, 10.0f, StateChangeCallback);
-    m_UISection.AddFloatSlider("Bilateral Similarity Distance Sigma", &settings->bilateralSimilarityDistanceSigma, 0.1f, 1.0f, StateChangeCallback);
+    m_UIElements.emplace_back(uiSection->RegisterUIElement<UICheckBox>("Generate Normal Buffer From Depth Buffer", m_GenerateNormals, StateChangeCallbackBool));
+    m_UIElements.emplace_back(uiSection->RegisterUIElement<UICheckBox>("Use Downsampled SSAO", m_UseDownsampledSSAO, StateChangeCallbackBool));
+    m_UIElements.emplace_back(uiSection->RegisterUIElement<UISlider<float>>("Bilateral Sigma Squared", m_CacaoSettings.bilateralSigmaSquared, 0.0f, 10.0f, StateChangeCallback));
+    m_UIElements.emplace_back(uiSection->RegisterUIElement<UISlider<float>>("Bilateral Similarity Distance Sigma", m_CacaoSettings.bilateralSimilarityDistanceSigma, 0.1f, 1.0f, StateChangeCallback));
 }
 
 void CACAORenderModule::EnableModule(bool enabled){
     RenderModule::EnableModule(enabled);
-    if(enabled){
-        GetUIManager()->RegisterUIElements(m_UISection);
-    }else {
-        GetUIManager()->UnRegisterUIElements(m_UISection);
+    for (auto& i : m_UIElements)
+    {
+        i->Show(enabled);
     }
 }
 
 
-void CACAORenderModule::CreateContext(const ResolutionInfo& resInfo)
+void CACAORenderModule::CreateCacaoContexts(const ResolutionInfo& resInfo)
 {
     FfxCacaoContextDescription description = {};
     description.backendInterface           = m_FfxInterface;

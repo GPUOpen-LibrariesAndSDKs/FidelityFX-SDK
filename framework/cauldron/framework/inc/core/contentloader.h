@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -49,9 +49,9 @@ namespace cauldron
      */
     struct EntityDataBlock
     {
-        Entity*                         pEntity = nullptr;
-        std::vector<ComponentData*>     ComponentsData = {};
-        std::vector<Component*>         Components = {};
+        Entity*                         pEntity = nullptr;          ///< Pointer to the entity this data block represents
+        std::vector<ComponentData*>     ComponentsData = {};        ///< Initialization data for all of the entity's components
+        std::vector<Component*>         Components = {};            ///< Pointers for all of the entity's components
 
         EntityDataBlock() {}
         ~EntityDataBlock()
@@ -81,26 +81,34 @@ namespace cauldron
     /**
      * @struct ContentBlock
      *
-     * ContentBlock struct used when loading scene content. 
+     * ContentBlock struct used when loading scene content.
      * Contains all meshes, textures, etc. needed for rendering a loaded asset.
      *
      * @ingroup CauldronCore
      */
     struct ContentBlock
     {
-        // Entity storage
-        std::vector<EntityDataBlock*>   EntityDataBlocks = {};
+
+        std::vector<EntityDataBlock*>   EntityDataBlocks = {};  ///< Entity storage
 
         // Active camera for content block (if any)
         const Entity*                   ActiveCamera = nullptr; ///< Defines an entity was loaded that was marked as an active camera
 
-        
-        std::vector<const Texture*> TextureAssets = {};         ///< Pointer list to loaded <c><i>Texture</i></c> resources.  
+
+        std::vector<const Texture*> TextureAssets = {};         ///< Pointer list to loaded <c><i>Texture</i></c> resources.
         std::vector<Material*>      Materials     = {};         ///< Pointer list to loaded <c><i>Material</i></c> resources.
         std::vector<Mesh*>          Meshes        = {};         ///< Pointer list to loaded <c><i>Mesh</i></c> resources.
         std::vector<Animation*>     Animations    = {};         ///< Pointer list to loaded <c><i>Animation</i></c> resources.
+        std::vector<AnimationSkin*> Skins    = {};              ///< Pointer list to loaded <c><i>AnimationSkin</i></c> resources.
 
+        /**
+         * @brief   Construction.
+         */
         ContentBlock() {}
+
+        /**
+         * @brief   Destruction.
+         */
         ~ContentBlock()
         {
             for (auto* pMat : Materials)
@@ -129,14 +137,14 @@ namespace cauldron
     };
 
     /// @defgroup CauldronLoaders ContentLoaders
-    /// Cauldron ContentLoaders Reference Documentation
+    /// FidelityFX Cauldron Framework ContentLoaders Reference Documentation
     ///
     /// @ingroup CauldronCore
 
     /**
      * @class ContentLoader
      *
-     * Base class from which all content loaders inherit inherit.
+     * Base class from which all content loaders inherit.
      *
      * @ingroup CauldronLoaders
      */
@@ -160,7 +168,7 @@ namespace cauldron
         virtual void LoadAsync(void* pLoadParams) = 0;
 
         /**
-         * @brief   Loads multiple content files asynchronously. 
+         * @brief   Loads multiple content files asynchronously.
          *          Must be overridden by each ContentLoader type.
          */
         virtual void LoadMultipleAsync(void* pLoadParams) = 0;

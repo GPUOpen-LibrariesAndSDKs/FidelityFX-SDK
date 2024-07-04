@@ -1,21 +1,25 @@
-// AMD Cauldron code
+// This file is part of the FidelityFX SDK.
 //
-// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sub-license, and / or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 #pragma once
 
 #include "core/contentmanager.h"
@@ -30,6 +34,8 @@ using json = nlohmann::ordered_json;
 
 namespace cauldron
 {
+    struct AnimationComponentData;
+
     /**
      * @struct GLTFDataRep
      *
@@ -43,6 +49,7 @@ namespace cauldron
         json*                                   pGLTFJsonData;                  ///< The json GLTF data instance.
         std::vector<std::vector<char>>          GLTFBufferData;                 ///< The GLTF buffer data entries.
         std::wstring                            GLTFFilePath;                   ///< The GLTF file path.
+        std::wstring                            GLTFFileName;                   ///< The GLTF file name.
 
         std::vector<LightComponentData>         LightData;                      ///< Loaded <c><i>LightComponentData</i></c>.
         std::vector<CameraComponentData>        CameraData;                     ///< Loaded <c><i>CameraComponentData</i></c>.
@@ -58,6 +65,8 @@ namespace cauldron
         // Content block being built up as we are loading various things
         ContentBlock*                           pLoadedContentRep = nullptr;    ///< The <c><i>ContentBlock</i></c> built by the loading processes.
 
+        std::chrono::nanoseconds                loadStartTime;                  ///< The time content loading started (used to track loading times)
+
         ~GLTFDataRep()
         {
             delete pGLTFJsonData;
@@ -69,7 +78,7 @@ namespace cauldron
     /**
      * @class GLTFLoader
      *
-     * GLTF loader class. Handles asynchronous GLTF scene loading.
+     * This is the GLTF loader class, which handles asynchronous GLTF scene loading.
      *
      * @ingroup CauldronLoaders
      */
@@ -105,10 +114,13 @@ namespace cauldron
         void LoadGLTFContent(void* pParam);
         static void LoadGLTFTexturesCompleted(const std::vector<const Texture*>& textureList, void* pCallbackParams);
 
+        static void InitSkinningData(const Mesh* pMesh, AnimationComponentData* pComponentData);
+
         static void LoadGLTFBuffer(void* pParam);
         static void LoadGLTFBuffersCompleted(void* pParam);
         static void LoadGLTFMesh(void* pParam);
         static void LoadGLTFAnimation(void* pParam);
+        static void LoadGLTFSkin(void* pParam);
         static void GLTFAllBufferAssetLoadsCompleted(void* pParam);
 
         // Parameter struct for Buffer-related loads
@@ -123,6 +135,7 @@ namespace cauldron
         static const json* LoadVertexBuffer(const json& attributes, const char* attributeName, const json& accessors, const json& bufferViews, const json& buffers, const GLTFBufferLoadParams& params, VertexBufferInformation& info, bool forceConversionToFloat);
         static void LoadIndexBuffer(const json& primitive, const json& accessors, const json& bufferViews, const json& buffers, const GLTFBufferLoadParams& params, IndexBufferInformation& info);
         static void LoadAnimInterpolants(AnimChannel* pAnimChannel, AnimChannel::ComponentSampler samplerType, int32_t samplerIndex, GLTFBufferLoadParams* pBufferLoadParams);
+        static void GetBufferDetails(int accessor, AnimInterpolants* pAccessor, GLTFBufferLoadParams* pBufferLoadParams);
         static void BuildBLAS(std::vector<Mesh*> meshes);
 
         void PostGLTFContentLoadCompleted(void* pParam);

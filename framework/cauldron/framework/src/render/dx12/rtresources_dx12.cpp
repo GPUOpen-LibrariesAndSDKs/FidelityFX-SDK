@@ -1,17 +1,20 @@
-// AMD Cauldron code
+// This file is part of the FidelityFX SDK.
 //
-// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sub-license, and / or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -23,6 +26,7 @@
 #include "render/dx12/device_dx12.h"
 #include "render/dx12/rtresources_dx12.h"
 #include "render/dx12/profiler_dx12.h"
+#include "render/dx12/defines_dx12.h"
 
 #include <core/framework.h>
 #include "core/components/meshcomponent.h"
@@ -70,12 +74,12 @@ namespace cauldron
         addressInfo = m_pBackingBuffer->GetAddressInfo();
         desc.DestAccelerationStructureData = addressInfo.GetImpl()->GPUBufferView;
 
-        Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> cmdList4;
+        MSComPtr<ID3D12GraphicsCommandList4> cmdList4;
         CauldronThrowOnFail(pCmdList->GetImpl()->DX12CmdList()->QueryInterface(IID_PPV_ARGS(&cmdList4)));
         cmdList4->BuildRaytracingAccelerationStructure(&desc, 0, nullptr);
     }
 
-    void BLASInternal::AddGeometry(const Mesh* pMesh)
+    void BLASInternal::AddGeometry(const Mesh* pMesh, const std::vector<VertexBufferInformation>& vertexPositions)
     {
         D3D12_RAYTRACING_GEOMETRY_DESC desc{};
         desc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
@@ -83,12 +87,12 @@ namespace cauldron
         for (uint32_t i = 0; i < (uint32_t)pMesh->GetNumSurfaces(); ++i)
         {
             const Surface* pSurface           = pMesh->GetSurface(i);
-            const VertexBufferInformation& vb = pSurface->GetVertexBuffer(VertexAttributeType::Position);
+            const VertexBufferInformation& vb       = vertexPositions.at(pSurface->GetSurfaceID());
             const IndexBufferInformation&  ib = pSurface->GetIndexBuffer();
             BufferAddressInfo addressInfo;
 
             //#pragma message(Reminder "Implement transparent geometry")
-            // 
+            //
             // Only process opaque geometry
             if (pSurface->HasTranslucency())
                 continue;
@@ -137,7 +141,7 @@ namespace cauldron
         m_DXRAccelStructInputs .pGeometryDescs = m_DXRGeometries.data();
         m_DXRAccelStructInputs .NumDescs       = (UINT)m_DXRGeometries.size();
 
-        Microsoft::WRL::ComPtr<ID3D12Device5> device5;
+        MSComPtr<ID3D12Device5>                               device5;
         D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO sizeInfo = {};
         CauldronThrowOnFail(GetDevice()->GetImpl()->DX12Device()->QueryInterface(IID_PPV_ARGS(&device5)));
         device5->GetRaytracingAccelerationStructurePrebuildInfo(&m_DXRAccelStructInputs , &sizeInfo);
@@ -165,7 +169,7 @@ namespace cauldron
 
     void TLASInternal::Build(cauldron::CommandList* pCmdList)
     {
-        GPUScopedProfileCapture tlasMarker(pCmdList, L"TLAS::Build");
+        GPUScopedProfileCapture tlasMarker(pCmdList, L"TLAS Build");
 
         BufferAddressInfo instancesBufferInfo = GetFramework()->GetDynamicBufferPool()->AllocConstantBuffer(
             (uint32_t)sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * (uint32_t)m_DXRInstanceDescriptors.size(), m_DXRInstanceDescriptors.data());
@@ -185,7 +189,7 @@ namespace cauldron
 #if _DEBUG
         D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO sizeInfo = {};
 
-        Microsoft::WRL::ComPtr<ID3D12Device5> device5;
+        MSComPtr<ID3D12Device5> device5;
         CauldronThrowOnFail(GetDevice()->GetImpl()->DX12Device()->QueryInterface(IID_PPV_ARGS(&device5)));
         device5->GetRaytracingAccelerationStructurePrebuildInfo(&asInputs, &sizeInfo);
 
@@ -203,7 +207,7 @@ namespace cauldron
         addressInfo = m_pBackingBuffer->GetAddressInfo();
         desc.DestAccelerationStructureData = addressInfo.GetImpl()->GPUBufferView;
 
-        Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> cmdList4;
+        MSComPtr<ID3D12GraphicsCommandList4> cmdList4;
         CauldronThrowOnFail(pCmdList->GetImpl()->DX12CmdList()->QueryInterface(IID_PPV_ARGS(&cmdList4)));
         cmdList4->BuildRaytracingAccelerationStructure(&desc, 0, nullptr);
 
@@ -253,7 +257,8 @@ namespace cauldron
         {
             ASInstance& asInstance = m_ManagedInstances.front();
 
-            m_pTlas->AddInstance(asInstance.Mesh->GetBlas(), asInstance.Transform, asInstance.Mesh->GetMeshIndex());
+            const BLAS* activeBlas = asInstance.Mesh->HasAnimatedBlas() ? asInstance.AnimatedBlas : asInstance.Mesh->GetStaticBlas();
+            m_pTlas->AddInstance(activeBlas, asInstance.Transform, asInstance.Mesh->GetMeshIndex());
 
             m_ManagedInstances.pop();
         }

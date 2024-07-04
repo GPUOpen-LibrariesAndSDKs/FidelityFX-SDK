@@ -1,25 +1,24 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-
 
 #include <string.h>     // for memset
 #include <cmath>        // for fabs, abs, sinf, sqrt, etc.
@@ -132,13 +131,13 @@ static FfxErrorCode createPipelineStates(FfxLensContext_Private* context)
     context->contextDescription.backendInterface.fpGetDeviceCapabilities(&context->contextDescription.backendInterface, &capabilities);
 
     // Setup a few options used to determine permutation flags
-    bool haveShaderModel66 = capabilities.minimumSupportedShaderModel >= FFX_SHADER_MODEL_6_6;
+    bool haveShaderModel66 = capabilities.maximumSupportedShaderModel >= FFX_SHADER_MODEL_6_6;
     bool supportedFP16 = capabilities.fp16Supported;
     bool canForceWave64 = false;
 
     const uint32_t waveLaneCountMin = capabilities.waveLaneCountMin;
     const uint32_t waveLaneCountMax = capabilities.waveLaneCountMax;
-    if (waveLaneCountMin == 32 && waveLaneCountMax == 64)
+    if (waveLaneCountMin <= 64 && waveLaneCountMax >= 64)
         canForceWave64 = haveShaderModel66;
     else
         canForceWave64 = false;
@@ -160,29 +159,32 @@ static FfxErrorCode createPipelineStates(FfxLensContext_Private* context)
 static void scheduleDispatch(FfxLensContext_Private* context, const FfxLensDispatchDescription* params, const FfxPipelineState* pipeline, uint32_t dispatchX, uint32_t dispatchY, uint32_t dispatchZ)
 {
     FfxGpuJobDescription dispatchJob = {FFX_GPU_JOB_COMPUTE};
+    wcscpy_s(dispatchJob.jobLabel, pipeline->name);
 
     // Texture srv
     for (uint32_t currentShaderResourceViewIndex = 0; currentShaderResourceViewIndex < pipeline->srvTextureCount; ++currentShaderResourceViewIndex) {
 
         const uint32_t currentResourceId = pipeline->srvTextureBindings[currentShaderResourceViewIndex].resourceIdentifier;
         const FfxResourceInternal currentResource = context->srvResources[currentResourceId];
-        dispatchJob.computeJobDescriptor.srvTextures[currentShaderResourceViewIndex] = currentResource;
-        wcscpy_s(dispatchJob.computeJobDescriptor.srvTextureNames[currentShaderResourceViewIndex],
+        dispatchJob.computeJobDescriptor.srvTextures[currentShaderResourceViewIndex].resource = currentResource;
+#ifdef FFX_DEBUG
+        wcscpy_s(dispatchJob.computeJobDescriptor.srvTextures[currentShaderResourceViewIndex].name,
                  pipeline->srvTextureBindings[currentShaderResourceViewIndex].name);
+#endif
     }
 
     // Texture uav
     uint32_t uavEntry = 0;  // Uav resource offset (accounts for uav arrays)
     for (uint32_t currentUnorderedAccessViewIndex = 0; currentUnorderedAccessViewIndex < pipeline->uavTextureCount; ++currentUnorderedAccessViewIndex) {
 
-        uint32_t numBindings = pipeline->uavTextureBindings[currentUnorderedAccessViewIndex].bindCount;
         uint32_t currentResourceId = pipeline->uavTextureBindings[currentUnorderedAccessViewIndex].resourceIdentifier;
-        wcscpy_s(dispatchJob.computeJobDescriptor.uavTextureNames[currentUnorderedAccessViewIndex],
+#ifdef FFX_DEBUG
+        wcscpy_s(dispatchJob.computeJobDescriptor.uavTextures[currentUnorderedAccessViewIndex].name,
                  pipeline->uavTextureBindings[currentUnorderedAccessViewIndex].name);
-
+#endif
         const FfxResourceInternal currentResource = context->uavResources[currentResourceId];
-        dispatchJob.computeJobDescriptor.uavTextures[uavEntry] = currentResource;
-        dispatchJob.computeJobDescriptor.uavTextureMips[uavEntry] = 0;
+        dispatchJob.computeJobDescriptor.uavTextures[uavEntry].resource = currentResource;
+        dispatchJob.computeJobDescriptor.uavTextures[uavEntry].mip = 0;
 
         ++uavEntry;
     }
@@ -192,7 +194,9 @@ static void scheduleDispatch(FfxLensContext_Private* context, const FfxLensDispa
     dispatchJob.computeJobDescriptor.dimensions[2] = dispatchZ;
     dispatchJob.computeJobDescriptor.pipeline      = *pipeline;
 
+#ifdef FFX_DEBUG
     wcscpy_s(dispatchJob.computeJobDescriptor.cbNames[0], pipeline->constantBufferBindings[0].name);
+#endif
     dispatchJob.computeJobDescriptor.cbs[0] = context->constantBuffer;
 
     
@@ -225,11 +229,14 @@ static FfxErrorCode lensDispatch(FfxLensContext_Private* context, const FfxLensD
     lensConst.chromAb     = params->chromAb;
     lensConst.vignette    = params->vignette;
 
-    memcpy(&context->constantBuffer.data, &lensConst, sizeof(LensConstants));
+    context->contextDescription.backendInterface.fpStageConstantBufferDataFunc(&context->contextDescription.backendInterface,
+                                                                               &lensConst,
+                                                                               sizeof(LensConstants),
+                                                                               &context->constantBuffer);
     scheduleDispatch(context, params, &context->pipelineLens, dispatchX, dispatchY, dispatchZ);
 
     // Execute all the work for the frame
-    context->contextDescription.backendInterface.fpExecuteGpuJobs(&context->contextDescription.backendInterface, commandList);
+    context->contextDescription.backendInterface.fpExecuteGpuJobs(&context->contextDescription.backendInterface, commandList, context->effectContextId);
 
     // Release dynamic resources
     context->contextDescription.backendInterface.fpUnregisterResources(&context->contextDescription.backendInterface, commandList, context->effectContextId);
@@ -248,10 +255,15 @@ static FfxErrorCode lensCreate(FfxLensContext_Private* context, const FfxLensCon
 
     memcpy(&context->contextDescription, contextDescription, sizeof(FfxLensContextDescription));
 
+    // Check version info - make sure we are linked with the right backend version
+    FfxVersionNumber version = context->contextDescription.backendInterface.fpGetSDKVersion(&context->contextDescription.backendInterface);
+    FFX_RETURN_ON_ERROR(version == FFX_SDK_MAKE_VERSION(1, 1, 0), FFX_ERROR_INVALID_VERSION);
+
     context->constantBuffer.num32BitEntries = sizeof(LensConstants) / sizeof(uint32_t);
 
     // Create the context.
-    FfxErrorCode errorCode = context->contextDescription.backendInterface.fpCreateBackendContext(&context->contextDescription.backendInterface, &context->effectContextId);
+    FfxErrorCode errorCode =
+        context->contextDescription.backendInterface.fpCreateBackendContext(&context->contextDescription.backendInterface, nullptr, &context->effectContextId);
     FFX_RETURN_ON_ERROR(errorCode == FFX_OK, errorCode);
 
     // Call out for device caps.
@@ -274,7 +286,7 @@ static FfxErrorCode lensCreate(FfxLensContext_Private* context, const FfxLensCon
 static FfxErrorCode lensRelease(FfxLensContext_Private* context)
 {
     FFX_ASSERT(context);
-
+    
     // Release all pipelines
     ffxSafeReleasePipeline(&context->contextDescription.backendInterface, &context->pipelineLens, context->effectContextId);
 
@@ -283,8 +295,8 @@ static FfxErrorCode lensRelease(FfxLensContext_Private* context)
     context->uavResources[FFX_LENS_RESOURCE_IDENTIFIER_OUTPUT_TEXTURE] = { FFX_LENS_RESOURCE_IDENTIFIER_NULL };
 
     // Release internal resources and copy resource
-    ffxSafeReleaseCopyResource(&context->contextDescription.backendInterface, context->srvResources[FFX_LENS_RESOURCE_IDENTIFIER_INPUT_TEXTURE]);
-    ffxSafeReleaseResource(&context->contextDescription.backendInterface, context->srvResources[FFX_LENS_RESOURCE_IDENTIFIER_INPUT_TEXTURE]);
+    ffxSafeReleaseCopyResource(&context->contextDescription.backendInterface, context->srvResources[FFX_LENS_RESOURCE_IDENTIFIER_INPUT_TEXTURE], context->effectContextId);
+    ffxSafeReleaseResource(&context->contextDescription.backendInterface, context->srvResources[FFX_LENS_RESOURCE_IDENTIFIER_INPUT_TEXTURE], context->effectContextId);
 
     // Destroy the context
     context->contextDescription.backendInterface.fpDestroyBackendContext(&context->contextDescription.backendInterface, context->effectContextId);
@@ -302,6 +314,7 @@ FfxErrorCode ffxLensContextCreate(FfxLensContext* context, const FfxLensContextD
     FFX_RETURN_ON_ERROR(contextDescription, FFX_ERROR_INVALID_POINTER);
 
     // Validate that all callbacks are set for the interface
+    FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpGetSDKVersion, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpGetDeviceCapabilities, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpCreateBackendContext, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpDestroyBackendContext, FFX_ERROR_INCOMPLETE_INTERFACE);
@@ -347,4 +360,9 @@ FfxErrorCode ffxLensContextDispatch(FfxLensContext* context, const FfxLensDispat
     return errorCode;
 
     return FFX_OK;
+}
+
+FFX_API FfxVersionNumber ffxLensGetEffectVersion()
+{
+    return FFX_SDK_MAKE_VERSION(FFX_LENS_VERSION_MAJOR, FFX_LENS_VERSION_MINOR, FFX_LENS_VERSION_PATCH);
 }

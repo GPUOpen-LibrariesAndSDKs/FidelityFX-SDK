@@ -1,17 +1,20 @@
-// AMD Cauldron code
+// This file is part of the FidelityFX SDK.
+//
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and / or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -28,10 +31,10 @@ struct SkydomeCBData
     Mat4 ClipToWorld;
 };
 #else 
-// Fullscreen.hlsl binds to b0, so contants need to start at b1 if using fullscreen.hlsl
+// procedural CS version of Skydome uses UpscalerInformation from upscaler.h which binds to b0. So, this needs to bind to b1.
 cbuffer SkydomeCBData : register(b1)
 {
-    matrix WorldClip;
+    matrix ClipToWorld;
 }
 #endif // __cplusplus
 
@@ -39,7 +42,6 @@ cbuffer SkydomeCBData : register(b1)
 
 struct ProceduralCBData
 {
-    Mat4 ClipToWorld;
     Vec3 SunDirection;
 
     float Rayleigh;
@@ -52,10 +54,10 @@ struct ProceduralCBData
 };
 
 #else
-// Fullscreen.hlsl binds to b0, so contants need to start at b1 if using fullscreen.hlsl
-cbuffer ProceduralCBData : register(b1)
+
+// This need to bind to b2.
+cbuffer ProceduralCBData : register(b2)
 {
-    matrix ClipToWorld;
     float4 SunDirection;    // Vector3 are really Vector4s
 
     float Rayleigh;
@@ -67,3 +69,4 @@ cbuffer ProceduralCBData : register(b1)
     float3 Padding;
 };
 #endif // __cplusplus
+

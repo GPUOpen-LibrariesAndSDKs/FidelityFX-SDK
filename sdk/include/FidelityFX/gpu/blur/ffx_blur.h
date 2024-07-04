@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C)2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #ifndef FFX_BLUR_H
@@ -262,7 +262,7 @@ MinTiles     -> Ceil(HalfKernel / TileSize) * 2 + 1
 // <------------------------------------------------>
 //                          |
 //...
-FfxUInt32 PackF2(FfxFloat32x2 c) { return (f32tof16(c.r) << 16) | f32tof16(c.g); }
+FfxUInt32 PackF2(FfxFloat32x2 c) { return (ffxF32ToF16(c.r) << 16) | ffxF32ToF16(c.g); }
 FfxFloat32x2 UnpackToF2(FfxUInt32 packedRG)
 {
 #ifdef FFX_HLSL
@@ -272,7 +272,7 @@ FfxFloat32x2 UnpackToF2(FfxUInt32 packedRG)
 #endif
 }
 #if FFX_HALF
-FfxUInt32 PackH2(FfxFloat16x2 c) { return (f32tof16(FfxFloat32(c.r)) << 16) | f32tof16(FfxFloat32(c.g)); } // TODO: is there a cast fp16->FfxUInt32  and skip fp16->fp32 promotion?
+FfxUInt32 PackH2(FfxFloat16x2 c) { return (ffxF32ToF16(FfxFloat32(c.r)) << 16) | ffxF32ToF16(FfxFloat32(c.g)); } // TODO: is there a cast fp16->FfxUInt32  and skip fp16->fp32 promotion?
 FfxFloat16x2 UnpackToH2(FfxUInt32 packedRG){ return FfxFloat16x2(UnpackToF2(packedRG)); }
 #endif
 
@@ -419,7 +419,7 @@ FfxUInt32 FlattenIndex(FfxInt32x2 Index, FfxInt32 ElementStride)
 
 void LDSBarrier()
 {
-    FFX_GROUP_MEMORY_BARRIER();
+    FFX_GROUP_MEMORY_BARRIER;
 }
 
 // index of the LDS tile in the ring buffer

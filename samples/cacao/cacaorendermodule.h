@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this softwareand associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright noticeand this permission notice shall be included in
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -30,7 +30,7 @@
 
 #include <functional>
 
-/// @defgroup FfxCacaoSample FidelityFX CACAO Sample
+/// @defgroup FfxCacaoSample FidelityFX CACAO sample
 /// Sample documentation for FidelityFX CACAO
 ///
 /// @ingroup SDKEffects
@@ -46,7 +46,7 @@ typedef struct CacaoPreset{
 } CacaoPreset;
 
 
-static std::vector<std::string> s_FfxCacaoPresetNames = {
+static std::vector<const char*> s_FfxCacaoPresetNames = {
 	"Native - Adaptive Quality",
 	"Native - High Quality",
 	"Native - Medium Quality",
@@ -305,7 +305,7 @@ namespace cauldron
 } // namespace cauldron
 
 /**
- * @class  
+ * @class CACAORenderModule
  * 	
  * This RenderModule -- using the depth, color, and optionally normal targets -- performs SSAO and outputs it to the color target. It also creates a UI section enabling users to modify the settings used for CACAO.
  * 
@@ -349,6 +349,12 @@ public:
     * @brief If set to true, CACAO will output to the callback target to be presented to the screen. If set to false, it will output to the SSAO channel.
     */
     void SetOutputToCallbackTarget(const bool outputToCallbackTarget);
+
+    /**
+    * @brief Init UI from master.
+    */
+    void InitUI(cauldron::UISection* uiSection);
+
 private:
 
     // Input/Output Textures
@@ -365,24 +371,23 @@ private:
     cauldron::ParameterSet*     m_pParamSet                 = nullptr;
 
     // FidelityFX CACAO information
-    int32_t                  m_PresetId;
+    int32_t                  m_PresetId = _countof(s_FfxCacaoPresets);
     bool                     m_UseDownsampledSSAO = false;
     bool                     m_GenerateNormals = false;
-    FfxCacaoSettings       m_CacaoSettings;
+    FfxCacaoSettings         m_CacaoSettings;
     FfxCacaoContext          m_CacaoContext;
     FfxCacaoContext          m_CacaoDownsampledContext;
     bool                     m_ContextCreated = false;
     bool                     m_OutputToCallbackTarget = true;
 
 	//Sample UI
-	cauldron::UISection       m_UISection;
+    std::vector<cauldron::UIElement*> m_UIElements;  // weak ptr.
 
-    FfxInterface             m_FfxInterface;
+    FfxInterface m_FfxInterface = {0};
 
-    void InitContext();
+    void InitSdkContexts();
 
-    void InitUI();
+    void CreateCacaoContexts(const cauldron::ResolutionInfo& resInfo);
 
-    void CreateContext(const cauldron::ResolutionInfo& resInfo);
-
+    void DestroyCacaoContexts();
 };

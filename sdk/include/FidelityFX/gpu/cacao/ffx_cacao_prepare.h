@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C)2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #include "ffx_core.h"
@@ -54,7 +54,7 @@ void FFX_CACAO_PrepareDepthsAndMips(FfxFloat32x4 samples, FfxUInt32x2 outputCoor
 	FfxInt32x2 bufferCoord = FfxInt32x2(gtid) - FfxInt32x2(depthArrayOffset);
 
 	outputCoord /= 2;
-	FFX_GROUP_MEMORY_BARRIER();
+	FFX_GROUP_MEMORY_BARRIER;
 
 	// if (stillAlive) <-- all threads alive here
 	{
@@ -71,7 +71,7 @@ void FFX_CACAO_PrepareDepthsAndMips(FfxFloat32x4 samples, FfxUInt32x2 outputCoor
 	bool stillAlive = gtid.x % 4 == depthArrayOffset.x && gtid.y % 4 == depthArrayOffset.y;
 
 	outputCoord /= 2;
-	FFX_GROUP_MEMORY_BARRIER();
+	FFX_GROUP_MEMORY_BARRIER;
 
 	if (stillAlive)
 	{
@@ -88,7 +88,7 @@ void FFX_CACAO_PrepareDepthsAndMips(FfxFloat32x4 samples, FfxUInt32x2 outputCoor
 	stillAlive = gtid.x % 8 == depthArrayOffset.x && gtid.y % 8 == depthArrayOffset.y;
 
 	outputCoord /= 2;
-	FFX_GROUP_MEMORY_BARRIER();
+	FFX_GROUP_MEMORY_BARRIER;
 
 	if (stillAlive)
 	{

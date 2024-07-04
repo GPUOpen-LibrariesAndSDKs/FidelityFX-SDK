@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #include "ffx_sssr_common.h"
@@ -44,7 +44,7 @@ FfxFloat32x3 SampleGGXVNDF(FfxFloat32x3 Ve, FfxFloat32 alpha_x, FfxFloat32 alpha
     FfxFloat32x3 Vh = normalize(FfxFloat32x3(alpha_x * Ve.x, alpha_y * Ve.y, Ve.z));
     // Section 4.1: orthonormal basis (with special case if cross product is zero)
     FfxFloat32 lensq = Vh.x * Vh.x + Vh.y * Vh.y;
-    FfxFloat32x3 T1 = lensq > 0 ? FfxFloat32x3(-Vh.y, Vh.x, 0) * rsqrt(lensq) : FfxFloat32x3(1, 0, 0);
+    FfxFloat32x3 T1 = lensq > 0 ? FfxFloat32x3(-Vh.y, Vh.x, 0) * ffxRsqrt(lensq) : FfxFloat32x3(1, 0, 0);
     FfxFloat32x3 T2 = cross(Vh, T1);
     // Section 4.2: parameterization of the projected area
     FfxFloat32 r = sqrt(U1);
@@ -106,10 +106,6 @@ FfxFloat32x3 SampleReflectionVector(FfxFloat32x3 view_direction, FfxFloat32x3 no
     return FfxFloat32x3(dot(TBN_col0, reflected_direction_tbn), dot(TBN_col1, reflected_direction_tbn), dot(TBN_col2, reflected_direction_tbn));
 }
 
-FfxBoolean IsMirrorReflection(FfxFloat32 roughness) {
-    return roughness < 0.0001;
-}
-
 void FFX_SSSR_InitialAdvanceRay(FfxFloat32x3 origin, FfxFloat32x3 direction, FfxFloat32x3 inv_direction, FfxFloat32x2 current_mip_resolution, FfxFloat32x2 current_mip_resolution_inv, FfxFloat32x2 floor_offset, FfxFloat32x2 uv_offset, FFX_PARAMETER_OUT FfxFloat32x3 position, FFX_PARAMETER_OUT FfxFloat32 current_t) {
     FfxFloat32x2 current_mip_position = current_mip_resolution * origin.xy;
 
@@ -169,15 +165,16 @@ FfxFloat32x2 FFX_SSSR_GetMipResolution(FfxFloat32x2 screen_dimensions, FfxInt32 
 }
 
 // Requires origin and direction of the ray to be in screen space [0, 1] x [0, 1]
-FfxFloat32x3 FFX_SSSR_HierarchicalRaymarch(FfxFloat32x3 origin, FfxFloat32x3 direction, FfxBoolean is_mirror, FfxFloat32x2 screen_size, FfxInt32 most_detailed_mip, FfxUInt32 min_traversal_occupancy, FfxUInt32 max_traversal_intersections, FFX_PARAMETER_OUT FfxBoolean valid_hit) {
-    const FfxFloat32x3 inv_direction = direction != FfxFloat32x3(0.0f, 0.0f, 0.0f) ? FfxFloat32x3(1.0f, 1.0f, 1.0f) / direction : FfxFloat32x3(FFX_SSSR_FLOAT_MAX, FFX_SSSR_FLOAT_MAX, FFX_SSSR_FLOAT_MAX);
+FfxFloat32x3 FFX_SSSR_HierarchicalRaymarch(FfxFloat32x3 origin, FfxFloat32x3 direction, FfxBoolean is_mirror, FfxFloat32x2 screen_size, FfxInt32 most_detailed_mip, FfxUInt32 min_traversal_occupancy, FfxUInt32 max_traversal_intersections, FFX_PARAMETER_OUT FfxBoolean valid_hit) 
+{
+    const FfxFloat32x3 inv_direction = direction != FFX_SELECT(FfxFloat32x3(0.0f, 0.0f, 0.0f), FfxFloat32x3(1.0f, 1.0f, 1.0f) / direction, FfxFloat32x3(FFX_SSSR_FLOAT_MAX, FFX_SSSR_FLOAT_MAX, FFX_SSSR_FLOAT_MAX));
 
     // Start on mip with highest detail.
     FfxInt32 current_mip = most_detailed_mip;
 
     // Could recompute these every iteration, but it's faster to hoist them out and update them.
     FfxFloat32x2 current_mip_resolution = FFX_SSSR_GetMipResolution(screen_size, current_mip);
-    FfxFloat32x2 current_mip_resolution_inv = rcp(current_mip_resolution);
+    FfxFloat32x2 current_mip_resolution_inv = ffxReciprocal(current_mip_resolution);
 
     // Offset to the bounding boxes uv space to intersect the ray with the center of the next pixel.
     // This means we ever so slightly over shoot into the next region.
@@ -200,7 +197,7 @@ FfxFloat32x3 FFX_SSSR_HierarchicalRaymarch(FfxFloat32x3 origin, FfxFloat32x3 dir
     while (i < max_traversal_intersections && current_mip >= most_detailed_mip && !exit_due_to_low_occupancy) {
         FfxFloat32x2 current_mip_position = current_mip_resolution * position.xy;
         FfxFloat32 surface_z = FFX_SSSR_LoadDepth(FfxInt32x2(current_mip_position), current_mip);
-        exit_due_to_low_occupancy = !is_mirror && AWaveActiveCountBits(true) <= min_traversal_occupancy;
+        exit_due_to_low_occupancy = !is_mirror && ffxWaveActiveCountBits(true) <= min_traversal_occupancy;
         FfxBoolean skipped_tile = FFX_SSSR_AdvanceRay(origin, direction, inv_direction, current_mip_position, current_mip_resolution_inv, floor_offset, uv_offset, surface_z, position, current_t);
         
         // Don't increase mip further than this because we did not generate it
@@ -295,7 +292,7 @@ void Intersect(FfxUInt32 group_index, FfxUInt32 group_id)
     FfxFloat32 z = FFX_SSSR_LoadDepth(FfxInt32x2(uv * mip_resolution), most_detailed_mip);
 
     FfxFloat32x3 screen_uv_space_ray_origin = FfxFloat32x3(uv, z);
-    FfxFloat32x3 view_space_ray = FFX_DNSR_Reflections_ScreenSpaceToViewSpace(screen_uv_space_ray_origin);
+    FfxFloat32x3 view_space_ray = ScreenSpaceToViewSpace(screen_uv_space_ray_origin);
     FfxFloat32x3 view_space_ray_direction = normalize(view_space_ray);
 
     FfxFloat32x3 view_space_surface_normal = FFX_MATRIX_MULTIPLY(ViewMatrix(), FfxFloat32x4(world_space_normal, 0)).xyz;

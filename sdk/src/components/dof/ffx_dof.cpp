@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -153,13 +153,13 @@ static FfxErrorCode createPipelineStates(FfxDofContext_Private* context)
     pipelineDescription.rootConstants = rootConstants;
 
     // Setup a few options used to determine permutation flags
-    bool haveShaderModel66 = context->deviceCapabilities.minimumSupportedShaderModel >= FFX_SHADER_MODEL_6_6;
+    bool haveShaderModel66 = context->deviceCapabilities.maximumSupportedShaderModel >= FFX_SHADER_MODEL_6_6;
     bool supportedFP16 = context->deviceCapabilities.fp16Supported;
     bool canForceWave64 = false;
 
     const uint32_t waveLaneCountMin = context->deviceCapabilities.waveLaneCountMin;
     const uint32_t waveLaneCountMax = context->deviceCapabilities.waveLaneCountMax;
-    if (waveLaneCountMin == 32 && waveLaneCountMax == 64)
+    if (waveLaneCountMin <= 64 && waveLaneCountMax >= 64)
         canForceWave64 = haveShaderModel66;
     else
         canForceWave64 = false;
@@ -202,51 +202,56 @@ static FfxErrorCode createPipelineStates(FfxDofContext_Private* context)
 static void scheduleDispatch(FfxDofContext_Private* context, const FfxDofDispatchDescription* params, const FfxPipelineState* pipeline, uint32_t dispatchX, uint32_t dispatchY)
 {
     FfxGpuJobDescription dispatchJob = {FFX_GPU_JOB_COMPUTE};
+    wcscpy_s(dispatchJob.jobLabel, pipeline->name);
 
     for (uint32_t currentShaderResourceViewIndex = 0; currentShaderResourceViewIndex < pipeline->srvTextureCount; ++currentShaderResourceViewIndex)
     {
         const uint32_t currentResourceId = pipeline->srvTextureBindings[currentShaderResourceViewIndex].resourceIdentifier;
         const FfxResourceInternal currentResource = context->srvResources[currentResourceId];
-        dispatchJob.computeJobDescriptor.srvTextures[currentShaderResourceViewIndex] = currentResource;
-        wcscpy_s(dispatchJob.computeJobDescriptor.srvTextureNames[currentShaderResourceViewIndex],
+        dispatchJob.computeJobDescriptor.srvTextures[currentShaderResourceViewIndex].resource = currentResource;
+#ifdef FFX_DEBUG
+        wcscpy_s(dispatchJob.computeJobDescriptor.srvTextures[currentShaderResourceViewIndex].name,
                  pipeline->srvTextureBindings[currentShaderResourceViewIndex].name);
+#endif
     }
 
     uint32_t uavEntry = 0;
     for (uint32_t currentUnorderedAccessViewIndex = 0; currentUnorderedAccessViewIndex < pipeline->uavTextureCount; ++currentUnorderedAccessViewIndex)
     {
-        const uint32_t currentResourceId = pipeline->uavTextureBindings[currentUnorderedAccessViewIndex].resourceIdentifier;
-        wcscpy_s(dispatchJob.computeJobDescriptor.uavTextureNames[currentUnorderedAccessViewIndex],
-                 pipeline->uavTextureBindings[currentUnorderedAccessViewIndex].name);
+        const FfxResourceBinding binding = pipeline->uavTextureBindings[currentUnorderedAccessViewIndex];
 
+        const uint32_t currentResourceId = binding.resourceIdentifier;
+#ifdef FFX_DEBUG
+        wcscpy_s(dispatchJob.computeJobDescriptor.uavTextures[currentUnorderedAccessViewIndex].name, binding.name);
+#endif
         if (currentResourceId == FFX_DOF_RESOURCE_IDENTIFIER_INTERNAL_BILAT_COLOR)
         {
             // Need to map as many resources as we have binding indices
             const FfxResourceInternal currentResource = context->uavResources[FFX_DOF_RESOURCE_IDENTIFIER_INTERNAL_BILAT_COLOR];
+            const uint32_t            bindEntry       = binding.arrayIndex;
 
-            for (uint32_t bindEntry = 0; bindEntry < pipeline->uavTextureBindings[currentUnorderedAccessViewIndex].bindCount; ++bindEntry)
-            {
-                // Don't over-subscribe mips (default to mip 0 once we've exhausted min mip)
+            // Don't over-subscribe mips (default to mip 0 once we've exhausted min mip)
                 FfxResourceDescription resDesc = context->contextDescription.backendInterface.fpGetResourceDescription(&context->contextDescription.backendInterface, currentResource);
-                dispatchJob.computeJobDescriptor.uavTextures[uavEntry] = currentResource;
-                dispatchJob.computeJobDescriptor.uavTextureMips[uavEntry++] = (bindEntry < resDesc.mipCount) ? bindEntry : 0;
-            }
+                dispatchJob.computeJobDescriptor.uavTextures[uavEntry].resource = currentResource;
+                dispatchJob.computeJobDescriptor.uavTextures[uavEntry++].mip = (bindEntry < resDesc.mipCount) ? bindEntry : 0;
         }
         else
         {
             const FfxResourceInternal currentResource = context->uavResources[currentResourceId];
-            dispatchJob.computeJobDescriptor.uavTextures[uavEntry] = currentResource;
-            dispatchJob.computeJobDescriptor.uavTextureMips[uavEntry++] = 0;
+            dispatchJob.computeJobDescriptor.uavTextures[uavEntry].resource = currentResource;
+            dispatchJob.computeJobDescriptor.uavTextures[uavEntry++].mip = 0;
         }
     }
     for (uint32_t currentUnorderedAccessViewIndex = 0; currentUnorderedAccessViewIndex < pipeline->uavBufferCount; ++currentUnorderedAccessViewIndex)
     {
         const uint32_t currentResourceId = pipeline->uavBufferBindings[currentUnorderedAccessViewIndex].resourceIdentifier;
-        wcscpy_s(dispatchJob.computeJobDescriptor.uavBufferNames[currentUnorderedAccessViewIndex],
+#ifdef FFX_DEBUG
+        wcscpy_s(dispatchJob.computeJobDescriptor.uavBuffers[currentUnorderedAccessViewIndex].name,
                  pipeline->uavBufferBindings[currentUnorderedAccessViewIndex].name);
+#endif
 
         const FfxResourceInternal currentResource                       = context->uavResources[currentResourceId];
-        dispatchJob.computeJobDescriptor.uavBuffers[currentUnorderedAccessViewIndex] = currentResource;
+        dispatchJob.computeJobDescriptor.uavBuffers[currentUnorderedAccessViewIndex].resource = currentResource;
     }
 
     dispatchJob.computeJobDescriptor.dimensions[0] = dispatchX;
@@ -254,7 +259,9 @@ static void scheduleDispatch(FfxDofContext_Private* context, const FfxDofDispatc
     dispatchJob.computeJobDescriptor.dimensions[2] = 1;
     dispatchJob.computeJobDescriptor.pipeline      = *pipeline;
 
+#ifdef FFX_DEBUG
     wcscpy_s(dispatchJob.computeJobDescriptor.cbNames[0], pipeline->constantBufferBindings[0].name);
+#endif
     dispatchJob.computeJobDescriptor.cbs[0] = context->constantBuffer;
 
 
@@ -301,7 +308,10 @@ static FfxErrorCode dofDispatch(FfxDofContext_Private* context, const FfxDofDisp
     cbuffer.cocLimit = 0.5f * context->contextDescription.cocLimitFactor * context->contextDescription.resolution.height;
     cbuffer.maxRings = context->contextDescription.quality;
 
-    memcpy(&context->constantBuffer.data, &cbuffer, context->constantBuffer.num32BitEntries * sizeof(uint32_t));
+    context->contextDescription.backendInterface.fpStageConstantBufferDataFunc(&context->contextDescription.backendInterface, 
+                                                                               &cbuffer, 
+                                                                               sizeof(DofConstants),
+                                                                               &context->constantBuffer);
     scheduleDispatch(context, params, &context->pipelineDsDepth, (fullTilesX + 7) / 8, (fullTilesY + 7) / 8);
     scheduleDispatch(context, params, &context->pipelineDsColor, dsTilesX, dsTilesY);
     scheduleDispatch(context, params, &context->pipelineDilate, (fullTilesX + 7) / 8, (fullTilesY + 7) / 8);
@@ -309,7 +319,7 @@ static FfxErrorCode dofDispatch(FfxDofContext_Private* context, const FfxDofDisp
     scheduleDispatch(context, params, &context->pipelineComposite, tilesX, tilesY);
 
     // Execute all the work for the frame
-    context->contextDescription.backendInterface.fpExecuteGpuJobs(&context->contextDescription.backendInterface, commandList);
+    context->contextDescription.backendInterface.fpExecuteGpuJobs(&context->contextDescription.backendInterface, commandList, context->effectContextId);
 
     // Release dynamic resources
     context->contextDescription.backendInterface.fpUnregisterResources(&context->contextDescription.backendInterface, commandList, context->effectContextId);
@@ -328,10 +338,15 @@ static FfxErrorCode dofCreate(FfxDofContext_Private* context, const FfxDofContex
 
     memcpy(&context->contextDescription, contextDescription, sizeof(FfxDofContextDescription));
 
+    // Check version info - make sure we are linked with the right backend version
+    FfxVersionNumber version = context->contextDescription.backendInterface.fpGetSDKVersion(&context->contextDescription.backendInterface);
+    FFX_RETURN_ON_ERROR(version == FFX_SDK_MAKE_VERSION(1, 1, 0), FFX_ERROR_INVALID_VERSION);
+
     context->constantBuffer.num32BitEntries = sizeof(DofConstants) / sizeof(uint32_t);
 
     // Create the context.
-    FfxErrorCode errorCode = context->contextDescription.backendInterface.fpCreateBackendContext(&context->contextDescription.backendInterface, &context->effectContextId);
+    FfxErrorCode errorCode =
+        context->contextDescription.backendInterface.fpCreateBackendContext(&context->contextDescription.backendInterface, nullptr, &context->effectContextId);
     FFX_RETURN_ON_ERROR(errorCode == FFX_OK, errorCode);
 
     // Call out for device caps.
@@ -342,52 +357,58 @@ static FfxErrorCode dofCreate(FfxDofContext_Private* context, const FfxDofContex
     uint32_t halfHeight = (contextDescription->resolution.height + 1) / 2;
     uint32_t tileWidth = (halfWidth + 3) / 4;
     uint32_t tileHeight = (halfHeight + 4) / 4;
+    bool is16bit = context->deviceCapabilities.fp16Supported;
     FfxInternalResourceDescription internalSurfaceDesc[] = {
         {FFX_DOF_RESOURCE_IDENTIFIER_INTERNAL_BILAT_COLOR,
          L"DOF_InternalBilatColor",
          FFX_RESOURCE_TYPE_TEXTURE2D,
          FFX_RESOURCE_USAGE_UAV,
-         FFX_SURFACE_FORMAT_R16G16B16A16_FLOAT,
+         is16bit ? FFX_SURFACE_FORMAT_R16G16B16A16_FLOAT : FFX_SURFACE_FORMAT_R32G32B32A32_FLOAT,
          halfWidth,
          halfHeight,
          FFX_DOF_INTERNAL_BILAT_MIP_COUNT,
-         FFX_RESOURCE_FLAGS_ALIASABLE},
+         FFX_RESOURCE_FLAGS_ALIASABLE,
+         {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
         {FFX_DOF_RESOURCE_IDENTIFIER_INTERNAL_RADIUS,
          L"DOF_InternalRadius",
          FFX_RESOURCE_TYPE_TEXTURE2D,
          FFX_RESOURCE_USAGE_UAV,
-         FFX_SURFACE_FORMAT_R16G16_FLOAT,
+         is16bit ? FFX_SURFACE_FORMAT_R16G16_FLOAT : FFX_SURFACE_FORMAT_R32G32_FLOAT,
          tileWidth,
          tileHeight,
          1,
-         FFX_RESOURCE_FLAGS_ALIASABLE},
+         FFX_RESOURCE_FLAGS_ALIASABLE,
+         {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
         {FFX_DOF_RESOURCE_IDENTIFIER_INTERNAL_DILATED_RADIUS,
          L"DOF_InternalDilatedRadius",
          FFX_RESOURCE_TYPE_TEXTURE2D,
          FFX_RESOURCE_USAGE_UAV,
-         FFX_SURFACE_FORMAT_R16G16_FLOAT,
+         is16bit ? FFX_SURFACE_FORMAT_R16G16_FLOAT : FFX_SURFACE_FORMAT_R32G32_FLOAT,
          tileWidth,
          tileHeight,
          1,
-         FFX_RESOURCE_FLAGS_ALIASABLE},
+         FFX_RESOURCE_FLAGS_ALIASABLE,
+         {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
         {FFX_DOF_RESOURCE_IDENTIFIER_INTERNAL_NEAR,
          L"DOF_InternalNear",
          FFX_RESOURCE_TYPE_TEXTURE2D,
          FFX_RESOURCE_USAGE_UAV,
-         FFX_SURFACE_FORMAT_R16G16B16A16_FLOAT,
+         is16bit ? FFX_SURFACE_FORMAT_R16G16B16A16_FLOAT : FFX_SURFACE_FORMAT_R32G32B32A32_FLOAT,
          halfWidth,
          halfHeight,
          1,
-         FFX_RESOURCE_FLAGS_ALIASABLE},
+         FFX_RESOURCE_FLAGS_ALIASABLE,
+         {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
         {FFX_DOF_RESOURCE_IDENTIFIER_INTERNAL_FAR,
          L"DOF_InternalFar",
          FFX_RESOURCE_TYPE_TEXTURE2D,
          FFX_RESOURCE_USAGE_UAV,
-         FFX_SURFACE_FORMAT_R16G16B16A16_FLOAT,
+         is16bit ? FFX_SURFACE_FORMAT_R16G16B16A16_FLOAT : FFX_SURFACE_FORMAT_R32G32B32A32_FLOAT,
          halfWidth,
          halfHeight,
          1,
-         FFX_RESOURCE_FLAGS_ALIASABLE},
+         FFX_RESOURCE_FLAGS_ALIASABLE,
+         {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
     };
 
     // Clear the SRV resources to NULL.
@@ -398,17 +419,25 @@ static FfxErrorCode dofCreate(FfxDofContext_Private* context, const FfxDofContex
         const FfxResourceDescription resourceDescription = { FFX_RESOURCE_TYPE_TEXTURE2D, currentSurfaceDescription->format,
             currentSurfaceDescription->width, currentSurfaceDescription->height, 1, currentSurfaceDescription->mipCount, currentSurfaceDescription->flags, currentSurfaceDescription->usage };
         const FfxResourceStates initialState = FFX_RESOURCE_STATE_UNORDERED_ACCESS;
-        const FfxCreateResourceDescription createResourceDescription = { FFX_HEAP_TYPE_DEFAULT, resourceDescription, initialState, currentSurfaceDescription->initDataSize, currentSurfaceDescription->initData, currentSurfaceDescription->name, currentSurfaceDescription->id };
+        const FfxCreateResourceDescription    createResourceDescription = {FFX_HEAP_TYPE_DEFAULT,
+                                                                           resourceDescription,
+                                                                           initialState,
+                                                                           currentSurfaceDescription->name,
+                                                                           currentSurfaceDescription->id,
+                                                                           currentSurfaceDescription->initData};
 
         FFX_VALIDATE(context->contextDescription.backendInterface.fpCreateResource(&context->contextDescription.backendInterface, &createResourceDescription, context->effectContextId, &context->srvResources[currentSurfaceDescription->id]));
     }
     // globals buffer
     {
-        uint32_t initData = 0;
         const FfxResourceDescription resourceDescription = { FFX_RESOURCE_TYPE_BUFFER, FFX_SURFACE_FORMAT_UNKNOWN,
             4, 4, 0, 0, FFX_RESOURCE_FLAGS_NONE, FFX_RESOURCE_USAGE_UAV };
-        const FfxCreateResourceDescription createResourceDescription = { FFX_HEAP_TYPE_DEFAULT, resourceDescription, FFX_RESOURCE_STATE_UNORDERED_ACCESS,
-            sizeof(initData), &initData, L"DOF_InternalGlobals", FFX_DOF_RESOURCE_IDENTIFIER_INTERNAL_GLOBALS };
+        const FfxCreateResourceDescription createResourceDescription = {FFX_HEAP_TYPE_DEFAULT,
+                                                                        resourceDescription,
+                                                                        FFX_RESOURCE_STATE_UNORDERED_ACCESS,
+                                                                        L"DOF_InternalGlobals",
+                                                                        FFX_DOF_RESOURCE_IDENTIFIER_INTERNAL_GLOBALS,
+                                                                        {FFX_RESOURCE_INIT_DATA_TYPE_VALUE, sizeof(uint32_t), 0}};
 
         FFX_VALIDATE(context->contextDescription.backendInterface.fpCreateResource(&context->contextDescription.backendInterface, &createResourceDescription, context->effectContextId, &context->srvResources[FFX_DOF_RESOURCE_IDENTIFIER_INTERNAL_GLOBALS]));
     }
@@ -425,7 +454,7 @@ static FfxErrorCode dofCreate(FfxDofContext_Private* context, const FfxDofContex
 static FfxErrorCode dofRelease(FfxDofContext_Private* context)
 {
     FFX_ASSERT(context);
-
+    
     // Release all pipelines
     for (FfxPipelineState* pipe : {&context->pipelineDsDepth, &context->pipelineDsColor, &context->pipelineDilate, &context->pipelineBlur, &context->pipelineComposite})
     {
@@ -438,13 +467,13 @@ static FfxErrorCode dofRelease(FfxDofContext_Private* context)
     context->srvResources[FFX_DOF_RESOURCE_IDENTIFIER_OUTPUT_COLOR] = { FFX_DOF_RESOURCE_IDENTIFIER_NULL };
 
     // Release internal resources
-    ffxSafeReleaseResource(&context->contextDescription.backendInterface, context->srvResources[FFX_DOF_RESOURCE_IDENTIFIER_INTERNAL_BILAT_COLOR]);
-    ffxSafeReleaseResource(&context->contextDescription.backendInterface, context->srvResources[FFX_DOF_RESOURCE_IDENTIFIER_INTERNAL_RADIUS]);
-    ffxSafeReleaseResource(&context->contextDescription.backendInterface, context->srvResources[FFX_DOF_RESOURCE_IDENTIFIER_INTERNAL_DILATED_RADIUS]);
-    ffxSafeReleaseResource(&context->contextDescription.backendInterface, context->srvResources[FFX_DOF_RESOURCE_IDENTIFIER_INTERNAL_NEAR]);
-    ffxSafeReleaseResource(&context->contextDescription.backendInterface, context->srvResources[FFX_DOF_RESOURCE_IDENTIFIER_INTERNAL_FAR]);
-    ffxSafeReleaseCopyResource(&context->contextDescription.backendInterface, context->srvResources[FFX_DOF_RESOURCE_IDENTIFIER_INTERNAL_GLOBALS]);
-    ffxSafeReleaseResource(&context->contextDescription.backendInterface, context->srvResources[FFX_DOF_RESOURCE_IDENTIFIER_INTERNAL_GLOBALS]);
+    ffxSafeReleaseResource(&context->contextDescription.backendInterface, context->srvResources[FFX_DOF_RESOURCE_IDENTIFIER_INTERNAL_BILAT_COLOR], context->effectContextId);
+    ffxSafeReleaseResource(&context->contextDescription.backendInterface, context->srvResources[FFX_DOF_RESOURCE_IDENTIFIER_INTERNAL_RADIUS], context->effectContextId);
+    ffxSafeReleaseResource(&context->contextDescription.backendInterface, context->srvResources[FFX_DOF_RESOURCE_IDENTIFIER_INTERNAL_DILATED_RADIUS], context->effectContextId);
+    ffxSafeReleaseResource(&context->contextDescription.backendInterface, context->srvResources[FFX_DOF_RESOURCE_IDENTIFIER_INTERNAL_NEAR], context->effectContextId);
+    ffxSafeReleaseResource(&context->contextDescription.backendInterface, context->srvResources[FFX_DOF_RESOURCE_IDENTIFIER_INTERNAL_FAR], context->effectContextId);
+    ffxSafeReleaseCopyResource(&context->contextDescription.backendInterface, context->srvResources[FFX_DOF_RESOURCE_IDENTIFIER_INTERNAL_GLOBALS], context->effectContextId);
+    ffxSafeReleaseResource(&context->contextDescription.backendInterface, context->srvResources[FFX_DOF_RESOURCE_IDENTIFIER_INTERNAL_GLOBALS], context->effectContextId);
 
     // Destroy the context
     context->contextDescription.backendInterface.fpDestroyBackendContext(&context->contextDescription.backendInterface, context->effectContextId);
@@ -466,6 +495,7 @@ FfxErrorCode ffxDofContextCreate(FfxDofContext* context, const FfxDofContextDesc
         FFX_ERROR_INVALID_POINTER);
 
     // Validate that all callbacks are set for the interface
+    FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpGetSDKVersion, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpGetDeviceCapabilities, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpCreateBackendContext, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpDestroyBackendContext, FFX_ERROR_INCOMPLETE_INTERFACE);
@@ -508,4 +538,9 @@ FfxErrorCode ffxDofContextDispatch(FfxDofContext* context, const FfxDofDispatchD
         FFX_ERROR_NULL_DEVICE);
 
     return dofDispatch(contextPrivate, dispatchDescription);
+}
+
+FFX_API FfxVersionNumber ffxDofGetEffectVersion()
+{
+    return FFX_SDK_MAKE_VERSION(FFX_DOF_VERSION_MAJOR, FFX_DOF_VERSION_MINOR, FFX_DOF_VERSION_PATCH);
 }

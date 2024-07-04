@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright © 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 // @defgroup PARALLEL_SORT
@@ -40,7 +40,7 @@
 /// FidelityFX Parallel Sort minor version.
 ///
 /// @ingroup FfxParallelSort
-#define FFX_PARALLELSORT_VERSION_MINOR     (2)
+#define FFX_PARALLELSORT_VERSION_MINOR     (3)
 
 /// FidelityFX Parallel Sort patch version.
 ///
@@ -57,7 +57,7 @@
 /// The size of the context specified in 32bit values.
 ///
 /// @ingroup FfxParallelSort
-#define FFX_PARALLELSORT_CONTEXT_SIZE      (98304)
+#define FFX_PARALLELSORT_CONTEXT_SIZE      (373712)
 
 #if defined(__cplusplus)
 extern "C" {
@@ -101,9 +101,9 @@ typedef enum FfxParallelSortInitializationFlagBits {
 /// @ingroup FfxParallelSort
 typedef struct FfxParallelSortContextDescription {
 
-    uint32_t         flags;             ///< A collection of <c><i>FfxParallelSortInitializationFlagBits</i></c>.
-    uint32_t         maxEntries;        ///< Maximum number of entries to sort
-    FfxInterface     backendInterface;  ///< A set of pointers to the backend implementation for FidelityFX.
+    uint32_t                    flags;                  ///< A collection of <c><i>FfxParallelSortInitializationFlagBits</i></c>.
+    uint32_t                    maxEntries;             ///< Maximum number of entries to sort
+    FfxInterface                backendInterface;       ///< A set of pointers to the backend implementation for FidelityFX.
 } FfxParallelSortContextDescription;
 
 /// A structure encapsulating the parameters needed to sort
@@ -196,6 +196,14 @@ FFX_API FfxErrorCode ffxParallelSortContextDispatch(FfxParallelSortContext* pCon
 ///
 /// @ingroup FfxParallelSort
 FFX_API FfxErrorCode ffxParallelSortContextDestroy(FfxParallelSortContext* pContext);
+
+/// Queries the effect version number.
+///
+/// @returns
+/// The SDK version the effect was built with.
+///
+/// @ingroup FfxParallelSort
+FFX_API FfxVersionNumber ffxParallelSortGetEffectVersion();
 
 #if defined(__cplusplus)
 }

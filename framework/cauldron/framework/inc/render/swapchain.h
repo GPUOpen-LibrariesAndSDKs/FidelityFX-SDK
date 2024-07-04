@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -38,7 +38,7 @@ namespace cauldron
     /**
      * @class SwapChain
      *
-     * The <c><i>Cauldron</i></c> api/platform-agnostic representation of the swapchain object. Interface for all
+     * The <c><i>FidelityFX Cauldron Framework</i></c> api/platform-agnostic representation of the swapchain object. Interface for all
      * presentation-related interfaces.
      *
      * @ingroup CauldronRender
@@ -117,6 +117,21 @@ namespace cauldron
         virtual void Present() = 0;
 
         /**
+         * @brief   Indicates if this is a replacement frame interpolation swapchain
+         */
+        virtual bool IsFrameInterpolation() const { return false; }
+
+        /**
+         * @brief   Gets the last present count for the swapchain.
+         */
+        virtual void GetLastPresentCount(UINT* pLastPresentCount) { *pLastPresentCount = 0; }
+
+        /**
+         * @brief   Gets the current refresh rate for the swapchain.
+         */
+        virtual void GetRefreshRate(double* outRefreshRate) { *outRefreshRate = 0.0; }
+
+        /**
          * @brief   Creates a screenshot of the current swap chain.
          */
         virtual void DumpSwapChainToFile(std::experimental::filesystem::path filePath) = 0;
@@ -141,7 +156,6 @@ namespace cauldron
          */
         virtual SwapChainInternal* GetImpl() = 0;
         virtual const SwapChainInternal* GetImpl() const = 0;
-
 
     private:
         // No copy, No move

@@ -1,17 +1,20 @@
-// AMD Cauldron code
+// This file is part of the FidelityFX SDK.
 //
-// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and / or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -43,8 +46,6 @@ groupshared float3 Tile[TILE_DIM * TILE_DIM];
 float2 GetClosestVelocity(in float2 uv, in float2 texelSize, out bool isSkyPixel)
 {
     // Scale uv for lower resolution motion vector texture
-    float2 uvScale = float2(float(DisplayWidth) / RenderWidth, float(DisplayHeight) / RenderHeight);
-
 #ifdef INVERTED_DEPTH
     float2 velocity;
     float closestDepth = 0.0f;
@@ -55,7 +56,7 @@ float2 GetClosestVelocity(in float2 uv, in float2 texelSize, out bool isSkyPixel
             const float depth = DepthBuffer.SampleLevel(PointSampler, st, 0.0f).x;
             if (depth > closestDepth)
             {
-                velocity = VelocityBuffer.SampleLevel(PointSampler, st * uvScale, 0.0f).xy;
+                velocity = VelocityBuffer.SampleLevel(PointSampler, st, 0.0f).xy;
                 closestDepth = depth;
             }
         }
@@ -71,7 +72,7 @@ float2 GetClosestVelocity(in float2 uv, in float2 texelSize, out bool isSkyPixel
             const float depth = DepthBuffer.SampleLevel(PointSampler, st, 0.0f).x;
             if (depth < closestDepth)
             {
-                velocity = VelocityBuffer.SampleLevel(PointSampler, st * uvScale, 0.0f).xy;
+                velocity = VelocityBuffer.SampleLevel(PointSampler, st, 0.0f).xy;
                 closestDepth = depth;
             }
         }
@@ -238,7 +239,7 @@ void MainCS(uint3 globalID : SV_DispatchThreadID, uint3 localID : SV_GroupThread
     GroupMemoryBarrierWithGroupSync();
 
     // Iterate the neighboring samples
-    if (any(int2(globalID.xy) >= float2(DisplayWidth, DisplayHeight)))
+    if (any(int2(globalID.xy) >= float2(RenderWidth, RenderHeight)))
         return; // out of bounds
 
     float wsum = 0.0f;

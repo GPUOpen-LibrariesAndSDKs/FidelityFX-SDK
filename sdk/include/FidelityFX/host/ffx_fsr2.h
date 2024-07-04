@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #pragma once
@@ -38,7 +38,7 @@
 /// FidelityFX Super Resolution 2 minor version.
 ///
 /// @ingroup ffxFsr2
-#define FFX_FSR2_VERSION_MINOR      (2)
+#define FFX_FSR2_VERSION_MINOR      (3)
 
 /// FidelityFX Super Resolution 2 patch version.
 ///
@@ -55,7 +55,7 @@
 /// The size of the context specified in 32bit values.
 ///
 /// @ingroup ffxFsr2
-#define FFX_FSR2_CONTEXT_SIZE (24576)
+#define FFX_FSR2_CONTEXT_SIZE (FFX_SDK_DEFAULT_CONTEXT_SIZE)
 
 #if defined(__cplusplus)
 extern "C" {
@@ -161,8 +161,8 @@ typedef struct FfxFsr2ContextDescription {
     uint32_t                    flags;                              ///< A collection of <c><i>FfxFsr2InitializationFlagBits</i></c>.
     FfxDimensions2D             maxRenderSize;                      ///< The maximum size that rendering will be performed at.
     FfxDimensions2D             displaySize;                        ///< The size of the presentation resolution targeted by the upscaling process.
-    FfxInterface                backendInterface;                   ///< A set of pointers to the backend implementation for FidelityFX SDK
     FfxFsr2Message              fpMessage;                          ///< A pointer to a function that can receive messages from the runtime.
+    FfxInterface                backendInterface;                   ///< A set of pointers to the backend implementation for FidelityFX SDK
 } FfxFsr2ContextDescription;
 
 /// A structure encapsulating the parameters for dispatching the various passes
@@ -281,6 +281,19 @@ typedef struct FfxFsr2Context
 ///
 /// @ingroup ffxFsr2
 FFX_API FfxErrorCode ffxFsr2ContextCreate(FfxFsr2Context* pContext, const FfxFsr2ContextDescription* pContextDescription);
+
+/// Get GPU memory usage of the FidelityFX Super Resolution context.
+///
+/// @param [in]  pContext                A pointer to a <c><i>FfxFsr2Context</i></c> structure.
+/// @param [out] pVramUsage              A pointer to a <c><i>FfxEffectMemoryUsage</i></c> structure.
+///
+/// @retval
+/// FFX_OK                              The operation completed successfully.
+/// @retval
+/// FFX_ERROR_CODE_NULL_POINTER         The operation failed because either <c><i>context</i></c> or <c><i>vramUsage</i></c> were <c><i>NULL</i></c>.
+///
+/// @ingroup ffxFsr2
+FFX_API FfxErrorCode ffxFsr2ContextGetGpuMemoryUsage(FfxFsr2Context* pContext, FfxEffectMemoryUsage* pVramUsage);
 
 /// Dispatch the various passes that constitute FidelityFX Super Resolution 2.
 ///
@@ -503,6 +516,14 @@ FFX_API FfxErrorCode ffxFsr2GetJitterOffset(float* pOutX, float* pOutY, int32_t 
 ///
 /// @ingroup ffxFsr2
 FFX_API bool ffxFsr2ResourceIsNull(FfxResource resource);
+
+/// Queries the effect version number.
+///
+/// @returns
+/// The SDK version the effect was built with.
+///
+/// @ingroup ffxFsr2
+FFX_API FfxVersionNumber ffxFsr2GetEffectVersion();
 
 #if defined(__cplusplus)
 }

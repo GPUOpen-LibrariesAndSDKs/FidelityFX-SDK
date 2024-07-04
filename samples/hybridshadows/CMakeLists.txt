@@ -1,13 +1,30 @@
 # Declare project
-if (FFX_API STREQUAL CAULDRON)
-	project(FFX_HYBRIDSHADOWS)
-else()
-	project(FFX_HYBRIDSHADOWS_NATIVE)
-endif()
+project(FFX_HYBRIDSHADOWS)
 
 # ---------------------------------------------
 # Fidelity FX Hybrid Shadows
 # ---------------------------------------------
+
+# Import SDK libs
+add_library(ffx_classifier_native STATIC IMPORTED)
+set_target_properties(ffx_classifier_native PROPERTIES
+					  IMPORTED_CONFIGURATIONS "DebugDX12;DebugVK;RelWithDebInfoDX12;RelWithDebInfoVK;ReleaseDX12;ReleaseVK"
+					  IMPORTED_LOCATION_DEBUGDX12 "${SDK_ROOT}/bin/ffx_sdk/ffx_classifier_x64d.lib"
+					  IMPORTED_LOCATION_DEBUGVK "${SDK_ROOT}/bin/ffx_sdk/ffx_classifier_x64d.lib"
+					  IMPORTED_LOCATION_RELEASEDX12 "${SDK_ROOT}/bin/ffx_sdk/ffx_classifier_x64.lib"
+					  IMPORTED_LOCATION_RELEASEVK "${SDK_ROOT}/bin/ffx_sdk/ffx_classifier_x64.lib"
+					  IMPORTED_LOCATION_RELWITHDEBINFODX12 "${SDK_ROOT}/bin/ffx_sdk/ffx_classifier_x64drel.lib"
+					  IMPORTED_LOCATION_RELWITHDEBINFOVK "${SDK_ROOT}/bin/ffx_sdk/ffx_classifier_x64drel.lib")
+
+add_library(ffx_denoiser_native STATIC IMPORTED)
+set_target_properties(ffx_denoiser_native PROPERTIES
+					  IMPORTED_CONFIGURATIONS "DebugDX12;DebugVK;RelWithDebInfoDX12;RelWithDebInfoVK;ReleaseDX12;ReleaseVK"
+					  IMPORTED_LOCATION_DEBUGDX12 "${SDK_ROOT}/bin/ffx_sdk/ffx_denoiser_x64d.lib"
+					  IMPORTED_LOCATION_DEBUGVK "${SDK_ROOT}/bin/ffx_sdk/ffx_denoiser_x64d.lib"
+					  IMPORTED_LOCATION_RELEASEDX12 "${SDK_ROOT}/bin/ffx_sdk/ffx_denoiser_x64.lib"
+					  IMPORTED_LOCATION_RELEASEVK "${SDK_ROOT}/bin/ffx_sdk/ffx_denoiser_x64.lib"
+					  IMPORTED_LOCATION_RELWITHDEBINFODX12 "${SDK_ROOT}/bin/ffx_sdk/ffx_denoiser_x64drel.lib"
+					  IMPORTED_LOCATION_RELWITHDEBINFOVK "${SDK_ROOT}/bin/ffx_sdk/ffx_denoiser_x64drel.lib")
 
 # Hybrid Shadows
 file(GLOB hybridshadows_src
@@ -24,22 +41,24 @@ set(config_file ${CMAKE_CURRENT_SOURCE_DIR}/config/hybridshadowsconfig.json)
 copyCommand("${config_file}" ${CONFIG_OUTPUT})
 
 # Add the sample to the solution
-add_executable(${PROJECT_NAME} WIN32 ${default_icon_src} ${default_entry_point} ${default_sample_files} ${config_file} ${hybridshadows_src} ${hybridshadows_shaders} ${ffx_remap})
+add_executable(${PROJECT_NAME} WIN32 ${default_icon_src} ${default_entry_point} ${default_sample_files} ${config_file} ${hybridshadows_src} ${hybridshadows_shaders})
 
 # Setup the correct exe based on backend name
 set(EXE_OUT_NAME ${PROJECT_NAME}_)
 
 # Link everything (including the compiler for now)
-target_link_libraries(${PROJECT_NAME} LINK_PUBLIC Framework RenderModules d3dcompiler ffx_classifier_${FFX_PLATFORM_NAME} ffx_denoiser_${FFX_PLATFORM_NAME})
+target_link_libraries(${PROJECT_NAME} LINK_PUBLIC Framework RenderModules d3dcompiler ffx_classifier_native ffx_denoiser_native backend_interface)
 set_target_properties(${PROJECT_NAME} PROPERTIES
                     OUTPUT_NAME_DEBUGDX12 "${EXE_OUT_NAME}DX12D"
                     OUTPUT_NAME_DEBUGVK "${EXE_OUT_NAME}VKD"
                     OUTPUT_NAME_RELEASEDX12 "${EXE_OUT_NAME}DX12"
                     OUTPUT_NAME_RELEASEVK "${EXE_OUT_NAME}VK"
+                    OUTPUT_NAME_RELWITHDEBINFODX12 "${EXE_OUT_NAME}drelDX12"
+					OUTPUT_NAME_RELWITHDEBINFOVK "${EXE_OUT_NAME}drelVK"
                     VS_DEBUGGER_WORKING_DIRECTORY "${BIN_OUTPUT}")
 
 # Add compile definitions to identify the sample
-target_compile_definitions(${PROJECT_NAME} PRIVATE SampleName=L"FidelityFX Hybrid Shadows"
+target_compile_definitions(${PROJECT_NAME} PRIVATE SampleName=L"FidelityFX Hybrid Shadows v2.1"
                                            ConfigFileName=L"configs/hybridshadowsconfig.json"
                                            ConfigSampleName="FidelityFX Hybrid Shadows"
 #Add RenderModuleClass definition only if this sample will use a custom rendermodule
@@ -52,25 +71,8 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE SampleName=L"FidelityFX Hybri
 # Add manifest info
 addManifest(${PROJECT_NAME})
 
-# Add dependency information
-add_dependencies(${PROJECT_NAME} Framework)
-add_dependencies(${PROJECT_NAME} RenderModules)
-add_dependencies(${PROJECT_NAME} ffx_classifier_${FFX_PLATFORM_NAME})
-add_dependencies(${PROJECT_NAME} ffx_denoiser_${FFX_PLATFORM_NAME})
-
-# Link the correct backend in
-if (FFX_API STREQUAL CAULDRON)
-    target_link_libraries(${PROJECT_NAME} LINK_PUBLIC ffx_backend_cauldron_${FFX_PLATFORM_NAME})
-    add_dependencies(${PROJECT_NAME} ffx_backend_cauldron_${FFX_PLATFORM_NAME})
-    target_include_directories(${PROJECT_NAME} PUBLIC ${FFX_API_CAULDRON_ROOT})
-else()
-    target_link_libraries(${PROJECT_NAME} LINK_PUBLIC ffx_backend_native)
-    target_include_directories(${PROJECT_NAME} PUBLIC ${FFX_HOST_BACKENDS_PATH})
-endif()
-
 # And solution layout definitions
 source_group(""							FILES ${default_entry_point})
-source_group(""							FILES ${ffx_remap})
 source_group("Sample" 					FILES ${default_sample_files})
 source_group("Icon"    					FILES ${default_icon_src})
 source_group("Config" 					FILES ${config_file})

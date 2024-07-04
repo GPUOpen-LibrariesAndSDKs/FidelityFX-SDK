@@ -14,10 +14,13 @@ The FidelityFX SDK is a collection of heavily optimized, open source effects (sh
 - [Stochastic Screen-Space Reflections 1.4](../techniques/stochastic-screen-space-reflections.md)
 - [Super Resolution 1.1](../techniques/super-resolution-spatial.md)
 - [Super Resolution 2.2](../techniques/super-resolution-temporal.md)
+- [Super Resolution 3.0](../techniques/super-resolution-interpolation.md)
+- [Super Resolution 3.0 Upscaler](../techniques/super-resolution-upscaler.md)
 - [Variable Shading 1.1](../techniques/variable-shading.md)
 - [Blur 1.0](../techniques/blur.md)
 - [Depth of Field 1.0](../techniques/depth-of-field.md)
 - [Lens 1.0](../techniques/lens.md)
+- [Breadcrumbs 1.0](../techniques/breadcrumbs.md)
 
 <h2>Supported ecosystems</h2>
 
@@ -32,7 +35,7 @@ If you are a registered Xbox developer, you can find AMD FidelityFX features ava
 
 <h2>Samples</h2>
 
-All samples are written in C++, and use our [Cauldron](../../framework/cauldron) sample framework.
+All samples are written in C++, and use the [FidelityFX Cauldron Framework](../../framework/cauldron) sample framework.
 
 <h2>Open source</h2>
 
@@ -50,3 +53,4 @@ If you find an issue, or have a request for the SDK, please consider opening an 
 <!-- - @subpage page_building-samples_index "Building the samples for the SDK" -->
 <!-- - @subpage page_running-samples_index "Running the samples for the SDK" -->
 <!-- - @subpage page_getting-started_naming-guidelines "FidelityFX naming guidelines for game applications" -->
+<!-- - @subpage page_ffx-api "Introduction to FidelityFX API" -->

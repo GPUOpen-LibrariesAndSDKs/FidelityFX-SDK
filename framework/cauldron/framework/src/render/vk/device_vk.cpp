@@ -1,17 +1,20 @@
-// AMD Cauldron code
+// This file is part of the FidelityFX SDK.
 //
-// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sub-license, and / or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -22,6 +25,7 @@
 #include "core/win/framework_win.h" // VK builds imply _WIN is defined
 #include "misc/assert.h"
 
+#include "render/vk/buffer_vk.h"
 #include "render/vk/commandlist_vk.h"
 #include "render/vk/device_vk.h"
 #include "render/vk/profiler_vk.h"
@@ -34,8 +38,8 @@
 #include <map>
 
 // macro to get the procedure address of vulkan extensions
-#define GET_INSTANCE_PROC_ADDR(name) m_##name = (PFN_##name)vkGetInstanceProcAddr(m_Instance, #name);
-#define GET_DEVICE_PROC_ADDR(name) m_##name = (PFN_##name)vkGetDeviceProcAddr(m_Device, #name);
+#define GET_INSTANCE_PROC_ADDR(name) m_##name = (PFN_##name)vkGetInstanceProcAddr(m_Instance, #name)
+#define GET_DEVICE_PROC_ADDR(name) m_##name = (PFN_##name)vkGetDeviceProcAddr(m_Device, #name)
 #define SET_FEATURE_IF_SUPPORTED(name) physicalDeviceFeatures.##name = supportedPhysicalDeviceFeatures.##name;\
                                        CauldronAssert(ASSERT_WARNING, physicalDeviceFeatures.##name == VK_TRUE, L"" #name " physical device feature requested but not supported");
 
@@ -43,8 +47,35 @@
 #define CHECK_FEATURE_SUPPORT_11(name) CauldronAssert(ASSERT_WARNING, vulkan11Features.##name == VK_TRUE, L"" #name " physical device feature for Vulkan 1.1 requested but not supported");
 #define CHECK_FEATURE_SUPPORT_12(name) CauldronAssert(ASSERT_WARNING, vulkan12Features.##name == VK_TRUE, L"" #name " physical device feature for Vulkan 1.2 requested but not supported");
 
+#define HAS_QUEUE_FAMILY_FLAG(flag) ((queueProps[i].queueFlags & flag) == flag)
+
 namespace cauldron
 {
+    uint32_t GetLowestBit(uint32_t flags)
+    {
+        uint32_t pos = 0;
+        while (flags != 0)
+        {
+            if ((flags & 0x1) == 0x1)
+                return pos;
+            flags >>= 1;
+            ++pos;
+        }
+        return 32;
+    }
+
+    uint32_t CountBits(uint32_t flags)
+    {
+        uint32_t count = 0;
+        while (flags != 0)
+        {
+            if ((flags & 0x1) == 0x1)
+                ++count;
+            flags >>= 1;
+        }
+        return count;
+    }
+
     uint32_t GetScore(VkPhysicalDevice physicalDevice, uint32_t requestedVulkanVersion)
     {
         uint32_t score = 0;
@@ -387,102 +418,191 @@ namespace cauldron
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueProps.data());
         CauldronAssert(ASSERT_CRITICAL, queueFamilyCount >= 1, L"Unable to get physical device queue family properties");
 
-        VkPhysicalDeviceMemoryProperties memoryProperties;
-        vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
+        std::vector<VkQueueFamilyProperties> queueAvailability = queueProps;
 
         QueueFamilies families;
 
+        // init
+        for (uint32_t i = 0; i < RequestedQueue::Count; ++i)
+            families.familyIndices[i] = UINT32_MAX;
+        
+        // How to select a queue:
+        //   - it should have the requested capabilities
+        //   - it should have no more capabilities than the requested one
+        //   - it shouldn't be used by another RequestedQueue
+
         // Find a graphics device and a queue that can present to the above surface
+        // We only support device where the graphics queue can present
         for (uint32_t i = 0; i < queueFamilyCount; ++i)
         {
-            if ((queueProps[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
-            {
-                if (families.GraphicsQueueFamilyIndex == UINT32_MAX)
-                {
-                    families.GraphicsQueueFamilyIndex = i;
-                    families.GraphicsQueueProperties = queueProps[i];
-                }
+            if (queueProps[i].queueCount == 0)
+                continue;
+            VkBool32 supportsPresent;
+            vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &supportsPresent);
 
-                VkBool32 supportsPresent;
-                vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &supportsPresent);
-                if (supportsPresent == VK_TRUE)
+            if (HAS_QUEUE_FAMILY_FLAG((VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT))  // VK_QUEUE_TRANSFER_BIT is implied
+                && supportsPresent)
+            {
+                if (families.familyIndices[RequestedQueue::Graphics] == UINT32_MAX)
                 {
-                    families.GraphicsQueueFamilyIndex = i;
-                    families.PresentQueueFamilyIndex = i;
-                    families.PresentQueueProperties = queueProps[i];
-                    families.presentQueueType = CommandQueue::Graphics;
+                    families.familyIndices[RequestedQueue::Graphics] = i;
+                    families.properties[RequestedQueue::Graphics]    = queueProps[i];
                     break;
                 }
             }
         }
+        --queueAvailability[families.familyIndices[RequestedQueue::Graphics]].queueCount;
 
-        // If didn't find a queue that supports both graphics and present, then
-        // find a separate present queue.
-        if (families.PresentQueueFamilyIndex == UINT32_MAX)
-        {
-            for (uint32_t i = 0; i < queueFamilyCount; ++i)
-            {
-                VkBool32 supportsPresent;
-                vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &supportsPresent);
-                if (supportsPresent == VK_TRUE)
-                {
-                    families.PresentQueueFamilyIndex = (uint32_t)i;
-                    families.PresentQueueProperties = queueProps[i];
-                    break;
-                }
-            }
-        }
+        CauldronAssert(ASSERT_CRITICAL, families.familyIndices[RequestedQueue::Graphics] != UINT32_MAX, L"Unable to get a graphics queue that supports Present.");
 
         // Get a compute queue that isn't the graphics one if possible
         for (uint32_t i = 0; i < queueFamilyCount; ++i)
         {
-            if ((queueProps[i].queueFlags & VK_QUEUE_COMPUTE_BIT) != 0)
+            if (HAS_QUEUE_FAMILY_FLAG(VK_QUEUE_COMPUTE_BIT) && (queueAvailability[i].queueCount > 0))  // VK_QUEUE_TRANSFER_BIT is implied
             {
-                if (families.ComputeQueueFamilyIndex == UINT32_MAX)
+                if (families.familyIndices[RequestedQueue::Compute] == UINT32_MAX)
                 {
-                    families.ComputeQueueFamilyIndex = i;
-                    families.ComputeQueueProperties = queueProps[i];
-                }
-                if (i != families.GraphicsQueueFamilyIndex)
-                {
-                    families.ComputeQueueFamilyIndex = i;
-                    families.ComputeQueueProperties = queueProps[i];
+                    families.familyIndices[RequestedQueue::Compute] = i;
+                    families.properties[RequestedQueue::Compute]    = queueProps[i];
                     break;
                 }
+            }
+        }
+        --queueAvailability[families.familyIndices[RequestedQueue::Compute]].queueCount;
+
+        // chose the same queue for FI async compute as we use for app async compute. We don't mind to share that one as we won't use it much.
+        families.familyIndices[RequestedQueue::FIAsyncCompute] = families.familyIndices[RequestedQueue::Compute];
+        families.properties[RequestedQueue::FIAsyncCompute]    = families.properties[RequestedQueue::Compute];
+
+        // for present and image aquire select a queue family that has not been selected or supports more than 1 queue
+        for (uint32_t i = 0; i < queueFamilyCount; ++i)
+        {
+            VkBool32 supportsPresent;
+            if (vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, (uint32_t)i, surface, &supportsPresent) == VK_SUCCESS)
+            {
+                // if only one GFX and one compute queue are available try to avoid them
+                if (queueAvailability[i].queueCount > 0)
+                {
+                    families.familyIndices[RequestedQueue::FIPresent]      = i;
+                    families.properties[RequestedQueue::FIPresent]         = queueProps[i];
+                    families.familyIndices[RequestedQueue::FIImageAcquire] = i;
+                    families.properties[RequestedQueue::FIImageAcquire]    = queueProps[i];
+                    break;
+                }
+            }
+        }
+
+        // if we don't have a queue for FIPresent so far, try compute queue family and use GFX as last resort
+        if (families.familyIndices[RequestedQueue::FIPresent] == UINT32_MAX)
+        {
+            VkBool32 supportsPresent;
+            if (vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, (uint32_t)families.familyIndices[RequestedQueue::Compute], surface, &supportsPresent) == VK_SUCCESS)
+            {
+                families.familyIndices[RequestedQueue::FIPresent]      = families.familyIndices[RequestedQueue::Compute];
+                families.properties[RequestedQueue::FIPresent]         = queueProps[families.familyIndices[RequestedQueue::Compute]];
+                families.familyIndices[RequestedQueue::FIImageAcquire] = families.familyIndices[RequestedQueue::Compute];
+                families.properties[RequestedQueue::FIImageAcquire]    = queueProps[families.familyIndices[RequestedQueue::Compute]];
+            }
+            else if (vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, (uint32_t)families.familyIndices[RequestedQueue::Graphics], surface, &supportsPresent) == VK_SUCCESS)
+            {
+                // since RequestedQueue::Graphics supports present we should always at the very least have one now
+                families.familyIndices[RequestedQueue::FIPresent]      = families.familyIndices[RequestedQueue::Graphics];
+                families.properties[RequestedQueue::FIPresent]         = queueProps[families.familyIndices[RequestedQueue::Graphics]];
+                families.familyIndices[RequestedQueue::FIImageAcquire] = families.familyIndices[RequestedQueue::Graphics];
+                families.properties[RequestedQueue::FIImageAcquire]    = queueProps[families.familyIndices[RequestedQueue::Graphics]];
             }
         }
 
         // Get a copy queue that isn't the graphics or compute one if possible
         for (uint32_t i = 0; i < queueFamilyCount; ++i)
         {
-            if ((queueProps[i].queueFlags & VK_QUEUE_TRANSFER_BIT) != 0)
+            if (HAS_QUEUE_FAMILY_FLAG(VK_QUEUE_GRAPHICS_BIT) || HAS_QUEUE_FAMILY_FLAG(VK_QUEUE_COMPUTE_BIT))
+                continue;
+
+            if (HAS_QUEUE_FAMILY_FLAG(VK_QUEUE_TRANSFER_BIT) && (queueAvailability[i].queueCount > 0))
             {
-                if (families.CopyQueueFamilyIndex == UINT32_MAX)
+                if (families.familyIndices[RequestedQueue::Copy] == UINT32_MAX)
                 {
-                    families.CopyQueueFamilyIndex = i;
-                    families.CopyQueueProperties = queueProps[i];
-                }
-                if (i != families.GraphicsQueueFamilyIndex && i != families.ComputeQueueFamilyIndex)
-                {
-                    families.CopyQueueFamilyIndex = i;
-                    families.CopyQueueProperties = queueProps[i];
-                    break;
+                    families.familyIndices[RequestedQueue::Copy] = i;
+                    families.properties[RequestedQueue::Copy]    = queueProps[i];
                 }
             }
         }
-
-        // check which queue family the present queue belongs to
-        if (families.presentQueueType == CommandQueue::Count)
+        // if no dedicated copy queue is available we use any queue that can copy
+        if (families.familyIndices[RequestedQueue::Copy] == UINT32_MAX)
         {
-            if (families.PresentQueueFamilyIndex == families.ComputeQueueFamilyIndex)
-                families.presentQueueType = CommandQueue::Compute;
-            else if (families.PresentQueueFamilyIndex == families.CopyQueueFamilyIndex)
-                families.presentQueueType = CommandQueue::Copy;
+            for (uint32_t i = 0; i < queueFamilyCount; ++i)
+            {
+                if (HAS_QUEUE_FAMILY_FLAG(VK_QUEUE_TRANSFER_BIT))
+                {
+                    if (families.familyIndices[RequestedQueue::Copy] == UINT32_MAX)
+                    {
+                        families.familyIndices[RequestedQueue::Copy] = i;
+                        families.properties[RequestedQueue::Copy]    = queueProps[i];
+                    }
+                }
+            }
         }
-
+/*
         // NOTE: we might want to choose the queue index in a given family to present overlapping queues.
         // for example, if we only have one queue family with graphics, compute and copy, we should take the index 0, 1, 2 from this family for each queue.
         // (providing this family has at least 3 queues)
+
+        // Choose the queue with the following criterias in this order:
+        //   - the queue hasn't been found yet
+        //   - compatible family should has less important capabilities. Capabilities are in the order of importance: Graphics, Compute, Transfer, Video Decode, Video Encode (as of Vulkan 1.3)
+        //   - compatible family should minimize the number of capabilities.
+        //   - the family has more queues
+        //   - importance of capabilities is in their VkQueueFlagBits order. So the lower the queueFlags value is, the more important the capabilities are.
+        auto canChoose = [&queueProps, &families](RequestedQueue requestedQueue, uint32_t tentative) {
+            bool chooseThisQueue = (families.familyIndices[requestedQueue] == UINT32_MAX)                                                              // queue not found yet
+                                   || (GetLowestBit(queueProps[tentative].queueFlags) > GetLowestBit(families.properties[requestedQueue].queueFlags))  // lower importance capabilities
+                                   || (CountBits(queueProps[tentative].queueFlags) < CountBits(families.properties[requestedQueue].queueFlags))        // less capabilities
+                                   || (queueProps[tentative].queueFlags == families.properties[requestedQueue].queueFlags &&
+                                       queueProps[tentative].queueCount > families.properties[requestedQueue].queueCount);                             // if they have the same capabilities, more queues
+
+            if (chooseThisQueue)
+            {
+                families.familyIndices[requestedQueue] = tentative;
+                families.properties[requestedQueue]    = queueProps[tentative];
+            }
+        };
+
+        // TODO: choose better queues
+        for (uint32_t i = 0; i < queueFamilyCount; ++i)
+        {
+            if (queueProps[i].queueCount == 0)
+                continue;
+
+            // check compute & transfer
+            if (HAS_QUEUE_FAMILY_FLAG((VK_QUEUE_COMPUTE_BIT)))  // VK_QUEUE_TRANSFER_BIT is implied
+            {
+                canChoose(RequestedQueue::FIAsyncCompute, i);
+            }
+
+            // Present queue will only do present and some copies. Hence it needs at least one of the following capabilities
+            // VK_QUEUE_GRAPHICS_BIT, VK_QUEUE_COMPUTE_BIT, VK_QUEUE_TRANSFER_BIT
+            if (HAS_QUEUE_FAMILY_FLAG(VK_QUEUE_GRAPHICS_BIT) || HAS_QUEUE_FAMILY_FLAG(VK_QUEUE_COMPUTE_BIT) || HAS_QUEUE_FAMILY_FLAG(VK_QUEUE_TRANSFER_BIT))
+            {
+                VkBool32 supportsPresent;
+                if (vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, (uint32_t)i, surface, &supportsPresent) == VK_SUCCESS)
+                {
+                    if (supportsPresent == VK_TRUE)
+                    {
+                        canChoose(RequestedQueue::FIPresent, i);
+                    }
+                }
+            }
+
+            // image acquire queue doesn't need any capability
+            {
+                canChoose(RequestedQueue::FIImageAcquire, i);
+            }
+        }
+*/
+        CauldronAssert(ASSERT_CRITICAL, families.familyIndices[RequestedQueue::FIAsyncCompute] != UINT32_MAX, L"Couldn't find an async compute queue for frame interpolation");
+        CauldronAssert(ASSERT_CRITICAL, families.familyIndices[RequestedQueue::FIPresent] != UINT32_MAX, L"Couldn't find a present queue for frame interpolation");
+        CauldronAssert(ASSERT_CRITICAL, families.familyIndices[RequestedQueue::FIImageAcquire] != UINT32_MAX, L"Couldn't find an image acquire queue");
 
         return families;
     }
@@ -536,6 +656,7 @@ namespace cauldron
         instanceCreator.TryAddExtension(VK_KHR_SURFACE_EXTENSION_NAME);
         instanceCreator.TryAddExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         instanceCreator.TryAddExtension(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
+        instanceCreator.TryAddExtension(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
         const VkValidationFeatureEnableEXT validationFeaturesRequested[] = {VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
                                                                             VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
@@ -600,7 +721,7 @@ namespace cauldron
         VkWin32SurfaceCreateInfoKHR createInfo = {};
         createInfo.sType                       = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
         createInfo.pNext                       = nullptr;
-        createInfo.hwnd                        = GetFramework()->GetInternal()->GetHWND();
+        createInfo.hwnd                        = GetFramework()->GetImpl()->GetHWND();
         res                                    = vkCreateWin32SurfaceKHR(m_Instance, &createInfo, nullptr, &m_Surface);
 
         // Use device creator to collect the extensions
@@ -612,6 +733,7 @@ namespace cauldron
         deviceCreator.TryAddExtension(VK_EXT_HDR_METADATA_EXTENSION_NAME);
         deviceCreator.TryAddExtension(VK_AMD_DISPLAY_NATIVE_HDR_EXTENSION_NAME);
         deviceCreator.TryAddExtension(VK_EXT_SHADER_SUBGROUP_BALLOT_EXTENSION_NAME);
+        deviceCreator.TryAddExtension(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
 
         // general features
         VkPhysicalDeviceVulkan11Features vulkan11Features = {};
@@ -637,9 +759,8 @@ namespace cauldron
             deviceCreator.AppendNextProperty(&accelerationStructureProperties, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR);
         }
 
-        VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeatures = {};
-        deviceCreator.TryAddExtensionFeature(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME, &bufferDeviceAddressFeatures, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES);
-        
+        // buffer device address is queried from vulkan12Features
+
         bool hasDeferredHostExtension = deviceCreator.TryAddExtension(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
         
         // RT 1.0
@@ -676,7 +797,11 @@ namespace cauldron
         // for SM 6.7
 
         // extra requested features
-        
+
+        // Add support for non-uniform indexing of arrayed buffer resources
+        // VK_EXT_descriptor_indexing was promoted to 1.2, so no need to query the extension
+        // vulkan12Features.shaderStorageBufferArrayNonUniformIndexing is enough
+
         // Add support for more dynamic states
         VkPhysicalDeviceExtendedDynamicStateFeaturesEXT extendedDynamicStateFeatures = {};  // promoted to Vulkan 1.3
         deviceCreator.TryAddExtensionFeature(VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME, &extendedDynamicStateFeatures, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT);
@@ -684,15 +809,32 @@ namespace cauldron
         VkPhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeatures = {};  // promoted to Vulkan 1.3
         deviceCreator.TryAddExtensionFeature(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME, &dynamicRenderingFeatures, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES);
 
+        VkPhysicalDeviceMaintenance4FeaturesKHR maintenance4Features = {};  // promoted to Vulkan 1.3
+        deviceCreator.TryAddExtensionFeature(VK_KHR_MAINTENANCE_4_EXTENSION_NAME, &maintenance4Features, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_FEATURES_KHR);
+
         // VK_KHR_timeline_semaphore was promoted to 1.2, so no need to query the extension
-        // this is needed for timeline semaphore
-        VkPhysicalDeviceTimelineSemaphoreFeaturesKHR semaphoreFeatures = {};
-        deviceCreator.AppendNextFeature(&semaphoreFeatures, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES_KHR);
+        // vulkan12Features.timelineSemaphore is enough
 
         // VK_EXT_descriptor_indexing was promoted to 1.2, so no need to query the extension
-        // this is needed to allow partially bound descriptors
-        VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures = {};
-        deviceCreator.AppendNextFeature(&descriptorIndexingFeatures, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES);
+        // vulkan12Features.descriptorBindingPartiallyBound is enough
+
+        VkPhysicalDeviceCoherentMemoryFeaturesAMD coherentMemoryFeatures = {};
+        deviceCreator.TryAddExtensionFeature(VK_AMD_DEVICE_COHERENT_MEMORY_EXTENSION_NAME, &coherentMemoryFeatures, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COHERENT_MEMORY_FEATURES_AMD);
+
+        VkPhysicalDeviceSynchronization2FeaturesKHR synchronizationFeatures = {};
+        deviceCreator.TryAddExtensionFeature(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME, &synchronizationFeatures, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR); // promoted to Vulkan 1.3
+
+        if (deviceCreator.TryAddExtension(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME)) // promoted to Vulkan 1.1
+        {
+            m_SupportedFeatures |= DeviceFeature::DedicatedAllocs;
+        }
+        CauldronAssert(ASSERT_WARNING, FeatureSupported(DeviceFeature::DedicatedAllocs), L"[VK_KHR_dedicated_allocation] Dedicated allocations requested but unsupported on this device");
+
+        if (deviceCreator.TryAddExtension(VK_AMD_BUFFER_MARKER_EXTENSION_NAME))
+        {
+            m_SupportedFeatures |= DeviceFeature::BufferMarkerAMD;
+        }
+        CauldronAssert(ASSERT_WARNING, FeatureSupported(DeviceFeature::BufferMarkerAMD), L"[VK_AMD_buffer_marker] AMD buffer markers requested but unsupported on this device");
 
         // query all features
         VkPhysicalDeviceFeatures physicalDeviceFeatures = deviceCreator.QueryDeviceFeatures();
@@ -769,10 +911,8 @@ namespace cauldron
         // for SM 6.3
         if (accelerationStructureFeatures.accelerationStructure == VK_TRUE)
             deviceCreator.AppendNextFeature(&accelerationStructureFeatures);
-        if (bufferDeviceAddressFeatures.bufferDeviceAddress == VK_TRUE)
-            deviceCreator.AppendNextFeature(&bufferDeviceAddressFeatures);
 
-        if (rayTracingPipelinesFeatures.rayTracingPipeline == VK_TRUE)
+        if (rayTracingPipelinesFeatures.rayTracingPipeline == VK_TRUE && vulkan12Features.bufferDeviceAddress == VK_TRUE)
         {
             checkList.raytracing_1_0 = true;
 
@@ -890,6 +1030,12 @@ namespace cauldron
         CHECK_FEATURE_SUPPORT(shaderStorageImageWriteWithoutFormat)
         CHECK_FEATURE_SUPPORT_11(storageBuffer16BitAccess)  // for FP16 support
         CHECK_FEATURE_SUPPORT_12(shaderFloat16)             // for FP16 support
+        CHECK_FEATURE_SUPPORT_12(descriptorBindingPartiallyBound)  // partially bound descriptors
+        CHECK_FEATURE_SUPPORT_12(timelineSemaphore)  // timeline semaphore
+        CHECK_FEATURE_SUPPORT_12(shaderStorageBufferArrayNonUniformIndexing)
+
+        if (vulkan12Features.shaderStorageBufferArrayNonUniformIndexing == VK_TRUE)
+            m_SupportedFeatures |= DeviceFeature::ShaderStorageBufferArrayNonUniformIndexing;
 
         // Add all the features for device creation
         VkPhysicalDeviceFeatures2 features = {};
@@ -909,16 +1055,20 @@ namespace cauldron
                        L"[VK_KHR_dynamic_rendering] Dynamic rendering requested but unsupported on this device");
         if (dynamicRenderingFeatures.dynamicRendering == VK_TRUE)
             deviceCreator.AppendNextFeature(&dynamicRenderingFeatures);
-        
-        CauldronAssert(ASSERT_WARNING, semaphoreFeatures.timelineSemaphore == VK_TRUE, L"timelineSemaphore feature requested but unsupported on this device");
-        if (semaphoreFeatures.timelineSemaphore == VK_TRUE)
-            deviceCreator.AppendNextFeature(&semaphoreFeatures);
 
-        CauldronAssert(ASSERT_WARNING,
-                       descriptorIndexingFeatures.descriptorBindingPartiallyBound == VK_TRUE,
-                       L"descriptorBindingPartiallyBound feature requested but unsupported on this device");
-        if (descriptorIndexingFeatures.descriptorBindingPartiallyBound == VK_TRUE)
-            deviceCreator.AppendNextFeature(&descriptorIndexingFeatures);
+        CauldronAssert(ASSERT_CRITICAL,
+                       maintenance4Features.maintenance4 == VK_TRUE,
+                       L"[VK_KHR_maintenance4] Extension requested but unsupported on this device");
+        if (maintenance4Features.maintenance4 == VK_TRUE)
+            deviceCreator.AppendNextFeature(&maintenance4Features);
+
+        if (coherentMemoryFeatures.deviceCoherentMemory == VK_TRUE)
+            m_SupportedFeatures |= DeviceFeature::CoherentMemoryAMD;
+        CauldronAssert(ASSERT_WARNING, coherentMemoryFeatures.deviceCoherentMemory == VK_TRUE, L"[VK_AMD_device_coherent_memory] AMD coherent device memory requested but unsupported on this device");
+
+        if (synchronizationFeatures.synchronization2 == VK_TRUE)
+            m_SupportedFeatures |= DeviceFeature::ExtendedSync;
+        CauldronAssert(ASSERT_WARNING, synchronizationFeatures.synchronization2 == VK_TRUE, L"[VK_KHR_synchronization2] Extended synchronization requested but unsupported on this device");
 
         // Warning for FP16 support
         CauldronAssert(ASSERT_WARNING, !pConfig->FP16 || FeatureSupported(DeviceFeature::FP16), L"FP16 support requested but unsupported on this device.");
@@ -938,44 +1088,90 @@ namespace cauldron
         // Warning for Wave64 support request
         CauldronAssert(ASSERT_WARNING,
                        FeatureSupported(DeviceFeature::WaveSize),
-                       L"[VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME] Wave size control unsupported on this device.");
+                       L"[VK_EXT_subgroup_size_control] Wave size control unsupported on this device.");
 
         // general warning
         if (FeatureSupported(DeviceFeature::RT_1_0) || FeatureSupported(DeviceFeature::RT_1_1))
         {
             CauldronAssert(ASSERT_WARNING,
                            hasDeferredHostExtension && (accelerationStructureFeatures.accelerationStructure == VK_TRUE) &&
-                               (bufferDeviceAddressFeatures.bufferDeviceAddress == VK_TRUE),
-                           L"Device supports VK_KHR_ray_tracing_pipeline or VK_KHR_ray_query extensions but doesn't support VK_KHR_deferred_host_operations, "
-                           L"VK_KHR_acceleration_structure or VK_KHR_buffer_device_address extensions.");
+                               (vulkan12Features.bufferDeviceAddress == VK_TRUE),
+                           L"Device supports VK_KHR_ray_tracing_pipeline or VK_KHR_ray_query extensions but doesn't support VK_KHR_deferred_host_operations extension, "
+                           L"VK_KHR_acceleration_structure extension or buffer device address feature.");
         }
 
         // Get all the queues we need
         m_QueueFamilies = GetQueues(m_PhysicalDevice, m_Surface);
 
-        // Create device
-        constexpr uint32_t c_QueueCount = 3;
-        float graphicsQueuePriority = 1.0f;
-        float computeQueuePriority = 1.0f;
-        float copyQueuePriorities[] = { 0.5f, 0.5f };
-        VkDeviceQueueCreateInfo queueInfos[c_QueueCount] = {};
-        queueInfos[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queueInfos[0].pNext = nullptr;
-        queueInfos[0].queueCount = 1;
-        queueInfos[0].pQueuePriorities = &graphicsQueuePriority;
-        queueInfos[0].queueFamilyIndex = m_QueueFamilies.GraphicsQueueFamilyIndex;
-        queueInfos[1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queueInfos[1].pNext = nullptr;
-        queueInfos[1].queueCount = 1;
-        queueInfos[1].pQueuePriorities = &computeQueuePriority;
-        queueInfos[1].queueFamilyIndex = m_QueueFamilies.ComputeQueueFamilyIndex;
-        queueInfos[2].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queueInfos[2].pNext = nullptr;
-        queueInfos[2].queueCount = 1;
-        queueInfos[2].pQueuePriorities = copyQueuePriorities;
-        queueInfos[2].queueFamilyIndex = m_QueueFamilies.CopyQueueFamilyIndex;
+        float                   queuePriorities[RequestedQueue::Count][RequestedQueue::Count];
+        VkDeviceQueueCreateInfo queueCreateInfos[RequestedQueue::Count];
+        uint32_t                queueCreateInfoCount = 0;
 
-        m_Device = deviceCreator.Create(queueInfos, c_QueueCount);
+        for (uint32_t i = 0; i < RequestedQueue::Count; ++i)
+        {
+            queueCreateInfos[i]                  = {};
+            queueCreateInfos[i].sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+            queueCreateInfos[i].pNext            = nullptr;
+            queueCreateInfos[i].flags            = 0;
+            queueCreateInfos[i].queueFamilyIndex = 0;
+            queueCreateInfos[i].queueCount       = 0;
+            queueCreateInfos[i].pQueuePriorities = queuePriorities[i];
+        }
+
+        // helper
+        auto addQueueToCreateInfo = [this, &queueCreateInfos, &queueCreateInfoCount, &queuePriorities](RequestedQueue requestedQueue, const float priority) {
+            for (uint32_t i = 0; i < RequestedQueue::Count; ++i)
+            {
+                // find the create info of the queue family
+                if (queueCreateInfos[i].queueFamilyIndex == m_QueueFamilies.familyIndices[requestedQueue] && queueCreateInfos[i].queueCount > 0)
+                {
+                    if (queueCreateInfos[i].queueCount < m_QueueFamilies.properties[requestedQueue].queueCount)
+                    {
+                        uint32_t queueIndex            = queueCreateInfos[i].queueCount;
+                        queuePriorities[i][queueIndex] = priority;
+                        ++queueCreateInfos[i].queueCount;
+                        m_QueueFamilies.queueIndices[requestedQueue] = queueIndex;
+                        return;
+                    }
+                    else
+                    {
+                        // check if there's a queue with the same priority
+                        for (uint32_t j = 0; j < queueCreateInfos[i].queueCount; ++j)
+                        {
+                            if (queuePriorities[i][j] == priority)
+                            {
+                                m_QueueFamilies.queueIndices[requestedQueue] = j;
+                                return;
+                            }
+                        }
+                            
+                        // priority cannot be set
+                        CauldronWarning(L"Cannot set the priority for the given queue as it is used elsewhere with another priority.");
+                        m_QueueFamilies.queueIndices[requestedQueue] = queueCreateInfos[i].queueCount - 1;
+                        return;
+                    }
+                }
+            }
+
+            // This queue family wasn't in the create info yet. Create a new entry
+            queueCreateInfos[queueCreateInfoCount].queueCount       = 1;
+            queueCreateInfos[queueCreateInfoCount].queueFamilyIndex = m_QueueFamilies.familyIndices[requestedQueue];
+            queuePriorities[queueCreateInfoCount][0]                = priority;
+            ++queueCreateInfoCount;
+            m_QueueFamilies.queueIndices[requestedQueue] = 0;
+        };
+
+        addQueueToCreateInfo(RequestedQueue::Graphics, 1.0f);
+        addQueueToCreateInfo(RequestedQueue::Compute, 1.0f);
+        addQueueToCreateInfo(RequestedQueue::Copy, 0.5f);
+
+        // For frame interpolation
+        addQueueToCreateInfo(RequestedQueue::FIAsyncCompute, 1.0f);
+        addQueueToCreateInfo(RequestedQueue::FIPresent, 1.0f);
+        addQueueToCreateInfo(RequestedQueue::FIImageAcquire, 0.9f);
+
+        // Create device
+        m_Device = deviceCreator.Create(queueCreateInfos, queueCreateInfoCount);
 
         // create the allocator
         VmaAllocatorCreateInfo allocatorInfo = {};
@@ -1002,35 +1198,88 @@ namespace cauldron
         GET_DEVICE_PROC_ADDR(vkCmdBuildAccelerationStructuresKHR);
         GET_DEVICE_PROC_ADDR(vkGetAccelerationStructureBuildSizesKHR);
 
-
         // Get hdr procedures
         GET_INSTANCE_PROC_ADDR(vkGetPhysicalDeviceSurfaceCapabilities2KHR);
         GET_INSTANCE_PROC_ADDR(vkGetPhysicalDeviceSurfaceFormats2KHR);
         GET_DEVICE_PROC_ADDR(vkSetHdrMetadataEXT);
         GET_INSTANCE_PROC_ADDR(vkGetPhysicalDeviceFragmentShadingRatesKHR);
 
+        // Get required breadcrumbs procedures
+        if (FeatureSupported(DeviceFeature::DedicatedAllocs))
+        {
+            GET_DEVICE_PROC_ADDR(vkGetBufferMemoryRequirements2KHR);
+        }
+        GET_DEVICE_PROC_ADDR(vkGetBufferMemoryRequirements);
+        GET_INSTANCE_PROC_ADDR(vkGetPhysicalDeviceMemoryProperties);
+        GET_DEVICE_PROC_ADDR(vkCreateBuffer);
+        GET_DEVICE_PROC_ADDR(vkAllocateMemory);
+        GET_DEVICE_PROC_ADDR(vkBindBufferMemory);
+        GET_DEVICE_PROC_ADDR(vkMapMemory);
+        GET_DEVICE_PROC_ADDR(vkCmdFillBuffer);
+        if (FeatureSupported(DeviceFeature::BufferMarkerAMD))
+        {
+            GET_DEVICE_PROC_ADDR(vkCmdWriteBufferMarkerAMD);
+            if (FeatureSupported(DeviceFeature::ExtendedSync))
+            {
+                GET_DEVICE_PROC_ADDR(vkCmdWriteBufferMarker2AMD);
+            }
+        }
+        GET_DEVICE_PROC_ADDR(vkUnmapMemory);
+        GET_DEVICE_PROC_ADDR(vkDestroyBuffer);
+        GET_DEVICE_PROC_ADDR(vkFreeMemory);
+
         // set device name
         SetResourceName(VK_OBJECT_TYPE_DEVICE, (uint64_t)m_Device, "CauldronDevice");
 
         // create the queues
-        auto queueBuilder = [this](CommandQueue queueType, uint32_t familyIndex, uint32_t queueIndex, uint32_t numFramesInFlight, const char* name)
+        auto queueBuilder = [this](CommandQueue queueType, RequestedQueue requestedQueue, uint32_t numFramesInFlight, const char* name)
         {
-            m_QueueSyncPrims[static_cast<uint32_t>(queueType)].Init(this, queueType, familyIndex, queueIndex, numFramesInFlight, name);
+            m_QueueSyncPrims[static_cast<uint32_t>(queueType)].Init(
+                this, queueType, m_QueueFamilies.familyIndices[requestedQueue], m_QueueFamilies.queueIndices[requestedQueue], numFramesInFlight, name);
         };
-        queueBuilder(CommandQueue::Graphics,   m_QueueFamilies.GraphicsQueueFamilyIndex, 0, pConfig->BackBufferCount, "CauldronGraphicsQueue"   );
-        queueBuilder(CommandQueue::Compute,    m_QueueFamilies.ComputeQueueFamilyIndex,  0, pConfig->BackBufferCount, "CauldronComputeQueue"    );
-        queueBuilder(CommandQueue::Copy,       m_QueueFamilies.CopyQueueFamilyIndex,     0, pConfig->BackBufferCount, "CauldronCopyQueue"       );
+        queueBuilder(CommandQueue::Graphics, RequestedQueue::Graphics, pConfig->BackBufferCount, "CauldronGraphicsQueue");
+        queueBuilder(CommandQueue::Compute,  RequestedQueue::Compute,  pConfig->BackBufferCount, "CauldronComputeQueue" );
+        queueBuilder(CommandQueue::Copy,     RequestedQueue::Copy,     pConfig->BackBufferCount, "CauldronCopyQueue"    );
 
-        // Special case for the present queue
-        // For now, we don't accept devices where graphics queue and present queue are separate. We don;t want to deal with swapchain queue ownership transfer.
-        CauldronAssert(ASSERT_CRITICAL, m_QueueFamilies.presentQueueType == CommandQueue::Graphics, L"Devices where the present queue isn't the graphics queue aren't supported.");
+        // frame interpolation
+        auto getFIQueue = [this](FIQueue& fiQueue, RequestedQueue requestedQueue, const char* name) {
+            vkGetDeviceQueue(m_Device, m_QueueFamilies.familyIndices[requestedQueue], m_QueueFamilies.queueIndices[requestedQueue], &fiQueue.queue);
+            CauldronAssert(ASSERT_CRITICAL, fiQueue.queue != VK_NULL_HANDLE, L"Couldn't get the frame interpolation queue");
+            SetResourceName(VK_OBJECT_TYPE_QUEUE, (uint64_t)fiQueue.queue, name);
+            fiQueue.family = m_QueueFamilies.familyIndices[requestedQueue];
+            fiQueue.index  = m_QueueFamilies.queueIndices[requestedQueue];
 
+            fiQueue.shared = false;
+            fiQueue.sharedWith = requestedQueue;
+            for (uint32_t i = 0; i < RequestedQueue::Count; ++i)
+            {
+                if (i == requestedQueue)
+                    continue;
+                if (m_QueueFamilies.familyIndices[requestedQueue] == m_QueueFamilies.familyIndices[i] &&
+                    m_QueueFamilies.queueIndices[requestedQueue] == m_QueueFamilies.queueIndices[i])
+                {
+                    fiQueue.shared = true;
+                    if (i < requestedQueue)  // only keeps the lowest requested queue
+                        fiQueue.sharedWith = static_cast<RequestedQueue>(i);
+                    break;
+                }
+            }
+        };
+        getFIQueue(m_FIAsyncComputeQueue, RequestedQueue::FIAsyncCompute, "FrameInterpolationAsyncComputeQueue");
+        getFIQueue(m_FIPresentQueue,      RequestedQueue::FIPresent,      "FrameInterpolationPresentQueue");
+        getFIQueue(m_FIImageAcquireQueue, RequestedQueue::FIImageAcquire, "FrameInterpolationImageAcquireQueue");
 
         m_DeviceName = StringToWString(physicalDeviceProperties.deviceName);
         switch (driverProperties.driverID)
         {
             case VK_DRIVER_ID_AMD_PROPRIETARY:
                 m_DriverVersion = L"Adrenalin ";
+                break;
+            case VK_DRIVER_ID_AMD_OPEN_SOURCE:
+                m_DriverVersion = L"Adrenalin ";
+                break;
+            case VK_DRIVER_ID_MESA_RADV:
+                m_DriverVersion = L"RADV Mesa";
                 break;
             case VK_DRIVER_ID_NVIDIA_PROPRIETARY:
                 m_DriverVersion = L"Nvidia ";
@@ -1058,6 +1307,87 @@ namespace cauldron
         const SamplerDesc defaultSamplerDesc = {};
         VkSamplerCreateInfo info = Convert(defaultSamplerDesc); // value is irrelevant
         vkCreateSampler(m_Device, &info, nullptr, &m_DefaultSampler);
+
+        // Breadcrumbs memory setup
+        {
+            // Get info for memory used as Breadcrumbs buffer
+            VkBufferCreateInfo bufferInfo = {};
+            bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+            bufferInfo.pNext = nullptr;
+            bufferInfo.flags = 0;
+            bufferInfo.size = 256;
+            bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            bufferInfo.queueFamilyIndexCount = 0;
+            bufferInfo.pQueueFamilyIndices = nullptr;
+
+            VkBuffer testBuffer = VK_NULL_HANDLE;
+            res = GetCreateBuffer()(m_Device, &bufferInfo, nullptr, &testBuffer);
+            CauldronAssert(ASSERT_CRITICAL, res == VK_SUCCESS, L"Cannot create test Breadcrumbs buffer to find memory requirements!");
+
+            uint32_t memoryTypeBits = 0;
+            /// Enable usage of dedicated memory for Breadcrumbs buffers only when is required by the implementation
+            if (FeatureSupported(DeviceFeature::DedicatedAllocs))
+            {
+                // Decide whether use dedicated memory or not
+                VkBufferMemoryRequirementsInfo2 bufferReq = {};
+                bufferReq.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2;
+                bufferReq.pNext = nullptr;
+                bufferReq.buffer = testBuffer;
+
+                VkMemoryDedicatedRequirements dedicatedMemoryReq = {};
+                dedicatedMemoryReq.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS;
+                dedicatedMemoryReq.pNext = nullptr;
+                dedicatedMemoryReq.requiresDedicatedAllocation = VK_FALSE;
+
+                VkMemoryRequirements2 memoryReq2 = {};
+                memoryReq2.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
+                memoryReq2.pNext = &dedicatedMemoryReq;
+
+                m_vkGetBufferMemoryRequirements2KHR(m_Device, &bufferReq, &memoryReq2);
+                if (dedicatedMemoryReq.requiresDedicatedAllocation)
+                    m_UseBreadcrumbsDedicatedAlloc = true;
+                memoryTypeBits = memoryReq2.memoryRequirements.memoryTypeBits;
+            }
+            else
+            {
+                VkMemoryRequirements memoryReq = {};
+                m_vkGetBufferMemoryRequirements(m_Device, testBuffer, &memoryReq);
+                memoryTypeBits = memoryReq.memoryTypeBits;
+            }
+            m_vkDestroyBuffer(m_Device, testBuffer, nullptr);
+
+            // Find proper memory index for created buffers
+            VkPhysicalDeviceMemoryProperties memoryProps = {};
+            m_vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &memoryProps);
+
+            const VkMemoryPropertyFlags requiredMemoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+            VkMemoryPropertyFlags preferredFlags = VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
+            // When choosing between HOST_CACHED and AMD specific memory, AMD will take precedence as better guarantee of visible writes
+            if (FeatureSupported(DeviceFeature::CoherentMemoryAMD))
+                preferredFlags |= VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD | VK_MEMORY_PROPERTY_DEVICE_UNCACHED_BIT_AMD;
+
+            uint32_t memoryCost = UINT32_MAX;
+            for (uint32_t i = 0, memoryBit = 1; i < memoryProps.memoryTypeCount; ++i, memoryBit <<= 1)
+            {
+                if (memoryTypeBits & memoryBit)
+                {
+                    const VkMemoryPropertyFlags memFlags = memoryProps.memoryTypes[i].propertyFlags;
+                    if ((memFlags & requiredMemoryFlags) == requiredMemoryFlags)
+                    {
+                        const uint32_t cost = CountBitsSet(preferredFlags & ~memFlags);
+                        if (cost < memoryCost)
+                        {
+                            m_BreadcrumbsMemoryIndex = i;
+                            if (cost == 0)
+                                break;
+                            memoryCost = cost;
+                        }
+                    }
+                }
+            }
+            CauldronAssert(ASSERT_CRITICAL, m_BreadcrumbsMemoryIndex != UINT32_MAX, L"No memory that satisfies requirements requested by Breadcrumbs buffer type!");
+        }
     }
 
     DeviceInternal::~DeviceInternal()
@@ -1066,6 +1396,9 @@ namespace cauldron
 
         // destroy default objects
         vkDestroySampler(m_Device, m_DefaultSampler, nullptr);
+        
+        delete m_pDepthToColorCopyBuffer;
+        m_pDepthToColorCopyBuffer = nullptr;
 
         // Release all the queues
         for (int i = 0; i < static_cast<uint32_t>(CommandQueue::Count); ++i)
@@ -1195,17 +1528,18 @@ namespace cauldron
 
     void DeviceInternal::CreateSwapChain(SwapChain*& pSwapChain, const SwapChainCreationParams& params, CommandQueue queueType)
     {
-        CauldronAssert(ASSERT_CRITICAL, m_QueueFamilies.presentQueueType == CommandQueue::Graphics, L"Devices where the present queue isn't the graphics queue aren't supported.");
-        VkResult res = vkCreateSwapchainKHR(m_Device, &params.swapchainCreateInfo, nullptr, pSwapChain->GetImpl()->VKSwapChainPtr());
+        VkResult res = CreateSwapchainKHR(&params.swapchainCreateInfo, nullptr, pSwapChain->GetImpl()->VKSwapChainPtr());
+        if (res != VK_SUCCESS && m_DeviceRemovedCallback)
+            m_DeviceRemovedCallback(m_DeviceRemovedCustomData);
         CauldronAssert(ASSERT_CRITICAL, res == VK_SUCCESS, L"Unable to create swapchain");
     }
 
     // For swapchain present and signaling (for synchronization)
     uint64_t DeviceInternal::PresentSwapChain(SwapChain* pSwapChain)
     {
-        CauldronAssert(ASSERT_CRITICAL, m_QueueFamilies.presentQueueType == CommandQueue::Graphics, L"Devices where the present queue isn't the graphics queue aren't supported.");
         uint32_t imageIndex = static_cast<uint32_t>(pSwapChain->GetBackBufferIndex());
-        return m_QueueSyncPrims[static_cast<uint32_t>(m_QueueFamilies.presentQueueType)].Present(pSwapChain->GetImpl()->VKSwapChain(), imageIndex);
+        return m_QueueSyncPrims[static_cast<uint32_t>(CommandQueue::Graphics)].Present(
+            this, pSwapChain->GetImpl()->VKSwapChain(), imageIndex, m_DeviceRemovedCallback, m_DeviceRemovedCustomData);
     }
 
     void DeviceInternal::WaitOnQueue(uint64_t waitValue, CommandQueue queueType) const
@@ -1213,20 +1547,32 @@ namespace cauldron
         m_QueueSyncPrims[static_cast<uint32_t>(queueType)].Wait(m_Device, waitValue);
     }
 
-    uint64_t DeviceInternal::ExecuteCommandLists(std::vector<CommandList*>& cmdLists, CommandQueue queueType, bool isLastSubmissionOfFrame)
+    uint64_t DeviceInternal::QueryLastCompletedValue(CommandQueue queueType)
     {
-        return m_QueueSyncPrims[static_cast<uint32_t>(queueType)].Submit(cmdLists, VK_NULL_HANDLE, VK_NULL_HANDLE, isLastSubmissionOfFrame);
+        return m_QueueSyncPrims[static_cast<uint32_t>(queueType)].QueryLastCompletedValue(m_Device);
+    }
+
+    uint64_t DeviceInternal::SignalQueue(CommandQueue queueType)
+    {
+        std::vector<CommandList*> cmdLists;
+        return m_QueueSyncPrims[static_cast<uint32_t>(queueType)].Submit(cmdLists, VK_NULL_HANDLE, VK_NULL_HANDLE, false, false, m_DeviceRemovedCallback, m_DeviceRemovedCustomData);
+    }
+
+    uint64_t DeviceInternal::ExecuteCommandLists(std::vector<CommandList*>& cmdLists, CommandQueue queueType, bool isFirstSubmissionOfFrame, bool isLastSubmissionOfFrame)
+    {
+        return m_QueueSyncPrims[static_cast<uint32_t>(queueType)].Submit(
+            cmdLists, VK_NULL_HANDLE, VK_NULL_HANDLE, isFirstSubmissionOfFrame, isLastSubmissionOfFrame, m_DeviceRemovedCallback, m_DeviceRemovedCustomData);
     }
 
     uint64_t DeviceInternal::ExecuteCommandLists(std::vector<CommandList*>& cmdLists, CommandQueue queueType, VkSemaphore waitSemaphore)
     {
-        return m_QueueSyncPrims[static_cast<uint32_t>(queueType)].Submit(cmdLists, VK_NULL_HANDLE, waitSemaphore, false);
+        return m_QueueSyncPrims[static_cast<uint32_t>(queueType)].Submit(cmdLists, VK_NULL_HANDLE, waitSemaphore, false, false, m_DeviceRemovedCallback, m_DeviceRemovedCustomData);
     }
 
     VkSemaphore DeviceInternal::ExecuteCommandListsWithSignalSemaphore(std::vector<CommandList*>& cmdLists, CommandQueue queueType)
     {
         VkSemaphore signalSemaphore = m_QueueSyncPrims[static_cast<uint32_t>(queueType)].GetOwnershipTransferSemaphore();
-        m_QueueSyncPrims[static_cast<uint32_t>(queueType)].Submit(cmdLists, signalSemaphore, VK_NULL_HANDLE, false);
+        m_QueueSyncPrims[static_cast<uint32_t>(queueType)].Submit(cmdLists, signalSemaphore, VK_NULL_HANDLE, false, false, m_DeviceRemovedCallback, m_DeviceRemovedCustomData);
         return signalSemaphore;
     }
 
@@ -1241,6 +1587,11 @@ namespace cauldron
         uint64_t waitValue = ExecuteCommandLists(cmdLists, queueType, waitSemaphore);
         m_QueueSyncPrims[static_cast<uint32_t>(queueType)].Wait(m_Device, waitValue);
         m_QueueSyncPrims[static_cast<uint32_t>(waitQueueType)].ReleaseOwnershipTransferSemaphore(waitSemaphore);
+    }
+
+    uint64_t DeviceInternal::GetLatestSemaphoreValue(CommandQueue queueType)
+    {
+        return m_QueueSyncPrims[static_cast<uint32_t>(queueType)].GetLatestSemaphoreValue();
     }
 
     void DeviceInternal::ExecuteResourceTransitionImmediate(uint32_t barrierCount, const Barrier* pBarriers)
@@ -1339,6 +1690,22 @@ namespace cauldron
         }
     }
 
+    BufferAddressInfo DeviceInternal::GetDepthToColorCopyBuffer(VkDeviceSize size)
+    {
+        if (m_pDepthToColorCopyBuffer != nullptr && m_pDepthToColorCopyBuffer->GetAddressInfo().GetImpl()->SizeInBytes < size)
+        {
+            delete m_pDepthToColorCopyBuffer;
+            m_pDepthToColorCopyBuffer = nullptr;
+        }
+        if (m_pDepthToColorCopyBuffer == nullptr)
+        {
+            BufferDesc desc =
+                BufferDesc::Data(L"DepthToColorCopyBuffer", static_cast<uint32_t>(size), 0);
+            m_pDepthToColorCopyBuffer = Buffer::CreateBufferResource(&desc, cauldron::ResourceState::CopyDest);
+        }
+        return m_pDepthToColorCopyBuffer->GetAddressInfo();
+    }
+
     void DeviceInternal::QueueSyncPrimitive::Init(Device* pDevice, CommandQueue queueType, uint32_t queueFamilyIndex, uint32_t queueIndex, uint32_t numFramesInFlight, const char* name)
     {
         DeviceInternal* pDeviceInternal = static_cast<DeviceInternal*>(pDevice);
@@ -1388,11 +1755,17 @@ namespace cauldron
 
         vkDestroySemaphore(device, m_Semaphore, nullptr);
 
-        for (size_t i = 0; i < m_FrameSemaphores.size(); ++i)
-        {
-            vkDestroySemaphore(device, m_FrameSemaphores[i], nullptr);
-        }
-        m_FrameSemaphores.clear();
+        auto destroySemaphores = [device](std::vector<VkSemaphore>& semaphores) {
+            for (size_t i = 0; i < semaphores.size(); ++i)
+            {
+                vkDestroySemaphore(device, semaphores[i], nullptr);
+            }
+            semaphores.clear();
+        };
+
+        destroySemaphores(m_FrameSemaphores);
+        destroySemaphores(m_AvailableOwnershipTransferSemaphores);
+        destroySemaphores(m_UsedOwnershipTransferSemaphores);
     }
 
     VkCommandPool DeviceInternal::QueueSyncPrimitive::GetCommandPool()
@@ -1405,7 +1778,7 @@ namespace cauldron
         if (m_AvailableCommandPools.PopFront(pool))
         {
             // reset the pool before using it
-            vkResetCommandPool(pDevice->VKDevice(), pool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
+            vkResetCommandPool(pDevice->VKDevice(), pool, 0);
 
             return pool;
         }
@@ -1415,7 +1788,7 @@ namespace cauldron
             VkCommandPoolCreateInfo poolInfo{};
             poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
             poolInfo.pNext = nullptr;
-            poolInfo.flags = 0; // VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+            poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
             poolInfo.queueFamilyIndex = m_FamilyIndex;
 
             VkCommandPool commandPool;
@@ -1432,9 +1805,42 @@ namespace cauldron
         m_AvailableCommandPools.PushBack(commandPool);
     }
 
-    uint64_t DeviceInternal::QueueSyncPrimitive::Submit(const std::vector<CommandList*>& cmdLists, const VkSemaphore signalSemaphore, const VkSemaphore waitSemaphore, bool useEndOfFrameSemaphore)
+    
+    template <uint32_t CAPACITY>
+    struct SemaphoreQueue
     {
-        std::lock_guard<std::mutex> lock(m_SubmitMutex);
+        void add(VkSemaphore semaphore, uint64_t value = 0, VkPipelineStageFlags stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT)
+        {
+            if (semaphore != VK_NULL_HANDLE)
+            {
+                if (count < CAPACITY)
+                {
+                    semaphores[count] = semaphore;
+                    values[count]     = value;
+                    stages[count]     = stage;
+                    ++count;
+                }
+                else
+                {
+                    CauldronCritical(L"Increase CAPACITY of SemaphoreQueue");
+                }
+            }
+        }
+
+        void reset()
+        {
+            count = 0;
+        }
+
+        VkSemaphore          semaphores[CAPACITY];
+        uint64_t             values[CAPACITY];
+        VkPipelineStageFlags stages[CAPACITY];
+        uint32_t             count = 0;
+    };
+
+    uint64_t DeviceInternal::QueueSyncPrimitive::Submit(const std::vector<CommandList*>& cmdLists, const VkSemaphore signalSemaphore, const VkSemaphore waitSemaphore, bool waitForSwapchainImage, bool useEndOfFrameSemaphore, DeviceRemovedCallback deviceRemovedCallback, void* deviceRemovedCustomData)
+    {
+        std::lock_guard<std::recursive_mutex> lock(m_SubmitMutex);
 
         std::vector<VkCommandBuffer> commandBuffers;
         commandBuffers.reserve(cmdLists.size());
@@ -1443,51 +1849,67 @@ namespace cauldron
             CauldronAssert(ASSERT_CRITICAL, m_QueueType == list->GetQueueType(), L"Command list is submitted on the wrong queue.");
             commandBuffers.push_back(list->GetImpl()->VKCmdBuffer());
         }
+        
+        SemaphoreQueue<2> waitSemaphores;
+        SemaphoreQueue<3> signalSemaphores;
 
-        VkPipelineStageFlags waitStageFlags[] = {VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT};
-        VkSemaphore waitSemaphores[] = { m_Semaphore, waitSemaphore };
-
-        uint32_t signalSemaphoreCount = 0;
-        VkSemaphore signalSemaphores[3];
-        signalSemaphores[signalSemaphoreCount++] = m_Semaphore;
-        if (signalSemaphore != VK_NULL_HANDLE)
-            signalSemaphores[signalSemaphoreCount++] = signalSemaphore;
-        if (useEndOfFrameSemaphore)
-            signalSemaphores[signalSemaphoreCount++] = m_FrameSemaphores[GetSwapChain()->GetBackBufferIndex()];
-
-        VkSubmitInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        info.pNext = nullptr;
-        info.waitSemaphoreCount = (waitSemaphore == VK_NULL_HANDLE) ? 1 : 2;
-        info.pWaitSemaphores = waitSemaphores;
-        info.pWaitDstStageMask = waitStageFlags;
-        info.pCommandBuffers = commandBuffers.data();
-        info.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
-        info.signalSemaphoreCount = signalSemaphoreCount;
-        info.pSignalSemaphores = signalSemaphores;
-
-        uint64_t semaphoreWaitValues[] = { m_LatestSemaphoreValue, 0 };
+        // add the semaphore waiting on the swapchain image availability
+        if (waitForSwapchainImage)
+            waitSemaphores.add(GetFramework()->GetSwapChain()->GetImpl()->GetImageAvailableSemaphore());
+        // wait on the provided semaphore
+        if (waitSemaphore != VK_NULL_HANDLE)
+            waitSemaphores.add(waitSemaphore);
+        
         ++m_LatestSemaphoreValue;
 
-        // the second value is useless
-        uint64_t semaphoreSignalValues[] = { m_LatestSemaphoreValue, 0, 0 };
+        // need to signal all the semaphores
+        signalSemaphores.add(m_Semaphore, m_LatestSemaphoreValue);
+        signalSemaphores.add(signalSemaphore);
+        if (useEndOfFrameSemaphore)
+            signalSemaphores.add(m_FrameSemaphores[GetSwapChain()->GetBackBufferIndex()]);
+
+        VkSubmitInfo info         = {};
+        info.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        info.pNext                = nullptr;
+        info.waitSemaphoreCount   = waitSemaphores.count;
+        info.pWaitSemaphores      = waitSemaphores.semaphores;
+        info.pWaitDstStageMask    = waitSemaphores.stages;
+        info.pCommandBuffers      = commandBuffers.data();
+        info.commandBufferCount   = static_cast<uint32_t>(commandBuffers.size());
+        info.signalSemaphoreCount = signalSemaphores.count;
+        info.pSignalSemaphores    = signalSemaphores.semaphores;
 
         VkTimelineSemaphoreSubmitInfo semaphoreSubmitInfo = {};
-        semaphoreSubmitInfo.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
-        semaphoreSubmitInfo.pNext = nullptr;
-        semaphoreSubmitInfo.waitSemaphoreValueCount = info.waitSemaphoreCount;
-        semaphoreSubmitInfo.pWaitSemaphoreValues = semaphoreWaitValues;
-        semaphoreSubmitInfo.signalSemaphoreValueCount = info.signalSemaphoreCount;
-        semaphoreSubmitInfo.pSignalSemaphoreValues = semaphoreSignalValues;
+        semaphoreSubmitInfo.sType                         = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
+        semaphoreSubmitInfo.pNext                         = nullptr;
+        semaphoreSubmitInfo.waitSemaphoreValueCount       = waitSemaphores.count;
+        semaphoreSubmitInfo.pWaitSemaphoreValues          = waitSemaphores.values;
+        semaphoreSubmitInfo.signalSemaphoreValueCount     = signalSemaphores.count;
+        semaphoreSubmitInfo.pSignalSemaphoreValues        = signalSemaphores.values;
 
         info.pNext = &semaphoreSubmitInfo;
 
-        vkQueueSubmit(m_Queue, 1, &info, VK_NULL_HANDLE);
+        VkResult res = vkQueueSubmit(m_Queue, 1, &info, VK_NULL_HANDLE);
+        if (res == VK_ERROR_DEVICE_LOST && deviceRemovedCallback)
+        {
+            deviceRemovedCallback(deviceRemovedCustomData);
+        }
 
         return m_LatestSemaphoreValue;
     }
 
-    uint64_t DeviceInternal::QueueSyncPrimitive::Present(VkSwapchainKHR swapchain, uint32_t imageIndex) // only valid on the present queue
+    VkResult DeviceInternal::QueueSyncPrimitive::SubmitPassthrough(uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence, DeviceRemovedCallback deviceRemovedCallback, void* deviceRemovedCustomData)
+    {
+        std::lock_guard<std::recursive_mutex> lock(m_SubmitMutex);
+        VkResult res = vkQueueSubmit(m_Queue, submitCount, pSubmits, fence);
+        if (res == VK_ERROR_DEVICE_LOST && deviceRemovedCallback) 
+        {
+            deviceRemovedCallback(deviceRemovedCustomData);
+        }
+        return res;
+    }
+
+    uint64_t DeviceInternal::QueueSyncPrimitive::Present(const DeviceInternal* pDevice, VkSwapchainKHR swapchain, uint32_t imageIndex, DeviceRemovedCallback deviceRemovedCallback, void* deviceRemovedCustomData) // only valid on the present queue
     {
         VkPresentInfoKHR presentInfo = {};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -1499,10 +1921,17 @@ namespace cauldron
         presentInfo.pImageIndices = &imageIndex;
         presentInfo.pResults = nullptr; // Optional
 
-        std::lock_guard<std::mutex> lock(m_SubmitMutex);
+        std::lock_guard<std::recursive_mutex> lock(m_SubmitMutex);
 
-        VkResult res = vkQueuePresentKHR(m_Queue, &presentInfo);
-        CauldronAssert(ASSERT_ERROR, res == VK_SUCCESS, L"Failed to present");
+        VkResult res = pDevice->QueuePresentKHR(m_Queue, &presentInfo);
+        if (res != VK_SUCCESS && deviceRemovedCallback)
+        {
+            deviceRemovedCallback(deviceRemovedCustomData);
+        }
+            
+        // VK_SUBOPTIMAL_KHR can be sent on success
+        // is VK_ERROR_OUT_OF_DATE_KHR acceptable?
+        CauldronAssert(ASSERT_ERROR, res == VK_SUCCESS || res == VK_SUBOPTIMAL_KHR, L"Failed to present");
 
         return m_LatestSemaphoreValue;
     }
@@ -1520,15 +1949,22 @@ namespace cauldron
         CauldronAssert(ASSERT_WARNING, res == VK_SUCCESS, L"Failed to wait on the queue semaphore.");
     }
 
+    uint64_t DeviceInternal::QueueSyncPrimitive::QueryLastCompletedValue(VkDevice device) const
+    {
+        uint64_t value = 0;
+        vkGetSemaphoreCounterValue(device, m_Semaphore, &value);
+        return value;
+    }
+
     void DeviceInternal::QueueSyncPrimitive::Flush()
     {
-        std::lock_guard<std::mutex> lock(m_SubmitMutex);
+        std::lock_guard<std::recursive_mutex> lock(m_SubmitMutex);
         vkQueueWaitIdle(m_Queue);
     }
 
     VkSemaphore DeviceInternal::QueueSyncPrimitive::GetOwnershipTransferSemaphore()
     {
-        std::lock_guard<std::mutex> lock(m_SubmitMutex);
+        std::lock_guard<std::recursive_mutex> lock(m_SubmitMutex);
 
         DeviceInternal* pDevice = GetDevice()->GetImpl();
 
@@ -1558,7 +1994,7 @@ namespace cauldron
 
     void DeviceInternal::QueueSyncPrimitive::ReleaseOwnershipTransferSemaphore(VkSemaphore semaphore)
     {
-        std::lock_guard<std::mutex> lock(m_SubmitMutex);
+        std::lock_guard<std::recursive_mutex> lock(m_SubmitMutex);
 
         for (auto it = m_UsedOwnershipTransferSemaphores.begin(); it != m_UsedOwnershipTransferSemaphores.end(); ++it)
         {
@@ -1571,6 +2007,139 @@ namespace cauldron
         }
 
         CauldronCritical(L"Queue ownership transfer semaphore to release wasn't found.");
+    }
+
+    void DeviceInternal::SetSwapchainMethodsAndContext(PFN_vkCreateSwapchainFFX           createSwapchainFFX,
+                                                       PFN_vkDestroySwapchainKHR          destroySwapchainKHR,
+                                                       PFN_vkGetSwapchainImagesKHR        getSwapchainImagesKHR,
+                                                       PFN_vkAcquireNextImageKHR          acquireNextImageKHR,
+                                                       PFN_vkQueuePresentKHR              queuePresentKHR,
+                                                       PFN_vkSetHdrMetadataEXT            setHdrMetadataEXT,
+                                                       PFN_vkCreateSwapchainFFXAPI        createSwapchainFFXAPI,
+                                                       PFN_vkDestroySwapchainFFXAPI       destroySwapchainFFXAPI,
+                                                       PFN_getLastPresentCountFFX         getLastPresentCountFFX,
+                                                       PFN_getLastPresentCountFFXAPI      getLastPresentCountFFXAPI,
+                                                       void*                              pSwapchainContext,
+                                                       const VkFrameInterpolationInfoFFX* pFrameInterpolationInfo)
+    {
+        m_vkCreateSwapchainFFX     = createSwapchainFFX;
+        m_vkDestroySwapchainKHR    = destroySwapchainKHR;
+        m_vkCreateSwapchainFFXAPI  = createSwapchainFFXAPI;
+        m_vkDestroySwapchainFFXAPI = destroySwapchainFFXAPI;
+        m_vkGetSwapchainImagesKHR  = getSwapchainImagesKHR;
+        m_vkAcquireNextImageKHR    = acquireNextImageKHR;
+        m_vkQueuePresentKHR        = queuePresentKHR;
+        
+        if (setHdrMetadataEXT == nullptr)
+            GET_DEVICE_PROC_ADDR(vkSetHdrMetadataEXT);
+        else
+            m_vkSetHdrMetadataEXT = setHdrMetadataEXT;
+
+        m_getLastPresentCountFFX = getLastPresentCountFFX;
+        m_getLastPresentCountFFXAPI = getLastPresentCountFFXAPI;
+
+        m_pSwapchainContext = pSwapchainContext;
+
+        if (pFrameInterpolationInfo == nullptr)
+            m_FrameInterpolationInfo = {};
+        else
+            m_FrameInterpolationInfo = *pFrameInterpolationInfo;
+    }
+
+    VkResult DeviceInternal::CreateSwapchainKHR(const VkSwapchainCreateInfoKHR* pCreateInfo,
+                                                const VkAllocationCallbacks*    pAllocator,
+                                                VkSwapchainKHR*                 pSwapchain) const
+    {
+        if (m_vkCreateSwapchainFFXAPI != nullptr)
+            return m_vkCreateSwapchainFFXAPI(m_Device, pCreateInfo, pAllocator, pSwapchain, m_pSwapchainContext);
+        else if (m_vkCreateSwapchainFFX != nullptr)
+            return m_vkCreateSwapchainFFX(m_Device, pCreateInfo, pAllocator, pSwapchain, &m_FrameInterpolationInfo);
+        return vkCreateSwapchainKHR(m_Device, pCreateInfo, pAllocator, pSwapchain);
+    }
+    void DeviceInternal::DestroySwapchainKHR(VkSwapchainKHR swapchain, const VkAllocationCallbacks* pAllocator) const
+    {
+        if (m_vkDestroySwapchainFFXAPI != nullptr)
+            m_vkDestroySwapchainFFXAPI(m_Device, swapchain, pAllocator, m_pSwapchainContext);
+        else if (m_vkDestroySwapchainKHR != nullptr)
+            m_vkDestroySwapchainKHR(m_Device, swapchain, pAllocator);
+        else
+            vkDestroySwapchainKHR(m_Device, swapchain, pAllocator);
+        
+    }
+    VkResult DeviceInternal::GetSwapchainImagesKHR(VkSwapchainKHR swapchain, uint32_t* pSwapchainImageCount, VkImage* pSwapchainImages) const
+    {
+        if (m_vkGetSwapchainImagesKHR != nullptr)
+            return m_vkGetSwapchainImagesKHR(m_Device, swapchain, pSwapchainImageCount, pSwapchainImages);
+        return vkGetSwapchainImagesKHR(m_Device, swapchain, pSwapchainImageCount, pSwapchainImages);
+    }
+    VkResult DeviceInternal::AcquireNextImageKHR(VkSwapchainKHR swapchain, uint64_t timeout, VkSemaphore semaphore, VkFence fence, uint32_t* pImageIndex) const
+    {
+        if (m_vkAcquireNextImageKHR != nullptr)
+            return m_vkAcquireNextImageKHR(m_Device, swapchain, timeout, semaphore, fence, pImageIndex);
+        return vkAcquireNextImageKHR(m_Device, swapchain, timeout, semaphore, fence, pImageIndex);
+    }
+    VkResult DeviceInternal::QueuePresentKHR(VkQueue queue, const VkPresentInfoKHR* pPresentInfo) const
+    {
+        if (m_vkQueuePresentKHR != nullptr)
+            return m_vkQueuePresentKHR(queue, pPresentInfo);
+        return vkQueuePresentKHR(queue, pPresentInfo);
+    }
+    uint64_t DeviceInternal::GetLastPresentCountFFX(VkSwapchainKHR swapchain)
+    {
+        if (m_getLastPresentCountFFXAPI != nullptr)
+            return m_getLastPresentCountFFXAPI(swapchain);
+        if (m_getLastPresentCountFFX != nullptr)
+            return m_getLastPresentCountFFX(swapchain);
+        return 0;
+    }
+
+    VkResult DeviceInternal::SubmitPassthrough(RequestedQueue queue, uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence)
+    {
+        RequestedQueue realRequestedQueue = queue;
+        switch (queue)
+        {
+        case RequestedQueue::Graphics:
+        case RequestedQueue::Compute:
+        case RequestedQueue::Copy:
+            break;
+
+        case RequestedQueue::FIPresent:
+            realRequestedQueue = m_FIPresentQueue.sharedWith;
+            break;
+        case RequestedQueue::FIAsyncCompute:
+            realRequestedQueue = m_FIAsyncComputeQueue.sharedWith;
+            break;
+        case RequestedQueue::FIImageAcquire:
+            realRequestedQueue = m_FIImageAcquireQueue.sharedWith;
+            break;
+        default:
+            return VK_INCOMPLETE;
+        }
+
+        switch (realRequestedQueue)
+        {
+        case RequestedQueue::Graphics:
+            return m_QueueSyncPrims[static_cast<int32_t>(CommandQueue::Graphics)].SubmitPassthrough(submitCount, pSubmits, fence, m_DeviceRemovedCallback, m_DeviceRemovedCustomData);
+        case RequestedQueue::Compute:
+            return m_QueueSyncPrims[static_cast<int32_t>(CommandQueue::Compute)].SubmitPassthrough(submitCount, pSubmits, fence, m_DeviceRemovedCallback, m_DeviceRemovedCustomData);
+        case RequestedQueue::Copy:
+            return m_QueueSyncPrims[static_cast<int32_t>(CommandQueue::Copy)].SubmitPassthrough(submitCount, pSubmits, fence, m_DeviceRemovedCallback, m_DeviceRemovedCustomData);
+
+        case RequestedQueue::FIPresent:
+            return m_FIPresentQueue.SubmitPassthrough(submitCount, pSubmits, fence);
+        case RequestedQueue::FIAsyncCompute:
+            return m_FIAsyncComputeQueue.SubmitPassthrough(submitCount, pSubmits, fence);
+        case RequestedQueue::FIImageAcquire:
+            return m_FIImageAcquireQueue.SubmitPassthrough(submitCount, pSubmits, fence);
+        default:
+            return VK_INCOMPLETE;
+        }
+    }
+
+    VkResult FIQueue::SubmitPassthrough(uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence)
+    {
+        std::lock_guard<std::mutex> lock(submitMutex);
+        return vkQueueSubmit(queue, submitCount, pSubmits, fence);
     }
 
 } // namespace cauldron

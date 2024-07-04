@@ -1,17 +1,20 @@
-// AMD Cauldron code
+// This file is part of the FidelityFX SDK.
 //
-// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sub-license, and / or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -28,6 +31,12 @@
 #include "render/rootsignature.h"
 #include "render/color_conversion.h"
 #include "render/swapchain.h"
+#include "render/dynamicresourcepool.h"
+
+#define FFX_CPU
+#include <FidelityFX/host/ffx_spd.h>
+#include <FidelityFX/gpu/ffx_core.h>
+#include <FidelityFX/gpu/spd/ffx_spd.h>
 
 using namespace cauldron;
 
@@ -48,55 +57,132 @@ ToneMappingRenderModule::ToneMappingRenderModule(const wchar_t* pName) :
 
 void ToneMappingRenderModule::Init(const json& InitData)
 {
-    // root signature
-    RootSignatureDesc signatureDesc;
-    signatureDesc.AddConstantBufferView(0, ShaderBindStage::Compute, 1);
-    signatureDesc.AddTextureSRVSet(0, ShaderBindStage::Compute, 1);
-    signatureDesc.AddTextureUAVSet(0, ShaderBindStage::Compute, 1);
-
-    m_pRootSignature = RootSignature::CreateRootSignature(L"ToneMappingRenderPass_RootSignature", signatureDesc);
-
+    // Get the proper pre-tone map color target
+    m_pRenderTargetIn = GetFramework()->GetRenderTexture(L"HDR11Color");
+    CauldronAssert(ASSERT_CRITICAL, m_pRenderTargetIn != nullptr, L"Couldn't find the render target for the tone mapper input");
+    
     // Get the proper post tone map color target
-    m_pRenderTarget = GetFramework()->GetRenderTexture(L"HDR11Color");
-    CauldronAssert(ASSERT_CRITICAL, m_pRenderTarget != nullptr, L"Couldn't find the render target for the tone mapper");
+    m_pRenderTargetOut = GetFramework()->GetRenderTexture(L"SwapChainProxy");
+    CauldronAssert(ASSERT_CRITICAL, m_pRenderTargetOut != nullptr, L"Couldn't find the render target for the tone mapper output");
 
-    // Get the input texture (these are the same now)
-    m_pTexture = m_pRenderTarget;
+    TextureDesc desc = TextureDesc::Tex2D(L"AutomaticExposureSpdAtomicCounter", ResourceFormat::R32_UINT, 1, 1, 1, 1, ResourceFlags::AllowUnorderedAccess);
+    m_pAutomaticExposureSpdAtomicCounter = GetDynamicResourcePool()->CreateRenderTexture(&desc);
+
+    desc = TextureDesc::Tex2D(L"AutomaticExposureMipsShadingChange", ResourceFormat::R16_FLOAT, 80, 45, 1, 1, ResourceFlags::AllowUnorderedAccess);
+    m_pAutomaticExposureMipsShadingChange = GetDynamicResourcePool()->CreateRenderTexture(&desc);
+
+    desc = TextureDesc::Tex2D(L"AutomaticExposureMips5", ResourceFormat::R16_FLOAT, 40, 22, 1, 1, ResourceFlags::AllowUnorderedAccess);
+    m_pAutomaticExposureMips5 = GetDynamicResourcePool()->CreateRenderTexture(&desc);
+
+    desc = TextureDesc::Tex2D(L"AutomaticExposureValue", ResourceFormat::RG32_FLOAT, 1, 1, 1, 1, ResourceFlags::AllowUnorderedAccess);
+    m_pAutomaticExposureValue = GetDynamicResourcePool()->CreateRenderTexture(&desc);
+
+    // Init auto exposure calculation
+    // root signature
+    // Auto exposure
+    uint32_t workGroupOffset[2];
+    uint32_t numWorkGroupsAndMips[2];
+    uint32_t rectInfo[4] = {0, 0, m_pRenderTargetIn->GetDesc().Width, m_pRenderTargetIn->GetDesc().Height};
+    ffxSpdSetup(m_DispatchThreadGroupCountXY, workGroupOffset, numWorkGroupsAndMips, rectInfo);
+
+    // Downsample
+    m_AutoExposureSpdConstants.numWorkGroups    = numWorkGroupsAndMips[0];
+    m_AutoExposureSpdConstants.mips             = numWorkGroupsAndMips[1];
+    m_AutoExposureSpdConstants.workGroupOffset[0] = workGroupOffset[0];
+    m_AutoExposureSpdConstants.workGroupOffset[1] = workGroupOffset[1];
+    m_AutoExposureSpdConstants.renderSize[0]      = rectInfo[2];
+    m_AutoExposureSpdConstants.renderSize[1]      = rectInfo[3];
+
+    RootSignatureDesc autoExposureSignatureDesc;
+    autoExposureSignatureDesc.AddConstantBufferView(0, ShaderBindStage::Compute, 1);
+    autoExposureSignatureDesc.AddTextureSRVSet(0, ShaderBindStage::Compute, 1);
+    autoExposureSignatureDesc.AddTextureUAVSet(0, ShaderBindStage::Compute, 1);
+    autoExposureSignatureDesc.AddTextureUAVSet(1, ShaderBindStage::Compute, 1);
+    autoExposureSignatureDesc.AddTextureUAVSet(2, ShaderBindStage::Compute, 1);
+    autoExposureSignatureDesc.AddTextureUAVSet(3, ShaderBindStage::Compute, 1);
+
+     // Initialize common resources that aren't pipeline dependent
+    m_LinearSamplerDesc.Filter        = FilterFunc::MinMagLinearMipPoint;
+    m_LinearSamplerDesc.MaxLOD        = std::numeric_limits<float>::max();
+    m_LinearSamplerDesc.MaxAnisotropy = 1;
+    ShaderBindStage shaderStage       = ShaderBindStage::Compute;
+    autoExposureSignatureDesc.AddStaticSamplers(0, shaderStage, 1, &m_LinearSamplerDesc);
+
+    m_pAutoExposureSpdRootSignature = RootSignature::CreateRootSignature(L"AutoExposureSPDRenderPass_RootSignature", autoExposureSignatureDesc);
 
     // Setup the pipeline object
-    PipelineDesc psoDesc;
-    psoDesc.SetRootSignature(m_pRootSignature);
+    PipelineDesc autoExposurePsoDesc;
+    autoExposurePsoDesc.SetRootSignature(m_pAutoExposureSpdRootSignature);
 
     // Setup the shaders to build on the pipeline object
-    std::wstring shaderPath = L"tonemapping.hlsl";
-    DefineList   defineList;
+    std::wstring shaderPath = L"autoexposure.hlsl";
+    DefineList   exposureDefineList;
 
-    defineList.insert(std::make_pair(L"NUM_THREAD_X", std::to_wstring(g_NumThreadX)));
-    defineList.insert(std::make_pair(L"NUM_THREAD_Y", std::to_wstring(g_NumThreadY)));
-    psoDesc.AddShaderDesc(ShaderBuildDesc::Compute(shaderPath.c_str(), L"MainCS", ShaderModel::SM6_0, &defineList));
+    exposureDefineList.insert(std::make_pair(L"NUM_THREAD_X", std::to_wstring(256)));
+    autoExposurePsoDesc.AddShaderDesc(ShaderBuildDesc::Compute(shaderPath.c_str(), L"MainCS", ShaderModel::SM6_0, &exposureDefineList));
 
-    m_pPipelineObj = PipelineObject::CreatePipelineObject(L"ToneMappingRenderPass_PipelineObj", psoDesc);
+    m_pAutoExposureSpdPipelineObj = PipelineObject::CreatePipelineObject(L"AutomaticExposureRenderPass_PipelineObj", autoExposurePsoDesc);
 
-    m_pParameters = ParameterSet::CreateParameterSet(m_pRootSignature);
-    m_pParameters->SetRootConstantBufferResource(GetDynamicBufferPool()->GetResource(), sizeof(TonemapperCBData), 0);
+    m_pAutoExposureSpdParameters = ParameterSet::CreateParameterSet(m_pAutoExposureSpdRootSignature);
+    m_pAutoExposureSpdParameters->SetRootConstantBufferResource(GetDynamicBufferPool()->GetResource(), sizeof(AutoExposureSpdConstants), 0);
+
+    // Set our texture to the right parameter slot
+    m_pAutoExposureSpdParameters->SetTextureSRV(m_pRenderTargetIn, ViewDimension::Texture2D, 0);
+    m_pAutoExposureSpdParameters->SetTextureUAV(m_pAutomaticExposureSpdAtomicCounter, ViewDimension::Texture2D, 0);
+    m_pAutoExposureSpdParameters->SetTextureUAV(m_pAutomaticExposureMipsShadingChange, ViewDimension::Texture2D, 1);
+    m_pAutoExposureSpdParameters->SetTextureUAV(m_pAutomaticExposureMips5, ViewDimension::Texture2D, 2);
+    m_pAutoExposureSpdParameters->SetTextureUAV(m_pAutomaticExposureValue, ViewDimension::Texture2D, 3);
+
+    // Init tonemapper
+    // root signature
+    RootSignatureDesc tonemapperSignatureDesc;
+    tonemapperSignatureDesc.AddConstantBufferView(0, ShaderBindStage::Compute, 1);
+    tonemapperSignatureDesc.AddTextureSRVSet(0, ShaderBindStage::Compute, 1);
+    tonemapperSignatureDesc.AddTextureSRVSet(1, ShaderBindStage::Compute, 1);
+    tonemapperSignatureDesc.AddTextureUAVSet(0, ShaderBindStage::Compute, 1);
+
+    m_pTonemapperRootSignature = RootSignature::CreateRootSignature(L"ToneMappingRenderPass_RootSignature", tonemapperSignatureDesc);
+
+    // Setup the pipeline object
+    PipelineDesc tonemapperPsoDesc;
+    tonemapperPsoDesc.SetRootSignature(m_pTonemapperRootSignature);
+
+    // Setup the shaders to build on the pipeline object
+    shaderPath = L"tonemapping.hlsl";
+
+    DefineList tonemapperDefineList;
+    tonemapperDefineList.insert(std::make_pair(L"NUM_THREAD_X", std::to_wstring(g_NumThreadX)));
+    tonemapperDefineList.insert(std::make_pair(L"NUM_THREAD_Y", std::to_wstring(g_NumThreadY)));
+    tonemapperPsoDesc.AddShaderDesc(ShaderBuildDesc::Compute(shaderPath.c_str(), L"MainCS", ShaderModel::SM6_0, &tonemapperDefineList));
+
+    m_pTonemapperPipelineObj = PipelineObject::CreatePipelineObject(L"ToneMappingRenderPass_PipelineObj", tonemapperPsoDesc);
+
+    m_pTonemapperParameters = ParameterSet::CreateParameterSet(m_pTonemapperRootSignature);
+    m_pTonemapperParameters->SetRootConstantBufferResource(GetDynamicBufferPool()->GetResource(), sizeof(TonemapperCBData), 0);
     
     // Set our texture to the right parameter slot
-    m_pParameters->SetTextureSRV(m_pTexture, ViewDimension::Texture2D, 0);
-    m_pParameters->SetTextureUAV(m_pRenderTarget, ViewDimension::Texture2D, 0);
+    m_pTonemapperParameters->SetTextureSRV(m_pAutomaticExposureValue, ViewDimension::Texture2D, 0);
+    m_pTonemapperParameters->SetTextureSRV(m_pRenderTargetIn, ViewDimension::Texture2D, 1);
+    m_pTonemapperParameters->SetTextureUAV(m_pRenderTargetOut, ViewDimension::Texture2D, 0);
 
     // Register UI for Tone mapping as part of post processing
-    UISection uiSection;
-    uiSection.SectionName = "Post Processing";
+    UISection* uiSection = GetUIManager()->RegisterUIElements("Post Processing");
+    if (uiSection)
+    {
+        std::vector<const char*> comboOptions = { "AMD Tonemapper", "DX11DSK", "Reinhard", "Uncharted2Tonemap", "ACES", "No Tonemapper" };
+        uiSection->RegisterUIElement<UICombo>("Tone Mapper", (int32_t&)m_TonemapperConstantData.ToneMapper, std::move(comboOptions));
 
-    const char* tonemappers[] = { "AMD Tonemapper", "DX11DSK", "Reinhard", "Uncharted2Tonemap", "ACES", "No Tonemapper" };
-    std::vector<std::string> comboOptions;
-    comboOptions.assign(tonemappers, tonemappers + _countof(tonemappers));
-    uiSection.AddCombo("Tone Mapper", (int32_t*)&m_ConstantData.ToneMapper, &comboOptions);
-
-    m_ConstantData.Exposure = GetScene()->GetSceneExposure();
-    std::function<void(void*)> exposureCallback = [this](void* pParams) { GetScene()->SetSceneExposure(this->m_ConstantData.Exposure); };
-    uiSection.AddFloatSlider("Exposure", &m_ConstantData.Exposure, 0.f, 5.f, exposureCallback);
-    GetUIManager()->RegisterUIElements(uiSection);
+        m_TonemapperConstantData.Exposure = GetScene()->GetSceneExposure();
+        uiSection->RegisterUIElement<UISlider<float>>(
+            "Exposure",
+            m_TonemapperConstantData.Exposure,
+            0.f, 5.f,
+            [this](float cur, float old) {
+                GetScene()->SetSceneExposure(cur);
+            }
+        );
+        uiSection->RegisterUIElement<UICheckBox>("AutoExposure", (bool&)m_TonemapperConstantData.UseAutoExposure);
+    }
 
     // We are now ready for use
     SetModuleReady(true);
@@ -104,9 +190,13 @@ void ToneMappingRenderModule::Init(const json& InitData)
 
 ToneMappingRenderModule::~ToneMappingRenderModule()
 {
-    delete m_pRootSignature;
-    delete m_pPipelineObj;
-    delete m_pParameters;
+    delete m_pAutoExposureSpdRootSignature;
+    delete m_pAutoExposureSpdPipelineObj;
+    delete m_pAutoExposureSpdParameters;
+
+    delete m_pTonemapperRootSignature;
+    delete m_pTonemapperPipelineObj;
+    delete m_pTonemapperParameters;
 }
 
 void ToneMappingRenderModule::Execute(double deltaTime, CommandList* pCmdList)
@@ -119,42 +209,97 @@ void ToneMappingRenderModule::Execute(double deltaTime, CommandList* pCmdList)
         return;
     }
 
-    GPUScopedProfileCapture tonemappingMarker(pCmdList, L"ToneMapping");
+    {
+        GPUScopedProfileCapture automaticExposureMarker(pCmdList, L"AutomaticExposure");
+        std::array<Barrier, 4u> automaticExposureTransitionBarriers;
+        automaticExposureTransitionBarriers[0] = Barrier::Transition(m_pAutomaticExposureSpdAtomicCounter->GetResource(),
+            ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource,
+            ResourceState::UnorderedAccess);
+        automaticExposureTransitionBarriers[1] = Barrier::Transition(m_pAutomaticExposureMipsShadingChange->GetResource(),
+            ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource,
+            ResourceState::UnorderedAccess);
+        automaticExposureTransitionBarriers[2] = Barrier::Transition(m_pAutomaticExposureMips5->GetResource(),
+            ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource,
+            ResourceState::UnorderedAccess);
+        automaticExposureTransitionBarriers[3] = Barrier::Transition(m_pAutomaticExposureValue->GetResource(),
+            ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource,
+            ResourceState::UnorderedAccess);
+        ResourceBarrier(pCmdList, static_cast<uint32_t>(automaticExposureTransitionBarriers.size()), automaticExposureTransitionBarriers.data());
+
+        // Allocate a dynamic constant buffer and set
+        BufferAddressInfo bufferInfo = GetDynamicBufferPool()->AllocConstantBuffer(sizeof(AutoExposureSpdConstants), &m_AutoExposureSpdConstants);
+        m_pAutoExposureSpdParameters->UpdateRootConstantBuffer(&bufferInfo, 0);
+
+        // bind all the parameters
+        m_pAutoExposureSpdParameters->Bind(pCmdList, m_pAutoExposureSpdPipelineObj);
+
+        // Set pipeline and dispatch
+        SetPipelineState(pCmdList, m_pAutoExposureSpdPipelineObj);
+
+        Dispatch(pCmdList, m_DispatchThreadGroupCountXY[0], m_DispatchThreadGroupCountXY[1], 1);
+    }
+    
+    {
+        GPUScopedProfileCapture tonemappingMarker(pCmdList, L"ToneMapping");
 
         // Render modules expect resources coming in/going out to be in a shader read state
-    Barrier barrier;
-    barrier = Barrier::Transition(
-        m_pRenderTarget->GetResource(), ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource, ResourceState::UnorderedAccess);
-    ResourceBarrier(pCmdList, 1, &barrier);
+        std::array<Barrier, 5u> tonemmaperTransitionBarriers;
+        tonemmaperTransitionBarriers[0] = Barrier::Transition(m_pRenderTargetOut->GetResource(),
+            ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource,
+            ResourceState::UnorderedAccess);
+        tonemmaperTransitionBarriers[1] = Barrier::Transition(m_pAutomaticExposureSpdAtomicCounter->GetResource(),
+            ResourceState::UnorderedAccess,
+            ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource);
+        tonemmaperTransitionBarriers[2] = Barrier::Transition(m_pAutomaticExposureMipsShadingChange->GetResource(),
+            ResourceState::UnorderedAccess,
+            ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource);
+        tonemmaperTransitionBarriers[3] = Barrier::Transition(m_pAutomaticExposureMips5->GetResource(),
+            ResourceState::UnorderedAccess,
+            ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource);
+        tonemmaperTransitionBarriers[4] = Barrier::Transition(m_pAutomaticExposureValue->GetResource(),
+            ResourceState::UnorderedAccess,
+            ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource);
+        ResourceBarrier(pCmdList, static_cast<uint32_t>(tonemmaperTransitionBarriers.size()), tonemmaperTransitionBarriers.data());
 
-    m_ConstantData.MonitorDisplayMode = GetFramework()->GetSwapChain()->GetSwapChainDisplayMode();
-    m_ConstantData.DisplayMaxLuminance = GetFramework()->GetSwapChain()->GetHDRMetaData().MaxLuminance;
+        m_TonemapperConstantData.MonitorDisplayMode = GetFramework()->GetSwapChain()->GetSwapChainDisplayMode();
+        m_TonemapperConstantData.DisplayMaxLuminance = GetFramework()->GetSwapChain()->GetHDRMetaData().MaxLuminance;
 
-    // Scene dependent
-    ColorSpace inputColorSpace  = ColorSpace_REC709;
+        ResolutionInfo resInfo = GetFramework()->GetResolutionInfo();
 
-    // Display mode dependent
-    // Both FSHDR_2084 and HDR10_2084 take rec2020 value
-    // Difference is FSHDR needs to be gamut mapped using monitor primaries and then gamut converted to rec2020
-    ColorSpace outputColorSpace = ColorSpace_REC2020;
-    SetupGamutMapperMatrices(inputColorSpace, outputColorSpace, &m_ConstantData.ContentToMonitorRecMatrix);
+        // assume symmetric letterbox
+        m_TonemapperConstantData.LetterboxRectBase[0] = (resInfo.DisplayWidth - resInfo.UpscaleWidth) / 2;
+        m_TonemapperConstantData.LetterboxRectBase[1] = (resInfo.DisplayHeight - resInfo.UpscaleHeight) / 2;
 
-    // Allocate a dynamic constant buffer and set
-    BufferAddressInfo bufferInfo = GetDynamicBufferPool()->AllocConstantBuffer(sizeof(TonemapperCBData), &m_ConstantData);
-    m_pParameters->UpdateRootConstantBuffer(&bufferInfo, 0);
+        m_TonemapperConstantData.LetterboxRectSize[0] = resInfo.UpscaleWidth;
+        m_TonemapperConstantData.LetterboxRectSize[1] = resInfo.UpscaleHeight;
 
-    // bind all the parameters
-    m_pParameters->Bind(pCmdList, m_pPipelineObj);
+        // Scene dependent
+        ColorSpace inputColorSpace = ColorSpace_REC709;
 
-    // Set pipeline and dispatch
-    SetPipelineState(pCmdList, m_pPipelineObj);
+        // Display mode dependent
+        // Both FSHDR_2084 and HDR10_2084 take rec2020 value
+        // Difference is FSHDR needs to be gamut mapped using monitor primaries and then gamut converted to rec2020
+        ColorSpace outputColorSpace = ColorSpace_REC2020;
+        SetupGamutMapperMatrices(inputColorSpace, outputColorSpace, &m_TonemapperConstantData.ContentToMonitorRecMatrix);
 
-    const uint32_t numGroupX = DivideRoundingUp(m_pRenderTarget->GetDesc().Width, g_NumThreadX);
-    const uint32_t numGroupY = DivideRoundingUp(m_pRenderTarget->GetDesc().Height, g_NumThreadY);
-    Dispatch(pCmdList, numGroupX, numGroupY, 1);
+        // Allocate a dynamic constant buffer and set
+        BufferAddressInfo bufferInfo = GetDynamicBufferPool()->AllocConstantBuffer(sizeof(TonemapperCBData), &m_TonemapperConstantData);
+        m_pTonemapperParameters->UpdateRootConstantBuffer(&bufferInfo, 0);
 
-    // Render modules expect resources coming in/going out to be in a shader read state
-    barrier = Barrier::Transition(
-        m_pRenderTarget->GetResource(), ResourceState::UnorderedAccess, ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource);
-    ResourceBarrier(pCmdList, 1, &barrier);
+        // bind all the parameters
+        m_pTonemapperParameters->Bind(pCmdList, m_pTonemapperPipelineObj);
+
+        // Set pipeline and dispatch
+        SetPipelineState(pCmdList, m_pTonemapperPipelineObj);
+
+        const uint32_t numGroupX = DivideRoundingUp(m_pRenderTargetOut->GetDesc().Width, g_NumThreadX);
+        const uint32_t numGroupY = DivideRoundingUp(m_pRenderTargetOut->GetDesc().Height, g_NumThreadY);
+        Dispatch(pCmdList, numGroupX, numGroupY, 1);
+
+        // Render modules expect resources coming in/going out to be in a shader read state
+        Barrier barrier = Barrier::Transition(m_pRenderTargetOut->GetResource(),
+            ResourceState::UnorderedAccess,
+            ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource);
+        ResourceBarrier(pCmdList, 1, &barrier);
+    }
 }

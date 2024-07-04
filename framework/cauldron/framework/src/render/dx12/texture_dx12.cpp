@@ -1,17 +1,20 @@
-// AMD Cauldron code
+// This file is part of the FidelityFX SDK.
+//
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sub-license, and / or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -155,8 +158,7 @@ namespace cauldron
 
     //////////////////////////////////////////////////////////////////////////
     // TextureCopyDesc
-
-    TextureCopyDesc::TextureCopyDesc(const GPUResource* pSrc, const GPUResource* pDst)
+    TextureCopyDesc::TextureCopyDesc(const GPUResource* pSrc, const GPUResource* pDst, unsigned int arrayIndex, unsigned int mipLevel)
     {
         GetImpl()->pCopyBox = nullptr;
 
@@ -167,10 +169,10 @@ namespace cauldron
         UINT64                             rowSizeInBytes;
         UINT64                             totalBytes;
 
-        GetDevice()->GetImpl()->DX12Device()->GetCopyableFootprints(&dx12Desc, 0, 1, 0, &dx12Footprint, &rowCount, &rowSizeInBytes, &totalBytes);
+        GetDevice()->GetImpl()->DX12Device()->GetCopyableFootprints(&dx12Desc, arrayIndex * dx12Desc.MipLevels + mipLevel, 1, 0, &dx12Footprint, &rowCount, &rowSizeInBytes, &totalBytes);
         D3D12_TEXTURE_COPY_LOCATION dx12DestinationLocation = {};
         dx12DestinationLocation.pResource = const_cast<ID3D12Resource*>(pDst->GetImpl()->DX12Resource());
-        dx12DestinationLocation.SubresourceIndex = 0;
+        dx12DestinationLocation.SubresourceIndex = arrayIndex * dx12Desc.MipLevels + mipLevel;
         dx12DestinationLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
 
         D3D12_TEXTURE_COPY_LOCATION dx12SourceLocation = {};
@@ -178,9 +180,9 @@ namespace cauldron
         // If both src & dst are textures, use the right copy source
         if (pSrc->IsTexture() == pDst->IsTexture())
         {
-            GetDevice()->GetImpl()->DX12Device()->GetCopyableFootprints(&pSrc->GetImpl()->DX12Desc(), 0, 1, 0, &dx12Footprint, &rowCount, &rowSizeInBytes, &totalBytes);
+            GetDevice()->GetImpl()->DX12Device()->GetCopyableFootprints(&pSrc->GetImpl()->DX12Desc(), arrayIndex * pSrc->GetImpl()->DX12Desc().MipLevels + mipLevel, 1, 0, &dx12Footprint, &rowCount, &rowSizeInBytes, &totalBytes);
             dx12SourceLocation.pResource = const_cast<ID3D12Resource*>(pSrc->GetImpl()->DX12Resource());
-            dx12SourceLocation.SubresourceIndex = 0;
+            dx12SourceLocation.SubresourceIndex = arrayIndex * pSrc->GetImpl()->DX12Desc().MipLevels + mipLevel;
             dx12SourceLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
 
             // If sizes don't match, make a copy box

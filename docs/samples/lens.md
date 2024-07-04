@@ -10,7 +10,9 @@ For details on the techniques that underpin the FidelityFX Lens effect you can r
 
 <h2>Requirements</h2>
 
-`Windows` `DirectX(R)12` `Vulkan(R)`
+ - Windows
+ - DirectX(R)12
+ - Vulkan(R)
 
 <h2>UI elements</h2>
 
@@ -30,9 +32,9 @@ The FidelityFX Lens effect takes as input the color buffer produced by the frame
 
 Almost always, it is preferable for FidelityFX Lens to run as late as possible in the frame to avoid side effects from the color changes introduced by the effect. The FidelityFX Lens effect also uses a small constant buffer, which passes some necessary parameters such as the center coordinate of the screen as well as artistic control values, such as intensity for the film grain, chromatic aberration, and vignette effects. These are all passed from the CPU. The output of the effect is a color buffer of the same resolution as the input. 
 
-<h2>Sample Controls and Configurations</h2>
+<h2>Sample controls and configurations</h2>
 
-For sample controls, configuration and Cauldron UI element details, please see [Running the samples](../getting-started/running-samples.md)
+For sample controls, configuration, and FidelityFX Cauldron Framework UI element details, see [Running the samples](../getting-started/running-samples.md).
 
 <h2>See also</h2>
 

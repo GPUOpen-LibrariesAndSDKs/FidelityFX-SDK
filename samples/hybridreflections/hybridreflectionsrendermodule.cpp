@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -23,12 +23,11 @@
 #include "shaders/surfacerendercommon.h"
 
 #include "hybridreflectionsrendermodule.h"
-#include "validation_remap.h"
 
+#include "core/backend_interface.h"
 #include "core/components/meshcomponent.h"
 #include "core/framework.h"
 #include "core/scene.h"
-#include "core/uimanager.h"
 #include "render/dynamicresourcepool.h"
 #include "render/dynamicbufferpool.h"
 #include "render/parameterset.h"
@@ -53,6 +52,18 @@ static void setFlag(uint32_t& flags, uint32_t bit, bool enable)
     flags &= ~bit;
     flags |= (enable ? bit : 0);
 };
+
+static std::vector<const char*> BuildDebugOptions(bool enable)
+{
+    std::vector<const char*> debugOptions;
+
+    if (enable)
+        debugOptions.push_back("Visualize Hit Counter");
+    debugOptions.push_back("Show Reflection Target");
+    debugOptions.push_back("Visualize Primary Rays");
+
+    return debugOptions;
+}
 
 void HybridReflectionsRenderModule::Init(const json& initData)
 {
@@ -128,14 +139,15 @@ void HybridReflectionsRenderModule::Init(const json& initData)
         m_Mask &= ~HSR_FLAGS_USE_RAY_TRACING;
     }
 
-    // Initialize the FFX backend
-    const size_t scratchBufferSize = ffxGetScratchMemorySize(FFX_HYBRID_REFLECTIONS_CONTEXT_COUNT);
-    void*        scratchBuffer     = malloc(scratchBufferSize);
-    FfxErrorCode errorCode         = ffxGetInterface(&m_BackendInterface, GetDevice(), scratchBuffer, scratchBufferSize, FFX_HYBRID_REFLECTIONS_CONTEXT_COUNT);
-    FFX_ASSERT(errorCode == FFX_OK);
+    CreateFfxContexts();
 
-    // Init context
-    CreateBackendContext();
+    GetFramework()->ConfigureRuntimeShaderRecompiler(
+        [this](void) {
+            DestroyFfxContexts();
+        },
+        [this](void) {
+            CreateFfxContexts();
+        });
 
     InitPrepareBlueNoise(initData);
     InitPrimaryRayTracing(initData);
@@ -160,16 +172,7 @@ HybridReflectionsRenderModule::~HybridReflectionsRenderModule()
     {
         EnableModule(false);
 
-        ffxClassifierContextDestroy(&m_ClassifierContext);
-        ffxDenoiserContextDestroy(&m_DenoiserContext);
-        ffxSpdContextDestroy(&m_SpdContext);
-
-        // Destroy the FidelityFX interface memory
-        if (m_BackendInterface.scratchBuffer)
-        {
-            free(m_BackendInterface.scratchBuffer);
-            m_BackendInterface.scratchBuffer = nullptr;
-        }
+        DestroyFfxContexts();
 
         delete m_pParamSet;
         delete m_pApplyReflectionsPipeline;
@@ -213,6 +216,43 @@ HybridReflectionsRenderModule::~HybridReflectionsRenderModule()
     }
 }
 
+void HybridReflectionsRenderModule::DestroyFfxContexts()
+{
+    // Flush anything out of the pipes before destroying the context
+    GetDevice()->FlushAllCommandQueues();
+
+    ffxClassifierContextDestroy(&m_ClassifierContext);
+    ffxDenoiserContextDestroy(&m_DenoiserContext);
+    ffxSpdContextDestroy(&m_SpdContext);
+
+    // Destroy the FidelityFX interface memory
+    if (m_BackendInterface.scratchBuffer)
+    {
+        free(m_BackendInterface.scratchBuffer);
+        m_BackendInterface.scratchBuffer = nullptr;
+    }
+}
+
+void HybridReflectionsRenderModule::CreateFfxContexts()
+{
+    // Initialize the FFX backend
+    const size_t scratchBufferSize = SDKWrapper::ffxGetScratchMemorySize(FFX_HYBRID_REFLECTIONS_CONTEXT_COUNT);
+    void*        scratchBuffer     = calloc(scratchBufferSize, 1u);
+    FfxErrorCode errorCode         = SDKWrapper::ffxGetInterface(&m_BackendInterface, GetDevice(), scratchBuffer, scratchBufferSize, FFX_HYBRID_REFLECTIONS_CONTEXT_COUNT);
+    CAULDRON_ASSERT(errorCode == FFX_OK);
+    CauldronAssert(ASSERT_CRITICAL, m_BackendInterface.fpGetSDKVersion(&m_BackendInterface) == FFX_SDK_MAKE_VERSION(1, 1, 0),
+        L"FidelityFX HybridReflections 2.1 sample requires linking with a 1.1 version SDK backend");
+    CauldronAssert(ASSERT_CRITICAL, ffxClassifierGetEffectVersion() == FFX_SDK_MAKE_VERSION(1, 3, 0),
+                       L"FidelityFX HybridReflections 2.1 sample requires linking with a 1.3 version FidelityFX Classifier library");
+    CauldronAssert(ASSERT_CRITICAL, ffxDenoiserGetEffectVersion() == FFX_SDK_MAKE_VERSION(1, 3, 0),
+                       L"FidelityFX HybridReflections 2.1 sample requires linking with a 1.3 version FidelityFX Denoiser library");
+                       
+    m_BackendInterface.fpRegisterConstantBufferAllocator(&m_BackendInterface, SDKWrapper::ffxAllocateConstantBuffer);
+
+    // Init context
+    CreateBackendContext();
+}
+
 void HybridReflectionsRenderModule::CreateBackendContext()
 {
     const ResolutionInfo& resInfo = GetFramework()->GetResolutionInfo();
@@ -220,30 +260,30 @@ void HybridReflectionsRenderModule::CreateBackendContext()
     m_DenoiserInitializationParameters.flags                      = FfxDenoiserInitializationFlagBits::FFX_DENOISER_REFLECTIONS;
     m_DenoiserInitializationParameters.windowSize.width           = resInfo.RenderWidth;
     m_DenoiserInitializationParameters.windowSize.height          = resInfo.RenderHeight;
-    m_DenoiserInitializationParameters.normalsHistoryBufferFormat = GetFfxSurfaceFormat(m_pNormal->GetFormat());
+    m_DenoiserInitializationParameters.normalsHistoryBufferFormat = SDKWrapper::GetFfxSurfaceFormat(m_pNormal->GetFormat());
     m_DenoiserInitializationParameters.backendInterface           = m_BackendInterface;
-    FFX_ASSERT(ffxDenoiserContextCreate(&m_DenoiserContext, &m_DenoiserInitializationParameters) == FFX_OK);
+    CAULDRON_ASSERT(ffxDenoiserContextCreate(&m_DenoiserContext, &m_DenoiserInitializationParameters) == FFX_OK);
 
     m_ClassifierInitializationParameters.flags = FfxClassifierInitializationFlagBits::FFX_CLASSIFIER_REFLECTION;
     m_ClassifierInitializationParameters.flags |= GetConfig()->InvertedDepth ? FFX_CLASSIFIER_ENABLE_DEPTH_INVERTED : 0;
     m_ClassifierInitializationParameters.resolution.width  = resInfo.RenderWidth;
     m_ClassifierInitializationParameters.resolution.height = resInfo.RenderHeight;
     m_ClassifierInitializationParameters.backendInterface  = m_BackendInterface;
-    FFX_ASSERT(ffxClassifierContextCreate(&m_ClassifierContext, &m_ClassifierInitializationParameters) == FFX_OK);
+    CAULDRON_ASSERT(ffxClassifierContextCreate(&m_ClassifierContext, &m_ClassifierInitializationParameters) == FFX_OK);
 
     m_SpdInitializationParameters.flags = 0;
     m_SpdInitializationParameters.flags |= FFX_SPD_WAVE_INTEROP_WAVE_OPS;
     m_SpdInitializationParameters.downsampleFilter = GetConfig()->InvertedDepth ? FFX_SPD_DOWNSAMPLE_FILTER_MAX : FFX_SPD_DOWNSAMPLE_FILTER_MIN;
     m_SpdInitializationParameters.backendInterface = m_BackendInterface;
-    FFX_ASSERT(ffxSpdContextCreate(&m_SpdContext, &m_SpdInitializationParameters) == FFX_OK);
+    CAULDRON_ASSERT(ffxSpdContextCreate(&m_SpdContext, &m_SpdInitializationParameters) == FFX_OK);
 }
 
-void HybridReflectionsRenderModule::ResetBakckendContext()
+void HybridReflectionsRenderModule::ResetBackendContext()
 {
     // Destroy the HSR context
-    FFX_ASSERT(ffxDenoiserContextDestroy(&m_DenoiserContext) == FFX_OK);
-    FFX_ASSERT(ffxClassifierContextDestroy(&m_ClassifierContext) == FFX_OK);
-    FFX_ASSERT(ffxSpdContextDestroy(&m_SpdContext) == FFX_OK);
+    CAULDRON_ASSERT(ffxDenoiserContextDestroy(&m_DenoiserContext) == FFX_OK);
+    CAULDRON_ASSERT(ffxClassifierContextDestroy(&m_ClassifierContext) == FFX_OK);
+    CAULDRON_ASSERT(ffxSpdContextDestroy(&m_SpdContext) == FFX_OK);
 
     // Re-create the HSR context
     CreateBackendContext();
@@ -278,22 +318,23 @@ void HybridReflectionsRenderModule::ShowDebugTarget()
     {
         m_Mask |= HSR_FLAGS_SHOW_DEBUG_TARGET;
 
-        int flagList[] = {
-            HSR_FLAGS_VISUALIZE_HIT_COUNTER,
-            HSR_FLAGS_SHOW_REFLECTION_TARGET,
-            HSR_FLAGS_VISUALIZE_PRIMARY_RAYS,
-        };
+        std::vector<int> flagList;
+
+        if (m_EnableHybridReflection) flagList.push_back(HSR_FLAGS_VISUALIZE_HIT_COUNTER);
+        flagList.push_back(HSR_FLAGS_SHOW_REFLECTION_TARGET);
+        flagList.push_back(HSR_FLAGS_VISUALIZE_PRIMARY_RAYS);
+
         m_Mask |= flagList[m_DebugOption];
     }
     else
     {
         m_Mask &= ~HSR_FLAGS_SHOW_DEBUG_TARGET;
 
-        int flagList[] = {
-            HSR_FLAGS_VISUALIZE_HIT_COUNTER,
-            HSR_FLAGS_SHOW_REFLECTION_TARGET,
-            HSR_FLAGS_VISUALIZE_PRIMARY_RAYS,
-        };
+        std::vector<int> flagList;
+
+        if (m_EnableHybridReflection) flagList.push_back(HSR_FLAGS_VISUALIZE_HIT_COUNTER);
+        flagList.push_back(HSR_FLAGS_SHOW_REFLECTION_TARGET);
+        flagList.push_back(HSR_FLAGS_VISUALIZE_PRIMARY_RAYS);
 
         for (auto flag : flagList)
         {
@@ -303,11 +344,11 @@ void HybridReflectionsRenderModule::ShowDebugTarget()
 }
 void HybridReflectionsRenderModule::SelectDebugOption()
 {
-    int flagList[] = {
-        HSR_FLAGS_VISUALIZE_HIT_COUNTER,
-        HSR_FLAGS_SHOW_REFLECTION_TARGET,
-        HSR_FLAGS_VISUALIZE_PRIMARY_RAYS,
-    };
+    std::vector<int> flagList;
+
+    if (m_EnableHybridReflection) flagList.push_back(HSR_FLAGS_VISUALIZE_HIT_COUNTER);
+    flagList.push_back(HSR_FLAGS_SHOW_REFLECTION_TARGET);
+    flagList.push_back(HSR_FLAGS_VISUALIZE_PRIMARY_RAYS);
 
     for (auto flag : flagList)
     {
@@ -315,6 +356,11 @@ void HybridReflectionsRenderModule::SelectDebugOption()
     }
 
     m_Mask |= flagList[m_DebugOption];
+}
+
+void HybridReflectionsRenderModule::ToggleHybridReflection()
+{
+    m_IsEnableHybridReflectionChanged = true;
 }
 
 void HybridReflectionsRenderModule::ToggleHalfResGBuffer()
@@ -331,6 +377,31 @@ void HybridReflectionsRenderModule::UpdateReflectionResolution()
     m_ReflectionResolutionMultiplier = m_EnableHalfResGBuffer ? 0.5f : 1.0f;
     m_ReflectionWidth                = std::max(128u, uint32_t(width * m_ReflectionResolutionMultiplier));
     m_ReflectionHeight               = std::max(128u, uint32_t(height * m_ReflectionResolutionMultiplier));
+}
+
+void HybridReflectionsRenderModule::UpdateUI(double deltaTime)
+{
+    if (m_IsEnableHybridReflectionChanged)
+    {
+        m_UIDebugOption->SetOption(BuildDebugOptions(m_EnableHybridReflection));
+        
+        // Keep current selection
+        if (m_EnableHybridReflection)
+        {
+            // Hit counter inserted in front
+            m_DebugOption += 1;
+        }
+        else if (m_DebugOption > 0)
+        {
+            // Hit counter removed from front
+            m_DebugOption -= 1;
+        }
+
+        if (m_Mask & HSR_FLAGS_SHOW_DEBUG_TARGET)
+            SelectDebugOption();
+
+        m_IsEnableHybridReflectionChanged = false;
+    }
 }
 
 void HybridReflectionsRenderModule::CreateResources()
@@ -464,27 +535,21 @@ void HybridReflectionsRenderModule::CreateResources()
 
 void HybridReflectionsRenderModule::BuildUI()
 {
-    cauldron::UISection uiSection;
-    uiSection.SectionName = "Hybrid Reflections";
-    uiSection.SectionType = UISectionType::Sample;
+    UISection* uiSection = GetUIManager()->RegisterUIElements("Hybrid Reflections", UISectionType::Sample);
 
-    std::vector<std::string> debugOptions = {
-        "Visualize Hit Counter",
-        "Show Reflection Target",
-        "Visualize Primary Rays",
-    };
+    std::vector<const char*> debugOptions;
 
-    std::function<void(void*)> showDebugTargetCallback = [this](void* pParams) { this->ShowDebugTarget(); };
-    uiSection.AddCheckBox("Show Debug Target", &m_ShowDebugTarget, showDebugTargetCallback);
-    std::function<void(void*)> debugOptionCallback = [this](void* pParams) { this->SelectDebugOption(); };
-    uiSection.AddCombo("Visualizer", (int32_t*)&m_DebugOption, &debugOptions, debugOptionCallback, &m_ShowDebugTarget);
+    std::function<void(bool, bool)> showDebugTargetCallback = [this](bool cur, bool old) { ShowDebugTarget(); };
+    uiSection->RegisterUIElement<UICheckBox>("Show Debug Target", m_ShowDebugTarget, showDebugTargetCallback);
+    std::function<void(int32_t, int32_t)> debugOptionCallback = [this](int32_t cur, int32_t old) { SelectDebugOption(); };
+    m_UIDebugOption = uiSection->RegisterUIElement<UICombo>("Visualizer", (int32_t&)m_DebugOption, BuildDebugOptions(m_EnableHybridReflection), m_ShowDebugTarget, debugOptionCallback);
 
-    uiSection.AddFloatSlider("Global Roughness Threshold", &m_RoughnessThreshold, 0.f, 1.f);
-    uiSection.AddFloatSlider("RT Roughness Threshold", &m_RTRoughnessThreshold, 0.f, 1.f);
-    uiSection.AddCheckBox("Don't reshade", &m_DisableReshading);
-    uiSection.AddCheckBox("Enable Hybrid Reflections", &m_EnableHybridReflection);
+    uiSection->RegisterUIElement<UISlider<float>>("Global Roughness Threshold", m_RoughnessThreshold, 0.f, 1.f);
+    uiSection->RegisterUIElement<UISlider<float>>("RT Roughness Threshold", m_RTRoughnessThreshold, 0.f, 1.f);
+    uiSection->RegisterUIElement<UICheckBox>("Don't reshade", m_DisableReshading);
 
-    GetUIManager()->RegisterUIElements(uiSection);
+    std::function<void(bool,bool)> enableHybridReflectionCallback = [this](bool cur, bool old) { ToggleHybridReflection(); };
+    uiSection->RegisterUIElement<UICheckBox>("Enable Hybrid Reflections", m_EnableHybridReflection, enableHybridReflectionCallback);
 }
 
 void HybridReflectionsRenderModule::InitApplyReflections(const json& initData)
@@ -1056,7 +1121,7 @@ void HybridReflectionsRenderModule::OnResize(const ResolutionInfo& resInfo)
     m_IsResized = true;
 
     // Need to recreate the HSR context on resource resize
-    ResetBakckendContext();
+    ResetBackendContext();
 }
 
 constexpr uint32_t g_NumThreadX = 8;
@@ -1319,6 +1384,7 @@ void HybridReflectionsRenderModule::ExecuteApplyReflections(double deltaTime, ca
     SetViewport(pCmdList, &vp);
     Rect scissorRect = {0, 0, resInfo.RenderWidth, resInfo.RenderHeight};
     SetScissorRects(pCmdList, 1, &scissorRect);
+    SetPrimitiveTopology(pCmdList, PrimitiveTopology::TriangleList);
 
     SetPipelineState(pCmdList, m_pApplyReflectionsPipeline);
     DrawInstanced(pCmdList, 3, 1, 0, 0);
@@ -1393,12 +1459,12 @@ void HybridReflectionsRenderModule::ExecuteDepthDownsample(double deltaTime, cau
     ResourceBarrier(pCmdList, static_cast<uint32_t>(barriers.size()), barriers.data());
 
     FfxSpdDispatchDescription dispatchParameters = {};
-    dispatchParameters.commandList               = ffxGetCommandList(pCmdList);
-    dispatchParameters.resource = ffxGetResource(m_pDepthHierarchy->GetResource(), L"HSR_DepthHierarchy", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ, FFX_RESOURCE_USAGE_ARRAYVIEW);
+    dispatchParameters.commandList               = SDKWrapper::ffxGetCommandList(pCmdList);
+    dispatchParameters.resource = SDKWrapper::ffxGetResource(m_pDepthHierarchy->GetResource(), L"HSR_DepthHierarchy", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ, FFX_RESOURCE_USAGE_ARRAYVIEW);
 
     // Disabled until remaining things are fixes
     FfxErrorCode errorCode = ffxSpdContextDispatch(&m_SpdContext, &dispatchParameters);
-    FFX_ASSERT(errorCode == FFX_OK);
+    CAULDRON_ASSERT(errorCode == FFX_OK);
 
     // FidelityFX contexts modify the set resource view heaps, so set the cauldron one back
     SetAllResourceViewHeaps(pCmdList);
@@ -1602,24 +1668,24 @@ void HybridReflectionsRenderModule::ExecuteClassifier(double deltaTime, cauldron
 
     // All cauldron resources come into a render module in a generic read state (ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource)
     FfxClassifierReflectionDispatchDescription dispatchParameters = {};
-    dispatchParameters.commandList                                = ffxGetCommandList(pCmdList);
-    dispatchParameters.depth         = ffxGetResource(m_pDepthTarget->GetResource(), L"HSR_InputDepth", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    dispatchParameters.motionVectors = ffxGetResource(m_pMotionVectors->GetResource(), L"HSR_InputMotionVectors", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    dispatchParameters.normal        = ffxGetResource(m_pNormal->GetResource(), L"HSR_InputNormal", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchParameters.commandList                                = SDKWrapper::ffxGetCommandList(pCmdList);
+    dispatchParameters.depth         = SDKWrapper::ffxGetResource(m_pDepthTarget->GetResource(), L"HSR_InputDepth", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchParameters.motionVectors = SDKWrapper::ffxGetResource(m_pMotionVectors->GetResource(), L"HSR_InputMotionVectors", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchParameters.normal        = SDKWrapper::ffxGetResource(m_pNormal->GetResource(), L"HSR_InputNormal", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
     dispatchParameters.materialParameters =
-        ffxGetResource(m_pAoRoughnessMetallic->GetResource(), L"HSR_InputSpecularRoughness", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+        SDKWrapper::ffxGetResource(m_pAoRoughnessMetallic->GetResource(), L"HSR_InputSpecularRoughness", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
     dispatchParameters.environmentMap =
-        ffxGetResource(m_pPrefilteredEnvironmentMap->GetResource(), L"HSR_InputEnvironmentMapTexture", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    dispatchParameters.radiance          = ffxGetResource(m_pRadianceA->GetResource(), L"HSR_Radiance", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    dispatchParameters.varianceHistory   = ffxGetResource(m_pVarianceB->GetResource(), L"HSR_VarianceHistory", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    dispatchParameters.hitCounter        = ffxGetResource(m_pHitCounterA->GetResource(), L"HSR_HitCounter", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    dispatchParameters.hitCounterHistory = ffxGetResource(m_pHitCounterB->GetResource(), L"HSR_HitCounterHistory", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    dispatchParameters.rayList           = ffxGetResource(m_pRayList->GetResource(), L"HSR_RayList", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
-    dispatchParameters.rayListHW         = ffxGetResource(m_pHWRayList->GetResource(), L"HSR_RayListHW", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
+        SDKWrapper::ffxGetResource(m_pPrefilteredEnvironmentMap->GetResource(), L"HSR_InputEnvironmentMapTexture", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchParameters.radiance          = SDKWrapper::ffxGetResource(m_pRadianceA->GetResource(), L"HSR_Radiance", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchParameters.varianceHistory   = SDKWrapper::ffxGetResource(m_pVarianceB->GetResource(), L"HSR_VarianceHistory", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchParameters.hitCounter        = SDKWrapper::ffxGetResource(m_pHitCounterA->GetResource(), L"HSR_HitCounter", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchParameters.hitCounterHistory = SDKWrapper::ffxGetResource(m_pHitCounterB->GetResource(), L"HSR_HitCounterHistory", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchParameters.rayList           = SDKWrapper::ffxGetResource(m_pRayList->GetResource(), L"HSR_RayList", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
+    dispatchParameters.rayListHW         = SDKWrapper::ffxGetResource(m_pHWRayList->GetResource(), L"HSR_RayListHW", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
     dispatchParameters.extractedRoughness =
-        ffxGetResource(m_pExtractedRoughness->GetResource(), L"HSR_ExtractedRoughness", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    dispatchParameters.rayCounter            = ffxGetResource(m_pRayCounter->GetResource(), L"HSR_RayCounter", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
-    dispatchParameters.denoiserTileList      = ffxGetResource(m_pDenoiserTileList->GetResource(), L"HSR_DenoiserTileList", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
+        SDKWrapper::ffxGetResource(m_pExtractedRoughness->GetResource(), L"HSR_ExtractedRoughness", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchParameters.rayCounter            = SDKWrapper::ffxGetResource(m_pRayCounter->GetResource(), L"HSR_RayCounter", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
+    dispatchParameters.denoiserTileList      = SDKWrapper::ffxGetResource(m_pDenoiserTileList->GetResource(), L"HSR_DenoiserTileList", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
     dispatchParameters.renderSize.width      = resInfo.RenderWidth;
     dispatchParameters.renderSize.height     = resInfo.RenderHeight;
     dispatchParameters.motionVectorScale[0]  = -1.f;
@@ -1651,7 +1717,7 @@ void HybridReflectionsRenderModule::ExecuteClassifier(double deltaTime, cauldron
     memcpy(&dispatchParameters.prevViewProjection, &pCamera->GetPreviousViewProjection(), sizeof(Mat4));
 
     FfxErrorCode errorCode = ffxClassifierContextReflectionDispatch(&m_ClassifierContext, &dispatchParameters);
-    FFX_ASSERT(errorCode == FFX_OK);
+    CAULDRON_ASSERT(errorCode == FFX_OK);
 
     // FidelityFX contexts modify the set resource view heaps, so set the cauldron one back
     SetAllResourceViewHeaps(pCmdList);
@@ -1665,21 +1731,21 @@ void HybridReflectionsRenderModule::ExecuteDenoiser(double deltaTime, cauldron::
 
     // Denoise
     FfxDenoiserReflectionsDispatchDescription denoiserDispatchParameters = {};
-    denoiserDispatchParameters.commandList                               = ffxGetCommandList(pCmdList);
-    denoiserDispatchParameters.depthHierarchy = ffxGetResource(m_pDepthHierarchy->GetResource(), L"HSR_DepthHierarchy", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    denoiserDispatchParameters.motionVectors  = ffxGetResource(m_pMotionVectors->GetResource(), L"HSR_MotionVectors", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    denoiserDispatchParameters.normal         = ffxGetResource(m_pNormal->GetResource(), L"HSR_InputNormal", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    denoiserDispatchParameters.radianceA      = ffxGetResource(m_pRadianceA->GetResource(), L"HSR_RadianceA", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    denoiserDispatchParameters.radianceB      = ffxGetResource(m_pRadianceB->GetResource(), L"HSR_RadianceB", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    denoiserDispatchParameters.varianceA      = ffxGetResource(m_pVarianceA->GetResource(), L"HSR_VarianceA", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    denoiserDispatchParameters.varianceB      = ffxGetResource(m_pVarianceB->GetResource(), L"HSR_VarianceB", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    denoiserDispatchParameters.commandList                               = SDKWrapper::ffxGetCommandList(pCmdList);
+    denoiserDispatchParameters.depthHierarchy = SDKWrapper::ffxGetResource(m_pDepthHierarchy->GetResource(), L"HSR_DepthHierarchy", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    denoiserDispatchParameters.motionVectors  = SDKWrapper::ffxGetResource(m_pMotionVectors->GetResource(), L"HSR_MotionVectors", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    denoiserDispatchParameters.normal         = SDKWrapper::ffxGetResource(m_pNormal->GetResource(), L"HSR_InputNormal", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    denoiserDispatchParameters.radianceA      = SDKWrapper::ffxGetResource(m_pRadianceA->GetResource(), L"HSR_RadianceA", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    denoiserDispatchParameters.radianceB      = SDKWrapper::ffxGetResource(m_pRadianceB->GetResource(), L"HSR_RadianceB", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    denoiserDispatchParameters.varianceA      = SDKWrapper::ffxGetResource(m_pVarianceA->GetResource(), L"HSR_VarianceA", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    denoiserDispatchParameters.varianceB      = SDKWrapper::ffxGetResource(m_pVarianceB->GetResource(), L"HSR_VarianceB", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
     denoiserDispatchParameters.extractedRoughness =
-        ffxGetResource(m_pExtractedRoughness->GetResource(), L"HSR_ExtractedRoughness", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+        SDKWrapper::ffxGetResource(m_pExtractedRoughness->GetResource(), L"HSR_ExtractedRoughness", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
     denoiserDispatchParameters.denoiserTileList =
-        ffxGetResource(m_pDenoiserTileList->GetResource(), L"HSR_DenoiserTileList", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
+        SDKWrapper::ffxGetResource(m_pDenoiserTileList->GetResource(), L"HSR_DenoiserTileList", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
     denoiserDispatchParameters.indirectArgumentsBuffer =
-        ffxGetResource(m_pIntersectionPassIndirectArgs->GetResource(), L"HSR_IndirectArgumentsBuffer ", FFX_RESOURCE_STATE_INDIRECT_ARGUMENT);
-    denoiserDispatchParameters.output              = ffxGetResource(m_pOutput->GetResource(), L"HSR_Output", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+        SDKWrapper::ffxGetResource(m_pIntersectionPassIndirectArgs->GetResource(), L"HSR_IndirectArgumentsBuffer ", FFX_RESOURCE_STATE_INDIRECT_ARGUMENT);
+    denoiserDispatchParameters.output              = SDKWrapper::ffxGetResource(m_pOutput->GetResource(), L"HSR_Output", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
     denoiserDispatchParameters.normalsUnpackMul    = 2.0f;   // Cauldron's GBuffer stores normals in the [0, 1] range, SSSR exepects them in the [-1, 1] range.
     denoiserDispatchParameters.normalsUnpackAdd    = -1.0f;  // Cauldron's GBuffer stores normals in the [0, 1] range, SSSR exepects them in the [-1, 1] range.
     denoiserDispatchParameters.motionVectorScale.x = 1.0f;
@@ -1696,7 +1762,7 @@ void HybridReflectionsRenderModule::ExecuteDenoiser(double deltaTime, cauldron::
     memcpy(&denoiserDispatchParameters.prevViewProjection, &pCamera->GetPreviousViewProjection(), sizeof(Mat4));
 
     FfxErrorCode errorCode = ffxDenoiserContextDispatchReflections(&m_DenoiserContext, &denoiserDispatchParameters);
-    FFX_ASSERT(errorCode == FFX_OK);
+    CAULDRON_ASSERT(errorCode == FFX_OK);
 
     // FidelityFX contexts modify the set resource view heaps, so set the cauldron one back
     SetAllResourceViewHeaps(pCmdList);

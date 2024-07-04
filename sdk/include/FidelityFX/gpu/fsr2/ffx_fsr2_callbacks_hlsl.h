@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #include "ffx_fsr2_resources.h"
@@ -31,16 +31,12 @@
 #ifdef __hlsl_dx_compiler
 #pragma dxc diagnostic pop
 #endif //__hlsl_dx_compiler
-#endif // #if defined(FFX_GPU)
 
-#if defined(FFX_GPU)
 #ifndef FFX_PREFER_WAVE64
 #define FFX_PREFER_WAVE64
-#endif // FFX_PREFER_WAVE64
+#endif // #ifndef FFX_PREFER_WAVE64
 
-#if defined(FFX_GPU)
 #pragma warning(disable: 3205)  // conversion from larger type to smaller
-#endif // #if defined(FFX_GPU)
 
 #define DECLARE_SRV_REGISTER(regIndex)  t##regIndex
 #define DECLARE_UAV_REGISTER(regIndex)  u##regIndex
@@ -72,9 +68,10 @@
         FfxFloat32    fDeltaTime;
         FfxFloat32    fDynamicResChangeFactor;
         FfxFloat32    fViewSpaceToMetersFactor;
+        FfxFloat32    fPadding;
     };
 
-#define FFX_FSR2_CONSTANT_BUFFER_1_SIZE (sizeof(cbFSR2) / 4)  // Number of 32-bit values. This must be kept in sync with the cbFSR2 size.
+#define FFX_FSR2_CONSTANT_BUFFER_1_SIZE 32
 
 /* Define getter functions in the order they are defined in the CB! */
 FfxInt32x2 RenderSize()
@@ -175,9 +172,9 @@ FfxFloat32 ViewSpaceToMetersFactor()
 
 #define FFX_FSR2_ROOTSIG_STRINGIFY(p) FFX_FSR2_ROOTSIG_STR(p)
 #define FFX_FSR2_ROOTSIG_STR(p) #p
-#define FFX_FSR2_ROOTSIG [RootSignature( "DescriptorTable(UAV(u0, numDescriptors = " FFX_FSR2_ROOTSIG_STRINGIFY(FFX_FSR2_RESOURCE_IDENTIFIER_COUNT) ")), " \
+#define FFX_FSR2_ROOTSIG [RootSignature("DescriptorTable(UAV(u0, numDescriptors = " FFX_FSR2_ROOTSIG_STRINGIFY(FFX_FSR2_RESOURCE_IDENTIFIER_COUNT) ")), " \
                                     "DescriptorTable(SRV(t0, numDescriptors = " FFX_FSR2_ROOTSIG_STRINGIFY(FFX_FSR2_RESOURCE_IDENTIFIER_COUNT) ")), " \
-                                    "RootConstants(num32BitConstants=" FFX_FSR2_ROOTSIG_STRINGIFY(FFX_FSR2_CONSTANT_BUFFER_1_SIZE) ", b0), " \
+                                    "CBV(b0), " \
                                     "StaticSampler(s0, filter = FILTER_MIN_MAG_MIP_POINT, " \
                                                       "addressU = TEXTURE_ADDRESS_CLAMP, " \
                                                       "addressV = TEXTURE_ADDRESS_CLAMP, " \
@@ -191,12 +188,12 @@ FfxFloat32 ViewSpaceToMetersFactor()
                                                       "comparisonFunc = COMPARISON_NEVER, " \
                                                       "borderColor = STATIC_BORDER_COLOR_TRANSPARENT_BLACK)" )]
 
-#define FFX_FSR2_CONSTANT_BUFFER_2_SIZE 6  // Number of 32-bit values. This must be kept in sync with max( cbRCAS , cbSPD) size.
+#define FFX_FSR2_CONSTANT_BUFFER_2_SIZE 6           // Number of 32-bit values. This must be kept in sync with max( cbRCAS , cbSPD) size.
 
-#define FFX_FSR2_CB2_ROOTSIG [RootSignature( "DescriptorTable(UAV(u0, numDescriptors = " FFX_FSR2_ROOTSIG_STRINGIFY(FFX_FSR2_RESOURCE_IDENTIFIER_COUNT) ")), " \
+#define FFX_FSR2_CB2_ROOTSIG [RootSignature("DescriptorTable(UAV(u0, numDescriptors = " FFX_FSR2_ROOTSIG_STRINGIFY(FFX_FSR2_RESOURCE_IDENTIFIER_COUNT) ")), " \
                                     "DescriptorTable(SRV(t0, numDescriptors = " FFX_FSR2_ROOTSIG_STRINGIFY(FFX_FSR2_RESOURCE_IDENTIFIER_COUNT) ")), " \
-                                    "RootConstants(num32BitConstants=" FFX_FSR2_ROOTSIG_STRINGIFY(FFX_FSR2_CONSTANT_BUFFER_1_SIZE) ", b0), " \
-                                    "RootConstants(num32BitConstants=" FFX_FSR2_ROOTSIG_STRINGIFY(FFX_FSR2_CONSTANT_BUFFER_2_SIZE) ", b1), " \
+                                    "CBV(b0), " \
+                                    "CBV(b1), " \
                                     "StaticSampler(s0, filter = FILTER_MIN_MAG_MIP_POINT, " \
                                                       "addressU = TEXTURE_ADDRESS_CLAMP, " \
                                                       "addressV = TEXTURE_ADDRESS_CLAMP, " \
@@ -209,12 +206,34 @@ FfxFloat32 ViewSpaceToMetersFactor()
                                                       "addressW = TEXTURE_ADDRESS_CLAMP, " \
                                                       "comparisonFunc = COMPARISON_NEVER, " \
                                                       "borderColor = STATIC_BORDER_COLOR_TRANSPARENT_BLACK)" )]
+
+#define FFX_FSR2_CONSTANT_BUFFER_3_SIZE 4           // Number of 32-bit values. This must be kept in sync with cbGenerateReactive size.
+
+#define FFX_FSR2_REACTIVE_ROOTSIG [RootSignature("DescriptorTable(UAV(u0, numDescriptors = " FFX_FSR2_ROOTSIG_STRINGIFY(FFX_FSR2_RESOURCE_IDENTIFIER_COUNT) ")), " \
+                                    "DescriptorTable(SRV(t0, numDescriptors = " FFX_FSR2_ROOTSIG_STRINGIFY(FFX_FSR2_RESOURCE_IDENTIFIER_COUNT) ")), " \
+                                    "CBV(b0), " \
+                                    "CBV(b1), " \
+                                    "StaticSampler(s0, filter = FILTER_MIN_MAG_MIP_POINT, " \
+                                                      "addressU = TEXTURE_ADDRESS_CLAMP, " \
+                                                      "addressV = TEXTURE_ADDRESS_CLAMP, " \
+                                                      "addressW = TEXTURE_ADDRESS_CLAMP, " \
+                                                      "comparisonFunc = COMPARISON_NEVER, " \
+                                                      "borderColor = STATIC_BORDER_COLOR_TRANSPARENT_BLACK), " \
+                                    "StaticSampler(s1, filter = FILTER_MIN_MAG_MIP_LINEAR, " \
+                                                      "addressU = TEXTURE_ADDRESS_CLAMP, " \
+                                                      "addressV = TEXTURE_ADDRESS_CLAMP, " \
+                                                      "addressW = TEXTURE_ADDRESS_CLAMP, " \
+                                                      "comparisonFunc = COMPARISON_NEVER, " \
+                                                      "borderColor = STATIC_BORDER_COLOR_TRANSPARENT_BLACK)" )]
+
 #if defined(FFX_FSR2_EMBED_ROOTSIG)
 #define FFX_FSR2_EMBED_ROOTSIG_CONTENT FFX_FSR2_ROOTSIG
 #define FFX_FSR2_EMBED_CB2_ROOTSIG_CONTENT FFX_FSR2_CB2_ROOTSIG
+#define FFX_FSR2_EMBED_ROOTSIG_REACTIVE_CONTENT FFX_FSR2_REACTIVE_ROOTSIG
 #else
 #define FFX_FSR2_EMBED_ROOTSIG_CONTENT
 #define FFX_FSR2_EMBED_CB2_ROOTSIG_CONTENT
+#define FFX_FSR2_EMBED_ROOTSIG_REACTIVE_CONTENT
 #endif // #if FFX_FSR2_EMBED_ROOTSIG
 
 #if defined(FSR2_BIND_CB_AUTOREACTIVE)

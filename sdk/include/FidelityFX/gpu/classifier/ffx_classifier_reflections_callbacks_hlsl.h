@@ -1,13 +1,14 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
-//
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
+// furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
@@ -30,12 +31,10 @@
 #ifdef __hlsl_dx_compiler
 #pragma dxc diagnostic pop
 #endif //__hlsl_dx_compiler
-#endif // #if defined(FFX_GPU)
 
-#if defined(FFX_GPU)
 #ifndef FFX_PREFER_WAVE64
 #define FFX_PREFER_WAVE64
-#endif // #if defined(FFX_GPU)
+#endif // #ifndef FFX_PREFER_WAVE64
 
 #if defined(FFX_GPU)
 #pragma warning(disable: 3205)  // conversion from larger type to smaller
@@ -116,17 +115,23 @@ cbuffer cbClassifierReflection : FFX_CLASSIFIER_DECLARE_CB(CLASSIFIER_BIND_CB_CL
 #if defined(FFX_GPU)
 #define FFX_CLASSIFIER_ROOTSIG_STRINGIFY(p) FFX_CLASSIFIER_ROOTSIG_STR(p)
 #define FFX_CLASSIFIER_ROOTSIG_STR(p) #p
-#define FFX_CLASSIFIER_ROOTSIG [RootSignature(    "DescriptorTable(UAV(u0, numDescriptors = " FFX_CLASSIFIER_ROOTSIG_STRINGIFY(FFX_CLASSIFIER_RESOURCE_IDENTIFIER_COUNT) ")), " \
+#define FFX_CLASSIFIER_ROOTSIG [RootSignature("DescriptorTable(UAV(u0, numDescriptors = " FFX_CLASSIFIER_ROOTSIG_STRINGIFY(FFX_CLASSIFIER_RESOURCE_IDENTIFIER_COUNT) ")), " \
                                             "DescriptorTable(SRV(t0, numDescriptors = " FFX_CLASSIFIER_ROOTSIG_STRINGIFY(FFX_CLASSIFIER_RESOURCE_IDENTIFIER_COUNT) ")), " \
-                                            "RootConstants(num32BitConstants=" FFX_CLASSIFIER_ROOTSIG_STRINGIFY(FFX_CLASSIFIER_CONSTANT_BUFFER_1_SIZE) ", b0), " \
+                                            "CBV(b0), " \
                                             "StaticSampler(s0, filter = FILTER_MIN_MAG_MIP_LINEAR, " \
                                                 "addressU = TEXTURE_ADDRESS_CLAMP, " \
                                                 "addressV = TEXTURE_ADDRESS_CLAMP, " \
                                                 "addressW = TEXTURE_ADDRESS_WRAP, " \
                                                 "comparisonFunc = COMPARISON_ALWAYS, " \
                                                 "borderColor = STATIC_BORDER_COLOR_TRANSPARENT_BLACK, " \
-                                                "maxAnisotropy = 1, " \
-                                                "visibility = SHADER_VISIBILITY_ALL) " )]
+                                                "maxAnisotropy = 1), " \
+                                            "StaticSampler(s1, filter = FILTER_MIN_MAG_MIP_LINEAR, " \
+                                                "addressU = TEXTURE_ADDRESS_CLAMP, " \
+                                                "addressV = TEXTURE_ADDRESS_CLAMP, " \
+                                                "addressW = TEXTURE_ADDRESS_CLAMP, " \
+                                                "comparisonFunc = COMPARISON_ALWAYS, " \
+                                                "borderColor = STATIC_BORDER_COLOR_TRANSPARENT_BLACK, " \
+                                                "maxAnisotropy = 1)" )]
 
 #if defined(FFX_CLASSIFIER_EMBED_ROOTSIG)
 #define FFX_CLASSIFIER_EMBED_ROOTSIG_CONTENT FFX_CLASSIFIER_ROOTSIG
@@ -326,49 +331,44 @@ FfxBoolean IsRoughnessPerceptual()
 
 #endif // #if defined(FFX_HALF)
 
+#if defined(CLASSIFIER_BIND_SRV_INPUT_NORMAL)
 FfxFloat32x3 LoadWorldSpaceNormal(FfxInt32x2 pixel_coordinate)
 {
-#if defined(CLASSIFIER_BIND_SRV_INPUT_NORMAL)
     return normalize(NormalsUnpackMul() * r_input_normal.Load(FfxInt32x3(pixel_coordinate, 0)).xyz + NormalsUnpackAdd());
-#else
-    return 0.0f;
-#endif
 }
+#endif // #if defined(CLASSIFIER_BIND_SRV_INPUT_NORMAL)
 
-
+#if defined(CLASSIFIER_BIND_SRV_INPUT_ENVIRONMENT_MAP)
 FfxFloat32x3 SampleEnvironmentMap(FfxFloat32x3 direction, FfxFloat32 preceptualRoughness)
 {
-#if defined(CLASSIFIER_BIND_SRV_INPUT_ENVIRONMENT_MAP)
     FfxFloat32 Width; FfxFloat32 Height;
     r_input_environment_map.GetDimensions(Width, Height);
     FfxInt32 maxMipLevel = FfxInt32(log2(FfxFloat32(Width > 0 ? Width : 1)));
     FfxFloat32 mip = clamp(preceptualRoughness * FfxFloat32(maxMipLevel), 0.0, FfxFloat32(maxMipLevel));
     return r_input_environment_map.SampleLevel(s_EnvironmentMapSampler, direction, mip).xyz * IBLFactor();
-#else
-    return 0.0f;
-#endif
 }
+#endif // #if defined(CLASSIFIER_BIND_SRV_INPUT_ENVIRONMENT_MAP)
 
+#if defined (CLASSIFIER_BIND_UAV_RAY_COUNTER)
 void IncrementRayCounterSW(FfxUInt32 value, FFX_PARAMETER_OUT FfxUInt32 original_value)
 {
-#if defined (CLASSIFIER_BIND_UAV_RAY_COUNTER)
     InterlockedAdd(rw_ray_counter[0], value, original_value);
-#endif
 }
+#endif // #if defined (CLASSIFIER_BIND_UAV_RAY_COUNTER)
 
+#if defined (CLASSIFIER_BIND_UAV_RAY_COUNTER)
 void IncrementRayCounterHW(FfxUInt32 value, FFX_PARAMETER_OUT FfxUInt32 original_value)
 {
-#if defined (CLASSIFIER_BIND_UAV_RAY_COUNTER)
     InterlockedAdd(rw_ray_counter[4], value, original_value);
-#endif
 }
+#endif // #if defined (CLASSIFIER_BIND_UAV_RAY_COUNTER)
 
+#if defined (CLASSIFIER_BIND_UAV_RAY_COUNTER)
 void IncrementDenoiserTileCounter(FFX_PARAMETER_OUT FfxUInt32 original_value)
 {
-#if defined (CLASSIFIER_BIND_UAV_RAY_COUNTER)
     InterlockedAdd(rw_ray_counter[2], 1, original_value);
-#endif
 }
+#endif // #if defined (CLASSIFIER_BIND_UAV_RAY_COUNTER)
 
 FfxUInt32 PackRayCoords(FfxUInt32x2 ray_coord, FfxBoolean copy_horizontal, FfxBoolean copy_vertical, FfxBoolean copy_diagonal)
 {
@@ -382,47 +382,46 @@ FfxUInt32 PackRayCoords(FfxUInt32x2 ray_coord, FfxBoolean copy_horizontal, FfxBo
     return packed;
 }
 
+#if defined (CLASSIFIER_BIND_UAV_RAY_LIST)
 void StoreRay(FfxInt32 index, FfxUInt32x2 ray_coord, FfxBoolean copy_horizontal, FfxBoolean copy_vertical, FfxBoolean copy_diagonal)
 {
-#if defined (CLASSIFIER_BIND_UAV_RAY_LIST)
     FfxUInt32 packedRayCoords = PackRayCoords(ray_coord, copy_horizontal, copy_vertical, copy_diagonal); // Store out pixel to trace
     rw_ray_list[index] = packedRayCoords;
-#endif
 }
+#endif // #if defined (CLASSIFIER_BIND_UAV_RAY_LIST)
 
+#if defined (CLASSIFIER_BIND_UAV_RAY_LIST)
 void StoreRaySWHelper(FfxInt32 index)
 {
-#if defined (CLASSIFIER_BIND_UAV_RAY_LIST)
     rw_ray_list[index] = 0xffffffffu;
-#endif
 }
+#endif // #if defined (CLASSIFIER_BIND_UAV_RAY_LIST)
 
+#if defined (CLASSIFIER_BIND_UAV_HW_RAY_LIST)
 void StoreRayHW(FfxInt32 index, FfxUInt32x2 ray_coord, FfxBoolean copy_horizontal, FfxBoolean copy_vertical, FfxBoolean copy_diagonal)
 {
-#if defined (CLASSIFIER_BIND_UAV_HW_RAY_LIST)
     FfxUInt32 packedRayCoords = PackRayCoords(ray_coord, copy_horizontal, copy_vertical, copy_diagonal); // Store out pixel to trace
     rw_hw_ray_list[index] = packedRayCoords;
-#endif
 }
+#endif // #if defined (CLASSIFIER_BIND_UAV_HW_RAY_LIST)
 
+#if defined (CLASSIFIER_BIND_UAV_DENOISER_TILE_LIST)
 void StoreDenoiserTile(FfxInt32 index, FfxUInt32x2 tile_coord)
 {
-#if defined (CLASSIFIER_BIND_UAV_DENOISER_TILE_LIST)
     rw_denoiser_tile_list[index] = ((tile_coord.y & 0xffffu) << 16) | ((tile_coord.x & 0xffffu) << 0); // Store out pixel to trace
-#endif
 }
+#endif // #if defined (CLASSIFIER_BIND_UAV_DENOISER_TILE_LIST)
 
-
+#if defined (CLASSIFIER_BIND_UAV_EXTRACTED_ROUGHNESS)
 void StoreExtractedRoughness(FfxUInt32x2 coordinate, FfxFloat32 roughness)
 {
-#if defined (CLASSIFIER_BIND_UAV_EXTRACTED_ROUGHNESS)
     rw_extracted_roughness[coordinate] = roughness;
-#endif
 }
+#endif // #if defined (CLASSIFIER_BIND_UAV_EXTRACTED_ROUGHNESS)
 
+#if defined (CLASSIFIER_BIND_SRV_INPUT_MATERIAL_PARAMETERS)
 FfxFloat32 LoadRoughnessFromMaterialParametersInput(FfxUInt32x3 coordinate) /**/
 {
-#if defined (CLASSIFIER_BIND_SRV_INPUT_MATERIAL_PARAMETERS)
     FfxFloat32 rawRoughness = r_input_material_parameters.Load(coordinate)[RoughnessChannel()];
     if (IsRoughnessPerceptual())
     {
@@ -430,60 +429,49 @@ FfxFloat32 LoadRoughnessFromMaterialParametersInput(FfxUInt32x3 coordinate) /**/
     }
 
     return rawRoughness;
-#else
-    return 0.0f;
-#endif
 }
+#endif // #if defined (CLASSIFIER_BIND_SRV_INPUT_MATERIAL_PARAMETERS)
 
+#if defined (CLASSIFIER_BIND_SRV_VARIANCE_HISTORY)
 FfxFloat32 SampleVarianceHistory(FfxFloat32x2 coordinate)
 {
-#if defined ( CLASSIFIER_BIND_SRV_VARIANCE_HISTORY )
     return (FfxFloat32)r_variance_history.SampleLevel(s_LinearSampler, coordinate, 0.0f).x;
-#else
-    return 0.0f;
-#endif
 }
+#endif // #if defined (CLASSIFIER_BIND_SRV_VARIANCE_HISTORY)
 
+#if defined (CLASSIFIER_BIND_UAV_RADIANCE)
 void StoreRadiance(FfxUInt32x2 coordinate, FfxFloat32x4 radiance) /**/
 {
-#if defined (CLASSIFIER_BIND_UAV_RADIANCE)
     rw_radiance[coordinate] = radiance;
-#endif
 }
+#endif // #if defined (CLASSIFIER_BIND_UAV_RADIANCE)
 
-
+#if defined (CLASSIFIER_BIND_SRV_INPUT_DEPTH)
 FfxFloat32 GetInputDepth(FfxUInt32x2 coordinate)
 {
-#if defined (CLASSIFIER_BIND_SRV_INPUT_DEPTH)
     return r_input_depth[coordinate];
-#else
-    return 0.0f;
-#endif
 }
+#endif // #if defined (CLASSIFIER_BIND_SRV_INPUT_DEPTH)
 
+#if defined(CLASSIFIER_BIND_SRV_HIT_COUNTER_HISTORY)
 FfxUInt32 LoadHitCounterHistory(FfxUInt32x2 coordinate)
 {
-#if defined(CLASSIFIER_BIND_SRV_HIT_COUNTER_HISTORY)
     return r_hit_counter_history[coordinate];
-#else
-    return 0.0f;
-#endif
 }
+#endif // #if defined(CLASSIFIER_BIND_SRV_HIT_COUNTER_HISTORY)
 
+#if defined(CLASSIFIER_BIND_UAV_HIT_COUNTER)
 void StoreHitCounter(FfxUInt32x2 coordinate, FfxUInt32 value)
 {
-#if defined(CLASSIFIER_BIND_UAV_HIT_COUNTER)
     rw_hit_counter[coordinate] = value;
-#endif
 }
+#endif // #if defined(CLASSIFIER_BIND_UAV_HIT_COUNTER)
 
+#if defined (CLASSIFIER_BIND_SRV_INPUT_MOTION_VECTORS)
 FfxFloat32x2 LoadMotionVector(FfxInt32x2 pixel_coordinate)
 {
-#if defined (CLASSIFIER_BIND_SRV_INPUT_MOTION_VECTORS)
     return MotionVectorScale() * r_input_motion_vectors.Load(FfxInt32x3(pixel_coordinate, 0));
-#else
-    return 0.0f;
-#endif
 }
+#endif // #if defined (CLASSIFIER_BIND_SRV_INPUT_MOTION_VECTORS)
 
 #endif // #if defined(FFX_GPU)

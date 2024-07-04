@@ -1,13 +1,14 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
-//
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
+// furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
@@ -30,12 +31,10 @@
 #ifdef __hlsl_dx_compiler
 #pragma dxc diagnostic pop
 #endif //__hlsl_dx_compiler
-#endif // #if defined(FFX_GPU)
 
-#if defined(FFX_GPU)
 #ifndef FFX_PREFER_WAVE64
 #define FFX_PREFER_WAVE64
-#endif
+#endif // #ifndef FFX_PREFER_WAVE64
 
 
 static const FfxFloat32x2 k_poissonDisc[] = {
@@ -78,7 +77,7 @@ static const FfxFloat32x2 k_poissonDisc[] = {
         FfxFloat32Mat4 lightView;
         FfxFloat32Mat4 inverseLightView;
 
-        //#define FFX_CLASSIFIER_CONSTANT_BUFFER_1_SIZE 18 + 2 booleans +  32 +  48// Number of 32-bit values
+        #define FFX_CLASSIFIER_CONSTANT_BUFFER_1_SIZE 100
     };
 #endif
 
@@ -86,7 +85,7 @@ static const FfxFloat32x2 k_poissonDisc[] = {
 #define FFX_CLASSIFIER_ROOTSIG_STR(p) #p
 #define FFX_CLASSIFIER_ROOTSIG [RootSignature( "DescriptorTable(UAV(u0, numDescriptors = " FFX_CLASSIFIER_ROOTSIG_STRINGIFY(FFX_CLASSIFIER_RESOURCE_IDENTIFIER_COUNT) ")), " \
                                     "DescriptorTable(SRV(t0, numDescriptors = " FFX_CLASSIFIER_ROOTSIG_STRINGIFY(FFX_CLASSIFIER_RESOURCE_IDENTIFIER_COUNT) ")), " \
-                                    "RootConstants(num32BitConstants=" FFX_CLASSIFIER_ROOTSIG_STRINGIFY(FFX_CLASSIFIER_CONSTANT_BUFFER_1_SIZE) ", b0), " \
+                                    "CBV(b0), " \
                                     "StaticSampler(s0, filter = FILTER_MIN_MAG_MIP_LINEAR, " \
                                                       "addressU = TEXTURE_ADDRESS_CLAMP, " \
                                                       "addressV = TEXTURE_ADDRESS_CLAMP, " \
@@ -265,54 +264,48 @@ FfxFloat32Mat4 InverseLightView()
     RWTexture2D<FfxFloat32x4> rwt2d_output : FFX_CLASSIFIER_DECLARE_UAV(FFX_CLASSIFIER_RESOURCE_IDENTIFIER_OUTPUT_COLOR);
 #endif
 
+#if defined(FFX_CLASSIFIER_BIND_SRV_INPUT_DEPTH)
 FfxFloat32 FfxClassifierSampleDepth(FfxUInt32x2 uiPxPos)
 {
-#if defined(FFX_CLASSIFIER_BIND_SRV_INPUT_DEPTH)
     return r_input_depth[uiPxPos].r;
-#else
-    return 0.0;
-#endif
 }
+#endif // #if defined(FFX_CLASSIFIER_BIND_SRV_INPUT_DEPTH)
 
+#if defined(FFX_CLASSIFIER_BIND_SRV_INPUT_NORMALS)
 FfxFloat32x3 FfxClassifierSampleNormal(FfxUInt32x2 uiPxPos)
 {
-#if defined(FFX_CLASSIFIER_BIND_SRV_INPUT_NORMALS)
     FfxFloat32x3 normal = r_input_normal[uiPxPos].rgb;
     normal = normal * NormalsUnpackMul().xxx + NormalsUnpackAdd().xxx;
     return normalize(normal);
-#else
-    return FfxFloat32x3(0.0, 0.0, 0.0);
-#endif
 }
+#endif // #if defined(FFX_CLASSIFIER_BIND_SRV_INPUT_NORMALS)
 
+#if defined(FFX_CLASSIFIER_BIND_SRV_INPUT_SHADOW_MAPS)
 FfxFloat32 FfxClassifierSampleShadowMap(FfxFloat32x2 sampleUV, FfxUInt32 cascadeIndex)
 {
-#if defined(FFX_CLASSIFIER_BIND_SRV_INPUT_SHADOW_MAPS)
     return r_input_shadowMap[NonUniformResourceIndex(cascadeIndex)][FfxUInt32x2(sampleUV)];
-#else
-    return 0.0;
-#endif
 }
+#endif // #if defined(FFX_CLASSIFIER_BIND_SRV_INPUT_SHADOW_MAPS)
 
+#if defined(FFX_CLASSIFIER_BIND_UAV_OUTPUT_RAY_HIT)
 void FfxClassifierStoreLightMask(FfxUInt32x2 index, FfxUInt32 lightMask)
 {
-#if defined(FFX_CLASSIFIER_BIND_UAV_OUTPUT_RAY_HIT)
     rwt2d_rayHitResults[index] = ~lightMask;
-#endif
 }
+#endif // #if defined(FFX_CLASSIFIER_BIND_UAV_OUTPUT_RAY_HIT)
 
 FfxUInt32 CountBits(const FfxUInt32 mask)
 {
     return countbits(mask);
 }
 
+#if defined(FFX_CLASSIFIER_BIND_UAV_OUTPUT_WORK_TILES) || defined(FFX_CLASSIFIER_BIND_UAV_OUTPUT_WORK_TILES_COUNT)
 void FfxClassifierStoreTile(FfxUInt32x4 uiTile)
 {
-#if defined(FFX_CLASSIFIER_BIND_UAV_OUTPUT_WORK_TILES) || defined(FFX_CLASSIFIER_BIND_UAV_OUTPUT_WORK_TILES_COUNT)
     uint index = ~0;
     InterlockedAdd(rwb_tileCount[0], 1, index);
     rwsb_tiles[index] = uiTile;
-#endif
 }
+#endif // #if defined(FFX_CLASSIFIER_BIND_UAV_OUTPUT_WORK_TILES) || defined(FFX_CLASSIFIER_BIND_UAV_OUTPUT_WORK_TILES_COUNT)
 
 #endif // #if defined(FFX_GPU)

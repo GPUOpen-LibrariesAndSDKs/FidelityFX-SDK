@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -82,6 +82,18 @@ void GPUParticleRenderModule::Init(const json& initData)
 
         m_pResetParticlesPipelineObj = PipelineObject::CreatePipelineObject(L"ResetParticles_PipelineObj", psoDesc);
     }
+    
+    {
+        // Setup the pipeline object
+        PipelineDesc psoDesc;
+        psoDesc.SetRootSignature(m_pRootSignature);
+
+        // Setup the shaders to build on the pipeline object
+        std::wstring shaderPath = L"ParticleSimulation.hlsl";
+        psoDesc.AddShaderDesc(ShaderBuildDesc::Compute(shaderPath.c_str(), L"CS_ClearAliveCount", ShaderModel::SM6_0, &defineList));
+
+        m_pClearAliveCountPipelineObj = PipelineObject::CreatePipelineObject(L"ClearAliveCount_PipelineObj", psoDesc);
+    }
 
     {
         // Setup the pipeline object
@@ -115,12 +127,12 @@ void GPUParticleRenderModule::Init(const json& initData)
 
     //////////////////////////////////////////////////////////////////////////
     // Build UI
-
-    UISection uiSection;
-    uiSection.SectionName = "Particle";
-    uiSection.AddCheckBox("Particle animation", &m_bPlayAnimations);
-    uiSection.AddCheckBox("Sort", &m_bSort);
-    GetUIManager()->RegisterUIElements(uiSection);
+    UISection* uiSection = GetUIManager()->RegisterUIElements("Particle");
+    if (uiSection)
+    {
+        uiSection->RegisterUIElement<UICheckBox>("Particle animation", m_bPlayAnimations);
+        uiSection->RegisterUIElement<UICheckBox>("Sort", m_bSort);
+    }
 
     //////////////////////////////////////////////////////////////////////////
     // Register additional execution callbacks during the frame
@@ -143,6 +155,7 @@ GPUParticleRenderModule::~GPUParticleRenderModule()
     delete m_pSimulatePipelineObj;
     delete m_pEmitPipelineObj;
     delete m_pResetParticlesPipelineObj;
+    delete m_pClearAliveCountPipelineObj;
     delete m_pParameters;
 }
 
@@ -234,6 +247,17 @@ void GPUParticleRenderModule::Execute(double deltaTime, CommandList* pCmdList, P
         ResourceBarrier(pCmdList, 5, barriers);
         pParticleSystem->m_ReadBufferStates = ResourceState::UnorderedAccess;
     }
+
+    {
+        SetPipelineState(pCmdList, m_pClearAliveCountPipelineObj);
+
+        Dispatch(pCmdList, 1, 1, 1);
+
+        Barrier barriers[2] = {Barrier::UAV(pParticleSystem->m_pAliveCountBuffer->GetResource()),
+                               Barrier::UAV(pParticleSystem->m_pIndirectArgsBuffer->GetResource())};
+        ResourceBarrier(pCmdList, 2, barriers);
+    }
+    
 
     // If we are resetting the particle system, then initialize the dead list
     if (m_bResetSystem)

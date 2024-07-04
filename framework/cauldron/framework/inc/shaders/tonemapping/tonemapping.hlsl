@@ -1,17 +1,20 @@
-// AMD Cauldron code
+// This file is part of the FidelityFX SDK.
 //
-// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and / or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -19,12 +22,15 @@
 
 #include "tonemappers.hlsl"
 #include "tonemappercommon.h"
+#include "transferfunction.h"
 
 //--------------------------------------------------------------------------------------
 // Texture definitions
 //--------------------------------------------------------------------------------------
+Texture2D<float2> AutomaticExposureValue : register(t0);
+Texture2D<float4> InputTexture : register(t1);
+
 RWTexture2D<float4> OutputTexture : register(u0);
-Texture2D<float4>   InputTexture  : register(t0);
 
 //--------------------------------------------------------------------------------------
 // Main function
@@ -33,18 +39,33 @@ Texture2D<float4>   InputTexture  : register(t0);
 void MainCS(uint3 dtID : SV_DispatchThreadID)
 {
     const int2 coord = dtID.xy;
+    float4     color;
 
-    const float4 texColor = InputTexture[coord];
-
-    float4 color;
-    color.xyz = Tonemap(texColor.rgb, Exposure, ToneMapper);
-    color.a = texColor.a;
-
-    switch (MonitorDisplayMode)
+    if (coord.x < LetterboxRectBase.x || coord.y < LetterboxRectBase.y || coord.x >= LetterboxRectBase.x + LetterboxRectSize.x ||
+        coord.y >= LetterboxRectBase.y + LetterboxRectSize.y)
     {
+        color = float4(0.0f.xxx, 1.0f);
+    }
+    else
+    {
+        const int2   coordInLetterbox = dtID.xy - LetterboxRectBase;
+        const float4 texColor         = InputTexture[coordInLetterbox];
+
+        const float2 autoExposure = AutomaticExposureValue[int2(0, 0)];
+
+        
+        color.xyz = Tonemap(texColor.rgb, UseAutoExposure ? autoExposure.x : Exposure, ToneMapper);
+        color.a   = texColor.a;
+
+        switch (MonitorDisplayMode)
+        {
         case DisplayMode::DISPLAYMODE_LDR:
+            color.xyz = ApplyGamma(color.xyz);
+            break;
+
         case DisplayMode::DISPLAYMODE_HDR10_SCRGB:
         case DisplayMode::DISPLAYMODE_FSHDR_SCRGB:
+            color.xyz = ApplyscRGBScale(color.xyz, 0.0f, DisplayMaxLuminance / 80.0f);
             break;
 
         case DisplayMode::DISPLAYMODE_HDR10_2084:
@@ -61,7 +82,9 @@ void MainCS(uint3 dtID : SV_DispatchThreadID)
             // 1 * ((1000 / 80) * (80 / 10000)) = 1 / 10 = 0.1
             // For simplcity we are getting rid of conversion to per 80 nit division factor and directly dividing max luminance set by 10000 nits
             color.xyz *= (DisplayMaxLuminance / 10000.0f);
+            color.xyz = ApplyPQ(color.xyz);
             break;
+        }
     }
 
     OutputTexture[coord] = color;

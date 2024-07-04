@@ -1,27 +1,26 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #include "vrsrendermodule.h"
-#include "validation_remap.h"
 
 #include "shaders/surfacerendercommon.h"
 #include "render/device.h"
@@ -30,6 +29,7 @@
 #include "render/profiler.h"
 #include "render/rasterview.h"
 #include "render/uploadheap.h"
+#include "core/backend_interface.h"
 #include "core/framework.h"
 #include "core/components/meshcomponent.h"
 #include "core/loaders/textureloader.h"
@@ -56,10 +56,7 @@ VRSRenderModule::VRSRenderModule() :
 
 VRSRenderModule::~VRSRenderModule()
 {
-    UpdateVRSContext(false);
-
-    // Destroy the FidelityFX interface memory
-    free(m_InitializationParameters.backendInterface.scratchBuffer);
+    DestroyFfxContext();
     
     delete m_pOverlayRootSignature;
     delete m_pOverlayPipelineObj;
@@ -157,16 +154,52 @@ void VRSRenderModule::Init(const json& initData)
 
         InitOverlay(initData);
 
-        // Initialize the FFX backend
-        const size_t scratchBufferSize = ffxGetScratchMemorySize(FFX_VRS_CONTEXT_COUNT);
-        void*        scratchBuffer     = malloc(scratchBufferSize);
-        FfxErrorCode errorCode         = ffxGetInterface(&m_InitializationParameters.backendInterface, GetDevice(), scratchBuffer, scratchBufferSize, FFX_VRS_CONTEXT_COUNT);
-        FFX_ASSERT(errorCode == FFX_OK);
+        InitFfxBackend();
+
+        GetFramework()->ConfigureRuntimeShaderRecompiler(
+            [this]() { DestroyFfxContext(); }, [this](void) { InitFfxContext(); });
     }
 
     UpdateVRSInfo();
 
     SetModuleReady(true);
+}
+
+void VRSRenderModule::InitFfxBackend()
+{
+    // Initialize the FFX backend
+    const size_t scratchBufferSize = SDKWrapper::ffxGetScratchMemorySize(FFX_VRS_CONTEXT_COUNT);
+    void*        scratchBuffer     = calloc(scratchBufferSize, 1u);
+    FfxErrorCode errorCode         = SDKWrapper::ffxGetInterface(&m_InitializationParameters.backendInterface, GetDevice(), scratchBuffer, scratchBufferSize, FFX_VRS_CONTEXT_COUNT);
+    CAULDRON_ASSERT(errorCode == FFX_OK);
+    CauldronAssert(ASSERT_CRITICAL, m_InitializationParameters.backendInterface.fpGetSDKVersion(&m_InitializationParameters.backendInterface) == FFX_SDK_MAKE_VERSION(1, 1, 0),
+        L"FidelityFX VRS 2.1 sample requires linking with a 1.1 version SDK backend");
+    CauldronAssert(ASSERT_CRITICAL, ffxVrsGetEffectVersion() == FFX_SDK_MAKE_VERSION(1, 2, 0),
+                       L"FidelityFX VRS 2.1 sample requires linking with a 1.2 version FidelityFX VRS library");
+                       
+    m_InitializationParameters.backendInterface.fpRegisterConstantBufferAllocator(&m_InitializationParameters.backendInterface, SDKWrapper::ffxAllocateConstantBuffer);
+}
+
+void VRSRenderModule::InitFfxContext()
+{
+    InitFfxBackend();
+
+    UpdateVRSContext(true);
+}
+
+void VRSRenderModule::DestroyFfxContext()
+{
+    // Flush anything out of the pipes before destroying the context
+    GetDevice()->FlushAllCommandQueues();
+
+    UpdateVRSContext(false);
+
+    // Destroy the FidelityFX interface memory
+    if (m_InitializationParameters.backendInterface.scratchBuffer != nullptr)
+    {
+        free(m_InitializationParameters.backendInterface.scratchBuffer);
+        m_InitializationParameters.backendInterface.scratchBuffer = nullptr;
+    }
 }
 
 void VRSRenderModule::OnResize(const ResolutionInfo& resInfo)
@@ -194,21 +227,23 @@ void VRSRenderModule::Execute(double deltaTime, CommandList* pCmdList)
 void VRSRenderModule::BuildUI()
 {
     // UI
-    UISection uiSection;
-    uiSection.SectionName = "Variable Shading";
-    uiSection.SectionType = UISectionType::Sample;
+    UISection* uiSection = GetUIManager()->RegisterUIElements("Variable Shading", UISectionType::Sample);
 
     if (m_VRSTierSupported == 0)
     {
-        uiSection.AddText("GPU does not support VRS!");
-        GetUIManager()->RegisterUIElements(uiSection);
+        uiSection->RegisterUIElement<UIText>("GPU does not support VRS!");
         return;
     }
 
-    std::function<void(void*)> variableShadingCallback = [this](void* pParams) { this->ToggleVariableShading(); };
-    uiSection.AddCheckBox("Enable Variable Shading", &m_EnableVariableShading, variableShadingCallback);
+    uiSection->RegisterUIElement<UICheckBox>(
+        "Enable Variable Shading",
+        m_EnableVariableShading,
+        [this](bool cur, bool old) {
+            ToggleVariableShading();
+        }
+    );
 
-    std::vector<std::string> comboOptions;
+    std::vector<const char*> comboOptions;
     const char* shadingRateOptions[] = {"1x1", "1x2", "1x4", "2x1", "2x2", "2x4", "4x1", "4x2", "4x4"};
     auto GetFirstSetBitPos    = [](int32_t n) { return log2(n & -n) + 1; };
     for (uint32_t i = 0; i < (m_FeatureInfoVRS.NumShadingRates); ++i)
@@ -221,13 +256,26 @@ void VRSRenderModule::BuildUI()
         comboOptions.push_back(shadingRateOptions[x * SHADING_RATE_SHIFT + y]);
     }
 
-    std::function<void(void*)> updateCallback = [this](void* pParams) { this->SelectBaseShadingRate(); };
-    uiSection.AddCombo("PerDraw VRS", (int32_t*)&m_ShadingRateIndex, &comboOptions, updateCallback, &m_VariableShadingEnabled);
+    uiSection->RegisterUIElement<UICombo>(
+        "PerDraw VRS",
+        (int32_t&)m_ShadingRateIndex,
+        comboOptions,
+        m_VariableShadingEnabled,
+        [this](int32_t cur, int32_t old) {
+            SelectBaseShadingRate();
+        }
+    );
 
     if (m_VRSTierSupported == 2)
     {
-        std::function<void(void*)> toggleVRSImageCallback = [this](void* pParams) { this->ToggleShadingRateImage(); };
-        uiSection.AddCheckBox("ShadingRateImage Enabled", &m_EnableShadingRateImage, toggleVRSImageCallback, &m_VariableShadingEnabled);
+        uiSection->RegisterUIElement<UICheckBox>(
+            "ShadingRateImage Enabled",
+            m_EnableShadingRateImage,
+            m_VariableShadingEnabled,
+            [this](bool cur, bool old) {
+                ToggleShadingRateImage();
+            }
+        );
 
         const char* combinerOptions[] = {"Passthrough", "Override", "Min", "Max", "Sum", "Mul"};
         comboOptions.clear();
@@ -241,17 +289,28 @@ void VRSRenderModule::BuildUI()
             }
         }
 
-        std::function<void(void*)> updateCombinerCallback = [this](void* pParams) { this->SelectCombiner(); };
-        uiSection.AddCombo("ShadingRateImage Combiner", (int32_t*)&m_ShadingRateCombinerIndex, &comboOptions, updateCombinerCallback, &m_ShadingRateImageEnabled);
+        uiSection->RegisterUIElement<UICombo>(
+            "ShadingRateImage Combiner",
+            (int32_t&)m_ShadingRateCombinerIndex,
+            std::move(comboOptions),
+            m_ShadingRateImageEnabled,
+            [this](int32_t cur, int32_t old) {
+                SelectCombiner();
+            }
+        );
 
-        uiSection.AddFloatSlider("VRS variance Threshold", &m_VRSThreshold, 0.f, 0.1f, nullptr, &m_ShadingRateImageEnabled);
-        uiSection.AddFloatSlider("VRS Motion Factor", &m_VRSMotionFactor, 0.f, 0.1f, nullptr, &m_ShadingRateImageEnabled);
+        uiSection->RegisterUIElement<UISlider<float>>("VRS variance Threshold", m_VRSThreshold, 0.f, 0.1f, m_ShadingRateImageEnabled);
+        uiSection->RegisterUIElement<UISlider<float>>("VRS Motion Factor", m_VRSMotionFactor, 0.f, 0.1f, m_ShadingRateImageEnabled);
 
-        std::function<void(void*)> overlayCallback = [this](void* pParams) { this->ToggleOverlay(); };
-        uiSection.AddCheckBox("ShadingRateImage Overlay", &m_DrawOverlay, overlayCallback, &m_ShadingRateImageEnabled);
+        uiSection->RegisterUIElement<UICheckBox>(
+            "ShadingRateImage Overlay",
+            m_DrawOverlay,
+            m_ShadingRateImageEnabled,
+            [this](bool cur, bool old) {
+                ToggleOverlay();
+            }
+        );
     }
-
-    GetUIManager()->RegisterUIElements(uiSection);
 }
 
 void VRSRenderModule::InitOverlay(const json& initData)
@@ -264,7 +323,7 @@ void VRSRenderModule::InitOverlay(const json& initData)
     m_pOverlayRootSignature = RootSignature::CreateRootSignature(L"VRSOverlay_RootSignature", signatureDesc);
 
     // Fetch needed resources
-    m_pOverlayRenderTarget = GetFramework()->GetColorTargetForCallback(L"VRSRenderModule::DrawOverlayCallback");
+    m_pOverlayRenderTarget = GetFramework()->GetRenderTexture(L"SwapChainProxy"); // This occurs after tone mapping, so goes to swapchain proxy
     CauldronAssert(ASSERT_CRITICAL, m_pOverlayRenderTarget != nullptr, L"Couldn't find or create the render target for VRS Overlay.");
 
     m_pOverlayRasterView = GetRasterViewAllocator()->RequestRasterView(m_pOverlayRenderTarget, ViewDimension::Texture2D);
@@ -597,7 +656,7 @@ void VRSRenderModule::UpdateVRSInfo()
 
 void VRSRenderModule::UpdateVRSContext(bool enabled)
 {
-    if (!enabled)
+    if (!enabled && m_ContextCreated)
     {
         // Flush anything out of the pipes before destroying the context
         GetDevice()->FlushAllCommandQueues();
@@ -607,7 +666,7 @@ void VRSRenderModule::UpdateVRSContext(bool enabled)
 
         m_ContextCreated = false;
     }
-    else if (!m_ContextCreated)
+    else if (enabled && !m_ContextCreated)
     {
         if (m_AllowAdditionalShadingRates)
             m_InitializationParameters.flags |= FFX_VRS_ALLOW_ADDITIONAL_SHADING_RATES;
@@ -633,10 +692,10 @@ void VRSRenderModule::ExecuteVRSImageGen(double deltaTime, cauldron::CommandList
     uint32_t height = GetFramework()->GetResolutionInfo().RenderHeight;
 
     FfxVrsDispatchDescription dispatchParameters = {};
-    dispatchParameters.commandList               = ffxGetCommandList(pCmdList);
-    dispatchParameters.output                    = ffxGetResource(m_pVRSTexture->GetResource(), L"VRSImage", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
-    dispatchParameters.historyColor        = ffxGetResource(m_pHistoryColorBuffer->GetResource(), L"HistoryColorBuffer", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    dispatchParameters.motionVectors       = ffxGetResource(m_pMotionVectors->GetResource(), L"VRSMotionVectorsTarget", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchParameters.commandList               = SDKWrapper::ffxGetCommandList(pCmdList);
+    dispatchParameters.output                    = SDKWrapper::ffxGetResource(m_pVRSTexture->GetResource(), L"VRSImage", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
+    dispatchParameters.historyColor        = SDKWrapper::ffxGetResource(m_pHistoryColorBuffer->GetResource(), L"HistoryColorBuffer", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchParameters.motionVectors       = SDKWrapper::ffxGetResource(m_pMotionVectors->GetResource(), L"VRSMotionVectorsTarget", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
     dispatchParameters.motionFactor        = m_VRSMotionFactor;
     dispatchParameters.varianceCutoff      = m_VRSThreshold;
     dispatchParameters.tileSize            = m_FeatureInfoVRS.MaxTileSize[0];
@@ -646,7 +705,7 @@ void VRSRenderModule::ExecuteVRSImageGen(double deltaTime, cauldron::CommandList
 
     // Disabled until remaining things are fixes
     FfxErrorCode errorCode = ffxVrsContextDispatch(&m_VRSContext, &dispatchParameters);
-    FFX_ASSERT(errorCode == FFX_OK);
+    CAULDRON_ASSERT(errorCode == FFX_OK);
 
     // FidelityFX contexts modify the set resource view heaps, so set the cauldron one back
     SetAllResourceViewHeaps(pCmdList);

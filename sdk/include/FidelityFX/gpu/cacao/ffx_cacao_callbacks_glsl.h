@@ -1,35 +1,33 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C)2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #include "ffx_cacao_resources.h"
 
 #if defined(FFX_GPU)
 #include "ffx_core.h"
-#endif // #if defined(FFX_GPU)
 
-#if defined(FFX_GPU)
 #ifndef FFX_PREFER_WAVE64
 #define FFX_PREFER_WAVE64
-#endif // #if defined(FFX_GPU)
+#endif // #ifndef FFX_PREFER_WAVE64
 
 #if defined(CACAO_BIND_CB_CACAO)
     struct FFX_CACAO_Constants
@@ -478,352 +476,299 @@ layout (set=0, binding = 1004) uniform sampler g_RealPointClampSampler;
 
 // =============================================================================
 // Clear Load Counter
-
+#if defined CACAO_BIND_UAV_LOAD_COUNTER
 void FFX_CACAO_ClearLoadCounter_SetLoadCounter(FfxUInt32 val)
 {
-#if defined CACAO_BIND_UAV_LOAD_COUNTER
-        imageStore(g_RwLoadCounter, 0, FfxUInt32x4(val, val, val, val));
-#endif
+    imageStore(g_RwLoadCounter, 0, FfxUInt32x4(val, val, val, val));
 }
+#endif // #if defined CACAO_BIND_UAV_LOAD_COUNTER
 
 // =============================================================================
 // Edge Sensitive Blur
-
+#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 FfxFloat32x2 FFX_CACAO_EdgeSensitiveBlur_SampleInput(FfxFloat32x2 uv, FfxUInt32 layerId)
 {
-#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
     return textureLod(sampler2DArray(g_SsaoBufferPing, g_PointMirrorSampler), FfxFloat32x3(uv, FfxFloat32(layerId)), 0.0f).xy;
-#else
-    return FfxFloat32x2(0, 0);
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 
+#if defined CACAO_BIND_UAV_SSAO_BUFFER_PONG
 void FFX_CACAO_EdgeSensitiveBlur_StoreOutput(FfxUInt32x2 coord, FfxFloat32x2 value, FfxUInt32 layerId)
 {
-#if defined CACAO_BIND_UAV_SSAO_BUFFER_PONG
     imageStore(g_RwSsaoBufferPong, FfxInt32x3(coord, layerId), FfxFloat32x4(value, 0, 0));
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_SSAO_BUFFER_PONG
 
 // =============================================================================
 // SSAO Generation
-
+#if defined CACAO_BIND_SRV_DEINTERLEAVED_DEPTHS
 FfxFloat32 FFX_CACAO_SSAOGeneration_SampleViewspaceDepthMip(FfxFloat32x2 uv, FfxFloat32 mip, FfxUInt32 layerId)
 {
-#if defined CACAO_BIND_SRV_DEINTERLEAVED_DEPTHS
     return textureLod(sampler2DArray(g_DeinterleavedDepth, g_ViewspaceDepthTapSampler), FfxFloat32x3(uv, FfxFloat32(layerId)), mip).x;
-#else
-    return 0;
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_DEINTERLEAVED_DEPTHS
 
+#if defined CACAO_BIND_SRV_DEINTERLEAVED_DEPTHS
 FfxFloat32x4 FFX_CACAO_SSAOGeneration_GatherViewspaceDepthOffset(FfxFloat32x2 uv, FfxInt32x2 offset, FfxUInt32 layerId)
 {
-#if defined CACAO_BIND_SRV_DEINTERLEAVED_DEPTHS
     return textureGatherOffset(sampler2DArray(g_DeinterleavedDepth, g_PointMirrorSampler), FfxFloat32x3(uv, FfxFloat32(layerId)), offset, 0);
-#else
-    return FfxFloat32x4(0, 0, 0, 0);
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_DEINTERLEAVED_DEPTHS
 
+#if defined CACAO_BIND_SRV_LOAD_COUNTER
 FfxUInt32 FFX_CACAO_SSAOGeneration_GetLoadCounter()
 {
-#if defined CACAO_BIND_SRV_LOAD_COUNTER
     return FfxUInt32(texelFetch(g_LoadCounter, 0, 0).x);
-#else
-    return 0;
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_LOAD_COUNTER
 
+#if defined CACAO_BIND_SRV_IMPORTANCE_MAP
 FfxFloat32 FFX_CACAO_SSAOGeneration_SampleImportance(FfxFloat32x2 uv)
 {
-#if defined CACAO_BIND_SRV_IMPORTANCE_MAP
     return textureLod(sampler2D(g_ImportanceMap, g_LinearClampSampler), uv, 0.0f).x;
-#else
-    return 0;
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_IMPORTANCE_MAP
 
+#if defined CACAO_BIND_SRV_SSAO_BUFFER_PONG
 FfxFloat32x2 FFX_CACAO_SSAOGeneration_LoadBasePassSSAOPass(FfxUInt32x2 coord, FfxUInt32 pass)
 {
-#if defined CACAO_BIND_SRV_SSAO_BUFFER_PONG
     return texelFetch(g_SsaoBufferPong, FfxInt32x3(coord, pass), 0).xy;
-#else
-    return FfxFloat32x2(0, 0);
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_SSAO_BUFFER_PONG
 
+#if defined CACAO_BIND_SRV_DEINTERLEAVED_NORMALS
 FfxFloat32x3 FFX_CACAO_SSAOGeneration_GetNormalPass(FfxUInt32x2 coord, FfxUInt32 pass)
 {
-#if defined CACAO_BIND_SRV_DEINTERLEAVED_NORMALS
     return texelFetch(g_DeinterleavedNormals, FfxInt32x3(coord, pass), 0).xyz;
-#else
-    return FfxFloat32x3(0, 0, 0);
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_DEINTERLEAVED_NORMALS
 
+#if defined CACAO_BIND_UAV_SSAO_BUFFER_PING
 void FFX_CACAO_SSAOGeneration_StoreOutput(FfxUInt32x2 coord, FfxFloat32x2 val, FfxUInt32 layerId)
 {
-#if defined CACAO_BIND_UAV_SSAO_BUFFER_PING
     imageStore(g_RwSsaoBufferPing, FfxInt32x3(coord, layerId), FfxFloat32x4(val, 0, 0));
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_SSAO_BUFFER_PING
 
 // ============================================================================
 // Apply
-
+#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 FfxFloat32 FFX_CACAO_Apply_SampleSSAOUVPass(FfxFloat32x2 uv, FfxUInt32 pass)
 {
-#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
     return textureLod(sampler2DArray(g_SsaoBufferPing, g_LinearClampSampler), FfxFloat32x3(uv, pass), 0.0f).x;
-#else
-    return 0;
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 
+#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 FfxFloat32x2 FFX_CACAO_Apply_LoadSSAOPass(FfxUInt32x2 coord, FfxUInt32 pass)
 {
-#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
     return texelFetch(g_SsaoBufferPing, FfxInt32x3(coord, pass), 0).xy;
-#else
-    return FfxFloat32x2(0, 0);
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 
+#if defined CACAO_BIND_UAV_OUTPUT
 void FFX_CACAO_Apply_StoreOutput(FfxUInt32x2 coord, FfxFloat32 val)
 {
-#if defined CACAO_BIND_UAV_OUTPUT
     FfxFloat32x4 prev = imageLoad(g_RwOutput, FfxInt32x2(coord));
     imageStore(g_RwOutput, FfxInt32x2(coord), FfxFloat32x4(val, prev.g, prev.b, prev.a));
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_OUTPUT
 
 // =============================================================================
 // Prepare
-
+#if defined CACAO_BIND_SRV_DEPTH_IN
 FfxFloat32x4 FFX_CACAO_Prepare_SampleDepthOffsets(FfxFloat32x2 uv)
 {
-#if defined CACAO_BIND_SRV_DEPTH_IN
     FfxFloat32x4 samples;
     samples.x = textureLodOffset(sampler2D(g_DepthIn, g_PointClampSampler), uv, 0.0f, FfxInt32x2(0, 2)).x;
     samples.y = textureLodOffset(sampler2D(g_DepthIn, g_PointClampSampler), uv, 0.0f, FfxInt32x2(2, 2)).x;
     samples.z = textureLodOffset(sampler2D(g_DepthIn, g_PointClampSampler), uv, 0.0f, FfxInt32x2(2, 0)).x;
     samples.w = textureLodOffset(sampler2D(g_DepthIn, g_PointClampSampler), uv, 0.0f, FfxInt32x2(0, 0)).x;
     return samples;
-#else
-    return FfxFloat32x4(0, 0, 0, 0);
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_DEPTH_IN
 
+#if defined CACAO_BIND_SRV_DEPTH_IN
 FfxFloat32x4 FFX_CACAO_Prepare_GatherDepth(FfxFloat32x2 uv)
 {
-#if defined CACAO_BIND_SRV_DEPTH_IN
     return textureGather(sampler2D(g_DepthIn, g_PointClampSampler), uv, 0);
-#else
-    return FfxFloat32x4(0, 0, 0, 0);
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_DEPTH_IN
 
+#if defined CACAO_BIND_SRV_DEPTH_IN
 FfxFloat32 FFX_CACAO_Prepare_LoadDepth(FfxUInt32x2 coord)
 {
-#if defined CACAO_BIND_SRV_DEPTH_IN
     return texelFetch(g_DepthIn, FfxInt32x2(coord), 0).x;
-#else
-    return 0;
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_DEPTH_IN
 
+#if defined CACAO_BIND_SRV_DEPTH_IN
 FfxFloat32 FFX_CACAO_Prepare_LoadDepthOffset(FfxUInt32x2 coord, FfxInt32x2 offset)
 {
-#if defined CACAO_BIND_SRV_DEPTH_IN
     return texelFetch(g_DepthIn, FfxInt32x2(coord) + offset, 0).x; //CACAO_TODO
-#else
-    return 0;
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_DEPTH_IN
 
+#if defined CACAO_BIND_SRV_DEPTH_IN
 FfxFloat32x4 FFX_CACAO_Prepare_GatherDepthOffset(FfxFloat32x2 uv, FfxInt32x2 offset)
 {
-#if defined CACAO_BIND_SRV_DEPTH_IN
     return textureGatherOffset(sampler2D(g_DepthIn, g_PointClampSampler), uv, offset, 0);
-#else
-    return FfxFloat32x4(0, 0, 0, 0);
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_DEPTH_IN
 
+#if defined CACAO_BIND_SRV_NORMAL_IN
 FfxFloat32x3 FFX_CACAO_Prepare_LoadNormal(FfxUInt32x2 coord)
 {
-#if defined CACAO_BIND_SRV_NORMAL_IN
     FfxFloat32x3 normal = texelFetch(g_NormalIn, FfxInt32x2(coord), 0).xyz;
     normal = normal * NormalsUnpackMul().xxx + NormalsUnpackAdd().xxx;
     normal = FFX_TRANSFORM_VECTOR(normal, FfxFloat32x3x3(NormalsWorldToViewspaceMatrix())).xyz;
     return normal;
-#else
-    return FfxFloat32x3(0, 0, 0);
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_NORMAL_IN
 
+#if defined CACAO_BIND_UAV_DEPTH_DOWNSAMPLED_MIPS
 void FFX_CACAO_Prepare_StoreDepthMip0(FfxUInt32x2 coord, FfxUInt32 index, FfxFloat32 val)
 {
-#if defined CACAO_BIND_UAV_DEPTH_DOWNSAMPLED_MIPS
     imageStore(g_RwDepthMips[0], FfxInt32x3(coord, index), FfxFloat32x4(val, val, val, val));
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_DEPTH_DOWNSAMPLED_MIPS
 
+#if defined CACAO_BIND_UAV_DEPTH_DOWNSAMPLED_MIPS
 void FFX_CACAO_Prepare_StoreDepthMip1(FfxUInt32x2 coord, FfxUInt32 index, FfxFloat32 val)
 {
-#if defined CACAO_BIND_UAV_DEPTH_DOWNSAMPLED_MIPS
     imageStore(g_RwDepthMips[1], FfxInt32x3(coord, index), FfxFloat32x4(val, val, val, val));
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_DEPTH_DOWNSAMPLED_MIPS
 
+#if defined CACAO_BIND_UAV_DEPTH_DOWNSAMPLED_MIPS
 void FFX_CACAO_Prepare_StoreDepthMip2(FfxUInt32x2 coord, FfxUInt32 index, FfxFloat32 val)
 {
-#if defined CACAO_BIND_UAV_DEPTH_DOWNSAMPLED_MIPS
     imageStore(g_RwDepthMips[2], FfxInt32x3(coord, index), FfxFloat32x4(val, val, val, val));
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_DEPTH_DOWNSAMPLED_MIPS
 
+#if defined CACAO_BIND_UAV_DEPTH_DOWNSAMPLED_MIPS
 void FFX_CACAO_Prepare_StoreDepthMip3(FfxUInt32x2 coord, FfxUInt32 index, FfxFloat32 val)
 {
-#if defined CACAO_BIND_UAV_DEPTH_DOWNSAMPLED_MIPS
     imageStore(g_RwDepthMips[3], FfxInt32x3(coord, index), FfxFloat32x4(val, val, val, val));
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_DEPTH_DOWNSAMPLED_MIPS
 
+#if defined CACAO_BIND_UAV_DEINTERLEAVED_DEPTHS
 void FFX_CACAO_Prepare_StoreDepth(FfxUInt32x2 coord, FfxUInt32 index, FfxFloat32 val)
 {
-#if defined CACAO_BIND_UAV_DEINTERLEAVED_DEPTHS
     imageStore(g_RwDeinterleavedDepth, FfxInt32x3(coord, index), FfxFloat32x4(val, val, val, val));
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_DEINTERLEAVED_DEPTHS
 
+#if defined CACAO_BIND_UAV_DEINTERLEAVED_DEPTHS
 void FFX_CACAO_Prepare_StoreNormal(FfxUInt32x2 coord, FfxUInt32 index, FfxFloat32x3 normal)
 {
-#if defined CACAO_BIND_UAV_DEINTERLEAVED_DEPTHS
     imageStore(g_RwDeinterleavedNormals, FfxInt32x3(coord, index), FfxFloat32x4(normal, 1.0f));
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_DEINTERLEAVED_DEPTHS
 
 // =============================================================================
 // Importance Map
-
+#if defined CACAO_BIND_SRV_SSAO_BUFFER_PONG
 FfxFloat32x4 FFX_CACAO_Importance_GatherSSAO(FfxFloat32x2 uv, FfxUInt32 index)
 {
-#if defined CACAO_BIND_SRV_SSAO_BUFFER_PONG
     return textureGather(sampler2DArray(g_SsaoBufferPong, g_PointClampSampler), FfxFloat32x3(uv, index), 0);
-#else
-    return FfxFloat32x4(0, 0, 0, 0);
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_SSAO_BUFFER_PONG
 
+#if defined CACAO_BIND_UAV_IMPORTANCE_MAP
 void FFX_CACAO_Importance_StoreImportance(FfxUInt32x2 coord, FfxFloat32 val)
 {
-#if defined CACAO_BIND_UAV_IMPORTANCE_MAP
     imageStore(g_RwImportanceMap, FfxInt32x2(coord), FfxFloat32x4(val, val, val, val));
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_IMPORTANCE_MAP
 
+#if defined CACAO_BIND_SRV_IMPORTANCE_MAP
 FfxFloat32 FFX_CACAO_Importance_SampleImportanceA(FfxFloat32x2 uv)
 {
-#if defined CACAO_BIND_SRV_IMPORTANCE_MAP
     return textureLod(sampler2D(g_ImportanceMap, g_LinearClampSampler), uv, 0.0f).x;
-#else
-    return 0;
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_IMPORTANCE_MAP
 
+#if defined CACAO_BIND_UAV_IMPORTANCE_MAP_PONG
 void FFX_CACAO_Importance_StoreImportanceA(FfxUInt32x2 coord, FfxFloat32 val)
 {
-#if defined CACAO_BIND_UAV_IMPORTANCE_MAP_PONG
     imageStore(g_RwImportanceMapPong, FfxInt32x2(coord), FfxFloat32x4(val, val, val, val));
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_IMPORTANCE_MAP_PONG
 
+#if defined CACAO_BIND_SRV_IMPORTANCE_MAP_PONG
 FfxFloat32 FFX_CACAO_Importance_SampleImportanceB(FfxFloat32x2 uv)
 {
-#if defined CACAO_BIND_SRV_IMPORTANCE_MAP_PONG
     return textureLod(sampler2D(g_ImportanceMapPong, g_LinearClampSampler), uv, 0.0f).x;
-#else
-    return 0;
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_IMPORTANCE_MAP_PONG
 
+#if defined CACAO_BIND_UAV_IMPORTANCE_MAP
 void FFX_CACAO_Importance_StoreImportanceB(FfxUInt32x2 coord, FfxFloat32 val)
 {
-#if defined CACAO_BIND_UAV_IMPORTANCE_MAP
     imageStore(g_RwImportanceMap, FfxInt32x2(coord), FfxFloat32x4(val, val, val, val));
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_IMPORTANCE_MAP
 
+#if defined CACAO_BIND_UAV_LOAD_COUNTER
 void FFX_CACAO_Importance_LoadCounterInterlockedAdd(FfxUInt32 val)
 {
-#if defined CACAO_BIND_UAV_LOAD_COUNTER
     imageAtomicAdd(g_RwLoadCounter, 0, val);
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_LOAD_COUNTER
 
 // =============================================================================
 // Bilateral Upscale
 
 // These resources ping/pong which is handled by schedule dispatch
-
+#if defined CACAO_BIND_UAV_OUTPUT
 void FFX_CACAO_BilateralUpscale_StoreOutput(FfxUInt32x2 coord, FfxInt32x2 offset, FfxFloat32 val)
 {
-#if defined CACAO_BIND_UAV_OUTPUT
     FfxFloat32x4 prev = imageLoad(g_RwOutput, FfxInt32x2(coord) + offset);
     imageStore(g_RwOutput, FfxInt32x2(coord) + offset, FfxFloat32x4(val, prev.g, prev.b, prev.a));
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_OUTPUT
 
+#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 FfxFloat32 FFX_CACAO_BilateralUpscale_SampleSSAOLinear(FfxFloat32x2 uv, FfxUInt32 index)
 {
-#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
     return textureLod(sampler2DArray(g_SsaoBufferPing, g_LinearClampSampler), FfxFloat32x3(uv, index), 0).r;
-#else
-    return 0;
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 
+#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 FfxFloat32 FFX_CACAO_BilateralUpscale_SampleSSAOPoint(FfxFloat32x2 uv, FfxUInt32 index)
 {
-#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
     return textureLod(sampler2DArray(g_SsaoBufferPing, g_PointClampSampler), FfxFloat32x3(uv, index), 0).r;
-#else
-    return 0;
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 
+#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 FfxFloat32x2 FFX_CACAO_BilateralUpscale_LoadSSAO(FfxUInt32x2 coord, FfxUInt32 index)
 {
-#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
     return texelFetch(g_SsaoBufferPing, FfxInt32x3(coord, index), 0).rg;
-#else
-    return FfxFloat32x2(0, 0);
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 
+#if defined CACAO_BIND_SRV_DEPTH_IN
 FfxFloat32x4 FFX_CACAO_BilateralUpscale_LoadDepths(FfxUInt32x2 coord)
 {
     FfxFloat32x4 depths;
-#if defined CACAO_BIND_SRV_DEPTH_IN
     depths.x = texelFetchOffset(g_DepthIn, FfxInt32x2(coord), 0, FfxInt32x2(0, 0)).x;
     depths.y = texelFetchOffset(g_DepthIn, FfxInt32x2(coord), 0, FfxInt32x2(1, 0)).x;
     depths.z = texelFetchOffset(g_DepthIn, FfxInt32x2(coord), 0, FfxInt32x2(0, 1)).x;
     depths.w = texelFetchOffset(g_DepthIn, FfxInt32x2(coord), 0, FfxInt32x2(1, 1)).x;
     return depths;
-#else
-    return FfxFloat32x4(0, 0, 0, 0);
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_DEPTH_IN
 
+#if defined CACAO_BIND_SRV_DEINTERLEAVED_DEPTHS
 FfxFloat32 FFX_CACAO_BilateralUpscale_LoadDownscaledDepth(FfxUInt32x2 coord, FfxUInt32 index)
 {
-#if defined CACAO_BIND_SRV_DEINTERLEAVED_DEPTHS
     return texelFetch(g_DeinterleavedDepth, FfxInt32x3(coord, index), 0).x;
-#else
-    return 0;
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_DEINTERLEAVED_DEPTHS
 
 #endif // #if defined(FFX_GPU)

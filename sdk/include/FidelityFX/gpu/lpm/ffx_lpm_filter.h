@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #include "ffx_core.h"
@@ -40,6 +40,20 @@
         pixelOneColor.rgb = FfxFloat16x3(redPair.x, greenPair.x, bluePair.x);
         pixelTwoColor.rgb = FfxFloat16x3(redPair.y, greenPair.y, bluePair.y);
 
+        switch (GetMonitorDisplayMode())
+        {
+        case 0: // Corresponds to FFX_LPM_DISPLAYMODE_LDR
+            pixelOneColor.xyz = ApplyGamma(pixelOneColor.xyz);
+            pixelTwoColor.xyz = ApplyGamma(pixelTwoColor.xyz);
+            break;
+
+        case 1: // Corresponds to FFX_LPM_DISPLAYMODE_HDR10_2084
+        case 3: // Corresponds to FFX_LPM_DISPLAYMODE_FSHDR_2084
+            pixelOneColor.xyz = ApplyPQ(pixelOneColor.xyz);
+            pixelTwoColor.xyz = ApplyPQ(pixelTwoColor.xyz);
+            break;
+        }
+
         StoreOutput(twoPixelPosInQuad.xy, pixelOneColor);
         StoreOutput(twoPixelPosInQuad.zw, pixelTwoColor);
     }
@@ -48,6 +62,19 @@
     {
         FfxFloat32x4 color = LoadInput(onePixelPosInQuad);
         LpmFilter(color.r, color.g, color.b, GetShoulder(), GetCon(), GetSoft(), GetCon2(), GetClip(), GetScaleOnly());
+
+        switch (GetMonitorDisplayMode())
+        {
+        case 0: // Corresponds to FFX_LPM_DISPLAYMODE_LDR
+            color.xyz = ApplyGamma(color.xyz);
+            break;
+
+        case 1: // Corresponds to FFX_LPM_DISPLAYMODE_HDR10_2084
+        case 3: // Corresponds to FFX_LPM_DISPLAYMODE_FSHDR_2084
+            color.xyz = ApplyPQ(color.xyz);
+            break;
+        }
+
         StoreOutput(onePixelPosInQuad, color);
     }
 #endif

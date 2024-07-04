@@ -4,11 +4,11 @@
         "MotionVectorGeneration": "VRSRenderModule",
 
         "RenderModules": [
-            "SkyDomeRenderModule",
             "RasterShadowRenderModule",
             "VRSRenderModule",
             "GBufferRenderModule",
             "LightingRenderModule",
+            "SkyDomeRenderModule",
             "TranslucencyRenderModule",
             "TAARenderModule",
             "ToneMappingRenderModule"

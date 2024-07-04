@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #include "ffx_spd_resources.h"
@@ -31,13 +31,10 @@
 #ifdef __hlsl_dx_compiler
 #pragma dxc diagnostic pop
 #endif //__hlsl_dx_compiler
-#endif // #if defined(FFX_GPU)
-
-#if defined(FFX_GPU)
 
 #ifndef FFX_PREFER_WAVE64
 #define FFX_PREFER_WAVE64
-#endif // #if defined(FFX_PREFER_WAVE64)
+#endif // #ifndef FFX_PREFER_WAVE64
 
 #pragma warning(disable: 3205)  // conversion from larger type to smaller
 
@@ -71,7 +68,7 @@
 #define FFX_SPD_ROOTSIG_STR(p) #p
 #define FFX_SPD_ROOTSIG [RootSignature( "DescriptorTable(UAV(u0, numDescriptors = " FFX_SPD_ROOTSIG_STRINGIFY(FFX_SPD_RESOURCE_IDENTIFIER_COUNT) ")), " \
                                     "DescriptorTable(SRV(t0, numDescriptors = " FFX_SPD_ROOTSIG_STRINGIFY(FFX_SPD_RESOURCE_IDENTIFIER_COUNT) ")), " \
-                                    "RootConstants(num32BitConstants=" FFX_SPD_ROOTSIG_STRINGIFY(FFX_SPD_CONSTANT_BUFFER_1_SIZE) ", b0), " \
+                                    "CBV(b0), " \
                                     "StaticSampler(s0, filter = FILTER_MIN_MAG_LINEAR_MIP_POINT, " \
                                                       "addressU = TEXTURE_ADDRESS_CLAMP, " \
                                                       "addressV = TEXTURE_ADDRESS_CLAMP, " \
@@ -126,104 +123,96 @@ SamplerState s_LinearClamp : register(s0);
 
 #if FFX_HALF
 
+#if defined(FFX_SPD_BIND_SRV_INPUT_DOWNSAMPLE_SRC)
     FfxFloat16x4 SampleSrcImageH(FfxFloat32x2 uv, FfxUInt32 slice)
     {
         FfxFloat32x2 textureCoord = FfxFloat32x2(uv) * InvInputSize() + InvInputSize();
-#if defined(FFX_SPD_BIND_SRV_INPUT_DOWNSAMPLE_SRC) 
         FfxFloat32x4 result = r_input_downsample_src.SampleLevel(s_LinearClamp, FfxFloat32x3(textureCoord, slice), 0);
-        return FfxFloat16x4(ffxSrgbToLinear(result.x), ffxSrgbToLinear(result.y), ffxSrgbToLinear(result.z), result.w);
-#endif // defined(FFX_SPD_BIND_SRV_INPUT_DOWNSAMPLE_SRC) 
-        return 0.f;
+        return FfxFloat16x4(ffxSrgbFromLinear(result.x), ffxSrgbFromLinear(result.y), ffxSrgbFromLinear(result.z), result.w);
     }
+    #endif // defined(FFX_SPD_BIND_SRV_INPUT_DOWNSAMPLE_SRC) 
 
+#if defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MIPS)
     FfxFloat16x4 LoadSrcImageH(FfxFloat32x2 uv, FfxUInt32 slice)
     {
-#if defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MIPS) 
         return FfxFloat16x4(rw_input_downsample_src_mips[0][FfxUInt32x3(uv, slice)]);
+    }
 #endif // defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MIPS) 
 
-        return 0.f;
-    }
-
+#if defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MIPS)
     void StoreSrcMipH(FfxFloat16x4 value, FfxInt32x2 uv, FfxUInt32 slice, FfxUInt32 mip)
     {
-#if defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MIPS) 
         rw_input_downsample_src_mips[mip][FfxUInt32x3(uv, slice)] = FfxFloat32x4(value);
-#endif // defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MIPS) 
     }
+#endif // defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MIPS) 
 
+#if defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MID_MIPMAP)
     FfxFloat16x4 LoadMidMipH(FfxInt32x2 uv, FfxUInt32 slice)
     {
-#if defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MID_MIPMAP) 
         return FfxFloat16x4(rw_input_downsample_src_mid_mip[FfxUInt32x3(uv, slice)]);
-#endif // defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MID_MIPMAP) 
-        return 0.f;
     }
+#endif // defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MID_MIPMAP) 
 
+#if defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MID_MIPMAP)
     void StoreMidMipH(FfxFloat16x4 value, FfxInt32x2 uv, FfxUInt32 slice)
     {
-#if defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MID_MIPMAP) 
         rw_input_downsample_src_mid_mip[FfxUInt32x3(uv, slice)] = FfxFloat32x4(value);
-#endif // defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MID_MIPMAP) 
     }
+#endif // defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MID_MIPMAP)
 
 #else // FFX_HALF
 
+#if defined(FFX_SPD_BIND_SRV_INPUT_DOWNSAMPLE_SRC)
     FfxFloat32x4 SampleSrcImage(FfxInt32x2 uv, FfxUInt32 slice)
     {
         FfxFloat32x2 textureCoord = FfxFloat32x2(uv) * InvInputSize() + InvInputSize();
-#if defined(FFX_SPD_BIND_SRV_INPUT_DOWNSAMPLE_SRC) 
         FfxFloat32x4 result = r_input_downsample_src.SampleLevel(s_LinearClamp, FfxFloat32x3(textureCoord, slice), 0);
-        return FfxFloat32x4(ffxSrgbToLinear(result.x), ffxSrgbToLinear(result.y), ffxSrgbToLinear(result.z), result.w);
-#endif // defined(FFX_SPD_BIND_SRV_INPUT_DOWNSAMPLE_SRC) 
-        return 0.f;
+        return FfxFloat32x4(ffxSrgbFromLinear(result.x), ffxSrgbFromLinear(result.y), ffxSrgbFromLinear(result.z), result.w);
     }
+#endif // defined(FFX_SPD_BIND_SRV_INPUT_DOWNSAMPLE_SRC)
 
+#if defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MIPS)
     FfxFloat32x4 LoadSrcImage(FfxInt32x2 uv, FfxUInt32 slice)
     {
-#if defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MIPS) 
         return rw_input_downsample_src_mips[0][FfxUInt32x3(uv, slice)];
+    }
 #endif // defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MIPS) 
 
-        return 0.f;
-    }
-
+#if defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MIPS)
     void StoreSrcMip(FfxFloat32x4 value, FfxInt32x2 uv, FfxUInt32 slice, FfxUInt32 mip)
     {
-#if defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MIPS) 
         rw_input_downsample_src_mips[mip][FfxUInt32x3(uv, slice)] = value;
-#endif // defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MIPS) 
     }
+#endif // defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MIPS)
 
+#if defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MID_MIPMAP)
     FfxFloat32x4 LoadMidMip(FfxInt32x2 uv, FfxUInt32 slice)
-    {
-#if defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MID_MIPMAP) 
+    { 
         return rw_input_downsample_src_mid_mip[FfxUInt32x3(uv, slice)];
-#endif // defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MID_MIPMAP) 
-        return 0.f;
     }
+#endif // defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MID_MIPMAP) 
 
+#if defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MID_MIPMAP)
     void StoreMidMip(FfxFloat32x4 value, FfxInt32x2 uv, FfxUInt32 slice)
     {
-#if defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MID_MIPMAP) 
         rw_input_downsample_src_mid_mip[FfxUInt32x3(uv, slice)] = value;
-#endif // defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MID_MIPMAP) 
     }
+#endif // defined(FFX_SPD_BIND_UAV_INPUT_DOWNSAMPLE_SRC_MID_MIPMAP)
 
 #endif // FFX_HALF
 
+#if defined(FFX_SPD_BIND_UAV_INTERNAL_GLOBAL_ATOMIC)
 void IncreaseAtomicCounter(FFX_PARAMETER_IN FfxUInt32 slice, FFX_PARAMETER_INOUT FfxUInt32 counter)
 {
-#if defined(FFX_SPD_BIND_UAV_INTERNAL_GLOBAL_ATOMIC) 
     InterlockedAdd(rw_internal_global_atomic[0].counter[slice], 1, counter);
-#endif // defined(FFX_SPD_BIND_UAV_INTERNAL_GLOBAL_ATOMIC) 
 }
+#endif // defined(FFX_SPD_BIND_UAV_INTERNAL_GLOBAL_ATOMIC)
 
+#if defined(FFX_SPD_BIND_UAV_INTERNAL_GLOBAL_ATOMIC)
 void ResetAtomicCounter(FFX_PARAMETER_IN FfxUInt32 slice)
 {
-#if defined(FFX_SPD_BIND_UAV_INTERNAL_GLOBAL_ATOMIC) 
     rw_internal_global_atomic[0].counter[slice] = 0;
-#endif // defined(FFX_SPD_BIND_UAV_INTERNAL_GLOBAL_ATOMIC) 
 }
+#endif // defined(FFX_SPD_BIND_UAV_INTERNAL_GLOBAL_ATOMIC)
 
 #endif // #if defined(FFX_GPU)

@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
 //
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -25,6 +25,26 @@
 ///
 /// @ingroup FfxHLSL
 
+#define DECLARE_SRV_REGISTER(regIndex) t##regIndex
+#define DECLARE_UAV_REGISTER(regIndex) u##regIndex
+#define DECLARE_CB_REGISTER(regIndex)  b##regIndex
+#define FFX_DECLARE_SRV(regIndex)   register(DECLARE_SRV_REGISTER(regIndex))
+#define FFX_DECLARE_UAV(regIndex)   register(DECLARE_UAV_REGISTER(regIndex))
+#define FFX_DECLARE_CB(regIndex)    register(DECLARE_CB_REGISTER(regIndex))
+
+/// A define for abstracting select functionality for pre/post HLSL 21
+///
+/// @ingroup HLSLCore
+#if __HLSL_VERSION >= 2021
+
+#define FFX_SELECT(cond, arg1, arg2) select(cond, arg1, arg2)
+
+#else // #if __HLSL_VERSION >= 2021
+
+#define FFX_SELECT(cond, arg1, arg2) cond ? arg1 : arg2
+
+#endif // #if __HLSL_VERSION >= 2021
+
 /// A define for abstracting shared memory between shading languages.
 ///
 /// @ingroup HLSLCore
@@ -33,12 +53,32 @@
 /// A define for abstracting compute memory barriers between shading languages.
 ///
 /// @ingroup HLSLCore
-#define FFX_GROUP_MEMORY_BARRIER() GroupMemoryBarrierWithGroupSync()
+#define FFX_GROUP_MEMORY_BARRIER GroupMemoryBarrierWithGroupSync()
 
 /// A define for abstracting compute atomic additions between shading languages.
 ///
 /// @ingroup HLSLCore
 #define FFX_ATOMIC_ADD(x, y) InterlockedAdd(x, y)
+
+/// A define for abstracting compute atomic additions between shading languages.
+///
+/// @ingroup HLSLCore
+#define FFX_ATOMIC_ADD_RETURN(x, y, r) InterlockedAdd(x, y, r)
+
+/// A define for abstracting compute atomic OR between shading languages.
+///
+/// @ingroup HLSLCore
+#define FFX_ATOMIC_OR(x, y) InterlockedOr(x, y)
+
+/// A define for abstracting compute atomic min between shading languages.
+///
+/// @ingroup HLSLCore
+#define FFX_ATOMIC_MIN(x, y) InterlockedMin(x, y)
+
+/// A define for abstracting compute atomic max between shading languages.
+///
+/// @ingroup HLSLCore
+#define FFX_ATOMIC_MAX(x, y) InterlockedMax(x, y)
 
 /// A define added to accept static markup on functions to aid CPU/GPU portability of code.
 ///
@@ -215,6 +255,24 @@
 /// @ingroup HLSLCore
 #define FFX_BROADCAST_MIN_INT16X4(a) FFX_MIN16_I(a)
 
+/// Convert FfxFloat32 to half (in lower 16-bits of output).
+/// 
+/// This function implements the same fast technique that is documented here: ftp://ftp.fox-toolkit.org/pub/fasthalffloatconversion.pdf
+/// 
+/// The function supports denormals.
+/// 
+/// Some conversion rules are to make computations possibly "safer" on the GPU,
+///  -INF & -NaN -> -65504
+///  +INF & +NaN -> +65504
+///
+/// @param [in] f               The 32bit floating point value to convert.
+/// 
+/// @returns
+/// The closest 16bit floating point value to <c><i>f</i></c>.
+/// 
+/// @ingroup HLSLCore
+#define ffxF32ToF16 f32tof16
+
 /// Pack 2x32-bit floating point values in a single 32bit value.
 ///
 /// This function first converts each component of <c><i>value</i></c> into their nearest 16-bit floating
@@ -227,9 +285,9 @@
 /// A packed 32bit value containing 2 16bit floating point values.
 ///
 /// @ingroup HLSLCore
-FfxUInt32 packHalf2x16(FfxFloat32x2 value)
+FfxUInt32 ffxPackHalf2x16(FfxFloat32x2 value)
 {
-    return f32tof16(value.x) | (f32tof16(value.y) << 16);
+    return ffxF32ToF16(value.x) | (ffxF32ToF16(value.y) << 16);
 }
 
 /// Broadcast a scalar value to a 2-dimensional floating point vector.
@@ -292,9 +350,9 @@ FfxInt32x2 ffxBroadcast2(FfxInt32 value)
 /// A 3-dimensional signed integer vector with <c><i>value</i></c> in each component.
 ///
 /// @ingroup HLSLCore
-FfxUInt32x3 ffxBroadcast3(FfxInt32 value)
+FfxInt32x3 ffxBroadcast3(FfxInt32 value)
 {
-    return FfxUInt32x3(value, value, value);
+    return FfxInt32x3(value, value, value);
 }
 
 /// Broadcast a scalar value to a 4-dimensional signed integer vector.
@@ -349,18 +407,18 @@ FfxUInt32x4 ffxBroadcast4(FfxUInt32 value)
     return FfxUInt32x4(value, value, value, value);
 }
 
-FfxUInt32 bitfieldExtract(FfxUInt32 src, FfxUInt32 off, FfxUInt32 bits)
+FfxUInt32 ffxBitfieldExtract(FfxUInt32 src, FfxUInt32 off, FfxUInt32 bits)
 {
     FfxUInt32 mask = (1u << bits) - 1;
     return (src >> off) & mask;
 }
 
-FfxUInt32 bitfieldInsert(FfxUInt32 src, FfxUInt32 ins, FfxUInt32 mask)
+FfxUInt32 ffxBitfieldInsert(FfxUInt32 src, FfxUInt32 ins, FfxUInt32 mask)
 {
     return (ins & mask) | (src & (~mask));
 }
 
-FfxUInt32 bitfieldInsertMask(FfxUInt32 src, FfxUInt32 ins, FfxUInt32 bits)
+FfxUInt32 ffxBitfieldInsertMask(FfxUInt32 src, FfxUInt32 ins, FfxUInt32 bits)
 {
     FfxUInt32 mask = (1u << bits) - 1;
     return (ins & mask) | (src & (~mask));
@@ -468,6 +526,110 @@ FfxFloat32x3 ffxAsFloat(FfxUInt32x3 x)
 FfxFloat32x4 ffxAsFloat(FfxUInt32x4 x)
 {
     return asfloat(x);
+}
+
+/// Compute the inverse of a value.
+///
+/// @param [in] x                   The value to calulate the inverse of.
+///
+/// @returns
+/// The inverse of <c><i>x</i></c>.
+///
+/// @ingroup HLSLCore
+FfxFloat32 ffxReciprocal(FfxFloat32 x)
+{
+    return rcp(x);
+}
+
+/// Compute the inverse of a value.
+///
+/// @param [in] x                   The value to calulate the inverse of.
+///
+/// @returns
+/// The inverse of <c><i>x</i></c>.
+///
+/// @ingroup HLSLCore
+FfxFloat32x2 ffxReciprocal(FfxFloat32x2 x)
+{
+    return rcp(x);
+}
+
+/// Compute the inverse of a value.
+///
+/// @param [in] x                   The value to calulate the inverse of.
+///
+/// @returns
+/// The inverse of <c><i>x</i></c>.
+///
+/// @ingroup HLSLCore
+FfxFloat32x3 ffxReciprocal(FfxFloat32x3 x)
+{
+    return rcp(x);
+}
+
+/// Compute the inverse of a value.
+///
+/// @param [in] x                   The value to calulate the inverse of.
+///
+/// @returns
+/// The inverse of <c><i>x</i></c>.
+///
+/// @ingroup HLSLCore
+FfxFloat32x4 ffxReciprocal(FfxFloat32x4 x)
+{
+    return rcp(x);
+}
+
+/// Compute the inverse square root of a value.
+///
+/// @param [in] x                   The value to calulate the inverse square root of.
+///
+/// @returns
+/// The inverse square root of <c><i>x</i></c>.
+///
+/// @ingroup HLSLCore
+FfxFloat32 ffxRsqrt(FfxFloat32 x)
+{
+    return rsqrt(x);
+}
+
+/// Compute the inverse square root of a value.
+///
+/// @param [in] x                   The value to calulate the inverse square root of.
+///
+/// @returns
+/// The inverse square root of <c><i>x</i></c>.
+///
+/// @ingroup HLSLCore
+FfxFloat32x2 ffxRsqrt(FfxFloat32x2 x)
+{
+    return rsqrt(x);
+}
+
+/// Compute the inverse square root of a value.
+///
+/// @param [in] x                   The value to calulate the inverse square root of.
+///
+/// @returns
+/// The inverse square root of <c><i>x</i></c>.
+///
+/// @ingroup HLSLCore
+FfxFloat32x3 ffxRsqrt(FfxFloat32x3 x)
+{
+    return rsqrt(x);
+}
+
+/// Compute the inverse square root of a value.
+///
+/// @param [in] x                   The value to calulate the inverse square root of.
+///
+/// @returns
+/// The inverse square root of <c><i>x</i></c>.
+///
+/// @ingroup HLSLCore
+FfxFloat32x4 ffxRsqrt(FfxFloat32x4 x)
+{
+    return rsqrt(x);
 }
 
 /// Compute the linear interopation between two values.
@@ -736,6 +898,58 @@ FfxFloat32x3 ffxFract(FfxFloat32x3 x)
 FfxFloat32x4 ffxFract(FfxFloat32x4 x)
 {
     return x - floor(x);
+}
+
+/// Rounds to the nearest integer. In case the fractional part is 0.5, it will round to the nearest even integer.
+///
+/// @param [in] x               The value to be rounded.
+///
+/// @returns
+/// The nearest integer from <c><i>x</i></c>. The nearest even integer from <c><i>x</i></c> if equidistant from 2 integer.
+///
+/// @ingroup HLSLCore
+FfxFloat32 ffxRound(FfxFloat32 x)
+{
+    return round(x);
+}
+
+/// Rounds to the nearest integer. In case the fractional part is 0.5, it will round to the nearest even integer.
+///
+/// @param [in] x               The value to be rounded.
+///
+/// @returns
+/// The nearest integer from <c><i>x</i></c>. The nearest even integer from <c><i>x</i></c> if equidistant from 2 integer.
+///
+/// @ingroup HLSLCore
+FfxFloat32x2 ffxRound(FfxFloat32x2 x)
+{
+    return round(x);
+}
+
+/// Rounds to the nearest integer. In case the fractional part is 0.5, it will round to the nearest even integer.
+///
+/// @param [in] x               The value to be rounded.
+///
+/// @returns
+/// The nearest integer from <c><i>x</i></c>. The nearest even integer from <c><i>x</i></c> if equidistant from 2 integer.
+///
+/// @ingroup HLSLCore
+FfxFloat32x3 ffxRound(FfxFloat32x3 x)
+{
+    return round(x);
+}
+
+/// Rounds to the nearest integer. In case the fractional part is 0.5, it will round to the nearest even integer.
+///
+/// @param [in] x               The value to be rounded.
+///
+/// @returns
+/// The nearest integer from <c><i>x</i></c>. The nearest even integer from <c><i>x</i></c> if equidistant from 2 integer.
+///
+/// @ingroup HLSLCore
+FfxFloat32x4 ffxRound(FfxFloat32x4 x)
+{
+    return round(x);
 }
 
 /// Compute the maximum of three values.
@@ -1151,18 +1365,26 @@ FfxUInt32x4 ffxMin3(FfxUInt32x4 x, FfxUInt32x4 y, FfxUInt32x4 z)
 }
 
 
-FfxUInt32 AShrSU1(FfxUInt32 a, FfxUInt32 b)
+FfxUInt32 ffxAShrSU1(FfxUInt32 a, FfxUInt32 b)
 {
     return FfxUInt32(FfxInt32(a) >> FfxInt32(b));
 }
 
 FfxUInt32 ffxPackF32(FfxFloat32x2 v){
-    FfxUInt32x2 p = FfxUInt32x2(f32tof16(FfxFloat32x2(v).x), f32tof16(FfxFloat32x2(v).y));
+    FfxUInt32x2 p = FfxUInt32x2(ffxF32ToF16(FfxFloat32x2(v).x), ffxF32ToF16(FfxFloat32x2(v).y));
 	return p.x | (p.y << 16);
 }
 
 FfxFloat32x2 ffxUnpackF32(FfxUInt32 a){
     return f16tof32(FfxUInt32x2(a & 0xFFFF, a >> 16));
+}
+
+FfxUInt32x2 ffxPackF32x2(FfxFloat32x4 v){
+	return FfxUInt32x2(ffxPackF32(v.xy), ffxPackF32(v.zw));
+}
+
+FfxFloat32x4 ffxUnpackF32x2(FfxUInt32x2 a){
+    return FfxFloat32x4(ffxUnpackF32(a.x), ffxUnpackF32(a.y));
 }
 
 //==============================================================================================================================
@@ -1190,11 +1412,19 @@ FFX_MIN16_U4 ffxUint32x2ToUint16x4(FfxUInt32x2 x)
 	return FFX_MIN16_U4(ffxUint32ToUint16x2(x.x), ffxUint32ToUint16x2(x.y));
 }
 
+FfxUInt32x2 ffxFloat16x4ToUint32x2(FFX_MIN16_F4 v)
+{
+    FfxUInt32x2 result;
+    result.x = ffxF32ToF16(v.x) | (ffxF32ToF16(v.y) << 16);
+    result.y = ffxF32ToF16(v.z) | (ffxF32ToF16(v.w) << 16);
+    return result;
+}
+
 /// @brief Inverts the value while avoiding division by zero. If the value is zero, zero is returned.
 /// @param v Value to invert.
 /// @return If v = 0 returns 0. If v != 0 returns 1/v.
 FfxFloat32 ffxInvertSafe(FfxFloat32 v){
-    FfxFloat32 s = sign(v);
+    FfxFloat32 s = FfxFloat32(sign(v));
     FfxFloat32 s2 = s*s;
     return s2/(v + s2 - 1.0);
 }
@@ -1203,7 +1433,7 @@ FfxFloat32 ffxInvertSafe(FfxFloat32 v){
 /// @param v Value to invert.
 /// @return If v = 0 returns 0. If v != 0 returns 1/v.
 FfxFloat32x2 ffxInvertSafe(FfxFloat32x2 v){
-    FfxFloat32x2 s = sign(v);
+    FfxFloat32x2 s = FfxFloat32x2(sign(v));
     FfxFloat32x2 s2 = s*s;
     return s2/(v + s2 - FfxFloat32x2(1.0, 1.0));
 }
@@ -1212,7 +1442,7 @@ FfxFloat32x2 ffxInvertSafe(FfxFloat32x2 v){
 /// @param v Value to invert.
 /// @return If v = 0 returns 0. If v != 0 returns 1/v.
 FfxFloat32x3 ffxInvertSafe(FfxFloat32x3 v){
-    FfxFloat32x3 s = sign(v);
+    FfxFloat32x3 s = FfxFloat32x3(sign(v));
     FfxFloat32x3 s2 = s*s;
     return s2/(v + s2 - FfxFloat32x3(1.0, 1.0, 1.0));
 }
@@ -1221,7 +1451,7 @@ FfxFloat32x3 ffxInvertSafe(FfxFloat32x3 v){
 /// @param v Value to invert.
 /// @return If v = 0 returns 0. If v != 0 returns 1/v.
 FfxFloat32x4 ffxInvertSafe(FfxFloat32x4 v){
-    FfxFloat32x4 s = sign(v);
+    FfxFloat32x4 s = FfxFloat32x4(sign(v));
     FfxFloat32x4 s2 = s*s;
     return s2/(v + s2 - FfxFloat32x4(1.0, 1.0, 1.0, 1.0));
 }
@@ -1234,7 +1464,7 @@ FfxFloat32x4 ffxInvertSafe(FfxFloat32x4 v){
 #define FFX_UINT32X2_TO_UINT16X4(x) ffxUint32x2ToUint16x4(FfxUInt32x2(x))
 
 FfxUInt32 ffxPackF16(FfxFloat16x2 v){
-    FfxUInt32x2 p = FfxUInt32x2(f32tof16(FfxFloat32x2(v).x), f32tof16(FfxFloat32x2(v).y));
+    FfxUInt32x2 p = FfxUInt32x2(ffxF32ToF16(FfxFloat32x2(v).x), ffxF32ToF16(FfxFloat32x2(v).y));
 	return p.x | (p.y << 16);
 }
 
@@ -1245,7 +1475,7 @@ FfxFloat16x2 ffxUnpackF16(FfxUInt32 a){
 //------------------------------------------------------------------------------------------------------------------------------
 FfxUInt32 FFX_MIN16_F2ToUint32(FFX_MIN16_F2 x)
 {
-	return f32tof16(x.x) + (f32tof16(x.y) << 16);
+	return ffxF32ToF16(x.x) + (ffxF32ToF16(x.y) << 16);
 }
 FfxUInt32x2 FFX_MIN16_F4ToUint32x2(FFX_MIN16_F4 x)
 {
@@ -1264,19 +1494,19 @@ FfxUInt32x2 FFX_MIN16_U4ToUint32x2(FFX_MIN16_U4 x)
 #define FFX_UINT16X2_TO_UINT32(x) FFX_MIN16_U2ToUint32(FFX_MIN16_U2(x))
 #define FFX_UINT16X4_TO_UINT32X2(x) FFX_MIN16_U4ToUint32x2(FFX_MIN16_U4(x))
 
-#if defined(FFX_HLSL_6_2) && !defined(FFX_NO_16_BIT_CAST)
+#if (FFX_HLSL_SM >= 62) && !defined(FFX_NO_16_BIT_CAST)
 #define FFX_TO_UINT16(x) asuint16(x)
 #define FFX_TO_UINT16X2(x) asuint16(x)
 #define FFX_TO_UINT16X3(x) asuint16(x)
 #define FFX_TO_UINT16X4(x) asuint16(x)
 #else
-#define FFX_TO_UINT16(a) FFX_MIN16_U(f32tof16(FfxFloat32(a)))
+#define FFX_TO_UINT16(a) FFX_MIN16_U(ffxF32ToF16(FfxFloat32(a)))
 #define FFX_TO_UINT16X2(a) FFX_MIN16_U2(FFX_TO_UINT16((a).x), FFX_TO_UINT16((a).y))
 #define FFX_TO_UINT16X3(a) FFX_MIN16_U3(FFX_TO_UINT16((a).x), FFX_TO_UINT16((a).y), FFX_TO_UINT16((a).z))
 #define FFX_TO_UINT16X4(a) FFX_MIN16_U4(FFX_TO_UINT16((a).x), FFX_TO_UINT16((a).y), FFX_TO_UINT16((a).z), FFX_TO_UINT16((a).w))
-#endif // #if defined(FFX_HLSL_6_2) && !defined(FFX_NO_16_BIT_CAST)
+#endif // #if (FFX_HLSL_SM>=62) && !defined(FFX_NO_16_BIT_CAST)
 
-#if defined(FFX_HLSL_6_2) && !defined(FFX_NO_16_BIT_CAST)
+#if (FFX_HLSL_SM >= 62) && !defined(FFX_NO_16_BIT_CAST)
 #define FFX_TO_FLOAT16(x) asfloat16(x)
 #define FFX_TO_FLOAT16X2(x) asfloat16(x)
 #define FFX_TO_FLOAT16X3(x) asfloat16(x)
@@ -1286,7 +1516,7 @@ FfxUInt32x2 FFX_MIN16_U4ToUint32x2(FFX_MIN16_U4 x)
 #define FFX_TO_FLOAT16X2(a) FFX_MIN16_F2(FFX_TO_FLOAT16((a).x), FFX_TO_FLOAT16((a).y))
 #define FFX_TO_FLOAT16X3(a) FFX_MIN16_F3(FFX_TO_FLOAT16((a).x), FFX_TO_FLOAT16((a).y), FFX_TO_FLOAT16((a).z))
 #define FFX_TO_FLOAT16X4(a) FFX_MIN16_F4(FFX_TO_FLOAT16((a).x), FFX_TO_FLOAT16((a).y), FFX_TO_FLOAT16((a).z), FFX_TO_FLOAT16((a).w))
-#endif // #if defined(FFX_HLSL_6_2) && !defined(FFX_NO_16_BIT_CAST)
+#endif // #if (FFX_HLSL_SM>=62) && !defined(FFX_NO_16_BIT_CAST)
 
 //==============================================================================================================================
 #define FFX_BROADCAST_FLOAT16(a)   FFX_MIN16_F(a)
@@ -1530,95 +1760,119 @@ FFX_MIN16_U4 ffxBitShiftRightHalf(FFX_MIN16_U4 a, FFX_MIN16_U4 b)
 //==============================================================================================================================
 #if defined(FFX_WAVE)
 // Where 'x' must be a compile time literal.
-FfxFloat32 AWaveXorF1(FfxFloat32 v, FfxUInt32 x)
+FfxFloat32 ffxWaveXorF1(FfxFloat32 v, FfxUInt32 x)
 {
     return WaveReadLaneAt(v, WaveGetLaneIndex() ^ x);
 }
-FfxFloat32x2 AWaveXorF2(FfxFloat32x2 v, FfxUInt32 x)
+FfxFloat32x2 ffxWaveXorF2(FfxFloat32x2 v, FfxUInt32 x)
 {
     return WaveReadLaneAt(v, WaveGetLaneIndex() ^ x);
 }
-FfxFloat32x3 AWaveXorF3(FfxFloat32x3 v, FfxUInt32 x)
+FfxFloat32x3 ffxWaveXorF3(FfxFloat32x3 v, FfxUInt32 x)
 {
     return WaveReadLaneAt(v, WaveGetLaneIndex() ^ x);
 }
-FfxFloat32x4 AWaveXorF4(FfxFloat32x4 v, FfxUInt32 x)
+FfxFloat32x4 ffxWaveXorF4(FfxFloat32x4 v, FfxUInt32 x)
 {
     return WaveReadLaneAt(v, WaveGetLaneIndex() ^ x);
 }
-FfxUInt32 AWaveXorU1(FfxUInt32 v, FfxUInt32 x)
+FfxUInt32 ffxWaveXorU1(FfxUInt32 v, FfxUInt32 x)
 {
     return WaveReadLaneAt(v, WaveGetLaneIndex() ^ x);
 }
-FfxUInt32x2 AWaveXorU1(FfxUInt32x2 v, FfxUInt32 x)
+FfxUInt32x2 ffxWaveXorU1(FfxUInt32x2 v, FfxUInt32 x)
 {
     return WaveReadLaneAt(v, WaveGetLaneIndex() ^ x);
 }
-FfxUInt32x3 AWaveXorU1(FfxUInt32x3 v, FfxUInt32 x)
+FfxUInt32x3 ffxWaveXorU1(FfxUInt32x3 v, FfxUInt32 x)
 {
     return WaveReadLaneAt(v, WaveGetLaneIndex() ^ x);
 }
-FfxUInt32x4 AWaveXorU1(FfxUInt32x4 v, FfxUInt32 x)
+FfxUInt32x4 ffxWaveXorU1(FfxUInt32x4 v, FfxUInt32 x)
 {
     return WaveReadLaneAt(v, WaveGetLaneIndex() ^ x);
 }
-FfxBoolean AWaveIsFirstLane()
+FfxBoolean ffxWaveIsFirstLane()
 {
     return WaveIsFirstLane();
 }
-FfxUInt32 AWaveLaneIndex()
+FfxUInt32 ffxWaveLaneIndex()
 {
     return WaveGetLaneIndex();
 }
-FfxBoolean AWaveReadAtLaneIndexB1(FfxBoolean v, FfxUInt32 x)
+FfxBoolean ffxWaveReadAtLaneIndexB1(FfxBoolean v, FfxUInt32 x)
 {
     return WaveReadLaneAt(v, x);
 }
-FfxUInt32 AWavePrefixCountBits(FfxBoolean v)
+FfxUInt32 ffxWavePrefixCountBits(FfxBoolean v)
 {
     return WavePrefixCountBits(v);
 }
-FfxUInt32 AWaveActiveCountBits(FfxBoolean v)
+FfxUInt32 ffxWaveActiveCountBits(FfxBoolean v)
 {
     return WaveActiveCountBits(v);
 }
-FfxUInt32 AWaveReadLaneFirstU1(FfxUInt32 v)
+FfxUInt32 ffxWaveReadLaneFirstU1(FfxUInt32 v)
 {
     return WaveReadLaneFirst(v);
 }
-FfxUInt32 WaveOr(FfxUInt32 a)
+FfxUInt32x2 ffxWaveReadLaneFirstU2(FfxUInt32x2 v)
+{
+    return WaveReadLaneFirst(v);
+}
+FfxBoolean ffxWaveReadLaneFirstB1(FfxBoolean v)
+{
+    return WaveReadLaneFirst(v);
+}
+FfxUInt32 ffxWaveOr(FfxUInt32 a)
 {
     return WaveActiveBitOr(a);
 }
-FfxFloat32 WaveMin(FfxFloat32 a)
+FfxUInt32 ffxWaveMin(FfxUInt32 a)
 {
     return WaveActiveMin(a);
 }
-FfxFloat32 WaveMax(FfxFloat32 a)
+FfxFloat32 ffxWaveMin(FfxFloat32 a)
+{
+    return WaveActiveMin(a);
+}
+FfxUInt32 ffxWaveMax(FfxUInt32 a)
 {
     return WaveActiveMax(a);
 }
-FfxUInt32 WaveLaneCount()
+FfxFloat32 ffxWaveMax(FfxFloat32 a)
+{
+    return WaveActiveMax(a);
+}
+FfxUInt32 ffxWaveSum(FfxUInt32 a)
+{
+    return WaveActiveSum(a);
+}
+FfxFloat32 ffxWaveSum(FfxFloat32 a)
+{
+    return WaveActiveSum(a);
+}
+FfxUInt32 ffxWaveLaneCount()
 {
     return WaveGetLaneCount();
 }
-FfxBoolean WaveAllTrue(FfxBoolean v)
+FfxBoolean ffxWaveAllTrue(FfxBoolean v)
 {
     return WaveActiveAllTrue(v);
 }
-FfxFloat32 QuadReadX(FfxFloat32 v)
+FfxFloat32 ffxQuadReadX(FfxFloat32 v)
 {
     return QuadReadAcrossX(v);
 }
-FfxFloat32x2 QuadReadX(FfxFloat32x2 v)
+FfxFloat32x2 ffxQuadReadX(FfxFloat32x2 v)
 {
     return QuadReadAcrossX(v);
 }
-FfxFloat32 QuadReadY(FfxFloat32 v)
+FfxFloat32 ffxQuadReadY(FfxFloat32 v)
 {
     return QuadReadAcrossY(v);
 }
-FfxFloat32x2 QuadReadY(FfxFloat32x2 v)
+FfxFloat32x2 ffxQuadReadY(FfxFloat32x2 v)
 {
     return QuadReadAcrossY(v);
 }

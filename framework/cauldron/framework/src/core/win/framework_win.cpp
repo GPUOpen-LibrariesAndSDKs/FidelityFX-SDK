@@ -1,17 +1,20 @@
-// AMD Cauldron code
+// This file is part of the FidelityFX SDK.
 //
-// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sub-license, and / or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -54,7 +57,7 @@ namespace cauldron
         RegisterClassExW(&windowClass);
     }
 
-    int FrameworkInternal::Init()
+    void FrameworkInternal::Init()
     {
         // Store the exe name for identifier purposes (used in benchmark gathering)
         wchar_t buf[MAX_PATH];
@@ -89,8 +92,6 @@ namespace cauldron
 
         // Get the monitor
         m_Monitor = MonitorFromWindow(m_WindowHandle, MONITOR_DEFAULTTONEAREST);
-
-        return 0;
     }
 
     LRESULT CALLBACK FrameworkInternal::WindowProc(HWND wndHandle, UINT message, WPARAM wParam, LPARAM lParam)
@@ -110,6 +111,7 @@ namespace cauldron
         case WM_DESTROY:
         {
             PostQuitMessage(0);
+            pFramework->m_pImpl->m_Quitting = true;
             return 0;
         }
 
@@ -139,33 +141,47 @@ namespace cauldron
             {
                 pFramework->m_pImpl->m_Minimized = true;
             }
-            else if (wParam == SIZE_RESTORED)
+            else if (wParam == SIZE_RESTORED || wParam == SIZE_MAXIMIZED)
             {
                 pFramework->m_pImpl->m_Minimized = false;
             }
-            
             break;
         }
 
         case WM_MOVE:
         {
             pFramework->m_pImpl->OnWindowMove();
-
             break;
         }
 
         // Turn off MessageBeep sound on Alt+Enter
-        case WM_MENUCHAR: return MNC_CLOSE << 16;
+        case WM_MENUCHAR: 
+        {
+            return MNC_CLOSE << 16;
+        }
 
         // Handle key presses from keyboard
         case WM_KEYDOWN:
         case WM_KEYUP:
         {
             if (message == WM_KEYDOWN && wParam == VK_ESCAPE)
+            {
                 DestroyWindow(wndHandle);
+                return 0;
+            }
             break;
         }
 
+        case WM_SYSCOMMAND:
+        {
+            // Swallow the menu key so it doesn't pause the application
+            if (wParam == SC_KEYMENU)
+            {
+                return 0;
+            }
+            break;
+        }
+            
         // Handle system key presses from keyboard
         case WM_SYSKEYDOWN:
         case WM_SYSKEYUP:
@@ -185,7 +201,32 @@ namespace cauldron
             break;
         }
 
-        // NOTE: Do we need to handle doubleclicks???
+        // Double click caption bar
+        case WM_NCLBUTTONDBLCLK:
+        {
+            if (wParam == HTCAPTION)
+            {
+                // Tell the InputManager to ignore input for this frame
+                // as we don't want to track left clicks associated with NCL DBLCLK
+                GetInputManager()->IgnoreInputForFrame();
+            }
+            break;
+        }
+
+        // Lost focus
+        case WM_KILLFOCUS:
+        {
+            pFramework->m_pImpl->OnFocusLost();
+            break;
+        }
+
+        // Gained focus
+        case WM_SETFOCUS:
+        {
+            pFramework->m_pImpl->OnFocusGained();
+            break;
+        }
+
         }
 
         // Handle any messages the switch statement didn't
@@ -271,7 +312,7 @@ namespace cauldron
         if (m_pFramework->m_UpscalerEnabled && m_pFramework->m_ResolutionUpdaterFn)
             m_pFramework->m_ResolutionInfo = m_pFramework->m_ResolutionUpdaterFn(width, height);
         else
-            m_pFramework->m_ResolutionInfo = { width, height, width, height };
+            m_pFramework->m_ResolutionInfo = {width, height, width, height, width, height};
 
         // Flush everything before resizing resources (can't have anything in the pipes)
         CauldronAssert(ASSERT_ERROR,
@@ -284,6 +325,16 @@ namespace cauldron
 
         // Trigger a resize event for the framework
         m_pFramework->ResizeEvent();
+    }
+
+    void FrameworkInternal::OnFocusLost()
+    {
+        m_pFramework->FocusLostEvent();
+    }
+
+    void FrameworkInternal::OnFocusGained()
+    {
+        m_pFramework->FocusGainedEvent();
     }
 
     int32_t FrameworkInternal::Run()
@@ -324,31 +375,33 @@ namespace cauldron
         while (msg.message != WM_QUIT)
         {
             // Check to see if any messages are waiting in the queue
-            if (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
+            while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
             {
                 TranslateMessage(&msg); // Translate keystroke messages into the right format
+                if (msg.message == WM_QUIT) // DispatchMessage resets the msg so the outer loop never sees the QUIT event
+                {
+                    break;
+                }
                 DispatchMessage(&msg);  // Send the message to the WindowProc function
             }
-            else
+
+            // Only update if we aren't minimized and we aren't quitting
+            if (!m_pFramework->m_pImpl->m_Minimized && !m_pFramework->m_pImpl->m_Quitting)
             {
-                // Only update if we aren't minimized
-                if (!m_pFramework->m_pImpl->m_Minimized)
+                if (m_sendResizeEvent)
                 {
-                    if (m_sendResizeEvent)
-                    {
-                        RECT clientRect = {};
-                        GetClientRect(m_WindowHandle, &clientRect);
-                        uint32_t width  = clientRect.right - clientRect.left;
-                        uint32_t height = clientRect.bottom - clientRect.top;
-                        const ResolutionInfo& resInfo = m_pFramework->GetResolutionInfo();
+                    RECT clientRect = {};
+                    GetClientRect(m_WindowHandle, &clientRect);
+                    uint32_t width  = clientRect.right - clientRect.left;
+                    uint32_t height = clientRect.bottom - clientRect.top;
+                    const ResolutionInfo& resInfo = m_pFramework->GetResolutionInfo();
 
-                        if (width != resInfo.DisplayWidth || height != resInfo.DisplayHeight)
-                            OnResize(width, height);
+                    if (width != resInfo.DisplayWidth || height != resInfo.DisplayHeight)
+                        OnResize(width, height);
 
-                        m_sendResizeEvent = false;
-                    }
-                    m_pFramework->MainLoop();
+                    m_sendResizeEvent = false;
                 }
+                m_pFramework->MainLoop();
             }
         }
 

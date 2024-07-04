@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -120,13 +120,13 @@ static FfxErrorCode createPipelineStates(FfxParallelSortContext_Private* context
     context->contextDescription.backendInterface.fpGetDeviceCapabilities(&context->contextDescription.backendInterface, &capabilities);
 
     // Setup a few options used to determine permutation flags
-    bool haveShaderModel66 = capabilities.minimumSupportedShaderModel >= FFX_SHADER_MODEL_6_6;
+    bool haveShaderModel66 = capabilities.maximumSupportedShaderModel >= FFX_SHADER_MODEL_6_6;
     bool supportedFP16 = capabilities.fp16Supported;
     bool canForceWave64 = false;
 
     const uint32_t waveLaneCountMin = capabilities.waveLaneCountMin;
     const uint32_t waveLaneCountMax = capabilities.waveLaneCountMax;
-    if (waveLaneCountMin == 32 && waveLaneCountMax == 64)
+    if (waveLaneCountMin <= 64 && waveLaneCountMax >= 64)
         canForceWave64 = haveShaderModel66;
     else
         canForceWave64 = false;
@@ -207,11 +207,16 @@ static FfxErrorCode parallelSortCreate(FfxParallelSortContext_Private* context, 
 
     memcpy(&context->contextDescription, contextDescription, sizeof(FfxParallelSortContextDescription));
 
+    // Check version info - make sure we are linked with the right backend version
+    FfxVersionNumber version = context->contextDescription.backendInterface.fpGetSDKVersion(&context->contextDescription.backendInterface);
+    FFX_RETURN_ON_ERROR(version == FFX_SDK_MAKE_VERSION(1, 1, 0), FFX_ERROR_INVALID_VERSION);
+
     // Setup constant buffer sizes.
     context->constantBuffer.num32BitEntries = sizeof(ParallelSortConstants) / sizeof(uint32_t);
 
     // Create the context
-    FfxErrorCode errorCode = context->contextDescription.backendInterface.fpCreateBackendContext(&context->contextDescription.backendInterface, &context->effectContextId);
+    FfxErrorCode errorCode =
+        context->contextDescription.backendInterface.fpCreateBackendContext(&context->contextDescription.backendInterface, nullptr, &context->effectContextId);
     FFX_RETURN_ON_ERROR(errorCode == FFX_OK, errorCode);
 
     // Call out for device caps.
@@ -225,23 +230,71 @@ static FfxErrorCode parallelSortCreate(FfxParallelSortContext_Private* context, 
 
     // declare internal resources needed
     const FfxInternalResourceDescription internalResourceDescs[] = {
-        {   FFX_PARALLELSORT_RESOURCE_IDENTIFIER_KEY_SCRATCH_BUFFER, L"ParallelSort_SortScratchBuffer", FFX_RESOURCE_TYPE_BUFFER, FFX_RESOURCE_USAGE_UAV,
-            FFX_SURFACE_FORMAT_UNKNOWN, contextDescription->maxEntries * sizeof(uint32_t), sizeof(uint32_t), 1, FFX_RESOURCE_FLAGS_NONE },
+        {FFX_PARALLELSORT_RESOURCE_IDENTIFIER_KEY_SCRATCH_BUFFER,
+         L"ParallelSort_SortScratchBuffer",
+         FFX_RESOURCE_TYPE_BUFFER,
+         FFX_RESOURCE_USAGE_UAV,
+         FFX_SURFACE_FORMAT_UNKNOWN,
+         contextDescription->maxEntries * sizeof(uint32_t),
+         sizeof(uint32_t),
+         1,
+         FFX_RESOURCE_FLAGS_NONE,
+         {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
 
-        {   FFX_PARALLELSORT_RESOURCE_IDENTIFIER_PAYLOAD_SCRATCH_BUFFER, L"ParallelSort_PayloadScratchBuffer", FFX_RESOURCE_TYPE_BUFFER, FFX_RESOURCE_USAGE_UAV,
-            FFX_SURFACE_FORMAT_UNKNOWN, contextDescription->maxEntries * sizeof(uint32_t), sizeof(uint32_t), 1, FFX_RESOURCE_FLAGS_NONE },
+        {FFX_PARALLELSORT_RESOURCE_IDENTIFIER_PAYLOAD_SCRATCH_BUFFER,
+         L"ParallelSort_PayloadScratchBuffer",
+         FFX_RESOURCE_TYPE_BUFFER,
+         FFX_RESOURCE_USAGE_UAV,
+         FFX_SURFACE_FORMAT_UNKNOWN,
+         contextDescription->maxEntries * sizeof(uint32_t),
+         sizeof(uint32_t),
+         1,
+         FFX_RESOURCE_FLAGS_NONE,
+         {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
 
-        {   FFX_PARALLELSORT_RESOURCE_IDENTIFIER_SCRATCH_BUFFER, L"ParallelSort_ScratchBuffer", FFX_RESOURCE_TYPE_BUFFER, FFX_RESOURCE_USAGE_UAV,
-            FFX_SURFACE_FORMAT_UNKNOWN, scratchBufferSize, sizeof(uint32_t), 1, FFX_RESOURCE_FLAGS_NONE },
+        {FFX_PARALLELSORT_RESOURCE_IDENTIFIER_SCRATCH_BUFFER,
+         L"ParallelSort_ScratchBuffer",
+         FFX_RESOURCE_TYPE_BUFFER,
+         FFX_RESOURCE_USAGE_UAV,
+         FFX_SURFACE_FORMAT_UNKNOWN,
+         scratchBufferSize,
+         sizeof(uint32_t),
+         1,
+         FFX_RESOURCE_FLAGS_NONE,
+         {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
 
-        {   FFX_PARALLELSORT_RESOURCE_IDENTIFIER_REDUCED_SCRATCH_BUFFER, L"ParallelSort_ReducedScratchBuffer", FFX_RESOURCE_TYPE_BUFFER, FFX_RESOURCE_USAGE_UAV,
-            FFX_SURFACE_FORMAT_UNKNOWN, reducedScratchBufferSize, sizeof(uint32_t), 1, FFX_RESOURCE_FLAGS_NONE },
+        {FFX_PARALLELSORT_RESOURCE_IDENTIFIER_REDUCED_SCRATCH_BUFFER,
+         L"ParallelSort_ReducedScratchBuffer",
+         FFX_RESOURCE_TYPE_BUFFER,
+         FFX_RESOURCE_USAGE_UAV,
+         FFX_SURFACE_FORMAT_UNKNOWN,
+         reducedScratchBufferSize,
+         sizeof(uint32_t),
+         1,
+         FFX_RESOURCE_FLAGS_NONE,
+         {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
 
-        {   FFX_PARALLELSORT_RESOURCE_IDENTIFIER_INDIRECT_COUNT_SCATTER_ARGS_BUFFER, L"ParallelSort_IndirectCountScatterArgsBuffer", FFX_RESOURCE_TYPE_BUFFER, (FfxResourceUsage)(FFX_RESOURCE_USAGE_UAV | FFX_RESOURCE_USAGE_INDIRECT),
-            FFX_SURFACE_FORMAT_UNKNOWN, sizeof(uint32_t) * 3, sizeof(uint32_t), 1, FFX_RESOURCE_FLAGS_NONE },
+        {FFX_PARALLELSORT_RESOURCE_IDENTIFIER_INDIRECT_COUNT_SCATTER_ARGS_BUFFER,
+         L"ParallelSort_IndirectCountScatterArgsBuffer",
+         FFX_RESOURCE_TYPE_BUFFER,
+         (FfxResourceUsage)(FFX_RESOURCE_USAGE_UAV | FFX_RESOURCE_USAGE_INDIRECT),
+         FFX_SURFACE_FORMAT_UNKNOWN,
+         sizeof(uint32_t) * 3,
+         sizeof(uint32_t),
+         1,
+         FFX_RESOURCE_FLAGS_NONE,
+         {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
 
-        {   FFX_PARALLELSORT_RESOURCE_IDENTIFIER_INDIRECT_REDUCE_SCAN_ARGS_BUFER, L"ParallelSort_IndirectReduceScanArgsBuffer", FFX_RESOURCE_TYPE_BUFFER, (FfxResourceUsage)(FFX_RESOURCE_USAGE_UAV | FFX_RESOURCE_USAGE_INDIRECT),
-            FFX_SURFACE_FORMAT_UNKNOWN, sizeof(uint32_t) * 3, sizeof(uint32_t), 1, FFX_RESOURCE_FLAGS_NONE },
+        {FFX_PARALLELSORT_RESOURCE_IDENTIFIER_INDIRECT_REDUCE_SCAN_ARGS_BUFER,
+         L"ParallelSort_IndirectReduceScanArgsBuffer",
+         FFX_RESOURCE_TYPE_BUFFER,
+         (FfxResourceUsage)(FFX_RESOURCE_USAGE_UAV | FFX_RESOURCE_USAGE_INDIRECT),
+         FFX_SURFACE_FORMAT_UNKNOWN,
+         sizeof(uint32_t) * 3,
+         sizeof(uint32_t),
+         1,
+         FFX_RESOURCE_FLAGS_NONE,
+         {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
     };
 
     // Clear the SRV resources to NULL.
@@ -256,7 +309,12 @@ static FfxErrorCode parallelSortCreate(FfxParallelSortContext_Private* context, 
         const FfxResourceType resourceType = internalResourceDescs[currentResourceId].type;
         const FfxResourceDescription resourceDescription = { resourceType, currentSurfaceDescription->format, currentSurfaceDescription->width, currentSurfaceDescription->height, 0, 0, FFX_RESOURCE_FLAGS_NONE, currentSurfaceDescription->usage };
         const FfxResourceStates initialState = FFX_RESOURCE_STATE_UNORDERED_ACCESS;
-        const FfxCreateResourceDescription createResourceDescription = { FFX_HEAP_TYPE_DEFAULT, resourceDescription, initialState, currentSurfaceDescription->initDataSize, currentSurfaceDescription->initData, currentSurfaceDescription->name, currentSurfaceDescription->id };
+        const FfxCreateResourceDescription    createResourceDescription = {FFX_HEAP_TYPE_DEFAULT,
+                                                                           resourceDescription,
+                                                                           initialState,
+                                                                           currentSurfaceDescription->name,
+                                                                           currentSurfaceDescription->id,
+                                                                           currentSurfaceDescription->initData};
         FFX_VALIDATE(context->contextDescription.backendInterface.fpCreateResource(&context->contextDescription.backendInterface, &createResourceDescription, context->effectContextId, &context->srvResources[currentSurfaceDescription->id]));
     }
 
@@ -274,15 +332,18 @@ static void scheduleDispatch(FfxParallelSortContext_Private* pContext, const Ffx
                                 const FfxPipelineState* pPipeline, uint32_t dispatchX, uint32_t dispatchY, uint32_t dispatchZ)
 {
     FfxGpuJobDescription dispatchJob = {FFX_GPU_JOB_COMPUTE};
+    wcscpy_s(dispatchJob.jobLabel, pPipeline->name);
 
     // Buffer uavs
     for (uint32_t currentUnorderedAccessViewIndex = 0; currentUnorderedAccessViewIndex < pPipeline->uavBufferCount; ++currentUnorderedAccessViewIndex) {
 
         const uint32_t currentResourceId = pPipeline->uavBufferBindings[currentUnorderedAccessViewIndex].resourceIdentifier;
         const FfxResourceInternal currentResource = pContext->uavResources[currentResourceId];
-        dispatchJob.computeJobDescriptor.uavBuffers[currentUnorderedAccessViewIndex] = currentResource;
-        wcscpy_s(dispatchJob.computeJobDescriptor.uavBufferNames[currentUnorderedAccessViewIndex],
+        dispatchJob.computeJobDescriptor.uavBuffers[currentUnorderedAccessViewIndex].resource = currentResource;
+#ifdef FFX_DEBUG
+        wcscpy_s(dispatchJob.computeJobDescriptor.uavBuffers[currentUnorderedAccessViewIndex].name,
                  pPipeline->uavBufferBindings[currentUnorderedAccessViewIndex].name);
+#endif
     }
 
     dispatchJob.computeJobDescriptor.dimensions[0] = dispatchX;
@@ -290,7 +351,9 @@ static void scheduleDispatch(FfxParallelSortContext_Private* pContext, const Ffx
     dispatchJob.computeJobDescriptor.dimensions[2] = dispatchZ;
     dispatchJob.computeJobDescriptor.pipeline      = *pPipeline;
 
+#ifdef FFX_DEBUG
     wcscpy_s(dispatchJob.computeJobDescriptor.cbNames[0], pPipeline->constantBufferBindings[0].name);
+#endif
     dispatchJob.computeJobDescriptor.cbs[0] = pContext->constantBuffer;
 
     
@@ -307,8 +370,10 @@ static void scheduleIndirectDispatch(FfxParallelSortContext_Private* pContext, c
 
         const uint32_t currentResourceId = pPipeline->uavBufferBindings[currentUnorderedAccessViewIndex].resourceIdentifier;
         const FfxResourceInternal currentResource = pContext->uavResources[currentResourceId];
-        jobDescriptor.uavBuffers[currentUnorderedAccessViewIndex] = currentResource;
-        wcscpy_s(jobDescriptor.uavBufferNames[currentUnorderedAccessViewIndex], pPipeline->uavBufferBindings[currentUnorderedAccessViewIndex].name);
+        jobDescriptor.uavBuffers[currentUnorderedAccessViewIndex].resource = currentResource;
+#ifdef FFX_DEBUG
+        wcscpy_s(jobDescriptor.uavBuffers[currentUnorderedAccessViewIndex].name, pPipeline->uavBufferBindings[currentUnorderedAccessViewIndex].name);
+#endif
     }
 
     jobDescriptor.cmdArgument = cmdArgument;
@@ -316,10 +381,13 @@ static void scheduleIndirectDispatch(FfxParallelSortContext_Private* pContext, c
     jobDescriptor.pipeline = *pPipeline;
 
     // Copy constants
+#ifdef FFX_DEBUG
     wcscpy_s(jobDescriptor.cbNames[0], pPipeline->constantBufferBindings[0].name);
+#endif
     jobDescriptor.cbs[0] = pContext->constantBuffer;
 
     FfxGpuJobDescription dispatchJob = { FFX_GPU_JOB_COMPUTE };
+    wcscpy_s(dispatchJob.jobLabel, pPipeline->name);
     dispatchJob.computeJobDescriptor = jobDescriptor;
 
     pContext->contextDescription.backendInterface.fpScheduleGpuJob(&pContext->contextDescription.backendInterface, &dispatchJob);
@@ -348,7 +416,10 @@ static FfxErrorCode parallelSortDispatch(FfxParallelSortContext_Private* pContex
     // If we are doing indirect dispatch, schedule a job to setup the argument buffers for dispatch
     if (pContext->contextDescription.flags & FFX_PARALLELSORT_INDIRECT_SORT)
     {
-        memcpy(&pContext->constantBuffer.data, &constants, sizeof(ParallelSortConstants));
+        pContext->contextDescription.backendInterface.fpStageConstantBufferDataFunc(&pContext->contextDescription.backendInterface, 
+                                                                                    &constants, 
+                                                                                    sizeof(ParallelSortConstants), 
+                                                                                    &pContext->constantBuffer);
         scheduleDispatch(pContext, pDescription, &pContext->pipelineSetupIndirectArgs, 1, 1, 1);
     }
 
@@ -363,7 +434,8 @@ static FfxErrorCode parallelSortDispatch(FfxParallelSortContext_Private* pContex
     for (uint32_t i = 0; constants.shift < 32; constants.shift += FFX_PARALLELSORT_SORT_BITS_PER_PASS, ++i)
     {
         // Update the constant buffer
-        memcpy(&pContext->constantBuffer.data, &constants, sizeof(ParallelSortConstants));
+        pContext->contextDescription.backendInterface.fpStageConstantBufferDataFunc(
+            &pContext->contextDescription.backendInterface, &constants, sizeof(ParallelSortConstants), &pContext->constantBuffer);
 
         // Sort - Sum Pass
         pContext->uavResources[FFX_PARALLELSORT_RESOURCE_IDENTIFIER_KEY_SRC] = pContext->uavResources[srcKeyResource];
@@ -435,7 +507,7 @@ static FfxErrorCode parallelSortDispatch(FfxParallelSortContext_Private* pContex
     }
 
     // Execute all the work for the frame
-    pContext->contextDescription.backendInterface.fpExecuteGpuJobs(&pContext->contextDescription.backendInterface, commandList);
+    pContext->contextDescription.backendInterface.fpExecuteGpuJobs(&pContext->contextDescription.backendInterface, commandList, pContext->effectContextId);
 
     // Release dynamic resources
     pContext->contextDescription.backendInterface.fpUnregisterResources(&pContext->contextDescription.backendInterface, commandList, pContext->effectContextId);
@@ -465,7 +537,7 @@ static FfxErrorCode parallelSortRelease(FfxParallelSortContext_Private* context)
     // release internal resources
     for (int32_t currentResourceIndex = 0; currentResourceIndex < FFX_PARALLELSORT_RESOURCE_IDENTIFIER_COUNT; ++currentResourceIndex) {
 
-        ffxSafeReleaseResource(&context->contextDescription.backendInterface, context->srvResources[currentResourceIndex]);
+        ffxSafeReleaseResource(&context->contextDescription.backendInterface, context->srvResources[currentResourceIndex], context->effectContextId);
     }
 
     // Destroy the context
@@ -474,32 +546,33 @@ static FfxErrorCode parallelSortRelease(FfxParallelSortContext_Private* context)
     return FFX_OK;
 }
 
-FfxErrorCode ffxParallelSortContextCreate(FfxParallelSortContext* pContext, const FfxParallelSortContextDescription* pContextDescription)
+FfxErrorCode ffxParallelSortContextCreate(FfxParallelSortContext* context, const FfxParallelSortContextDescription* contextDescription)
 {
     // Check pointers are valid.
-    FFX_RETURN_ON_ERROR(pContext, FFX_ERROR_INVALID_POINTER);
-    FFX_RETURN_ON_ERROR(pContextDescription, FFX_ERROR_INVALID_POINTER);
+    FFX_RETURN_ON_ERROR(context, FFX_ERROR_INVALID_POINTER);
+    FFX_RETURN_ON_ERROR(contextDescription, FFX_ERROR_INVALID_POINTER);
 
     // Zero context memory.
-    memset(pContext, 0, sizeof(FfxParallelSortContext));
+    memset(context, 0, sizeof(FfxParallelSortContext));
 
     // Validate that all callbacks are set for the interface
-    FFX_RETURN_ON_ERROR(pContextDescription->backendInterface.fpGetDeviceCapabilities, FFX_ERROR_INCOMPLETE_INTERFACE);
-    FFX_RETURN_ON_ERROR(pContextDescription->backendInterface.fpCreateBackendContext, FFX_ERROR_INCOMPLETE_INTERFACE);
-    FFX_RETURN_ON_ERROR(pContextDescription->backendInterface.fpDestroyBackendContext, FFX_ERROR_INCOMPLETE_INTERFACE)
+    FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpGetSDKVersion, FFX_ERROR_INCOMPLETE_INTERFACE);
+    FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpGetDeviceCapabilities, FFX_ERROR_INCOMPLETE_INTERFACE);
+    FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpCreateBackendContext, FFX_ERROR_INCOMPLETE_INTERFACE);
+    FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpDestroyBackendContext, FFX_ERROR_INCOMPLETE_INTERFACE)
 
     // If a scratch buffer is declared, then we must have a size
-    if (pContextDescription->backendInterface.scratchBuffer) {
+    if (contextDescription->backendInterface.scratchBuffer) {
 
-        FFX_RETURN_ON_ERROR(pContextDescription->backendInterface.scratchBufferSize, FFX_ERROR_INCOMPLETE_INTERFACE);
+        FFX_RETURN_ON_ERROR(contextDescription->backendInterface.scratchBufferSize, FFX_ERROR_INCOMPLETE_INTERFACE);
     }
     
     // Ensure public context is always larger (or equal) to private.
     FFX_STATIC_ASSERT(sizeof(FfxParallelSortContext) >= sizeof(FfxParallelSortContext_Private));
 
     // create the context.
-    FfxParallelSortContext_Private* contextPrivate = (FfxParallelSortContext_Private*)(pContext);
-    const FfxErrorCode errorCode = parallelSortCreate(contextPrivate, pContextDescription);
+    FfxParallelSortContext_Private* contextPrivate = (FfxParallelSortContext_Private*)(context);
+    const FfxErrorCode errorCode = parallelSortCreate(contextPrivate, contextDescription);
 
     return errorCode;
 }
@@ -524,4 +597,9 @@ FfxErrorCode ffxParallelSortContextDestroy(FfxParallelSortContext* pContext)
     const FfxErrorCode errorCode = parallelSortRelease(contextPrivate);
 
     return errorCode;
+}
+
+FFX_API FfxVersionNumber ffxParallelSortGetEffectVersion()
+{
+    return FFX_SDK_MAKE_VERSION(FFX_PARALLELSORT_VERSION_MAJOR, FFX_PARALLELSORT_VERSION_MINOR, FFX_PARALLELSORT_VERSION_PATCH);
 }

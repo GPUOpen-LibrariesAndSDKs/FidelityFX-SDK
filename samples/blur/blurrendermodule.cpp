@@ -1,28 +1,28 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this softwareand associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright noticeand this permission notice shall be included in
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #include "blurrendermodule.h"
-#include "validation_remap.h"
 
+#include "core/backend_interface.h"
 #include "core/framework.h"
 #include "core/loaders/textureloader.h"
 #include "core/uimanager.h"
@@ -48,7 +48,11 @@ FfxBlurFloatPrecision GetFloatPrecision(int32_t fpMathIndex)
     else if (floatingPointMath == "Use FP32")
         return FFX_BLUR_FLOAT_PRECISION_32BIT;
     else
-        FFX_ASSERT_FAIL("Unhandled float precision value.");
+    {
+        // Unhandled float precision value.
+        CAULDRON_ASSERT(false);
+    }
+        
     return FFX_BLUR_FLOAT_PRECISION_COUNT;
 }
 
@@ -62,7 +66,10 @@ FfxBlurKernelPermutation GetGaussianSigmaPermutation(int32_t sigmaIndex)
     else if (sigmaIndex == 2)
         return FFX_BLUR_KERNEL_PERMUTATION_2;
     else
-        FFX_ASSERT_FAIL("Unhandled Gaussian Sigma Index");
+    {
+        // Unhandled Gaussian Sigma Index.
+        CAULDRON_ASSERT(false);
+    }
 
     return (FfxBlurKernelPermutation)FFX_BLUR_KERNEL_PERMUTATION_COUNT;
 }
@@ -92,7 +99,10 @@ FfxBlurKernelSize GetKernelSize(int32_t kernelSizeIndex)
     else if (kernelSize == "21x21")
         return FFX_BLUR_KERNEL_SIZE_21x21;
     else
-        FFX_ASSERT_FAIL("Unhandled Kernel Size");
+    {
+        // Unhandled kernel size.
+        CAULDRON_ASSERT(false);
+    }
 
     return (FfxBlurKernelSize)FFX_BLUR_KERNEL_SIZE_COUNT;
 }
@@ -105,110 +115,111 @@ BlurRenderModule::BlurRenderModule()
 
 void BlurRenderModule::Init(const json& initData)
 {
-    UISection uiSection;
-    uiSection.SectionName = "Blur";
-    uiSection.SectionType = UISectionType::Sample;
+    UISection* uiSection = GetUIManager()->RegisterUIElements("Blur", UISectionType::Sample);
 
-    const char* algorithmOptions[] = {
-        "None",
-        "FidelityFX Blur",
-        "Single Pass Box Filter",
-        "Multi-pass Separable Filter",
-        "Multi-pass Separable Filter Transpose"
-    };
+    if (uiSection)
+    {
+        std::vector<const char*> algoOptions = {
+            "None", "FidelityFX Blur", "Single Pass Box Filter",
+            "Multi-pass Separable Filter", "Multi-pass Separable Filter Transpose"};
+        uiSection->RegisterUIElement<UICombo>(
+            "Algorithm",
+            m_CurrentAlgorithm1,
+            algoOptions,
+            [this](int32_t cur, int32_t old) {
+                if (cur != old)
+                {
+                    m_EnableFilterOptions1 = m_CurrentAlgorithm1 != static_cast<int32_t>(Algorithm::NONE);
 
-    std::vector<std::string> algoOptions;
-    algoOptions.assign(algorithmOptions, algorithmOptions + _countof(algorithmOptions));
+                    if (m_CurrentAlgorithm1 == static_cast<int32_t>(Algorithm::FIDELITYFX_BLUR_GAUSSIAN))
+                    {
+                        DestroyBlurContexts();
+                        CreateBlurContexts();
+                    }
+                }
+            });
 
-    uiSection.AddCombo("Algorithm", &m_CurrentAlgorithm1, &algoOptions, [this](void* pParams) {
-        int32_t oldAlgorithm = *static_cast<int32_t*>(pParams);
-        if (oldAlgorithm == m_CurrentAlgorithm1)
-            return;
+        std::vector<const char*> gaussianSigmaOptions(s_GaussianSigmaOptions, s_GaussianSigmaOptions + _countof(s_GaussianSigmaOptions));
+        uiSection->RegisterUIElement<UICombo>("Gaussian Kernel Sigma", m_CurrentGaussianSigma1, gaussianSigmaOptions, m_EnableFilterOptions1);
 
-        m_EnableFilterOptions1 = m_CurrentAlgorithm1 != static_cast<int32_t>(Algorithm::NONE);
+        std::vector<const char*> kernOptions(s_KernelSizeOptions, s_KernelSizeOptions + _countof(s_KernelSizeOptions));
+        uiSection->RegisterUIElement<UICombo>("Kernel Size", m_CurrentKernelSize1, kernOptions, m_EnableFilterOptions1);
 
-        if (m_CurrentAlgorithm1 == static_cast<int32_t>(Algorithm::FIDELITYFX_BLUR_GAUSSIAN))
-        {
-            DestroyBlurContexts();
+        std::vector<const char*> mathOptions(s_FloatingPointMathOptions, s_FloatingPointMathOptions + _countof(s_FloatingPointMathOptions));
+        uiSection->RegisterUIElement<UICombo>(
+            "Floating Point Math",
+            m_CurrentFpMath1,
+            mathOptions,
+            m_EnableFilterOptions1,
+            [this](int32_t cur, int32_t old) {
+                if (cur != old)
+                {
+                    if (m_CurrentAlgorithm1 == static_cast<int32_t>(Algorithm::FIDELITYFX_BLUR_GAUSSIAN))
+                    {
+                        DestroyBlurContexts();
+                        CreateBlurContexts();
+                    }
+                }
+            });
+
+        uiSection->RegisterUIElement<UICheckBox>(
+            "Display the difference between two algorithms.",
+            m_ComparisonModeEnabled,
+            [this](bool cur, bool old) {
+                m_EnableFilterOptions2 = cur ? m_CurrentAlgorithm2 != static_cast<int32_t>(Algorithm::NONE) : false;
+            });
+        uiSection->RegisterUIElement<UISeparator>();
+
+        // Add controls for the comparison mode that are enabled/disabled by m_ComparisonModeEnabled.
+        uiSection->RegisterUIElement<UICombo>(
+            "Compare Algorithm",
+            m_CurrentAlgorithm2,
+            std::move(algoOptions),
+            m_ComparisonModeEnabled,
+            [this](int32_t cur, int32_t old) {
+                if (cur != old)
+                {
+                    m_EnableFilterOptions2 = m_CurrentAlgorithm2 != static_cast<int32_t>(Algorithm::NONE);
+
+                    if (m_CurrentAlgorithm2 == static_cast<int32_t>(Algorithm::FIDELITYFX_BLUR_GAUSSIAN))
+                    {
+                        DestroyBlurContexts();
+                        CreateBlurContexts();
+                    }
+                }
+            });
+
+        uiSection->RegisterUIElement<UICombo>("Compare Gaussian Sigma", m_CurrentGaussianSigma2, std::move(gaussianSigmaOptions), m_EnableFilterOptions2);
+
+        uiSection->RegisterUIElement<UICombo>("Compare Kernel Size", m_CurrentKernelSize2, std::move(kernOptions), m_EnableFilterOptions2);
+
+        uiSection->RegisterUIElement<UICombo>(
+            "Compare FP Math",
+            m_CurrentFpMath2,
+            std::move(mathOptions),
+            m_EnableFilterOptions2,
+            [this](int32_t cur, int32_t old) {
+                if (cur != old)
+                {
+                    if (m_CurrentAlgorithm2 == static_cast<int32_t>(Algorithm::FIDELITYFX_BLUR_GAUSSIAN))
+                    {
+                        DestroyBlurContexts();
+                        CreateBlurContexts();
+                    }
+                }
+            });
+
+        uiSection->RegisterUIElement<UISlider<float>>("Diff Factor", m_DiffFactor, 1.0f, 10.0f, m_ComparisonModeEnabled);
+    }
+
+    GetFramework()->ConfigureRuntimeShaderRecompiler(
+        // PreReload Callback
+        [this]() { DestroyBlurContexts(); },
+        // PostReload Callback
+        [this]() {
+            InitFfxBackend();
             CreateBlurContexts();
-        }
-    });
-
-    std::vector<std::string> gaussianSigmaOptions;
-    gaussianSigmaOptions.assign(s_GaussianSigmaOptions, s_GaussianSigmaOptions + _countof(s_GaussianSigmaOptions));
-    uiSection.AddCombo("Gaussian Kernel Sigma", &m_CurrentGaussianSigma1, &gaussianSigmaOptions, nullptr, &m_EnableFilterOptions1);
-
-    std::vector<std::string> kernOptions;
-    kernOptions.assign(s_KernelSizeOptions, s_KernelSizeOptions + _countof(s_KernelSizeOptions));
-    uiSection.AddCombo("Kernel Size", &m_CurrentKernelSize1, &kernOptions, nullptr, &m_EnableFilterOptions1);
-
-    std::vector<std::string> mathOptions;
-    mathOptions.assign(s_FloatingPointMathOptions, s_FloatingPointMathOptions + _countof(s_FloatingPointMathOptions));
-    uiSection.AddCombo("Floating Point Math", &m_CurrentFpMath1, &mathOptions, [this](void* pParams) {
-        int32_t oldFpMath = *static_cast<int32_t*>(pParams);
-        if (oldFpMath == m_CurrentFpMath1)
-            return;
-
-        if (m_CurrentAlgorithm1 == static_cast<int32_t>(Algorithm::FIDELITYFX_BLUR_GAUSSIAN))
-        {
-            DestroyBlurContexts();
-            CreateBlurContexts();
-        }
-    }, &m_EnableFilterOptions1);
-
-    uiSection.AddCheckBox("Display the difference between two algorithms.", &m_ComparisonModeEnabled, [this](void* pParams) {
-        if (m_ComparisonModeEnabled)
-            m_EnableFilterOptions2 = m_CurrentAlgorithm2 != static_cast<int32_t>(Algorithm::NONE);
-        else
-            m_EnableFilterOptions2 = false;
-    });
-
-    uiSection.AddSeparator();
-
-    // Add controls for the comparison mode that are enabled/disabled by m_ComparisonModeEnabled.
-    uiSection.AddCombo(
-        "Compare Algorithm",
-        &m_CurrentAlgorithm2,
-        &algoOptions,
-        [this](void* pParams) {
-            int32_t oldAlgorithm = *static_cast<int32_t*>(pParams);
-            if (oldAlgorithm == m_CurrentAlgorithm2)
-                return;
-
-            m_EnableFilterOptions2 = m_CurrentAlgorithm2 != static_cast<int32_t>(Algorithm::NONE);
-
-            if (m_CurrentAlgorithm2 == static_cast<int32_t>(Algorithm::FIDELITYFX_BLUR_GAUSSIAN))
-            {
-                DestroyBlurContexts();
-                CreateBlurContexts();
-            }
-        },
-        &m_ComparisonModeEnabled);
-
-    uiSection.AddCombo("Compare Gaussian Sigma", &m_CurrentGaussianSigma2, &gaussianSigmaOptions, nullptr, &m_EnableFilterOptions2);
-
-    uiSection.AddCombo("Compare Kernel Size", &m_CurrentKernelSize2, &kernOptions, nullptr, &m_EnableFilterOptions2);
-
-    uiSection.AddCombo(
-        "Compare FP Math",
-        &m_CurrentFpMath2,
-        &mathOptions,
-        [this](void* pParams) {
-            int32_t oldFpMath = *static_cast<int32_t*>(pParams);
-            if (oldFpMath == m_CurrentFpMath2)
-                return;
-
-            if (m_CurrentAlgorithm2 == static_cast<int32_t>(Algorithm::FIDELITYFX_BLUR_GAUSSIAN))
-            {
-                DestroyBlurContexts();
-                CreateBlurContexts();
-            }
-        },
-        &m_EnableFilterOptions2);
-
-    uiSection.AddFloatSlider("Diff Factor", &m_DiffFactor, 1.0f, 10.0f, nullptr, &m_ComparisonModeEnabled);
-
-    GetUIManager()->RegisterUIElements(uiSection);
+        });
 
     InitTextures();
 
@@ -268,13 +279,32 @@ static ParameterSet* CreateComparisonParameterSet(
     return pParameterSet;
 }
 
+void BlurRenderModule::InitFfxBackend()
+{
+    // Release the scratch buffer memory
+    if (m_BackendInterface.scratchBuffer)
+        free(m_BackendInterface.scratchBuffer);
+
+    size_t scratchBufferSize = SDKWrapper::ffxGetScratchMemorySize(2 * FFX_BLUR_CONTEXT_COUNT);
+    void* scratchBuffer = calloc(scratchBufferSize, 1u);
+    FfxErrorCode errorCode = SDKWrapper::ffxGetInterface(&m_BackendInterface, GetDevice(), scratchBuffer, scratchBufferSize, 2 * FFX_BLUR_CONTEXT_COUNT);
+    CAULDRON_ASSERT(errorCode == FFX_OK);
+
+    // valid effect library and backend versions
+    CauldronAssert(ASSERT_CRITICAL, m_BackendInterface.fpGetSDKVersion(&m_BackendInterface) == FFX_SDK_MAKE_VERSION(1, 1, 0),
+                        L"FidelityFX Blur 1.1 sample requires linking with a 1.1 version SDK backend");
+
+
+    CauldronAssert(ASSERT_CRITICAL, ffxBlurGetEffectVersion() == FFX_SDK_MAKE_VERSION(1, 1, 0),
+                       L"FidelityFX Blur 1.1 sample requires linking with a 1.1 version FidelityFX Blur library");
+                       
+    m_BackendInterface.fpRegisterConstantBufferAllocator(&m_BackendInterface, SDKWrapper::ffxAllocateConstantBuffer);
+}
+
 void BlurRenderModule::InitPipelines()
 {
     // Initialize the FFX backend
-    size_t scratchBufferSize = ffxGetScratchMemorySize(2 * FFX_BLUR_CONTEXT_COUNT);
-    void* scratchBuffer = malloc(scratchBufferSize);
-    FfxErrorCode errorCode = ffxGetInterface(&m_BackendInterface, GetDevice(), scratchBuffer, scratchBufferSize, 2 * FFX_BLUR_CONTEXT_COUNT);
-    FFX_ASSERT(errorCode == FFX_OK);
+    InitFfxBackend();
 
     CreateBlurContexts();
 
@@ -925,17 +955,17 @@ void BlurRenderModule::ExecuteBlurEffect(
 
     FfxBlurDispatchDescription desc = {};
 
-    desc.commandList = ffxGetCommandList(pCmdList);
+    desc.commandList = SDKWrapper::ffxGetCommandList(pCmdList);
 
     desc.kernelPermutation = kernelPermutation;
     desc.kernelSize = kernelSize;
 
-    desc.input = ffxGetResource(inputOutputPair.first->GetResource(), L"BLUR_InputSrc", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    desc.input = SDKWrapper::ffxGetResource(inputOutputPair.first->GetResource(), L"BLUR_InputSrc", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
 
     desc.inputAndOutputSize.width  = desc.input.description.width;
     desc.inputAndOutputSize.height = desc.input.description.height;
 
-    desc.output = ffxGetResource(inputOutputPair.second->GetResource(), L"BLUR_Output", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
+    desc.output = SDKWrapper::ffxGetResource(inputOutputPair.second->GetResource(), L"BLUR_Output", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
 
     ffxBlurContextDispatch(&blurContext, &desc);
 

@@ -2,9 +2,9 @@
     "FidelityFX Lens": {
 
         "RenderModules": [
-            "SkyDomeRenderModule",
             "GBufferRenderModule",
             "LightingRenderModule",
+            "SkyDomeRenderModule",
             "LensRenderModule",
             "ToneMappingRenderModule"
         ],

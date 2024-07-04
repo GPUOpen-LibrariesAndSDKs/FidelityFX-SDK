@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright © 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -24,28 +24,38 @@
 #include "glsl_compiler.h"
 #include "utils.h"
 
+#include <Windows.h>
+#include <vector>
+#include <string_view>
+#include <filesystem>
+#include <unordered_set>
+#include <locale>
+
 static const wchar_t* const APP_NAME    = L"FidelityFX-SC";
 static const wchar_t* const EXE_NAME    = L"FidelityFX_SC";
 static const wchar_t* const APP_VERSION = L"1.0.0";
 
-inline bool Contains(const wchar_t* s, const wchar_t* subS)
+inline bool Contains(std::wstring_view s, std::wstring_view subS)
 {
-    return std::wstring(s).find(std::wstring(subS)) != std::wstring::npos;
+    return s.find(subS) != s.npos;
 }
 
-inline bool StartsWith(const wchar_t* s, const wchar_t* subS)
+inline bool Contains(std::string_view s, std::string_view subS)
 {
-    size_t sLen    = wcslen(s);
-    size_t subSLen = wcslen(subS);
-    if (sLen >= subSLen)
-    {
-        size_t p = std::wstring(s).find(std::wstring(subS));
-        return p == 0;
-    }
-    return false;
+    return s.find(subS) != s.npos;
 }
 
-inline void Split(std::wstring str, std::wstring token, std::vector<std::wstring>& result)
+inline bool StartsWith(std::wstring_view s, std::wstring_view subS)
+{
+    return s.substr(0, subS.size()) == subS;
+}
+
+inline bool StartsWith(std::string_view s, std::string_view subS)
+{
+    return s.substr(0, subS.size()) == subS;
+}
+
+inline void Split(std::wstring str, std::wstring_view token, std::vector<std::wstring>& result)
 {
     while (str.size())
     {
@@ -65,20 +75,22 @@ inline void Split(std::wstring str, std::wstring token, std::vector<std::wstring
     }
 }
 
-inline bool IsNumeric(const std::wstring& s)
+inline bool IsNumeric(std::wstring_view s)
 {
-    std::wstring::const_iterator it = s.begin();
-    while (it != s.end() && std::isdigit(*it))
-        ++it;
-    return !s.empty() && it == s.end();
+    for (wchar_t c : s)
+        if (!std::isdigit(c))
+            return false;
+    return !s.empty();
 }
 
 struct PermutationOption
 {
     std::wstring              definition;
+    std::string               definitionUtf8;
     std::vector<std::wstring> values;
     uint32_t                  numBits;
     bool                      isNumeric;
+    bool                      foundInShader = false;
 };
 
 struct LaunchParameters
@@ -98,6 +110,7 @@ struct LaunchParameters
     bool                           embedArguments     = false;
     bool                           printArguments     = false;
     bool                           disableLogs        = false;
+    bool                           debugCompile       = false;
 
     static void PrintCommandLineSyntax();
     void        ParseCommandLine(int argCount, const wchar_t* const* args);
@@ -174,7 +187,7 @@ void LaunchParameters::PrintCommandLineSyntax()
         L"-disable-logs\n"
         L"  Prevent logging of compile warnings and errors.\n"
         L"-compiler=<Compiler>\n"
-        L"  Select the compiler to generate permutations from (dxc, fxc or glslang).\n"
+        L"  Select the compiler to generate permutations from (dxc, gdk.desktop.x64, gdk.scarlett.x64, fxc or glslang).\n"
         L"-dxcdll=<DXC DLL Path>\n"
         L"  Path to the dxccompiler dll to use.\n"
         L"-d3ddll=<D3D DLL Path>\n"
@@ -183,6 +196,10 @@ void LaunchParameters::PrintCommandLineSyntax()
         L"  Path to the glslangValidator executable to use.\n"
         L"-deps=<Format>\n"
         L"  Dump depfile which recorded the include file dependencies in format of (gcc or msvc).\n"
+        L"-debugcompile\n"
+        L"  Compile shader with debug information.\n"
+        L"-debugcmdline\n"
+        L"  Print all the input arguments.\n"
     );
 }
 
@@ -259,6 +276,8 @@ void LaunchParameters::ParseCommandLine(int argCount, const wchar_t* const* args
             printArguments = true;
         else if (std::wstring(args[i]) == L"-disable-logs")
             disableLogs = true;
+        else if (std::wstring(args[i]) == L"-debugcompile")
+            debugCompile = true;
         else if (args[i][0] == L'-')
         {
             compilerArgs.push_back(args[i++]);
@@ -284,6 +303,7 @@ void LaunchParameters::ParsePermutationOption(PermutationOption& outPermutationO
 {
     size_t equalPos                 = arg.find_first_of(L"=", 0);
     outPermutationOption.definition = arg.substr(2, equalPos - 2);
+    outPermutationOption.definitionUtf8 = WCharToUTF8(outPermutationOption.definition);
 
     size_t       openBracePos      = arg.find_first_of(L"{", 0);
     std::wstring multiOptionSubStr = arg.substr(openBracePos + 1, arg.length() - openBracePos - 2);
@@ -331,12 +351,15 @@ void Application::Process()
 
     GenerateMacroPermutations(m_MacroPermutations);
 
-    int totalPermutations = m_MacroPermutations.size();
+    size_t predictedDuplicates = std::count_if(m_MacroPermutations.begin(), m_MacroPermutations.end(), [](const Permutation& p) { return p.identicalTo.has_value(); });
+
+    size_t totalPermutations = m_MacroPermutations.size();
 
     std::vector<std::thread> threads;
 
     if (m_Params.numThreads == 0)
         m_Params.numThreads = std::thread::hardware_concurrency();
+    m_Params.numThreads = std::min(m_Params.numThreads, static_cast<int>(totalPermutations - predictedDuplicates));
 
     printf("%s\n", WCharToUTF8(m_ShaderFileName).c_str());
 
@@ -356,16 +379,23 @@ void Application::Process()
     else if (m_Params.deps == L"msvc")
         DumpDepfileMSVC();
 
-    printf("%s: Processed %i shader permutations, found %i duplicates.\n",
+    printf("%s: Processed %zu shader permutations, found %zu duplicates (%zu found early).\n",
            WCharToUTF8(m_ShaderFileName).c_str(),
            totalPermutations,
-           totalPermutations - m_LastPermutationIndex);
+           totalPermutations - size_t(m_LastPermutationIndex),
+           predictedDuplicates);
+    if (totalPermutations - m_LastPermutationIndex < predictedDuplicates)
+    {
+        printf("\nERROR: Predicted %llu duplicates\n\n\n", predictedDuplicates);
+    }
 }
 
 void Application::GenerateMacroPermutations(std::deque<Permutation>& permutations)
 {
     Permutation temp;
     temp.sourcePath = WCharToUTF8(m_Params.inputFile);
+    // put the permutation options that appear in shaders first.
+    std::stable_partition(m_Params.permutationOptions.begin(), m_Params.permutationOptions.end(), [](const PermutationOption& opt) { return opt.foundInShader; });
     GenerateMacroPermutations(temp, permutations, 0, 0);
 }
 
@@ -385,6 +415,12 @@ void Application::GenerateMacroPermutations(Permutation current, std::deque<Perm
     {
         Permutation temp = current;
 
+        if (!currentOption.foundInShader && !temp.identicalTo.has_value() && i != 0)
+        {
+            // this and all remaining permutations (in this recursion) have identical output to the last real one processed.
+            temp.identicalTo = temp.key;
+        }
+
         if (currentOption.values[i][0] != L'-')
         {
             if (currentOption.isNumeric)
@@ -403,6 +439,25 @@ void Application::GenerateMacroPermutations(Permutation current, std::deque<Perm
 
         GenerateMacroPermutations(temp, permutations, idx + 1, curBit + currentOption.numBits);
     }
+}
+
+static bool FindIncludeFilePath(const std::string& includeFile, const std::vector<fs::path>& includeSearchPaths, fs::path& includeFilePath)
+{
+    fs::path localPath = includeFile;
+    if (fs::exists(localPath))
+    {
+        includeFilePath = fs::absolute(localPath);
+        return true;
+    }
+
+    for (const auto& searchPath : includeSearchPaths)
+    {
+        includeFilePath = fs::absolute(searchPath / localPath);
+        if (fs::exists(includeFilePath))
+            return true;
+    }
+
+    return false;
 }
 
 void Application::OpenSourceFile()
@@ -444,9 +499,9 @@ void Application::OpenSourceFile()
 
         if (extension == L"hlsl")
             m_Compiler = std::unique_ptr<HLSLCompiler>(
-                new HLSLCompiler(HLSLCompiler::DXC, dxcDll, shaderPath, shaderName, shaderFileName, outputPath, m_Params.disableLogs));
+                new HLSLCompiler(HLSLCompiler::DXC, dxcDll, shaderPath, shaderName, shaderFileName, outputPath, m_Params.disableLogs, m_Params.debugCompile));
         else if (extension == L"glsl")
-            m_Compiler = std::unique_ptr<GLSLCompiler>(new GLSLCompiler(glslangExe, shaderPath, shaderName, shaderFileName, outputPath, m_Params.disableLogs));
+            m_Compiler = std::unique_ptr<GLSLCompiler>(new GLSLCompiler(glslangExe, shaderPath, shaderName, shaderFileName, outputPath, m_Params.disableLogs, m_Params.debugCompile));
         else
             throw std::runtime_error("Unknown shader source file extension. Please use the -compiler option to specify which compiler to use.");
     }
@@ -454,14 +509,91 @@ void Application::OpenSourceFile()
     {
         if (m_Params.compiler == L"dxc")
             m_Compiler = std::unique_ptr<HLSLCompiler>(
-                new HLSLCompiler(HLSLCompiler::DXC, dxcDll, shaderPath, shaderName, shaderFileName, outputPath, m_Params.disableLogs));
+                new HLSLCompiler(HLSLCompiler::DXC, dxcDll, shaderPath, shaderName, shaderFileName, outputPath, m_Params.disableLogs, m_Params.debugCompile));
+        else if (m_Params.compiler == L"gdk.desktop.x64")
+            m_Compiler = std::unique_ptr<HLSLCompiler>(new HLSLCompiler(
+                HLSLCompiler::GDK_DESKTOP_X64, dxcDll, shaderPath, shaderName, shaderFileName, outputPath, m_Params.disableLogs, m_Params.debugCompile));
+        else if (m_Params.compiler == L"gdk.scarlett.x64")
+            m_Compiler = std::unique_ptr<HLSLCompiler>(new HLSLCompiler(
+                HLSLCompiler::GDK_SCARLETT_X64, dxcDll, shaderPath, shaderName, shaderFileName, outputPath, m_Params.disableLogs, m_Params.debugCompile));
         else if (m_Params.compiler == L"fxc")
             m_Compiler = std::unique_ptr<HLSLCompiler>(
-                new HLSLCompiler(HLSLCompiler::FXC, d3dDll, shaderPath, shaderName, shaderFileName, outputPath, m_Params.disableLogs));
+                new HLSLCompiler(HLSLCompiler::FXC, d3dDll, shaderPath, shaderName, shaderFileName, outputPath, m_Params.disableLogs, m_Params.debugCompile));
         else if (m_Params.compiler == L"glslang")
-            m_Compiler = std::unique_ptr<GLSLCompiler>(new GLSLCompiler(glslangExe, shaderPath, shaderName, shaderFileName, outputPath, m_Params.disableLogs));
+            m_Compiler = std::unique_ptr<GLSLCompiler>(new GLSLCompiler(glslangExe, shaderPath, shaderName, shaderFileName, outputPath, m_Params.disableLogs, m_Params.debugCompile));
         else
             throw std::runtime_error("Unknown compiler requested (valid options: dxc, fxc or glslang)");
+    }
+
+    std::vector<fs::path> includeSearchPaths{};
+    for (size_t i = 0; i < m_Params.compilerArgs.size(); i++)
+    {
+        auto& arg = m_Params.compilerArgs[i];
+        if (arg == L"-I" && i + 1 < m_Params.compilerArgs.size())
+        {
+            includeSearchPaths.emplace_back(m_Params.compilerArgs[++i]);
+        }
+        else if (StartsWith(arg, L"-I "))
+        {
+            includeSearchPaths.emplace_back(arg.substr(3));
+        }
+        else if (StartsWith(arg, L"-I"))
+        {
+            includeSearchPaths.emplace_back(arg.substr(2));
+        }
+    }
+
+    // early filter for duplicate permutations
+    // find out which of the permutation options are mentioned in the file (+includes).
+    if (m_Params.permutationOptions.size() > 0)
+    {
+        std::vector<std::string> searchFiles{shaderPath};
+        std::unordered_set<fs::path> searchedFiles{};
+        size_t numDefsFound = 0;
+        while (!searchFiles.empty() && numDefsFound < m_Params.permutationOptions.size())
+        {
+            auto sourceFilename = searchFiles.back();
+            searchFiles.pop_back();
+            if (!searchedFiles.emplace(sourceFilename).second)
+            {
+                // already searched this file.
+                continue;
+            }
+
+            std::ifstream source{sourceFilename};
+            std::string line;
+            while (std::getline(source, line))
+            {
+                auto startOfLine = line.find_first_not_of(" \t");
+                std::string_view trimmedLine = std::string_view(line).substr(startOfLine > line.size() ? 0 : startOfLine);
+                if (StartsWith(trimmedLine, "#include"))
+                {
+                    auto startOfFile = std::min(trimmedLine.find('"'), trimmedLine.find('<')) + 1;
+                    auto endOfFile = std::min(trimmedLine.rfind('"'), trimmedLine.rfind('>'));
+                    auto filename = trimmedLine.substr(startOfFile, endOfFile - startOfFile);
+
+                    fs::path includeFilePath;
+                    if (FindIncludeFilePath(std::string(filename), includeSearchPaths, includeFilePath))
+                    {
+                        searchFiles.push_back(includeFilePath.string());
+                    }
+                }
+
+                for (auto& option : m_Params.permutationOptions)
+                {
+                    if (!option.foundInShader && Contains(trimmedLine, option.definitionUtf8))
+                    {
+                        option.foundInShader = true;
+                        numDefsFound++;
+                    }
+                }
+            }
+        }
+    }
+    else
+    {
+        for (auto& option : m_Params.permutationOptions)
+            option.foundInShader = true;
     }
 }
 
@@ -495,6 +627,26 @@ void Application::ProcessPermutations()
 
 void Application::CompilePermutation(Permutation& permutation)
 {
+    if (permutation.identicalTo.has_value())
+    {
+        std::unique_lock<std::mutex> guard(m_WriteMutex);
+
+        if (auto it = m_KeyToIndexMap.find(*permutation.identicalTo); it != m_KeyToIndexMap.end())
+        {
+            auto index = it->second;
+            m_KeyToIndexMap[permutation.key] = index;
+            return;
+        }
+        else
+        {
+            guard.unlock();
+            // add the permutation back to the end of the queue.
+            std::lock_guard<std::mutex> readGuard(m_ReadMutex);
+            m_MacroPermutations.push_front(permutation);
+            return;
+        }
+    }
+
     // ------------------------------------------------------------------------------------------------
     // Setup compiler args.
     // ------------------------------------------------------------------------------------------------
@@ -849,7 +1001,7 @@ void Application::DumpDepfileGCC()
 
     fs::path output = WCharToUTF8(outputFilename);
 
-    output = fs::relative(output);
+    output = fs::absolute(output);
 
     fprintf(fp, "%s:", output.generic_string().c_str());
 

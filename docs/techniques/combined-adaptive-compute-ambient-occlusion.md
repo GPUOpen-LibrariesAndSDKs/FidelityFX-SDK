@@ -70,7 +70,7 @@ A constant buffer needs to be filled with relevant values. Many values should be
 
 The FidelityFX CACAO algorithm is comprised of several passes which are configured in different ways depending on the variant of the FidelityFX CACAO algorithm that is being used.
 
-![alt text](media/combined-adaptive-compute-ambient-occlusion/cacao-pipeline.png "A diagram showing all passes in the FidelityFX CACAO algorithm.")
+![invert](media/combined-adaptive-compute-ambient-occlusion/cacao-pipeline.png "A diagram showing all passes in the FidelityFX CACAO algorithm.")
 
 The table below summarizes which passes of the FidelityFX CACAO algorithm are present in the different configurations one might choose to operate the algorithm with. Depending on the desired performance level, the level of quality may be adjusted. By adjusting the quality level, some passes which constitute the effect will be omitted. 
 
@@ -148,7 +148,8 @@ The following table describes the outputs which are computed by the prepare proc
 
 The process of de-interleaving is identical for both the depth and normal buffers, and is shown in the diagram below. Each group of 2x2 pixels is considered and separated into four separate textures, each a quarter of the resolution of the original input. The reason for this is to improve the efficiency of the cache hierarchy present in the GPU.
 
-![alt text](media/combined-adaptive-compute-ambient-occlusion/cacao-interleave.png "A diagram showing how depth and normal buffers are de-interleaved.")
+![invert](media/combined-adaptive-compute-ambient-occlusion/cacao-interleave.png "A diagram showing how depth and normal buffers are de-interleaved.")
+
 
 In the diagram above, each square present in the image to the left represents a single pixel. You can see that each set of 2x2 pixels contains four unique colors. 
 

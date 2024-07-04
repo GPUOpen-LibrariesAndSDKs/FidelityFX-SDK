@@ -6,17 +6,19 @@ FidelityFX Luminance Preserving Mapper (or LPM) is a tone and gamut mapping solu
 
 For details on the techniques that underpin the FidelityFX LPM effect you can refer to the respective [technique documentation](../techniques/luma-preserving-mapper.md).
 
-<h2>FidelityFX LPM Off</h2>
+<h2>FidelityFX LPM off</h2>
 
 ![NoLPM](media/luma-preserving-mapper/NoLPM.jpg)
 
-<h2>FidelityFX LPM On</h2>
+<h2>FidelityFX LPM on</h2>
 
 ![LPM](media/luma-preserving-mapper/LPM.jpg)
 
 <h2>Requirements</h2>
 
-`Windows` `DirectX(R)12` `Vulkan(R)`
+ - Windows
+ - DirectX(R)12
+ - Vulkan(R)
 
 <h2>UI elements</h2>
 
@@ -75,9 +77,9 @@ For best performance, the sample compiles these options into the multiple shader
 * FP16-LpmFilter
 * FP32-LpmFilter
 
-<h2>Sample Controls and Configurations</h2>
+<h2>Sample controls and configurations</h2>
 
-For sample controls, configuration and Cauldron UI element details, please see [Running the samples](../getting-started/running-samples.md)
+For sample controls, configuration, and FidelityFX Cauldron Framework UI element details, see [Running the samples](../getting-started/running-samples.md).
 
 ## See also
 

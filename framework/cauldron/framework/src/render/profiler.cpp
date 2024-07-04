@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -136,9 +136,6 @@ namespace cauldron
         // Save the CPU timings of the previous frame in the correct vector
         if (m_CPUProfilingEnabled)
             CollectCPUTimings();
-
-        // Start a capture to measure duration of CPU frame
-        m_CPUFrameCapture = BeginCPU(L"CPUFrame");
     }
 
     void Profiler::BeginGPUFrame(CommandList* pCmdList)
@@ -146,17 +143,10 @@ namespace cauldron
         // Save the GPU timing of the previous frame using the same command list
         if (m_GPUProfilingEnabled)
             CollectGPUTimings(pCmdList);
-
-        // Start a capture to measure duration of GPU frame
-        m_GPUFrameCapture = BeginGPU(pCmdList, L"GPU Frame (total)");
     }
 
     void Profiler::EndFrame(CommandList* pCmdList)
     {
-        // End CPU/GPU captures for frame
-        EndCPU(m_CPUFrameCapture);
-        EndGPU(pCmdList, m_GPUFrameCapture);
-
         // Nothing to do to end the CPU frame
         if (m_GPUProfilingEnabled)
             EndFrameGPU(pCmdList);
@@ -181,6 +171,13 @@ namespace cauldron
         latestCPUTimings.clear();
         latestCPUTimings.swap(m_CurrentCPUTimings);
         m_CurrentCPUTimings.clear();
+
+        // Calculate frame tick
+        m_LatestCPUFrameCount = 0;
+        if (latestCPUTimings.size())
+        {
+            m_LatestCPUFrameCount = (latestCPUTimings[latestCPUTimings.size() - 1].EndTime - latestCPUTimings[0].StartTime).count();
+        }
     }
 
     void Profiler::CollectGPUTimings(CommandList* pCmdList)
@@ -234,6 +231,13 @@ namespace cauldron
                 latestGPUTimings.reserve(1);
                 latestGPUTimings.emplace_back(timingInfo);
             }
+        }
+
+        // Calculate frame tick
+        m_LatestGPUFrameCount = 0;
+        if (latestGPUTimings.size())
+        {
+            m_LatestGPUFrameCount = (latestGPUTimings[latestGPUTimings.size() - 1].EndTime - latestGPUTimings[0].StartTime).count();
         }
 
         m_GPUTimingInfos[frameID].clear();

@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C)2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #include "ffx_core.h"
@@ -84,6 +84,7 @@ FfxFloat16x4 SpdReduce4H(FfxFloat16x4 v0, FfxFloat16x4 v1, FfxFloat16x4 v2, FfxF
     return FfxDofDownsampleQuadH(v0, v1, v2, v3);
 }
 #else // #if FFX_HALF
+#define FFX_SPD_NO_WAVE_OPERATIONS 1
 FFX_GROUPSHARED FfxFloat32 spdIntermediateR[16][16];
 FFX_GROUPSHARED FfxFloat32 spdIntermediateG[16][16];
 FFX_GROUPSHARED FfxFloat32 spdIntermediateB[16][16];
@@ -170,6 +171,6 @@ void DownsampleColor(FfxUInt32 LocalThreadId, FfxUInt32x2 WorkGroupId)
 #if FFX_HALF
     SpdDownsampleH(WorkGroupId, LocalThreadId, FfxUInt32(FFX_DOF_OPTION_MAX_MIP), FfxUInt32(0), FfxUInt32(0));
 #else
-	SpdDownsample(WorkGroupId, LocalThreadId, FfxUInt32(FFX_DOF_OPTION_MAX_MIP), FfxUInt32(0), FfxUInt32(0));
+    SpdDownsample(WorkGroupId, LocalThreadId, FfxUInt32(FFX_DOF_OPTION_MAX_MIP), FfxUInt32(0), FfxUInt32(0));
 #endif
 }

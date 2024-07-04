@@ -1,13 +1,14 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
-//
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
+// furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
@@ -41,7 +42,7 @@
 /// FidelityFX Classifier minor version.
 ///
 /// @ingroup ffxClassifier
-#define FFX_CLASSIFIER_VERSION_MINOR (0)
+#define FFX_CLASSIFIER_VERSION_MINOR (3)
 
 /// FidelityFX Classifier patch version.
 ///
@@ -58,7 +59,7 @@
 /// The size of the context specified in 32bit values.
 ///
 /// @ingroup ffxClassifier
-#define FFX_CLASSIFIER_CONTEXT_SIZE  (16536)
+#define FFX_CLASSIFIER_CONTEXT_SIZE  (18500)
 
 #if defined(__cplusplus)
 extern "C" {
@@ -76,7 +77,7 @@ typedef enum FfxClassifierPass
 
 /// An enumeration of bit flags used when creating a
 /// <c><i>FfxClassifierContext</i></c>. See <c><i>FfxClassifierContextDescription</i></c>.
-/// Curently, no flags exist.
+/// Currently, no flags exist.
 ///
 /// @ingroup ffxClassifier
 typedef enum FfxClassifierInitializationFlagBits {
@@ -109,25 +110,24 @@ typedef struct FfxClassifierShadowDispatchDescription {
     FfxResource                 workQueue;          ///< The <c><i>FfxResource</i></c> (UAV Buffer 0)Work Queue: rwsb_tiles.
     FfxResource                 workQueueCount;     ///< The <c><i>FfxResource</i></c> (UAV Buffer 1)Work Queue Counter: rwb_tileCount
     FfxResource                 rayHitTexture;      ///< The <c><i>FfxResource</i></c> (UAV Texture 0)Ray Hit Texture
-    FfxResource                 outputColor;        ///< The <c><i>FfxResource</i></c> (UAV Texture 1)Color Output
 
-    FfxFloat32 normalsUnPackMul;
-    FfxFloat32 normalsUnPackAdd;
+    FfxFloat32 normalsUnPackMul;  		    ///< A multiply factor to transform the normal to the space expected by the Classifier
+    FfxFloat32 normalsUnPackAdd;  		    ///< An offset to transform the normal to the space expected by the Classifier
 
     // Constant Data
-    FfxFloat32x3 lightDir; /// The light direction
-    FfxFloat32   sunSizeLightSpace;
-    FfxUInt32    tileCutOff;
+    FfxFloat32x3 lightDir; 			    ///< The light direction
+    FfxFloat32   sunSizeLightSpace; 		    ///< The sun size
+    FfxUInt32    tileCutOff; 			    ///< The tile cutoff
 
-    FfxBoolean   bRejectLitPixels; // UI Setting
-    FfxUInt32    cascadeCount; // UI Setting
-    FfxFloat32   blockerOffset; // UI Setting
+    FfxBoolean   bRejectLitPixels; 		    ///< UI Setting, selects wheter to reject lit pixels in the shadows maps
+    FfxUInt32    cascadeCount; 			    ///< The number of cascades
+    FfxFloat32   blockerOffset; 		    ///< UI Setting, the blocker offsett
 
-    FfxBoolean   bUseCascadesForRayT; // UI Setting
-    FfxFloat32   cascadeSize;
+    FfxBoolean   bUseCascadesForRayT; 		    ///< UI Setting, selects whether to use the classifier to save ray intervals
+    FfxFloat32   cascadeSize; 			    ///< The cascade size
 
-    FfxFloat32x4 cascadeScale[4];
-    FfxFloat32x4 cascadeOffset[4];
+    FfxFloat32x4 cascadeScale[4];  		    ///< A multiply factor for each cascade
+    FfxFloat32x4 cascadeOffset[4]; 		    ///< An offeset factor for each cascade
 
     // Matrices
     FfxFloat32 viewToWorld[16];
@@ -274,6 +274,14 @@ FFX_API FfxErrorCode ffxClassifierContextReflectionDispatch(FfxClassifierContext
 ///
 /// @ingroup ffxClassifier
 FFX_API FfxErrorCode ffxClassifierContextDestroy(FfxClassifierContext* pContext);
+
+/// Queries the effect version number.
+///
+/// @returns
+/// The SDK version the effect was built with.
+///
+/// @ingroup ffxClassifier
+FFX_API FfxVersionNumber ffxClassifierGetEffectVersion();
 
 #if defined(__cplusplus)
 }

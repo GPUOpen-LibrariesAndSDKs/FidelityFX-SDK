@@ -1,35 +1,33 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #include "ffx_sssr_resources.h"
 
 #if defined(FFX_GPU)
 #include "ffx_core.h"
-#endif // #if defined(FFX_GPU)
 
-#if defined(FFX_GPU)
 #ifndef FFX_PREFER_WAVE64
 #define FFX_PREFER_WAVE64
-#endif // #if defined(FFX_GPU)
+#endif // #ifndef FFX_PREFER_WAVE64
 
 #if defined(SSSR_BIND_CB_SSSR)
     layout (set = 0, binding = SSSR_BIND_CB_SSSR, std140) uniform cbSSSR_t
@@ -369,86 +367,74 @@ layout (set = 0, binding = 1001) uniform sampler s_LinearSampler;
 
 #if FFX_HALF
 
+#if defined (SSSR_BIND_UAV_DEPTH_HIERARCHY)
 FfxFloat16x4 SpdLoadH(FfxInt32x2 coordinate, FfxUInt32 slice)
 {
-#if defined (SSSR_BIND_UAV_DEPTH_HIERARCHY) 
     return FfxFloat16x4(imageLoad(rw_depth_hierarchy[6], coordinate).x);   // 5 -> 6 as we store a copy of the depth buffer at index 0
-#else
-    return FfxFloat16x4(0.0f);
-#endif
 }
+#endif // #if defined (SSSR_BIND_UAV_DEPTH_HIERARCHY)
 
+#if defined (SSSR_BIND_SRV_INPUT_DEPTH)
 FfxFloat16x4 SpdLoadSourceImageH(FfxInt32x2 coordinate, FfxUInt32 slice)
 {
-#if defined (SSSR_BIND_SRV_INPUT_DEPTH) 
     return FfxFloat16x4(texelFetch(r_input_depth, coordinate, 0).x);
-#else
-    return FfxFloat16x4(0.0f);
-#endif
 }
+#endif // #if defined (SSSR_BIND_SRV_INPUT_DEPTH)
 
+#if defined (SSSR_BIND_UAV_DEPTH_HIERARCHY)
 void SpdStoreH(FfxInt32x2 pix, FfxFloat16x4 outValue, FfxUInt32 coordinate, FfxUInt32 slice)
 {
-#if defined (SSSR_BIND_UAV_DEPTH_HIERARCHY) 
     imageStore(rw_depth_hierarchy[coordinate + 1], pix, FfxFloat16x4(outValue.x));    // + 1 as we store a copy of the depth buffer at index 0
-#endif
 }
+#endif // #if defined (SSSR_BIND_UAV_DEPTH_HIERARCHY)
 
 #endif // #if defined(FFX_HALF)
 
+#if defined(SSSR_BIND_SRV_INPUT_NORMAL)
 FfxFloat32x3 FFX_SSSR_LoadWorldSpaceNormal(FfxInt32x2 pixel_coordinate)
 {
-#if defined(SSSR_BIND_SRV_INPUT_NORMAL)
     // Normals are 
     return normalize(NormalsUnpackMul() * texelFetch(r_input_normal, pixel_coordinate, 0).xyz + NormalsUnpackAdd());
-#else
-    return FfxFloat32x3(0.0f);
-#endif
 }
+#endif // #if defined(SSSR_BIND_SRV_INPUT_NORMAL)
 
+#if defined(SSSR_BIND_SRV_DEPTH_HIERARCHY)
 FfxFloat32 FFX_SSSR_LoadDepth(FfxInt32x2 pixel_coordinate, FfxInt32 mip)
 {
-#if defined(SSSR_BIND_SRV_DEPTH_HIERARCHY) 
     return texelFetch(r_depth_hierarchy, pixel_coordinate, mip).x;
-#else
-    return 0.0f;
-#endif
 }
+#endif // #if defined(SSSR_BIND_SRV_DEPTH_HIERARCHY)
 
+#if defined(SSSR_BIND_SRV_BLUE_NOISE_TEXTURE)
 FfxFloat32x2 FFX_SSSR_SampleRandomVector2D(FfxUInt32x2 pixel)
 {
-#if defined(SSSR_BIND_SRV_BLUE_NOISE_TEXTURE) 
     return texelFetch(r_blue_noise_texture, FfxInt32x2(pixel.xy % 128), 0).xy;
-#else
-    return FfxFloat32x2(0.0f);
-#endif
 }
+#endif // #if defined(SSSR_BIND_SRV_BLUE_NOISE_TEXTURE)
 
-FfxFloat32x3 FFX_SSSR_SampleEnvironmentMap(FfxFloat32x3 direction, FfxFloat32 roughness)
-{
 #if defined(SSSR_BIND_SRV_INPUT_ENVIRONMENT_MAP)
+FfxFloat32x3 FFX_SSSR_SampleEnvironmentMap(FfxFloat32x3 direction, FfxFloat32 preceptualRoughness)
+{
     FfxInt32x2 cubeSize = textureSize(r_input_environment_map, 0);
-    FfxInt32 maxMipLevel = FfxInt32(log2(FfxFloat32(cubeSize.x > 0 ? cubeSize.y : 1)));
-    FfxFloat32 lod = clamp(roughness * FfxFloat32(maxMipLevel), 0.0, FfxFloat32(maxMipLevel));
+    FfxInt32 maxMipLevel = FfxInt32(log2(FfxFloat32(cubeSize.x > 0 ? cubeSize.x : 1)));
+    FfxFloat32 lod = clamp(preceptualRoughness * FfxFloat32(maxMipLevel), 0.0, FfxFloat32(maxMipLevel));
     return textureLod(samplerCube(r_input_environment_map, s_EnvironmentMapSampler), direction, lod).xyz * IBLFactor();
-#else
-    return FfxFloat32x3(0.0f);
-#endif
 }
+#endif // #if defined(SSSR_BIND_SRV_INPUT_ENVIRONMENT_MAP)
 
+#if defined (SSSR_BIND_UAV_RAY_COUNTER)
 void IncrementRayCounter(FfxUInt32 value, FFX_PARAMETER_OUT FfxUInt32 original_value)
 {
-#if defined (SSSR_BIND_UAV_RAY_COUNTER) 
     original_value = atomicAdd(rw_ray_counter.data[0], value);
-#endif
 }
+#endif // #if defined (SSSR_BIND_UAV_RAY_COUNTER)
 
+#if defined (SSSR_BIND_UAV_RAY_COUNTER)
 void IncrementDenoiserTileCounter(FFX_PARAMETER_OUT FfxUInt32 original_value)
 {
-#if defined (SSSR_BIND_UAV_RAY_COUNTER) 
     original_value = atomicAdd(rw_ray_counter.data[2], 1);
-#endif
 }
+#endif // #if defined (SSSR_BIND_UAV_RAY_COUNTER)
 
 FfxUInt32 PackRayCoords(FfxUInt32x2 ray_coord, FfxBoolean copy_horizontal, FfxBoolean copy_vertical, FfxBoolean copy_diagonal)
 {
@@ -462,24 +448,24 @@ FfxUInt32 PackRayCoords(FfxUInt32x2 ray_coord, FfxBoolean copy_horizontal, FfxBo
     return packed;
 }
 
+#if defined (SSSR_BIND_UAV_RAY_LIST)
 void StoreRay(FfxInt32 index, FfxUInt32x2 ray_coord, FfxBoolean copy_horizontal, FfxBoolean copy_vertical, FfxBoolean copy_diagonal)
 {
-#if defined (SSSR_BIND_UAV_RAY_LIST) 
     FfxUInt32 packedRayCoords = PackRayCoords(ray_coord, copy_horizontal, copy_vertical, copy_diagonal); // Store out pixel to trace
     rw_ray_list.data[index] = packedRayCoords;
-#endif
 }
+#endif // #if defined (SSSR_BIND_UAV_RAY_LIST)
 
+#if defined (SSSR_BIND_UAV_DENOISER_TILE_LIST)
 void StoreDenoiserTile(FfxInt32 index, FfxUInt32x2 tile_coord)
-{
-#if defined (SSSR_BIND_UAV_DENOISER_TILE_LIST) 
+{ 
     rw_denoiser_tile_list.data[index] = ((tile_coord.y & 0xffffu) << 16) | ((tile_coord.x & 0xffffu) << 0); // Store out pixel to trace
-#endif
 }
+#endif // #if defined (SSSR_BIND_UAV_DENOISER_TILE_LIST)
 
+#if defined (SSSR_BIND_SRV_DEPTH_HIERARCHY)
 FfxBoolean IsReflectiveSurface(FfxUInt32x2 pixel_coordinate, FfxFloat32 roughness)
 {
-#if defined (SSSR_BIND_SRV_DEPTH_HIERARCHY) 
 #if FFX_SSSR_OPTION_INVERTED_DEPTH
     const FfxFloat32 far_plane = 0.0f;
     return texelFetch(r_depth_hierarchy, FfxInt32x2(pixel_coordinate), 0).r > far_plane;
@@ -487,21 +473,19 @@ FfxBoolean IsReflectiveSurface(FfxUInt32x2 pixel_coordinate, FfxFloat32 roughnes
     const FfxFloat32 far_plane = 1.0f;
     return texelFetch(r_depth_hierarchy, FfxInt32x2(pixel_coordinate), 0).r < far_plane;
 #endif //  FFX_SSSR_OPTION_INVERTED_DEPTH
-#else
-    return FFX_FALSE;
-#endif
 }
+#endif // #if defined (SSSR_BIND_SRV_DEPTH_HIERARCHY)
 
+#if defined (SSSR_BIND_UAV_EXTRACTED_ROUGHNESS)
 void StoreExtractedRoughness(FfxUInt32x2 coordinate, FfxFloat32 roughness)
 {
-#if defined (SSSR_BIND_UAV_EXTRACTED_ROUGHNESS) 
     imageStore(rw_extracted_roughness, FfxInt32x2(coordinate), FfxFloat32x4(roughness));
-#endif
 }
+#endif // #if defined (SSSR_BIND_UAV_EXTRACTED_ROUGHNESS)
 
+#if defined (SSSR_BIND_SRV_INPUT_MATERIAL_PARAMETERS)
 FfxFloat32 LoadRoughnessFromMaterialParametersInput(FfxUInt32x3 coordinate)
 {
-#if defined (SSSR_BIND_SRV_INPUT_MATERIAL_PARAMETERS) 
     FfxFloat32 rawRoughness = texelFetch(r_input_material_parameters, FfxInt32x2(coordinate.xy), FfxInt32(coordinate.z))[RoughnessChannel()];
     if (IsRoughnessPerceptual())
     {
@@ -509,178 +493,152 @@ FfxFloat32 LoadRoughnessFromMaterialParametersInput(FfxUInt32x3 coordinate)
     }
 
     return rawRoughness;
-#else
-    return 0.0f;
-#endif
 }
+#endif // #if defined (SSSR_BIND_SRV_INPUT_MATERIAL_PARAMETERS)
 
+#if defined (SSSR_BIND_UAV_RAY_COUNTER)
 FfxBoolean IsRayIndexValid(FfxUInt32 ray_index)
 {
-#if defined (SSSR_BIND_UAV_RAY_COUNTER) 
     return ray_index < rw_ray_counter.data[1];
-#else
-    return FFX_FALSE;
-#endif
 }
+#endif // #if defined (SSSR_BIND_UAV_RAY_COUNTER)
 
+#if defined (SSSR_BIND_UAV_RAY_LIST)
 FfxUInt32 GetRaylist(FfxUInt32 ray_index)
 {
-#if defined (SSSR_BIND_UAV_RAY_LIST) 
     return rw_ray_list.data[ray_index];
-#else
-    return 0;
-#endif
 }
+#endif // #if defined (SSSR_BIND_UAV_RAY_LIST)
 
+#if defined (SSSR_BIND_UAV_BLUE_NOISE_TEXTURE)
 void FFX_SSSR_StoreBlueNoiseSample(FfxUInt32x2 coordinate, FfxFloat32x2 blue_noise_sample)
-{
-#if defined (SSSR_BIND_UAV_BLUE_NOISE_TEXTURE) 
+{ 
     imageStore(rw_blue_noise_texture, FfxInt32x2(coordinate), FfxFloat32x4(blue_noise_sample, 0.0f, 0.0f));
-#endif
 }
+#endif // #if defined (SSSR_BIND_UAV_BLUE_NOISE_TEXTURE)
 
+#if defined (SSSR_BIND_SRV_VARIANCE)
 FfxFloat32 FFX_SSSR_LoadVarianceHistory(FfxInt32x3 coordinate)
 {
-#if defined ( SSSR_BIND_SRV_VARIANCE ) 
     return texelFetch(r_variance, coordinate.xy, coordinate.z).x;
-#else
-    return 0.0f;
-#endif
 }
+#endif // #if defined (SSSR_BIND_SRV_VARIANCE)
 
+#if defined (SSSR_BIND_UAV_RADIANCE)
 void FFX_SSSR_StoreRadiance(FfxUInt32x2 coordinate, FfxFloat32x4 radiance)
 {
-#if defined (SSSR_BIND_UAV_RADIANCE) 
     imageStore(rw_radiance, FfxInt32x2(coordinate), radiance);
-#endif
 }
+#endif // #if defined (SSSR_BIND_UAV_RADIANCE)
 
+#if defined (SSSR_BIND_SRV_SOBOL_BUFFER)
 FfxUInt32 FFX_SSSR_GetSobolSample(FfxUInt32x3 coordinate)
 {
-#if defined (SSSR_BIND_SRV_SOBOL_BUFFER) 
     return FfxUInt32(texelFetch(r_sobol_buffer, FfxInt32x2(coordinate.xy), FfxInt32(coordinate.z)).r);
-#else
-    return 0;
-#endif
 }
+#endif // #if defined (SSSR_BIND_SRV_SOBOL_BUFFER)
 
+#if defined (SSSR_BIND_SRV_SCRAMBLING_TILE_BUFFER)
 FfxUInt32 FFX_SSSR_GetScramblingTile(FfxUInt32x3 coordinate)
-{
-#if defined (SSSR_BIND_SRV_SCRAMBLING_TILE_BUFFER) 
+{ 
     return FfxUInt32(texelFetch(r_scrambling_tile_buffer, FfxInt32x2(coordinate.xy), FfxInt32(coordinate.z)).r);
-#else
-    return 0;
-#endif
 }
+#endif // #if defined (SSSR_BIND_SRV_SCRAMBLING_TILE_BUFFER)
 
+#if defined (SSSR_BIND_UAV_INTERSECTION_PASS_INDIRECT_ARGS)
 void FFX_SSSR_WriteIntersectIndirectArgs(FfxUInt32 index, FfxUInt32 data)
 {
-#if defined SSSR_BIND_UAV_INTERSECTION_PASS_INDIRECT_ARGS
     rw_intersection_pass_indirect_args.data[index] = data;
-#endif
 }
+#endif // #if defined (SSSR_BIND_UAV_INTERSECTION_PASS_INDIRECT_ARGS)
 
+#if defined (SSSR_BIND_UAV_RAY_COUNTER)
 void FFX_SSSR_WriteRayCounter(FfxUInt32 index, FfxUInt32 data)
 {
-#if defined (SSSR_BIND_UAV_RAY_COUNTER) 
     rw_ray_counter.data[index] = data;
-#endif
 }
+#endif // #if defined (SSSR_BIND_UAV_RAY_COUNTER)
 
+#if defined (SSSR_BIND_UAV_RAY_COUNTER)
 FfxUInt32 FFX_SSSR_GetRayCounter(FfxUInt32 index)
 {
-#if defined (SSSR_BIND_UAV_RAY_COUNTER) 
     return rw_ray_counter.data[index];
-#else
-    return 0;
-#endif
 }
+#endif // #if defined (SSSR_BIND_UAV_RAY_COUNTER)
 
+#if defined (SSSR_BIND_SRV_INPUT_DEPTH)
 void FFX_SSSR_GetInputDepthDimensions(FFX_PARAMETER_OUT FfxFloat32x2 image_size)
 {
-#if defined (SSSR_BIND_SRV_INPUT_DEPTH) 
-    image_size = textureSize(sampler2D(r_input_depth, s_LinearSampler) , 0);
-#else
-    image_size = FfxFloat32x2(0.0f, 0.0f);
-#endif
+    image_size = textureSize(r_input_depth, 0);
 }
+#endif // #if defined (SSSR_BIND_SRV_INPUT_DEPTH)
 
+#if defined (SSSR_BIND_UAV_DEPTH_HIERARCHY)
 void FFX_SSSR_GetDepthHierarchyMipDimensions(FfxUInt32 mip, FFX_PARAMETER_OUT FfxFloat32x2 image_size)
 {
-#if defined (SSSR_BIND_UAV_DEPTH_HIERARCHY) 
     image_size = imageSize(rw_depth_hierarchy[mip]);
-#else
-    image_size = FfxFloat32x2(0.0f, 0.0f);
-#endif
 }
+#endif // #if defined (SSSR_BIND_UAV_DEPTH_HIERARCHY)
 
+#if defined (SSSR_BIND_SRV_INPUT_DEPTH)
 FfxFloat32 FFX_SSSR_GetInputDepth(FfxUInt32x2 coordinate)
 {
-#if defined (SSSR_BIND_SRV_INPUT_DEPTH) 
     return texelFetch(r_input_depth, FfxInt32x2(coordinate), 0).r;
-#else
-    return 0.0f;
-#endif
 }
 
 FfxFloat32x4 SpdLoadSourceImage(FfxInt32x2 coordinate, FfxUInt32 slice)
 {
     return FFX_SSSR_GetInputDepth(coordinate).xxxx;
 }
+#endif // #if defined (SSSR_BIND_SRV_INPUT_DEPTH)
 
+#if defined (SSSR_BIND_UAV_DEPTH_HIERARCHY) 
 void FFX_SSSR_WriteDepthHierarchy(FfxUInt32 index, FfxUInt32x2 coordinate, FfxFloat32 data)
 {
-#if defined (SSSR_BIND_UAV_DEPTH_HIERARCHY) 
     imageStore(rw_depth_hierarchy[index], FfxInt32x2(coordinate), FfxFloat32x4(data));
-#endif
 }
+#endif // #if defined (SSSR_BIND_UAV_DEPTH_HIERARCHY) 
 
+#if defined (SSSR_BIND_UAV_DEPTH_HIERARCHY)
 FfxFloat32x4 SpdLoad(FfxInt32x2 coordinate, FfxUInt32 slice)
 {
-#if defined (SSSR_BIND_UAV_DEPTH_HIERARCHY) 
     return FfxFloat32x4(imageLoad(rw_depth_hierarchy[6], coordinate).x);   // 5 -> 6 as we store a copy of the depth buffer at index 0
-#else
-    return FfxFloat32x4(0.0f);
-#endif
 }
+#endif // #if defined (SSSR_BIND_UAV_DEPTH_HIERARCHY)
 
+#if defined (SSSR_BIND_UAV_DEPTH_HIERARCHY)
 void SpdStore(FfxInt32x2 pix, FfxFloat32x4 outValue, FfxUInt32 coordinate, FfxUInt32 slice)
 {
-#if defined (SSSR_BIND_UAV_DEPTH_HIERARCHY) 
     imageStore(rw_depth_hierarchy[coordinate + 1], pix, FfxFloat32x4(outValue.x));    // + 1 as we store a copy of the depth buffer at index 0
-#endif
 }
+#endif // #if defined (SSSR_BIND_UAV_DEPTH_HIERARCHY)
 
+#if defined (SSSR_BIND_UAV_SPD_GLOBAL_ATOMIC)
 void SpdResetAtomicCounter(FfxUInt32 slice)
 {
-#if defined (SSSR_BIND_UAV_SPD_GLOBAL_ATOMIC) 
     rw_spd_global_atomic.data[0] = 0;
-#endif
 }
+#endif // #if defined (SSSR_BIND_UAV_SPD_GLOBAL_ATOMIC)
 
+#if defined (SSSR_BIND_UAV_SPD_GLOBAL_ATOMIC)
 void FFX_SSSR_SPDIncreaseAtomicCounter(FFX_PARAMETER_INOUT FfxUInt32 spdCounter)
 {
-#if defined (SSSR_BIND_UAV_SPD_GLOBAL_ATOMIC) 
     spdCounter = atomicAdd(rw_spd_global_atomic.data[0], 1);
-#endif
 }
+#endif // #if defined (SSSR_BIND_UAV_SPD_GLOBAL_ATOMIC)
 
+#if defined(SSSR_BIND_SRV_INPUT_COLOR)
 FfxFloat32x3 FFX_SSSR_LoadInputColor(FfxInt32x3 coordinate)
 {
-#if defined(SSSR_BIND_SRV_INPUT_COLOR) 
     return texelFetch(r_input_color, coordinate.xy, coordinate.z).xyz;
-#else
-    return FfxFloat32x3(0.0f);
-#endif
 }
+#endif // #if defined(SSSR_BIND_SRV_INPUT_COLOR)
 
+#if defined(SSSR_BIND_SRV_EXTRACTED_ROUGHNESS)
 FfxFloat32 FFX_SSSR_LoadExtractedRoughness(FfxInt32x3 coordinate)
 {
-#if defined(SSSR_BIND_SRV_EXTRACTED_ROUGHNESS) 
     return texelFetch(r_extracted_roughness, coordinate.xy, coordinate.z).x;
-#else
-    return 0.0f;
-#endif
 }
+#endif // #if defined(SSSR_BIND_SRV_EXTRACTED_ROUGHNESS)
 
 #endif // #if defined(FFX_GPU)

@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright © 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -71,8 +71,9 @@ GLSLCompiler::GLSLCompiler(const std::string& glslangExe,
                            const std::string& shaderName,
                            const std::string& shaderFileName,
                            const std::string& outputPath,
-                           bool               disableLogs)
-    : ICompiler(shaderPath, shaderName, shaderFileName, outputPath, disableLogs)
+                           bool               disableLogs,
+                           bool               debugCompile)
+    : ICompiler(shaderPath, shaderName, shaderFileName, outputPath, disableLogs, debugCompile)
     , m_GlslangExe(glslangExe.empty() ? "glslangValidator.exe" : glslangExe)
 {
     fs::create_directory(m_OutputPath + "/" + m_ShaderName + "_temp");
@@ -81,6 +82,79 @@ GLSLCompiler::GLSLCompiler(const std::string& glslangExe,
 GLSLCompiler::~GLSLCompiler()
 {
     fs::remove_all(m_OutputPath + "/" + m_ShaderName + "_temp");
+}
+
+static bool FindIncludeFilePath(const std::string& includeFile, const std::vector<fs::path>& includeSearchPaths, fs::path& includeFilePath)
+{
+    fs::path localPath = includeFile;
+    if (fs::exists(localPath))
+    {
+        includeFilePath = fs::absolute(localPath);
+        return true;
+    }
+
+    for (const auto& searchPath : includeSearchPaths)
+    {
+        includeFilePath = fs::absolute(searchPath / localPath);
+        if (fs::exists(includeFilePath))
+            return true;
+    }
+
+    return false;
+}
+
+static void CollectDependencies(const std::string& shaderPath, const std::vector<fs::path>& includeSearchPaths, std::unordered_set<std::string>& dependencies)
+{
+    std::ifstream ifileStream(shaderPath);
+
+    if (!ifileStream.is_open())
+        return;
+
+    auto findNonWhiteSpace = [](const std::string& line, size_t startIndex) -> size_t {
+        for (size_t i = startIndex; i < line.size(); ++i)
+        {
+            if (!std::isspace(line[i]))
+                return i;
+        }
+
+        return std::string::npos;
+    };
+
+    std::string line;
+    while (std::getline(ifileStream, line))
+    {
+        size_t nwsIndex = findNonWhiteSpace(line, 0u);
+        if (nwsIndex != std::string::npos)
+        {
+            // If the first non-whitespace text is "#include" then find the absolute path to the specified file.
+            if (nwsIndex != line.find("#include"))
+                continue;
+
+            nwsIndex = findNonWhiteSpace(line, nwsIndex + 8u);
+            if (nwsIndex == std::string::npos)
+                continue;
+
+            // If the first non-whitespace after the #include is a quote character then find the close quote char.
+            if (line[nwsIndex] == '"' || line[nwsIndex] == '<')
+            {
+                char closeQuoteChar = '"';
+                if (line[nwsIndex] == '<')
+                    closeQuoteChar = '>';
+                size_t closeQuoteIndex = line.find(closeQuoteChar, nwsIndex + 1u);
+                if (closeQuoteIndex != std::string::npos)
+                {
+                    std::string includeFile(&line[nwsIndex + 1u], closeQuoteIndex - (nwsIndex + 1u));
+                    fs::path includeFilePath;
+                    if (FindIncludeFilePath(includeFile, includeSearchPaths, includeFilePath))
+                    {
+                        dependencies.insert(includeFilePath.generic_string());
+
+                        CollectDependencies(includeFilePath.generic_string(), includeSearchPaths, dependencies);
+                    }
+                }
+            }
+        }
+    }
 }
 
 bool GLSLCompiler::GLSLCompiler::Compile(Permutation& permutation, const std::vector<std::string>& arguments, std::mutex& writeMutex)
@@ -104,21 +178,45 @@ bool GLSLCompiler::GLSLCompiler::Compile(Permutation& permutation, const std::ve
 
     std::string cmdLine = m_GlslangExe + " ";
 
+    if (m_DebugCompile)
+    {
+        cmdLine += "-g -gVS -Od ";
+    }
+
+    std::vector<fs::path> includeSearchPaths;
     for (int i = 0; i < arguments.size(); i++)
     {
-        cmdLine += arguments[i];
+        if (arguments[i][0] == '-' && arguments[i][1] == 'I')
+        {
+            cmdLine += "\"" + arguments[i] + "\"";
+            includeSearchPaths.push_back(&(arguments[i][2]));
+        }
+        else
+        {
+            cmdLine += arguments[i];
+        }
 
         if (!(arguments[i][0] == '-' && arguments[i][1] == 'D'))
             cmdLine += " ";
     }
 
+    // Our code for collecting shader dependencies is not smart enough to deal with the possibility that each permutation
+    // might have different #include files, so we only need to collect them once and then reuse them for each permutation.
+    writeMutex.lock();
+    if (!m_ShaderDependenciesCollected)
+    {
+        m_ShaderDependenciesCollected = true;
+        CollectDependencies(m_ShaderPath, includeSearchPaths, m_ShaderDependencies);
+    }
+    writeMutex.unlock();
+
     // ------------------------------------------------------------------------------------------------
     // Create temporary SPIRV name
     // ------------------------------------------------------------------------------------------------
 
-    std::string tempFilePath = m_OutputPath + "/" + m_ShaderName + "_temp/" + std::to_string(permutation.key) + ".spv ";
+    std::string tempFilePath = m_OutputPath + "/" + m_ShaderName + "_temp/" + std::to_string(permutation.key) + ".spv";
 
-    cmdLine += "-o " + tempFilePath + " " + m_ShaderPath;
+    cmdLine += "-o \"" + tempFilePath + "\" \"" + m_ShaderPath + "\"";
 
     // ------------------------------------------------------------------------------------------------
     // Launch process and compile SPIRV using glslangValidator
@@ -211,6 +309,8 @@ bool GLSLCompiler::GLSLCompiler::Compile(Permutation& permutation, const std::ve
         permutation.name           = m_ShaderName + "_" + permutation.hashDigest;
         permutation.headerFileName = permutation.name + ".h";
     }
+
+    permutation.dependencies = m_ShaderDependencies;
 
     return succeeded;
 }

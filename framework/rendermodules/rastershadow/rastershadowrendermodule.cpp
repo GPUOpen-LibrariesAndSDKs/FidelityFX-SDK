@@ -1,9 +1,9 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
-//
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
@@ -12,9 +12,9 @@
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -28,6 +28,7 @@
 #include "core/framework.h"
 #include "core/components/lightcomponent.h"
 #include "core/components/meshcomponent.h"
+#include "core/components/animationcomponent.h"
 #include "core/scene.h"
 #include "render/parameterset.h"
 #include "render/pipelineobject.h"
@@ -217,6 +218,7 @@ void RasterShadowRenderModule::Execute(double deltaTime, CommandList* pCmdList)
 
                             BufferAddressInfo perObjectBufferInfo = GetDynamicBufferPool()->AllocConstantBuffer(sizeof(InstanceInformation), &instanceInfo);
                             BufferAddressInfo textureIndicesBufferInfo = GetDynamicBufferPool()->AllocConstantBuffer(sizeof(TextureIndices), &pipelineSurfaceInfo.TextureIndices);
+
                             m_pParameterSet->UpdateRootConstantBuffer(&perObjectBufferInfo, 1);
                             m_pParameterSet->UpdateRootConstantBuffer(&textureIndicesBufferInfo, 2);
 
@@ -231,6 +233,22 @@ void RasterShadowRenderModule::Execute(double deltaTime, CommandList* pCmdList)
                                 if (pipelineGroup.m_UsedAttributes & (0x1 << attribute))
                                 {
                                     vertexBuffers.push_back(pSurface->GetVertexBuffer(static_cast<VertexAttributeType>(attribute)).pBuffer->GetAddressInfo());
+                                }
+                            }
+
+                            // Skeletal Animation
+                            if (pipelineSurfaceInfo.pOwner->HasComponent(AnimationComponentMgr::Get()))
+                            {
+                                const auto& data = pipelineSurfaceInfo.pOwner->GetComponent<const AnimationComponent>(AnimationComponentMgr::Get())->GetData();
+
+                                if (data->m_skinId != -1)
+                                {
+                                    // Positions are stored at index 0
+                                    // Normals are stored at index 1
+
+                                    // Replace the vertices POSITION attribute with the Skinned POSITION attribute
+                                    const uint32_t surfaceID = pSurface->GetSurfaceID();
+                                    vertexBuffers[0]         = data->m_skinnedPositions[surfaceID].pBuffer->GetAddressInfo();
                                 }
                             }
 
@@ -399,11 +417,9 @@ uint32_t RasterShadowRenderModule::GetPipelinePermutationID(const Surface* pSurf
 {
     // RasterShadow shader should be optimized based on what the model provides
     //   - It only needs the Position and Color0 attributes
-    //   - Joints and Weights are used for animation
 
     // Those are the only attributes we can accept
-    uint32_t usedAttributes = VertexAttributeFlag_Position | VertexAttributeFlag_Color0 | VertexAttributeFlag_Weights0 | VertexAttributeFlag_Weights1 |
-        VertexAttributeFlag_Joints0 | VertexAttributeFlag_Joints1;
+    uint32_t usedAttributes = VertexAttributeFlag_Position | VertexAttributeFlag_Color0;
 
     // only keep the available attributes of the surface
     const uint32_t surfaceAttributes = pSurface->GetVertexAttributes();
@@ -518,7 +534,7 @@ uint32_t RasterShadowRenderModule::GetPipelinePermutationID(const Surface* pSurf
     depthDesc.DepthFunc = ComparisonFunc::Less;
     psoDesc.AddDepthState(&depthDesc);
 
-    PipelineObject* pPipelineObj = PipelineObject::CreatePipelineObject(L"RasterShadowRenderModule_PipelineObj", psoDesc);
+    PipelineObject*              pPipelineObj = PipelineObject::CreatePipelineObject(L"RasterShadowRenderModule_PipelineObj", psoDesc);
 
     PipelineRenderGroup pipelineGroup;
     pipelineGroup.m_Pipeline = pPipelineObj;
@@ -677,19 +693,19 @@ void RasterShadowRenderModule::DestroyShadowMapInfo(cauldron::LightComponent* pL
 void RasterShadowRenderModule::UpdateUIState(bool hasDirectional)
 {
     // If we have the UI setup already
-    if (!m_UISection.SectionElements.empty())
+    if (m_UISection && !m_UISection->GetElements().empty())
     {
         // If we no longer have directional light, hide the UI
         if (m_DirUIShowing && !hasDirectional)
         {
-            GetUIManager()->UnRegisterUIElements(m_UISection);
+            m_UISection->Show(false);
             m_DirUIShowing = false;
         }
 
         // If we have have directional light again, show it again
         else if (hasDirectional && !m_DirUIShowing)
         {
-            GetUIManager()->RegisterUIElements(m_UISection);
+            m_UISection->Show(true);
             m_DirUIShowing = true;
         }
     }
@@ -697,13 +713,7 @@ void RasterShadowRenderModule::UpdateUIState(bool hasDirectional)
     // If we don't have the UI setup yet, and we have a directional light, setup the UI
     else if (hasDirectional)
     {
-        std::function<void(void*)> cascadeCallback = [this](void*) {
-            for (int i = 0; i < 3; ++i)
-                m_CascadeSplitPointsEnabled[i] = (m_NumCascades > i + 1);
-            this->UpdateCascades();
-        };
-        
-        m_UISection.SectionName = "Shadow";
+        m_UISection = GetUIManager()->RegisterUIElements("Shadow");
 
         // Init cascade enables to number of cascades
         m_CascadeSplitPointsEnabled[0] = m_NumCascades > 1;
@@ -713,22 +723,55 @@ void RasterShadowRenderModule::UpdateUIState(bool hasDirectional)
         // Setup cascades number
         static bool enabled = true;
 #if defined(_VK)
-        // There is a known issue with native VK backend holding on to resource handles 
+        // There is a known issue with native VK backend holding on to resource handles
         // when it shouldn't be, so don't allow changing of slice count on VK for now.
         // This will be in the "Known Issues" section of the documentation
         enabled = false;
 #endif // #if defined(_VK)
-        m_UISection.AddIntSlider("Cascades Number", &m_NumCascades, 1, 4, cascadeCallback, &enabled);
+        m_UISection->RegisterUIElement<UISlider<int32_t>>(
+            "Cascades Number",
+            m_NumCascades,
+            1, 4,
+            enabled,
+            [this](int32_t cur, int32_t old) {
+                for (int i = 0; i < _countof(m_CascadeSplitPointsEnabled); ++i)
+                    m_CascadeSplitPointsEnabled[i] = (m_NumCascades > i + 1);
+                UpdateCascades();
+            });
 
         // Setup cascade split points
-        m_UISection.AddFloatSlider("Cascade Split Points 0", &m_CascadeSplitPoints[0], 0.0f, 100.0f, cascadeCallback, &m_CascadeSplitPointsEnabled[0], false, "%.2f%%");
-        m_UISection.AddFloatSlider("Cascade Split Points 1", &m_CascadeSplitPoints[1], 0.0f, 100.0f, cascadeCallback, &m_CascadeSplitPointsEnabled[1], false, "%.2f%%");
-        m_UISection.AddFloatSlider("Cascade Split Points 2", &m_CascadeSplitPoints[2], 0.0f, 100.0f, cascadeCallback, &m_CascadeSplitPointsEnabled[2], false, "%.2f%%");
+        m_UISection->RegisterUIElement<UISlider<float>>(
+            "Cascade Split Points 0",
+            m_CascadeSplitPoints[0],
+            0.0f, 100.0f,
+            m_CascadeSplitPointsEnabled[0],
+            [this](int32_t cur, int32_t old) { UpdateCascades(); },
+            true, false, "%.2f%%");
+        m_UISection->RegisterUIElement<UISlider<float>>(
+            "Cascade Split Points 1",
+            m_CascadeSplitPoints[1],
+            0.0f, 100.0f,
+            m_CascadeSplitPointsEnabled[1],
+            [this](int32_t cur, int32_t old) { UpdateCascades(); },
+            true, false, "%.2f%%");
+        m_UISection->RegisterUIElement<UISlider<float>>(
+            "Cascade Split Points 2",
+            m_CascadeSplitPoints[2],
+            0.0f, 100.0f,
+            m_CascadeSplitPointsEnabled[2],
+            [this](int32_t cur, int32_t old) { UpdateCascades(); },
+            true, false, "%.2f%%");
 
         // bMoveLightTexelSize
-        m_UISection.AddCheckBox("Camera Pixel Align", &m_MoveLightTexelSize, cascadeCallback);
+        m_UISection->RegisterUIElement<UICheckBox>(
+            "Camera Pixel Align",
+            m_MoveLightTexelSize,
+            [this](bool cur, bool old) {
+                for (int i = 0; i < _countof(m_CascadeSplitPointsEnabled); ++i)
+                    m_CascadeSplitPointsEnabled[i] = (m_NumCascades > i + 1);
+                UpdateCascades();
+            });
 
-        GetUIManager()->RegisterUIElements(m_UISection);
         m_DirUIShowing = true;
     }
 }
@@ -766,4 +809,7 @@ void RasterShadowRenderModule::UpdateCascades()
             pLightComponent->SetupCascades(m_NumCascades, m_CascadeSplitPoints, m_MoveLightTexelSize);
         }
     }
+
+    // Any of these changes need to force the camera to be dirtry
+    GetScene()->GetCurrentCamera()->SetDirty();
 }

@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -29,19 +29,20 @@
 
 #include <functional>
 
-/// @defgroup FfxCasSample FidelityFX CAS Sample
+/// @defgroup FfxCasSample FidelityFX CAS sample
 /// Sample documentation for FidelityFX CAS
 ///
 /// @ingroup SDKEffects
 
 /// @defgroup CasRM CasRenderModule
-/// CasRenderModule Reference Documentation
+/// CasRenderModule reference documentation
 ///
 /// @ingroup FfxCasSample
 /// @{
 
 /**
  * @class CASRenderModule
+ * CASRenderModule handles a number of tasks related to CAS.
  *
  * CASRenderModule takes care of:
  *      - creating UI section that enable users to switch between options of CAS
@@ -111,10 +112,9 @@ private:
      */
     void                     UpdateUpscaleRatio(const float* pOldRatio);
 
-    /**
-     * @brief   Destroy the FFX API Context, re-gather the parameters required, and re-create the context.
-     */
-    void                     ResetCas();
+    void                     SetupFfxInterface();
+    void                     InitCasContext();
+    void                     DestroyCasContext();
 
     CAS_State m_CasState   = CAS_State_SharpenOnly;
     bool      m_CasEnabled = true;
@@ -126,7 +126,7 @@ private:
     bool           m_CasUpscalingEnabled = false;
 
     // CAS Context members
-    FfxCasContextDescription m_InitializationParameters = {};
+    FfxCasContextDescription m_InitializationParameters = {0};
     FfxCasContext            m_CasContext;
 
     // CAS resources

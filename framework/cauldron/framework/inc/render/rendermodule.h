@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -35,7 +35,7 @@ namespace cauldron
     /**
      * @class RenderModule
      *
-     * The <c><i>Cauldron</i></c> render module base class. All render features inherit from this base class
+     * The <c><i>FidelityFX Cauldron Framework</i></c> render module base class. All render features inherit from this base class
      * in order to execute gpu workloads.
      *
      * @ingroup CauldronRender
@@ -65,6 +65,11 @@ namespace cauldron
         virtual void EnableModule(bool enabled) { m_ModuleEnabled = enabled; }
 
         /**
+         * @brief   Update the render module UI before Execution.
+         */
+        virtual void UpdateUI(double deltaTime) {};
+
+        /**
          * @brief   Executes the render module.
          */
         virtual void Execute(double deltaTime, CommandList* pCmdList) = 0;
@@ -75,6 +80,18 @@ namespace cauldron
         virtual void OnResize(const ResolutionInfo& resInfo) {}
 
         /**
+         * @brief   Callback used when OnFocusLost events occur.
+         */
+        virtual void OnFocusLost() {}
+
+        /**
+         * @brief   Callback used when OnFocusGained events occur.
+         */
+        virtual void OnFocusGained() {}
+
+        virtual void OnPreFrame() {}
+
+        /**
          * @brief   Returns true if the render module is ready for execution.
          */
         bool ModuleReady() const { return m_ModuleReady; }
@@ -83,6 +100,7 @@ namespace cauldron
          * @brief   Returns true if the render module is enabled.
          */
         bool ModuleEnabled() const { return m_ModuleEnabled; }
+
 
         /**
          * @brief   Returns the render module name.

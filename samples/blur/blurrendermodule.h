@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this softwareand associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright noticeand this permission notice shall be included in
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -39,23 +39,23 @@ namespace cauldron
     class Texture;
 } // namespace cauldron
 
-/// @defgroup FfxBlurSample FidelityFX Blur Sample
+/// @defgroup FfxBlurSample FidelityFX Blur sample
 /// Sample documentation for FidelityFX Blur
 /// 
 /// @ingroup SDKEffects
 
 /// @defgroup BlurRM BlurRenderModule
-/// BlurRenderModule Reference Documentation
+/// BlurRenderModule reference documentation
 /// 
 /// @ingroup FfxBlurSample
 /// @{
 
 /**
  * @class BlurRenderModule
+ * BlurRenderModule handles a number of tasks related to Blur.
  *
  * BlurRenderModule takes care of:
- *      - creating UI section that enable users to switch between BLUR effect options:
- *          - kernel size & floating point math type.
+ *      - creating UI section that enable users to switch between BLUR effect options: kernel size & floating point math type.
  *      - executes multiple different blur effects, including but not limited to FFX Blur.
  *      - implements a comparison mode for comparing quality and performance of FFX Blur
  *        to conventional blur implementations. Comparison mode displays the difference between
@@ -102,6 +102,10 @@ private:
     };
 
     /**
+     * @brief   Create and initialize m_BackendInterface.
+     */
+    void InitFfxBackend();
+    /**
      * @brief   Create and initialize textures required for blur and comparison mode effects.
      */
     void InitTextures();
@@ -135,7 +139,7 @@ private:
     int32_t m_CurrentKernelSize1    = 6;  // defaults to 17x17
     int32_t m_CurrentFpMath1        = 1;
 
-    FfxInterface   m_BackendInterface;
+    FfxInterface m_BackendInterface = {0};
 
     FfxBlurContext m_BlurContext1        = {};
     bool           m_BlurContext1Created = false;
@@ -194,6 +198,7 @@ private:
     bool m_ComparisonModeEnabled = false;
     bool m_EnableFilterOptions1  = true;
     bool m_EnableFilterOptions2  = false;
+    bool m_RebuildShaders = false;
 
     const cauldron::Texture* m_pInput                = nullptr;
     const cauldron::Texture* m_pPass1Output          = nullptr;

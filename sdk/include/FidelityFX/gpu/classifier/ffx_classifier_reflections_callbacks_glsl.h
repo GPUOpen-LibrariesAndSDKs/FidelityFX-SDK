@@ -1,13 +1,14 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
-//
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
+// furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
@@ -23,12 +24,10 @@
 
 #if defined(FFX_GPU)
 #include "ffx_core.h"
-#endif // #if defined(FFX_GPU)
 
-#if defined(FFX_GPU)
 #ifndef FFX_PREFER_WAVE64
 #define FFX_PREFER_WAVE64
-#endif // #if defined(FFX_GPU)
+#endif // #ifndef FFX_PREFER_WAVE64
 
 #if defined(CLASSIFIER_BIND_CB_CLASSIFIER)
     layout (set = 0, binding = CLASSIFIER_BIND_CB_CLASSIFIER, std140) uniform cbClassifierReflections_t
@@ -382,7 +381,7 @@ FfxFloat32x3 SampleEnvironmentMap(FfxFloat32x3 direction, FfxFloat32 preceptualR
 {
 #if defined(CLASSIFIER_BIND_SRV_INPUT_ENVIRONMENT_MAP)
     FfxInt32x2 cubeSize = textureSize(r_input_environment_map, 0);
-    FfxInt32 maxMipLevel = FfxInt32(log2(FfxFloat32(cubeSize.x > 0 ? cubeSize.y : 1)));
+    FfxInt32 maxMipLevel = FfxInt32(log2(FfxFloat32(cubeSize.x > 0 ? cubeSize.x : 1)));
     FfxFloat32 lod = clamp(preceptualRoughness * FfxFloat32(maxMipLevel), 0.0, FfxFloat32(maxMipLevel));
     return textureLod(samplerCube(r_input_environment_map, s_EnvironmentMapSampler), direction, lod).xyz * IBLFactor();
 #else

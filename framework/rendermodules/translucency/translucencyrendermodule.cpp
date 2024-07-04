@@ -1,9 +1,9 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
@@ -12,9 +12,9 @@
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -26,6 +26,7 @@
 #include "core/components/cameracomponent.h"
 #include "core/components/meshcomponent.h"
 #include "core/components/particlespawnercomponent.h"
+#include "core/components/animationcomponent.h"
 #include "core/scene.h"
 #include "render/device.h"
 #include "render/parameterset.h"
@@ -307,8 +308,8 @@ void TranslucencyRenderModule::Execute(double deltaTime, CommandList* pCmdList)
     uint32_t width, height;
     if (upscaleState == UpscalerState::None || upscaleState == UpscalerState::PostUpscale)
     {
-        width = resInfo.DisplayWidth;
-        height = resInfo.DisplayHeight;
+        width = resInfo.UpscaleWidth;
+        height = resInfo.UpscaleHeight;
     }
     else
     {
@@ -316,15 +317,15 @@ void TranslucencyRenderModule::Execute(double deltaTime, CommandList* pCmdList)
         height = resInfo.RenderHeight;
     }
 
-    SetViewportScissorRect(pCmdList, 0, 0, width, height, 0.f, 1.f); 
+    SetViewportScissorRect(pCmdList, 0, 0, width, height, 0.f, 1.f);
     SetPrimitiveTopology(pCmdList, PrimitiveTopology::TriangleList);
 
     // Preprocess to sort depth
     for (auto& renderSurface : m_TranslucentRenderSurfaces)
     {
         // Depth gather
-        const Vectormath::SSE::Matrix4 wvp    = GetScene()->GetSceneInfo().CameraInfo.ViewProjectionMatrix * renderSurface.m_RenderSurface.pOwner->GetTransform();
-        const Vectormath::SSE::Vector4 center = renderSurface.m_RenderSurface.pSurface->Center();
+        const Vectormath::Matrix4 wvp    = GetScene()->GetSceneInfo().CameraInfo.ViewProjectionMatrix * renderSurface.m_RenderSurface.pOwner->GetTransform();
+        const Vectormath::Vector4 center = renderSurface.m_RenderSurface.pSurface->Center();
         renderSurface.m_depth = (wvp * center).getW();
     }
     // Sort translucent object from further away to closes to the camera, this is needed for correct color blending
@@ -333,8 +334,8 @@ void TranslucencyRenderModule::Execute(double deltaTime, CommandList* pCmdList)
     for (auto& spawner : m_RenderParticleSpawners)
     {
         // Depth gather
-        const Vectormath::SSE::Matrix4 vp       = GetScene()->GetSceneInfo().CameraInfo.ViewProjectionMatrix * spawner.m_RenderParticles.pOwner->GetTransform();
-        const Vectormath::SSE::Vector4 position = Vectormath::SSE::Vector4(spawner.m_RenderParticles.pParticleSystem->GetPosition(), 1.0f);
+        const Vectormath::Matrix4 vp       = GetScene()->GetSceneInfo().CameraInfo.ViewProjectionMatrix * spawner.m_RenderParticles.pOwner->GetTransform();
+        const Vectormath::Vector4 position = Vectormath::Vector4(spawner.m_RenderParticles.pParticleSystem->GetPosition(), 1.0f);
         spawner.m_depth                         = (vp * position).getW();
     }
     // Sort translucent object from further away to closes to the camera, this is needed for correct color blending
@@ -395,6 +396,24 @@ void TranslucencyRenderModule::Execute(double deltaTime, CommandList* pCmdList)
                 if (renderSurface.m_UsedAttributes & (0x1 << attribute))
                 {
                     vertexBuffers.push_back(pSurface->GetVertexBuffer(static_cast<VertexAttributeType>(attribute)).pBuffer->GetAddressInfo());
+                }
+            }
+
+            // Skeletal Animation
+            if (renderSurface.m_RenderSurface.pOwner->HasComponent(AnimationComponentMgr::Get()))
+            {
+                const auto& data = renderSurface.m_RenderSurface.pOwner->GetComponent<const AnimationComponent>(AnimationComponentMgr::Get())->GetData();
+
+                if (data->m_skinId != -1)
+                {
+                    // Positions are stored at index 0
+                    // Normals are stored at index 1
+
+                    // Replace the vertices POSITION attribute with the Skinned POSITION attribute
+                    // Replace the vertices NORMAL   attribute with the Skinned NORMAL   attribute
+                    const uint32_t surfaceID = pSurface->GetSurfaceID();
+                    vertexBuffers[0]         = data->m_skinnedPositions[surfaceID].pBuffer->GetAddressInfo();
+                    vertexBuffers[1]         = data->m_skinnedNormals[surfaceID].pBuffer->GetAddressInfo();
                 }
             }
 
@@ -779,12 +798,9 @@ uint32_t TranslucencyRenderModule::CreatePipelineObject(const Surface* pSurface)
     //     - POSITION have to be present
     //     - NORMAL, TANGENT and COLOR# are always used if present
     //     - TEXCOORD# depends on which textures are using them. If there is no texture, they should be removed
-    //     - WEIGHT# and JOINTS# aren't used yet but we can add them safely
 
-    // so we should accept by default all the attributes except the texcoords
-    uint32_t usedAttributes = VertexAttributeFlag_Position | VertexAttributeFlag_Normal | VertexAttributeFlag_Tangent | VertexAttributeFlag_Color0 |
-                              VertexAttributeFlag_Color1 | VertexAttributeFlag_Weights0 | VertexAttributeFlag_Weights1 | VertexAttributeFlag_Joints0 |
-                              VertexAttributeFlag_Joints1;
+    uint32_t usedAttributes =
+        VertexAttributeFlag_Position | VertexAttributeFlag_Normal | VertexAttributeFlag_Tangent | VertexAttributeFlag_Color0 | VertexAttributeFlag_Color1;
 
     // only keep the available attributes of the surface
     const uint32_t surfaceAttributes = pSurface->GetVertexAttributes();
@@ -841,6 +857,7 @@ uint32_t TranslucencyRenderModule::CreatePipelineObject(const Surface* pSurface)
         defineList.insert(std::make_pair(L"ADDITIONAL_TRANSLUCENT_EXPORTS", m_OptionalTransparencyOptions.OptionalAdditionalExports.c_str()));
 
     defineList.insert(std::make_pair(L"TRANS_ALL_TEXTURES_INDEX", L"t" + std::to_wstring(3 + MAX_SHADOW_MAP_TEXTURES_COUNT)));
+    defineList.insert(std::make_pair(L"HAS_WORLDPOS", L""));
 
     // Get the defines for attributes that make up the surface vertices
     Surface::GetVertexAttributeDefines(usedAttributes, defineList);

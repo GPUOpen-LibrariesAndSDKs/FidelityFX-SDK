@@ -1,13 +1,14 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
-//
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
+// furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
@@ -29,7 +30,6 @@
 #define FFX_CLASSIFIER_RESOURCE_IDENTIFIER_WORK_QUEUE                3
 #define FFX_CLASSIFIER_RESOURCE_IDENTIFIER_OUTPUT_WORK_QUEUE_COUNTER 4
 #define FFX_CLASSIFIER_RESOURCE_IDENTIFIER_OUTPUT_RAY_HIT            5
-#define FFX_CLASSIFIER_RESOURCE_IDENTIFIER_OUTPUT_COLOR              6
 #define FFX_CLASSIFIER_RESOURCE_IDENTIFIER_INPUT_SHADOW_MAPS         7
 #define FFX_CLASSIFIER_RESOURCE_IDENTIFIER_INPUT_MOTION_VECTORS      8
 #define FFX_CLASSIFIER_RESOURCE_IDENTIFIER_INPUT_SPECULAR_ROUGHNESS  9
@@ -45,7 +45,11 @@
 #define FFX_CLASSIFIER_RESOURCE_IDENTIFIER_DEBUG_IMAGE               19
 #define FFX_CLASSIFIER_RESOURCE_IDENTIFIER_RADIANCE                  20
 
-#define FFX_CLASSIFIER_RESOURCE_IDENTIFIER_COUNT (21 + FFX_CLASSIFIER_MAX_SHADOW_MAP_TEXTURES_COUNT)
+#define FFX_CLASSIFIER_RESOURCE_IDENTIFIER_COUNT                     25 // 21 + FFX_CLASSIFIER_MAX_SHADOW_MAP_TEXTURES_COUNT
+#if defined(FFX_CLASSIFIER_MAX_SHADOW_MAP_TEXTURES_COUNT)
+static_assert(FFX_CLASSIFIER_MAX_SHADOW_MAP_TEXTURES_COUNT == 4,
+              "This count represents 21 + FFX_CLASSIFIER_MAX_SHADOW_MAP_TEXTURES_COUNT. This assert monitors if MAX_SHADOW_MAP_TEXTURES_COUNT has changed");
+#endif // #if defined(FFX_CLASSIFIER_MAX_SHADOW_MAP_TEXTURES_COUNT)
 
 #define FFX_CLASSIFIER_CONSTANTBUFFER_IDENTIFIER_CLASSIFIER  0
 #define FFX_CLASSIFIER_CONSTANTBUFFER_IDENTIFIER_REFLECTION  1

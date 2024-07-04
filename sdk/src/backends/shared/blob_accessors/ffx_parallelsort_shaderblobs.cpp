@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this softwareand associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright noticeand this permission notice shall be included in
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -48,7 +48,7 @@
 key.index = 0;                                                                                                              \
 key.FFX_PARALLELSORT_OPTION_HAS_PAYLOAD = FFX_CONTAINS_FLAG(options, PARALLELSORT_SHADER_PERMUTATION_HAS_PAYLOAD);
 
-static FfxShaderBlob parallelSortGetSetupIndirectArgsPassPermutationBlobByIndex(uint32_t permutationOptions, bool isWave64, bool is16bit)
+static FfxShaderBlob parallelSortGetSetupIndirectArgsPassPermutationBlobByIndex(uint32_t permutationOptions, bool isWave64, bool)
 {
 
     ffx_parallelsort_setup_indirect_args_pass_PermutationKey key;
@@ -66,7 +66,7 @@ static FfxShaderBlob parallelSortGetSetupIndirectArgsPassPermutationBlobByIndex(
     }
 }
 
-static FfxShaderBlob parallelSortGetSumPassPermutationBlobByIndex(uint32_t permutationOptions, bool isWave64, bool is16bit)
+static FfxShaderBlob parallelSortGetSumPassPermutationBlobByIndex(uint32_t permutationOptions, bool isWave64, bool)
 {
 
     ffx_parallelsort_sum_pass_PermutationKey key;
@@ -85,7 +85,7 @@ static FfxShaderBlob parallelSortGetSumPassPermutationBlobByIndex(uint32_t permu
     }
 }
 
-static FfxShaderBlob parallelSortGetReducePassPermutationBlobByIndex(uint32_t permutationOptions, bool isWave64, bool is16bit)
+static FfxShaderBlob parallelSortGetReducePassPermutationBlobByIndex(uint32_t permutationOptions, bool isWave64, bool)
 {
 
     ffx_parallelsort_reduce_pass_PermutationKey key;
@@ -104,7 +104,7 @@ static FfxShaderBlob parallelSortGetReducePassPermutationBlobByIndex(uint32_t pe
     }
 }
 
-static FfxShaderBlob parallelSortGetScanPassPermutationBlobByIndex(uint32_t permutationOptions, bool isWave64, bool is16bit)
+static FfxShaderBlob parallelSortGetScanPassPermutationBlobByIndex(uint32_t permutationOptions, bool isWave64, bool)
 {
 
     ffx_parallelsort_scan_pass_PermutationKey key;
@@ -123,7 +123,7 @@ static FfxShaderBlob parallelSortGetScanPassPermutationBlobByIndex(uint32_t perm
     }
 }
 
-static FfxShaderBlob parallelSortGetScanAddPassPermutationBlobByIndex(uint32_t permutationOptions, bool isWave64, bool is16bit)
+static FfxShaderBlob parallelSortGetScanAddPassPermutationBlobByIndex(uint32_t permutationOptions, bool isWave64, bool)
 {
 
     ffx_parallelsort_scan_add_pass_PermutationKey key;
@@ -142,7 +142,7 @@ static FfxShaderBlob parallelSortGetScanAddPassPermutationBlobByIndex(uint32_t p
     }
 }
 
-static FfxShaderBlob parallelSortGetScatterPassPermutationBlobByIndex(uint32_t permutationOptions, bool isWave64, bool is16bit)
+static FfxShaderBlob parallelSortGetScatterPassPermutationBlobByIndex(uint32_t permutationOptions, bool isWave64, bool)
 {
 
     ffx_parallelsort_scatter_pass_PermutationKey key;
@@ -219,7 +219,7 @@ FfxErrorCode parallelSortGetPermutationBlobByIndex(
     }
 
     // return an empty blob
-    memset(&outBlob, 0, sizeof(FfxShaderBlob));
+    memset(outBlob, 0, sizeof(FfxShaderBlob));
     return FFX_OK;
 }
 

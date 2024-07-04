@@ -1,17 +1,20 @@
-// AMD Cauldron code
+// This file is part of the FidelityFX SDK.
 //
-// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sub-license, and / or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -30,6 +33,9 @@
 #include "render/dynamicresourcepool.h"
 #include "render/rendermodules/ui/uirendermodule.h"
 #include "render/profiler.h"
+#include "render/swapchain.h"
+
+#include "render/rendermodules/runtimeshaderrecompiler/runtimeshaderrecompilerrendermodule.h"
 
 // For windows DPI scaling fetching
 #include <shellscalingapi.h>
@@ -63,7 +69,7 @@ namespace cauldron
 
         // On windows, we will use the win32 backend as it requires hijacking input and a few other things.
         // However, we will not use the rendering backend and elect to have a cauldron specific back end for rendering
-        ImGui_ImplWin32_Init(GetFramework()->GetInternal()->GetHWND());
+        ImGui_ImplWin32_Init(GetFramework()->GetImpl()->GetHWND());
 
         // If in development mode, disabe the ini file (as it's really annoying when working on UI development)
         if (GetConfig()->DeveloperMode)
@@ -243,6 +249,18 @@ namespace cauldron
         static float s_CPUFrameTimes[c_NumFrames] = { 0 };
         static float s_GPUFrameTimes[c_NumFrames] = { 0 };
 
+        // Gather stats for averages
+        struct TimingTotals
+        {
+            std::chrono::nanoseconds TotalTime;
+            std::wstring             Label;
+        };
+        static std::vector<TimingTotals>   s_CPUTotals = {};
+        static std::vector<TimingTotals>   s_GPUTotals = {};
+        static int64_t                    s_CPUFrameTotals = 0;
+        static int64_t                    s_GPUFrameTotals = 0;
+        static int64_t                    s_NumGatheredFrames = 0;
+
         // Track highest frame rate and determine the max value of the graph based on the measured highest value
         static float s_HighestRecentGPUTime = 0.0f;
         static float s_HighestRecentCPUTime = 0.0f;
@@ -255,6 +273,9 @@ namespace cauldron
         // Scrolling data and average FPS computing
         const std::vector<TimingInfo>& cpuTimings = GetProfiler()->GetCPUTimings();
         const std::vector<TimingInfo>& gpuTimings = GetProfiler()->GetGPUTimings();
+        const int64_t CPUTickCount = GetProfiler()->GetCPUFrameTicks();
+        const int64_t GPUTickCount = GetProfiler()->GetGPUFrameTicks();
+
         const bool cpuTimeStampsAvailable = cpuTimings.size() > 1;
         const bool gpuTimeStampsAvailable = gpuTimings.size() > 1;
 
@@ -270,14 +291,89 @@ namespace cauldron
         // Track new frame times and update maximums
         if (cpuTimeStampsAvailable)
         {
-            s_CPUFrameTimes[c_NumFrames - 1] = (float)cpuTimings[0].GetDuration().count();
+            s_CPUFrameTimes[c_NumFrames - 1] = (float)CPUTickCount;
             s_HighestRecentCPUTime = std::max<float>(s_HighestRecentCPUTime, s_CPUFrameTimes[c_NumFrames - 1]);
         }
 
         if (gpuTimeStampsAvailable)
         {
-            s_GPUFrameTimes[c_NumFrames - 1] = (float)gpuTimings[0].GetDuration().count();
+            s_GPUFrameTimes[c_NumFrames - 1] = (float)GPUTickCount;
             s_HighestRecentGPUTime = std::max<float>(s_HighestRecentGPUTime, s_GPUFrameTimes[c_NumFrames - 1]);
+        }
+
+        // Update runtime averages
+        if (!s_NumGatheredFrames)
+        {
+            // Initialize the results with what we have to date
+            s_CPUTotals.resize(cpuTimings.size());
+            s_GPUTotals.resize(gpuTimings.size());
+
+            s_CPUFrameTotals = CPUTickCount;
+            s_GPUFrameTotals = GPUTickCount;
+            for (size_t i = 0; i < cpuTimings.size(); ++i)
+            {
+                s_CPUTotals[i].TotalTime = cpuTimings[i].EndTime - cpuTimings[i].StartTime;
+                s_CPUTotals[i].Label = cpuTimings[i].Label;
+            }
+            for (size_t i = 0; i < gpuTimings.size(); ++i)
+            {
+                s_GPUTotals[i].TotalTime = gpuTimings[i].EndTime - gpuTimings[i].StartTime;
+                s_GPUTotals[i].Label = gpuTimings[i].Label;
+            }
+            s_NumGatheredFrames = 1;
+        }
+        else
+        {
+            // Update totals, and reset if data layout has changed (which occurs when user plays with options that alters
+            // the rendering flow of the sample)
+            bool dataValid = s_CPUTotals.size() == cpuTimings.size();
+
+            if (dataValid)
+            {
+                // Start with CPU
+                s_CPUFrameTotals += CPUTickCount;
+                for (size_t i = 0; i < cpuTimings.size(); ++i)
+                {
+                    if (s_CPUTotals[i].Label == cpuTimings[i].Label)
+                    {
+                        s_CPUTotals[i].TotalTime += cpuTimings[i].EndTime - cpuTimings[i].StartTime;
+                    }
+                    else
+                    {
+                        dataValid = false;
+                        break;
+                    }
+                }
+            }
+            
+            // If still good, do GPU
+            dataValid = dataValid && (s_GPUTotals.size() == gpuTimings.size());
+            if (dataValid)
+            {
+                s_GPUFrameTotals += GPUTickCount;
+                for (size_t i = 0; i < gpuTimings.size(); ++i)
+                {
+                    if (s_GPUTotals[i].Label == gpuTimings[i].Label)
+                    {
+                        s_GPUTotals[i].TotalTime += gpuTimings[i].EndTime - gpuTimings[i].StartTime;
+                    }
+                    else
+                    {
+                        dataValid = false;
+                        break;
+                    }
+                }
+            }
+
+            if (dataValid)
+            {
+                ++s_NumGatheredFrames;
+            }
+            else
+            {
+                s_NumGatheredFrames = 0;
+                CauldronWarning(L"Resetting gathered performance results averages due to change in render flow from user interaction.");
+            }
         }
 
         // Use slowest between gpu & cpu frame times as FPS tracker
@@ -300,6 +396,7 @@ namespace cauldron
             if (GetFramework()->UpscalerEnabled())
             {
                 ImGui::Text("Render Res  : %ix%i", resInfo.RenderWidth, resInfo.RenderHeight);
+                ImGui::Text("Upscale Res : %ix%i", resInfo.UpscaleWidth, resInfo.UpscaleHeight);
                 ImGui::Text("Display Res : %ix%i", resInfo.DisplayWidth, resInfo.DisplayHeight);
             }
             else
@@ -309,7 +406,42 @@ namespace cauldron
             ImGui::Text("GPU         : %S", pDevice->GetDeviceName());
             ImGui::Text("Driver      : %S", pDevice->GetDriverVersion());
             ImGui::Text("CPU         : %S", pFwrk->GetCPUName());
-            ImGui::Text("FPS         : %d (%.2f ms)", fps, frameTimeMilliSeconds);
+
+            if (GetFramework()->FrameInterpolationEnabled())
+            {
+                static std::chrono::nanoseconds cpuTimestamp  = cpuTimings[0].EndTime;
+                static uint64_t                 renderFrames  = GetFramework()->GetFrameID();
+                static uint64_t                 displayFrames = 0;  // GetFramework()->GetSwapChain()->GetLastPresentCount();
+                static uint64_t                 renderFPS     = 0;
+                static uint64_t                 displayFPS    = 0;
+                if ((cpuTimings[0].EndTime - cpuTimestamp).count() > 1000000000)
+                {
+                    // minus one to exclude the current frame from measurement,
+                    // as we're on the next frame AFTER the 1 second we wanted to measure
+                    renderFPS    = GetFramework()->GetFrameID() - renderFrames - 1;
+                    renderFrames = GetFramework()->GetFrameID();
+
+                    UINT lastPresentCount = 0;
+                    GetFramework()->GetSwapChain()->GetLastPresentCount(&lastPresentCount);
+                    displayFPS    = lastPresentCount - displayFrames - 1;
+                    displayFrames = lastPresentCount;
+
+                    cpuTimestamp = cpuTimings[0].EndTime;
+                }
+
+                double monitorRefreshRate = 0.0;
+                GetFramework()->GetSwapChain()->GetRefreshRate(&monitorRefreshRate);
+
+                ImGui::Text("Render FPS  : %d", renderFPS);
+                ImGui::Text("Display FPS : %d", displayFPS);
+                ImGui::Text("RefreshRate : %.1f", monitorRefreshRate);
+                ImGui::Text("CPU time    : %.2f ms", frameTimeNanoSecondsCPU / 1000000.f);
+                ImGui::Text("GPU time    : %.2f ms", frameTimeNanoSecondsGPU / 1000000.f);
+            }
+            else
+            {
+                ImGui::Text("FPS         : %d (%.2f ms)", fps, frameTimeMilliSeconds);
+            }
 
             if (ImGui::CollapsingHeader("Timing Information", ImGuiTreeNodeFlags_DefaultOpen))
             {
@@ -340,16 +472,41 @@ namespace cauldron
                     }
                     ImGui::PlotLines("", s_GPUFrameTimes, c_NumFrames, 0, "GPU frame time (us)", 0.0f, s_FrameTimeGraphMaxGPUValues[frameTimeGraphMaxValue], ImVec2(0, 40));
 
-                    // Display captured GPU times
-                    for (auto gpuTimingItr = gpuTimings.begin(); gpuTimingItr != gpuTimings.end(); ++gpuTimingItr)
+                    // Display frame time separately as it's recorded over multiple cmd lists and can't be done together in VK
                     {
-                        int64_t nanoCount = gpuTimingItr->GetDuration().count();
+                        float valueAvg = 0.f;
+                        if (s_NumGatheredFrames)
+                        {
+                            int64_t avg = s_GPUFrameTotals / s_NumGatheredFrames;
+                            valueAvg = s_ShowMilliSeconds ? avg * 0.000001f : avg * 0.001f;
+                        }
+
+                        float value = s_ShowMilliSeconds ? GPUTickCount * 0.000001f : GPUTickCount * 0.001f;
+                        const char* pStrUnit = s_ShowMilliSeconds ? "ms" : "us";
+                        ImGui::Text("%-24.24S: %7.2f %s", L"GPU Frame (total)", value, pStrUnit);
+                        ImGui::SameLine();
+                        ImGui::Text("  avg: %7.2f %s", valueAvg, pStrUnit);
+                    }
+
+                    // Display captured GPU times
+                    for (int i = 0; i < gpuTimings.size(); ++i)
+                    {
+                        float valueAvg = 0.f;
+                        if (s_NumGatheredFrames)
+                        {
+                            int64_t nanoCountTotal = s_GPUTotals[i].TotalTime.count();
+                            int64_t avg = nanoCountTotal / s_NumGatheredFrames;
+                            valueAvg = s_ShowMilliSeconds ? avg * 0.000001f : avg * 0.001f;
+                        }
+
+                        int64_t nanoCount = gpuTimings[i].GetDuration().count();
                         float value = s_ShowMilliSeconds ? nanoCount * 0.000001f : nanoCount * 0.001f;
                         const char* pStrUnit = s_ShowMilliSeconds ? "ms" : "us";
                         // Will print only up to 24 characters left aligned from ':' by 24 characters, and write timings to 2 decimals right aligned by 7 characters
-                        ImGui::Text("%-24.24S: %7.2f %s", gpuTimingItr->Label.c_str(), value, pStrUnit);
+                        ImGui::Text("%-24.24S: %7.2f %s", gpuTimings[i].Label.c_str(), value, pStrUnit);
+                        ImGui::SameLine();
+                        ImGui::Text("  avg: %7.2f %s", valueAvg, pStrUnit);
                     }
-
                 }
                 else
                 {
@@ -363,13 +520,39 @@ namespace cauldron
                     }
                     ImGui::PlotLines("", s_CPUFrameTimes, c_NumFrames, 0, "CPU frame time (us)", 0.0f, s_FrameTimeGraphMaxCPUValues[frameTimeGraphMaxValue], ImVec2(0, 40));
 
-                    // Display captured CPU times
-                    for (auto cpuTimingItr = cpuTimings.begin(); cpuTimingItr != cpuTimings.end(); ++cpuTimingItr)
+                    // Display frame time separately as it's recorded over multiple cmd lists and can't be done together in VK
                     {
-                        int64_t nanoCount = cpuTimingItr->GetDuration().count();
+                        float valueAvg = 0.f;
+                        if (s_NumGatheredFrames)
+                        {
+                            int64_t avg = s_CPUFrameTotals / s_NumGatheredFrames;
+                            valueAvg = s_ShowMilliSeconds ? avg * 0.000001f : avg * 0.001f;
+                        }
+
+                        float value = s_ShowMilliSeconds ? CPUTickCount * 0.000001f : CPUTickCount * 0.001f;
+                        const char* pStrUnit = s_ShowMilliSeconds ? "ms" : "us";
+                        ImGui::Text("%-24.24S: %7.2f %s", L"CPU Frame (total)", value, pStrUnit);
+                        ImGui::SameLine();
+                        ImGui::Text("  avg: %7.2f %s", valueAvg, pStrUnit);
+                    }
+
+                    // Display captured CPU times
+                    for (int i = 0; i < cpuTimings.size(); ++i)
+                    {
+                        float valueAvg = 0.f;
+                        if (s_NumGatheredFrames)
+                        {
+                            int64_t nanoCountTotal = s_CPUTotals[i].TotalTime.count();
+                            int64_t avg = nanoCountTotal / s_NumGatheredFrames;
+                            valueAvg = s_ShowMilliSeconds ? avg * 0.000001f : avg * 0.001f;
+                        }
+
+                        int64_t nanoCount = cpuTimings[i].GetDuration().count();
                         float value = s_ShowMilliSeconds ? nanoCount * 0.000001f : nanoCount * 0.001f;
                         const char* pStrUnit = s_ShowMilliSeconds ? "ms" : "us";
-                        ImGui::Text("%-18S: %7.2f %s", cpuTimingItr->Label.c_str(), value, pStrUnit);
+                        ImGui::Text("%-18S: %7.2f %s", cpuTimings[i].Label.c_str(), value, pStrUnit);
+                        ImGui::SameLine();
+                        ImGui::Text("  avg: %7.2f %s", valueAvg, pStrUnit);
                     }
                 }
             }
@@ -480,6 +663,29 @@ namespace cauldron
     // Builds the general tab
     void UIBackendInternal::BuildGeneralTab()
     {
+        static RuntimeShaderRecompilerRenderModule* pShaderCompilerRM = static_cast<RuntimeShaderRecompilerRenderModule*>(GetFramework()->GetRenderModule("RuntimeShaderRecompilerRenderModule"));
+        if (pShaderCompilerRM && pShaderCompilerRM->RebuildEnabled())
+        {
+            if (ImGui::CollapsingHeader("Shader re-compile", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                if (pShaderCompilerRM->RebuildEnabled())
+                {
+                    if (ImGui::Button("Compile Modified Shaders"))
+                    {
+                        pShaderCompilerRM->ScheduleRebuild();
+                    }
+
+                    // Display the build status description
+                    ImGui::Text("Build Status:");
+                    ImGui::Text(pShaderCompilerRM->GetBuildStatusDescription());
+                }
+                else
+                {
+                    ImGui::Text("Runtime shader recompile not configured.");
+                }
+            }
+        }
+
         if(GetConfig()->IsAnyInCodeCaptureEnabled())
         {
             if (ImGui::CollapsingHeader("Capture", ImGuiTreeNodeFlags_DefaultOpen))
@@ -503,94 +709,27 @@ namespace cauldron
         }
 
         // Get all the ui sections and elements from the ui manager
-        const std::vector<UISection>& sections = GetUIManager()->GetGeneralLayout();
-        for (auto& sectionIter = sections.begin(); sectionIter != sections.end(); ++sectionIter)
+        for (const auto& sectionIter : GetUIManager()->GetGeneralLayout())
         {
-            if (ImGui::CollapsingHeader(sectionIter->SectionName.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+            const auto& section = sectionIter.second;
+            if (section->Shown() &&
+                ImGui::CollapsingHeader(section->GetSectionName(), ImGuiTreeNodeFlags_DefaultOpen))
             {
                 // Iterate through all elements
-                for (auto& elementIter = sectionIter->SectionElements.begin(); elementIter != sectionIter->SectionElements.end(); ++elementIter)
+                for (const auto& elementIter : section->GetElements())
                 {
-                    if (elementIter->SameLineAsPreviousElement)
-                        ImGui::SameLine();
-
-                    if (elementIter->pEnableControl)
-                        ImGui::BeginDisabled(!*elementIter->pEnableControl);
-
-                    switch (elementIter->Type)
+                    const auto& element = elementIter.second;
+                    if (element->IsShown())
                     {
-                    case UIElementType::Text:
-                        ImGui::Text(elementIter->Description.c_str());
-                        break;
+                        if (element->SameLine())
+                            ImGui::SameLine();
 
-                    case UIElementType::Button:
-                        CauldronError(L"Not yet implemented! Add support to ImGuiBackendCommon::BuildGeneralTab()");
-                        break;
+                        ImGui::BeginDisabled(!element->Enabled());
 
-                    case UIElementType::Checkbox:
-                    {
-                        bool oldValue = *elementIter->pBoolSourceData;
-                        if (ImGui::Checkbox(elementIter->Description.c_str(), elementIter->pBoolSourceData))
-                        {
-                            if (elementIter->pCallbackFunction)
-                                elementIter->pCallbackFunction(&oldValue);
-                        }
-                        break;
-                    }
-                    case UIElementType::RadioButton:
-                        CauldronError(L"Not yet implemented! Add support to ImGuiBackendCommon::BuildGeneralTab()");
-                        break;
+                        element->BuildUI();
 
-                    case UIElementType::Combo:
-                    {
-                        std::vector<const char*> options;
-                        for (auto itr = elementIter->SelectionOptions.begin(); itr != elementIter->SelectionOptions.end(); ++itr)
-                            options.push_back(itr->c_str());
-
-                        int32_t oldValue = *elementIter->pIntSourceData;
-                        if (ImGui::Combo(elementIter->Description.c_str(), elementIter->pIntSourceData, options.data(), (int32_t)elementIter->SelectionOptions.size()))
-                        {
-                            // If we have a callback, call it with the old value
-                            if (elementIter->pCallbackFunction)
-                                elementIter->pCallbackFunction((void*)&oldValue);
-                        }
-                        break;
-                    }
-
-                    case UIElementType::Slider:
-                        if (elementIter->IntRepresentation)
-                        {
-                            int oldValue = *elementIter->pIntSourceData;
-                            if (ImGui::SliderInt(elementIter->Description.c_str(), elementIter->pIntSourceData, elementIter->MinIntValue, elementIter->MaxIntValue, elementIter->Format.c_str()))
-                            {
-                                // If we have a callback, call it with the old value
-                                if (elementIter->pCallbackFunction)
-                                    elementIter->pCallbackFunction((void*)&oldValue);
-                            }
-                        }
-                        else
-                        {
-                            float oldValue = *elementIter->pFloatSourceData;
-                            if (ImGui::SliderFloat(elementIter->Description.c_str(), elementIter->pFloatSourceData, elementIter->MinFloatValue, elementIter->MaxFloatValue, elementIter->Format.c_str()))
-                            {
-                                // If we have a callback, call it with the old value
-                                if (elementIter->pCallbackFunction)
-                                    elementIter->pCallbackFunction((void*)&oldValue);
-                            }
-                        }
-                        break;
-
-                    case UIElementType::Separator:
-                        ImGui::Separator();
-                        break;
-
-                    default:
-                        CauldronError(L"Unsupported UIElement type encountered. It will not be displayed. Please file an git issue to add support for missing element type");
-                        break;
-                    }
-
-                    if (elementIter->pEnableControl)
                         ImGui::EndDisabled();
+                    }
                 }
             }
 
@@ -642,6 +781,69 @@ namespace cauldron
             for (auto entityIter = sceneEntities.begin(); entityIter != sceneEntities.end(); ++entityIter)
                 EntityEntry(*entityIter);
         }
+    }
+
+    void UIText::BuildUI()
+    {
+        ImGui::Text(GetDesc());
+    }
+
+    void UIButton::BuildUI()
+    {
+        if (ImGui::Button(GetDesc()))
+        {
+            m_Callback();
+        }
+    }
+
+    void UICheckBox::BuildUI()
+    {
+        bool cur = GetData();
+
+        if (ImGui::Checkbox(GetDesc(), &cur))
+        {
+            SetData(cur);
+        }
+    }
+
+    void UIRadioButton::BuildUI()
+    {
+        CauldronError(L"Not yet implemented! Add support to ImGuiBackendCommon::BuildGeneralTab()");
+    }
+
+    void UICombo::BuildUI()
+    {
+        int32_t cur = GetData();
+
+        if (ImGui::Combo(GetDesc(), &cur, m_Option.data(), (int32_t)m_Option.size()))
+        {
+            SetData(cur);
+        }
+    }
+
+    void UISlider<int32_t>::BuildUI()
+    {
+        int32_t cur = GetData();
+
+        if (ImGui::SliderInt(GetDesc(), &cur, m_MinValue, m_MaxValue, m_Format))
+        {
+            SetData(cur);
+        }
+    }
+
+    void UISlider<float>::BuildUI()
+    {
+        float cur = GetData();
+
+        if (ImGui::SliderFloat(GetDesc(), &cur, m_MinValue, m_MaxValue, m_Format))
+        {
+            SetData(cur);
+        }
+    }
+
+    void UISeparator::BuildUI()
+    {
+        ImGui::Separator();
     }
 
 } // namespace cauldron

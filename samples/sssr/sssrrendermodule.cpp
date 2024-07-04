@@ -1,28 +1,28 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #include "sssrrendermodule.h"
-#include "validation_remap.h"
 
+#include "core/backend_interface.h"
 #include "core/framework.h"
 #include "core/scene.h"
 #include "core/uimanager.h"
@@ -124,18 +124,32 @@ void SSSRRenderModule::Init(const json& initData)
 
     //////////////////////////////////////////////////////////////////////////
     // Backend init
+    InitFfxContext();
 
-    // Initialize the FFX backend
-    const size_t scratchBufferSize = ffxGetScratchMemorySize(FFX_SSSR_CONTEXT_COUNT);
-    void* scratchBuffer = malloc(scratchBufferSize);
-    FfxErrorCode errorCode = ffxGetInterface(&m_InitializationParameters.backendInterface, GetDevice(), scratchBuffer, scratchBufferSize, FFX_SSSR_CONTEXT_COUNT);
-    FFX_ASSERT(errorCode == FFX_OK);
-    
-    // Init SSSR context
-    CreateSSSRContext();
+    GetFramework()->ConfigureRuntimeShaderRecompiler(
+        [this](void) { DestroyFfxContext(); },
+        [this](void) { InitFfxContext(); });
 
     // That's all we need for now
     SetModuleReady(true);
+}
+
+void SSSRRenderModule::InitFfxContext()
+{
+    // Initialize the FFX backend
+    const size_t scratchBufferSize = SDKWrapper::ffxGetScratchMemorySize(FFX_SSSR_CONTEXT_COUNT);
+    void* scratchBuffer = calloc(scratchBufferSize, 1);
+    FfxErrorCode errorCode = SDKWrapper::ffxGetInterface(&m_InitializationParameters.backendInterface, GetDevice(), scratchBuffer, scratchBufferSize, FFX_SSSR_CONTEXT_COUNT);
+    CAULDRON_ASSERT(errorCode == FFX_OK);
+    CauldronAssert(ASSERT_CRITICAL, m_InitializationParameters.backendInterface.fpGetSDKVersion(&m_InitializationParameters.backendInterface) == FFX_SDK_MAKE_VERSION(1, 1, 0),
+        L"FidelityFX SSSR 2.1 sample requires linking with a 1.1 version SDK backend");
+    CauldronAssert(ASSERT_CRITICAL, ffxSssrGetEffectVersion() == FFX_SDK_MAKE_VERSION(1, 5, 0),
+                       L"FidelityFX SSSR 2.1 sample requires linking with a 1.5 version FidelityFX SSSR library");
+                       
+    m_InitializationParameters.backendInterface.fpRegisterConstantBufferAllocator(&m_InitializationParameters.backendInterface, SDKWrapper::ffxAllocateConstantBuffer);
+    
+    // Init SSSR context
+    CreateSSSRContext();
 }
 
 SSSRRenderModule::~SSSRRenderModule()
@@ -146,7 +160,7 @@ SSSRRenderModule::~SSSRRenderModule()
         EnableModule(false);
 
         // Destroy the SSSR context
-        FFX_ASSERT(ffxSssrContextDestroy(&m_Context) == FFX_OK);
+        CAULDRON_ASSERT(ffxSssrContextDestroy(&m_Context) == FFX_OK);
 
         // Destroy the FidelityFX interface memory
         free(m_InitializationParameters.backendInterface.scratchBuffer);
@@ -157,43 +171,58 @@ SSSRRenderModule::~SSSRRenderModule()
     }
 }
 
+void SSSRRenderModule::DestroyFfxContext()
+{
+    // Flush anything out of the pipes before destroying the context
+    GetDevice()->FlushAllCommandQueues();
+
+    // Destroy the SSSR context
+    CAULDRON_ASSERT(ffxSssrContextDestroy(&m_Context) == FFX_OK);
+
+    // Destroy the FidelityFX interface memory
+    if (m_InitializationParameters.backendInterface.scratchBuffer != nullptr)
+    {
+        free(m_InitializationParameters.backendInterface.scratchBuffer);
+        m_InitializationParameters.backendInterface.scratchBuffer = nullptr;
+    }
+}
+
 void SSSRRenderModule::InitUI()
 {
-    UISection uiSection;
-    uiSection.SectionName = "SSSR";
-    uiSection.SectionType = UISectionType::Sample;
+    UISection* uiSection = GetUIManager()->RegisterUIElements("SSSR", UISectionType::Sample);
 
-    uiSection.AddCheckBox("Apply Screen Space Reflections", &m_ApplyScreenSpaceReflections);
-    uiSection.AddCheckBox("Show Reflection Target", &m_ShowReflectionTarget);
-    uiSection.AddFloatSlider("Reflections Intensity (1 for PBR correctness)", &m_SpecularReflectionsMultiplier, 0.0f, 10.0f);
+    uiSection->RegisterUIElement<UICheckBox>("Apply Screen Space Reflections", m_ApplyScreenSpaceReflections);
+    uiSection->RegisterUIElement<UICheckBox>("Show Reflection Target", m_ShowReflectionTarget);
+    uiSection->RegisterUIElement<UISlider<float>>("Reflections Intensity (1 for PBR correctness)", m_SpecularReflectionsMultiplier, 0.0f, 10.0f);
 
+    uiSection->RegisterUIElement<UISlider<int32_t>>("Max Traversal Iterations", m_MaxTraversalIntersections, 0, 256);
+    uiSection->RegisterUIElement<UISlider<int32_t>>("Min Traversal Occupancy", m_MinTraversalOccupancy, 0, 32);
+    uiSection->RegisterUIElement<UISlider<float>>("Depth Buffer Thickness", m_DepthBufferThickness, 0.0f, 0.03f);
+    uiSection->RegisterUIElement<UISlider<float>>("Roughness Threshold", m_RoughnessThreshold, 0.0f, 1.0f);
+    uiSection->RegisterUIElement<UISlider<float>>("Temporal Stability", m_TemporalStabilityFactor, 0.f, 1.f);
+    uiSection->RegisterUIElement<UISlider<float>>("Temporal Variance Threshold", m_VarianceThreshold, 0.0f, 0.01f);
+    uiSection->RegisterUIElement<UICheckBox>("Enable Variance Guided Tracing", m_TemporalVarianceGuidedTracingEnabled);
 
-    uiSection.AddIntSlider("Max Traversal Iterations", &m_MaxTraversalIntersections, 0, 256);
-    uiSection.AddIntSlider("Min Traversal Occupancy", &m_MinTraversalOccupancy, 0, 32);
-    uiSection.AddIntSlider("Most Detailed Mip", &m_MostDetailedMip, 0, 5);
-    uiSection.AddFloatSlider("Depth Buffer Thickness", &m_DepthBufferThickness, 0.0f, 0.03f);
-    uiSection.AddFloatSlider("Roughness Threshold", &m_RoughnessThreshold, 0.0f, 1.0f);
-    uiSection.AddFloatSlider("Temporal Stability", &m_TemporalStabilityFactor, 0.f, 1.f);
-    uiSection.AddFloatSlider("Temporal Variance Threshold", &m_VarianceThreshold, 0.0f, 0.01f);
-    uiSection.AddCheckBox("Enable Variance Guided Tracing", &m_TemporalVarianceGuidedTracingEnabled);
-
-    static std::vector<std::string> samplesPerQuadOptions = { "1", "2", "4" };
-    uiSection.AddCombo("Samples Per Quad", &m_SamplesPerQuadOptionIndex, &samplesPerQuadOptions, [this](void* pParams) {
-        switch (m_SamplesPerQuadOptionIndex)
-        {
-        case 0:
-            m_SamplesPerQuad = 1;
-            break;
-        case 1:
-            m_SamplesPerQuad = 2;
-            break;
-        case 2:
-            m_SamplesPerQuad = 4;
-            break;
+    static std::vector<const char*> samplesPerQuadOptions = { "1", "2", "4" };
+    uiSection->RegisterUIElement<UICombo>(
+        "Samples Per Quad",
+        m_SamplesPerQuadOptionIndex,
+        samplesPerQuadOptions,
+        [this](int32_t cur, int32_t old) {
+            switch (cur)
+            {
+            case 0:
+                m_SamplesPerQuad = 1;
+                break;
+            case 1:
+                m_SamplesPerQuad = 2;
+                break;
+            case 2:
+                m_SamplesPerQuad = 4;
+                break;
+            }
         }
-        });
-
-    GetUIManager()->RegisterUIElements(uiSection);
+    );
 }
 
 void SSSRRenderModule::CreateSSSRContext()
@@ -202,14 +231,14 @@ void SSSRRenderModule::CreateSSSRContext()
     m_InitializationParameters.flags = GetConfig()->InvertedDepth ? FFX_SSSR_ENABLE_DEPTH_INVERTED : 0;
     m_InitializationParameters.renderSize.width = resInfo.RenderWidth;
     m_InitializationParameters.renderSize.height = resInfo.RenderHeight;
-    m_InitializationParameters.normalsHistoryBufferFormat = GetFfxSurfaceFormat(m_pNormal->GetFormat());
-    FFX_ASSERT(ffxSssrContextCreate(&m_Context, &m_InitializationParameters) == FFX_OK);
+    m_InitializationParameters.normalsHistoryBufferFormat = SDKWrapper::GetFfxSurfaceFormat(m_pNormal->GetFormat());
+    CAULDRON_ASSERT(ffxSssrContextCreate(&m_Context, &m_InitializationParameters) == FFX_OK);
 }
 
 void SSSRRenderModule::ResetSSSRContext()
 {
     // Destroy the SSSR context
-    FFX_ASSERT(ffxSssrContextDestroy(&m_Context) == FFX_OK);
+    CAULDRON_ASSERT(ffxSssrContextDestroy(&m_Context) == FFX_OK);
 
     // Re-create the SSSR context
     CreateSSSRContext();
@@ -246,15 +275,15 @@ void SSSRRenderModule::Execute(double deltaTime, CommandList* pCmdList)
 
     // All cauldron resources come into a render module in a generic read state (ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource)
     FfxSssrDispatchDescription dispatchParameters = {};
-    dispatchParameters.commandList = ffxGetCommandList(pCmdList);
-    dispatchParameters.color = ffxGetResource(m_pColorTarget->GetResource(), L"SSSR_InputColor", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    dispatchParameters.depth = ffxGetResource(m_pDepthTarget->GetResource(), L"SSSR_InputDepth", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    dispatchParameters.motionVectors = ffxGetResource(m_pMotionVectors->GetResource(), L"SSSR_InputMotionVectors", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    dispatchParameters.normal = ffxGetResource(m_pNormal->GetResource(), L"SSSR_InputNormal", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    dispatchParameters.materialParameters = ffxGetResource(m_pAoRoughnessMetallic->GetResource(), L"SSSR_InputAoRoughnessMetallic", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    dispatchParameters.environmentMap = ffxGetResource(m_pPrefilteredEnvironmentMap->GetResource(), L"SSSR_InputEnvironmentMapTexture", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    dispatchParameters.brdfTexture = ffxGetResource(m_pBrdfTexture->GetResource(), L"SSSR_InputBRDFTexture", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    dispatchParameters.output = ffxGetResource(m_pOutput->GetResource(), L"SSSR_Output", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchParameters.commandList = SDKWrapper::ffxGetCommandList(pCmdList);
+    dispatchParameters.color = SDKWrapper::ffxGetResource(m_pColorTarget->GetResource(), L"SSSR_InputColor", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchParameters.depth = SDKWrapper::ffxGetResource(m_pDepthTarget->GetResource(), L"SSSR_InputDepth", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchParameters.motionVectors = SDKWrapper::ffxGetResource(m_pMotionVectors->GetResource(), L"SSSR_InputMotionVectors", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchParameters.normal = SDKWrapper::ffxGetResource(m_pNormal->GetResource(), L"SSSR_InputNormal", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchParameters.materialParameters = SDKWrapper::ffxGetResource(m_pAoRoughnessMetallic->GetResource(), L"SSSR_InputAoRoughnessMetallic", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchParameters.environmentMap = SDKWrapper::ffxGetResource(m_pPrefilteredEnvironmentMap->GetResource(), L"SSSR_InputEnvironmentMapTexture", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchParameters.brdfTexture = SDKWrapper::ffxGetResource(m_pBrdfTexture->GetResource(), L"SSSR_InputBRDFTexture", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchParameters.output = SDKWrapper::ffxGetResource(m_pOutput->GetResource(), L"SSSR_Output", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
     dispatchParameters.normalUnPackMul = 2.0f;      // Cauldron's GBuffer stores normals in the [0, 1] range, SSSR expects them in the [-1, 1] range.
     dispatchParameters.normalUnPackAdd = -1.0f;     // Cauldron's GBuffer stores normals in the [0, 1] range, SSSR expects them in the [-1, 1] range.
     dispatchParameters.motionVectorScale.x = 1.0f;
@@ -282,7 +311,7 @@ void SSSRRenderModule::Execute(double deltaTime, CommandList* pCmdList)
     memcpy(&dispatchParameters.prevViewProjection,  &pCamera->GetPreviousViewProjection(), sizeof(Mat4));
 
     FfxErrorCode errorCode = ffxSssrContextDispatch(&m_Context, &dispatchParameters);
-    FFX_ASSERT(errorCode == FFX_OK);
+    CAULDRON_ASSERT(errorCode == FFX_OK);
 
     // FidelityFX contexts modify the set resource view heaps, so set the cauldron one back
     SetAllResourceViewHeaps(pCmdList);
@@ -311,6 +340,7 @@ void SSSRRenderModule::Execute(double deltaTime, CommandList* pCmdList)
     SetViewport(pCmdList, &vp);
     Rect scissorRect = { 0, 0, resInfo.RenderWidth, resInfo.RenderHeight };
     SetScissorRects(pCmdList, 1, &scissorRect);
+    SetPrimitiveTopology(pCmdList, PrimitiveTopology::TriangleList);
 
     SetPipelineState(pCmdList, m_pApplyReflectionsPipeline);
     DrawInstanced(pCmdList, 3);

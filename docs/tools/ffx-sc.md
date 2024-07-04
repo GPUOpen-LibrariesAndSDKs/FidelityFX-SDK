@@ -18,68 +18,26 @@ The following arguments will allow you to control how compilation occurs:
 
 **Options**
 
-**&lt;CompilerArgs&gt;**
+| Option                                                  | Descriptions                                                                                                                                                        |  
+|---------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **&lt;CompilerArgs&gt;**                                | A list of arguments accepted by the target compiler, separated by spaces.                                                                                           |
+| **-output=\<Path\>**                                    | Path to where the shader permutations should be output to.                                                                                                          |
+| **-D\<Name\>**                                          | Define a macro that is defined in all shader permutations.                                                                                                          |
+| **-D\<Name\>={\<Value1\>, \<Value2\>, \<Value3\> ...}** | Declare a shader option that will generate permutations with the macro defined using the given values. Use a '-' to define a permutation where no macro is defined. |
+| **-num-threads=\<Num\>**                                | Number of threads to use for generating shaders. Sets to the max number of threads available on the current CPU by default.                                         |
+| **-name=\<Name\>**                                      | The name used for prefixing variables in the generated headers. Uses the file name by default.                                                                      |
+| **-reflection**                                         | Generate header containing reflection data.                                                                                                                         |
+| **-embed-arguments**                                    | Write the compile arguments used for each permutation into their respective headers.                                                                                |
+| **-print-arguments**                                    | Print the compile arguments used for each permuations.                                                                                                              |
+| **-disable-logs**                                       | Prevent logging of compile warnings and errors.                                                                                                                     |
+| **-compiler=\<Compiler\>**                              | Select the compiler to generate permutations from (`dxc`, `fxc` or `glslang`).                                                                                      |
+| **-dxcdll=\<DXC DLL Path\>**                            | Path to the dxccompiler dll to use.                                                                                                                                 |
+| **-d3ddll=\<D3D DLL Path\>**                            | Path to the `d3dcompiler` dll to use.                                                                                                                               |
+| **-glslangexe=\<glslangValidator.exe Path\>**           | Path to the `glslangValidator` executable to use.                                                                                                                   |
+| **-deps=\<Format\>**                                    | Dump depfile which recorded the include file dependencies in format of (`gcc` or `msvc`).                                                                           |
+| **-debugcompile**                                       | Compile shader with debug information.                                                                                                                              |
+| **-debugcmdline**                                       | Print all the input arguments.                                                                                                                                      |
 
-  A list of arguments accepted by the target compiler, separated by spaces.
-
-**-output=\<Path\>**
-
-  Path to where the shader permutations should be output to.
-
-**-D\<Name\>**
-
-  Define a macro that is defined in all shader permutations.
-
-**-D\<Name\>={\<Value1\>, \<Value2\>, \<Value3\> ...}**
-
-  Declare a shader option that will generate permutations with the macro defined using the given values.
-  Use a '-' to define a permutation where no macro is defined.
-  
-**-num-threads=\<Num\>**
-
-  Number of threads to use for generating shaders.
-  Sets to the max number of threads available on the current CPU by default.
-
-**-name=\<Name\>**
-
-  The name used for prefixing variables in the generated headers.
-  Uses the file name by default.
-  
-**-reflection**
-
-  Generate header containing reflection data.
-  
-**-embed-arguments**
-
-  Write the compile arguments used for each permutation into their respective headers.
-
-**-print-arguments**
-
-  Print the compile arguments used for each permuations.
-
-**-disable-logs**
-
-  Prevent logging of compile warnings and errors.
-
-**-compiler=\<Compiler\>**
-
-  Select the compiler to generate permutations from (`dxc`, `fxc` or `glslang`).
-
-**-dxcdll=\<DXC DLL Path\>**
-
-  Path to the dxccompiler dll to use.
-
-**-d3ddll=\<D3D DLL Path\>**
-
-  Path to the `d3dcompiler` dll to use.
-
-**-glslangexe=\<glslangValidator.exe Path\>**
-
-  Path to the `glslangValidator` executable to use.
-  
-**-deps=\<Format\>**
-
-  Dump depfile which recorded the include file dependencies in format of (`gcc` or `msvc`).
   
 <h2>Modifying the Shader Compiler</h2>
 

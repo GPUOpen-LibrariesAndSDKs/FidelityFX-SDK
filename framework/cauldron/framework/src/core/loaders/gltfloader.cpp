@@ -1,17 +1,20 @@
-// AMD Cauldron code
+// This file is part of the FidelityFX SDK.
 //
-// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sub-license, and / or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -320,11 +323,14 @@ namespace cauldron
             // Create glTF data representation that will be passed around for loading
             GLTFDataRep* glTFDataRep = new GLTFDataRep();
 
+            glTFDataRep->loadStartTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch());
+
             // And the content block that will hold references to all the managed content in this block (textures, buffers, entities)
             glTFDataRep->pLoadedContentRep = new ContentBlock();
 
             // Add the name of the file all content was loaded from (will be used to uniquely identify internal assets like meshes and animations)
             glTFDataRep->GLTFFilePath = filePathString;
+            glTFDataRep->GLTFFileName = pFileToLoad->c_str();
 
             // Start by loading the glTF file and reading in all the json data
             glTFDataRep->pGLTFJsonData = new json();
@@ -453,8 +459,8 @@ namespace cauldron
                 glTFDataRep->pLoadedContentRep->Materials.resize(materials.size());
 
                 // Load texture redirects
-                CauldronAssert(ASSERT_CRITICAL, hasTextureRedirects, L"Loading gltf materials with now texture redirects. This behavior is unsupported. Please try another scene");
-                const json& textures = glTFData["textures"];
+                json empty;
+                const json& textures = hasTextureRedirects ? glTFData["textures"] : empty;
 
                 // Go through all the materials and pre-init them with everything except the valid texture pointers (which we will fixup after
                 // textures are loaded). This will also create an SRGB format map for texture loading so we don't have to re-scan the materials.
@@ -686,6 +692,7 @@ namespace cauldron
 
         bool hasMeshData = glTFData.find("meshes") != glTFData.end();
         bool hasAnimationData = glTFData.find("animations") != glTFData.end();
+        bool hasAnimationSkins = glTFData.find("skins") != glTFData.end();
 
         uint32_t numLoads = 0;
 
@@ -696,6 +703,10 @@ namespace cauldron
         if (hasAnimationData)
         {
             numLoads += (uint32_t)glTFData["animations"].size();
+        }
+        if (hasAnimationSkins)
+        {
+            numLoads += (uint32_t)glTFData["skins"].size();
         }
 
         // Create a completion callback to be called after all buffer loads have completed
@@ -772,6 +783,41 @@ namespace cauldron
             GetTaskManager()->AddTaskList(animationTaskList);
         }
 
+        if (hasAnimationSkins)
+        {
+            const json&      skinsJson = glTFData["skins"];
+            std::queue<Task> skinTaskList;
+
+            pGLTFData->pLoadedContentRep->Skins.resize(skinsJson.size());
+
+            for (size_t i = 0; i < skinsJson.size(); ++i)
+            {
+                // Build load info for the loading job
+                GLTFBufferLoadParams* pBufferLoadParams = new GLTFBufferLoadParams();
+                pBufferLoadParams->pGLTFData            = pGLTFData;
+                pBufferLoadParams->BufferIndex          = (uint32_t)i;
+                pBufferLoadParams->BufferName           = pGLTFData->GLTFFilePath;
+
+                if (skinsJson[i].find("name") != skinsJson[i].end())
+                {
+                    std::string skinName = skinsJson[i]["name"];
+                    pBufferLoadParams->BufferName += StringToWString(skinName);
+                }
+                else
+                {
+                    std::wstring skinName = L"Skin_";
+                    skinName += std::to_wstring(i);
+                    pBufferLoadParams->BufferName += skinName;
+                }
+
+                // Push the task
+                skinTaskList.push(Task(&GLTFLoader::LoadGLTFSkin, pBufferLoadParams, pLoadCompleteCallback));
+            }
+
+            // Dispatch the loading tasks
+            GetTaskManager()->AddTaskList(skinTaskList);
+        }
+
     }
 
     const json* GLTFLoader::LoadVertexBuffer(const json& attributes, const char* attributeName, const json& accessors, const json& bufferViews, const json& buffers, const GLTFBufferLoadParams& params, VertexBufferInformation& info, bool forceConversionToFloat)
@@ -800,7 +846,10 @@ namespace cauldron
             info.ResourceDataFormat = ResourceDataFormat(info.AttributeDataFormat, resourceFormatType);
 
             // Original buffer validation
-            BufferViewInfo bufferViewInfo = GetBufferInfo(accessor, bufferViews);
+                BufferViewInfo bufferViewInfo = GetBufferInfo(accessor, bufferViews);
+
+            if (strcmp(attributeName, "JOINTS_0") == 0)
+                stride = static_cast<uint32_t>(bufferViewInfo.Stride);
 
             // Only support tightly packed data
             CauldronAssert(ASSERT_WARNING, bufferViewInfo.Stride == 0 || bufferViewInfo.Stride == stride, L"Stride doesn't match between the type of the accessor and the type of the vertex attribute.");
@@ -811,13 +860,16 @@ namespace cauldron
 
             uint32_t bufferLength = buffers[bufferViewInfo.BufferID]["byteLength"].get<uint32_t>();
             CauldronAssert(ASSERT_CRITICAL, bufferViewInfo.Offset + byteOffset + totalLength <= bufferLength, L"Vertex buffer out of buffer bounds.");
-            
+
             // Get a pointer to the data at the correct offset into the buffer
             char* data = params.pGLTFData->GLTFBufferData[bufferViewInfo.BufferID].data();
             data += bufferViewInfo.Offset + byteOffset;
 
             // Verify that the component is already using floats or allowed to be converted to floats
-            CauldronAssert(ASSERT_ERROR, (resourceFormatType == g_GLTFComponentType_Float) || forceConversionToFloat, L"Unsupported component type for vertex attribute.");
+            if (!(strcmp(attributeName, "JOINTS_0") == 0 || strcmp(attributeName, "JOINTS_1")))
+            {
+                CauldronAssert(ASSERT_ERROR, (resourceFormatType == g_GLTFComponentType_Float) || forceConversionToFloat, L"Unsupported component type for vertex attribute.");
+            }
 
             // Convert to float if necessary
             std::vector<float> convertedData;
@@ -854,12 +906,15 @@ namespace cauldron
                 {
                     CauldronAssert(ASSERT_ERROR, false, L"Unsupported component type conversion for vertex attribute.");
                 }
-               
+
                 // Make the data pointer point towards our converted data
                 data = (char*)convertedData.data();
             }
 
-            BufferDesc desc = BufferDesc::Vertex(L"VertexBuffer", totalLength, stride);
+            // align buffer size up to 4-bytes for compatibility with StructuredBuffers with uints.
+            uint32_t totalAlignedLength = AlignUp(totalLength, 4u);
+
+            BufferDesc desc = BufferDesc::Vertex(StringToWString(std::string("VertexBuffer_") + std::string(attributeName)).c_str(), totalAlignedLength, stride);
             info.pBuffer = Buffer::CreateBufferResource(&desc, ResourceState::CopyDest);
             info.pBuffer->CopyData(data, totalLength, params.pUploadCtx, ResourceState::VertexBufferResource);
             return &accessor;
@@ -875,39 +930,25 @@ namespace cauldron
             int indicesID = primitive["indices"];
             auto& accessor = accessors[indicesID];
 
-            std::string& type = accessor["type"].get<std::string>();
-            CauldronAssert(ASSERT_ERROR, type == "SCALAR", L"Indices types are only scalar");
-
-            uint32_t stride = 0;
-            int componentType = accessor["componentType"];
-            switch (componentType)
-            {
-            case g_GLTFComponentType_UnsignedShort:
-                info.IndexFormat = ResourceFormat::R16_UINT;
-                stride = 2;
-                break;
-            case g_GLTFComponentType_UnsignedInt:
-                info.IndexFormat = ResourceFormat::R32_UINT;
-                stride = 4;
-                break;
-            default:
-                CauldronWarning(L"Unsupported component type for index buffer.");
-                return;
-            }
-
-            info.Count = accessor["count"].get<uint32_t>();
-
-            // create buffer
-            BufferViewInfo bufferViewInfo = GetBufferInfo(accessor, bufferViews);
-            const char* data = params.pGLTFData->GLTFBufferData[bufferViewInfo.BufferID].data();
-
-            // only support tightly packed data
-            CauldronAssert(ASSERT_WARNING, bufferViewInfo.Stride == 0 || bufferViewInfo.Stride == stride, L"Stride doesn't match between the type of the accessor and the type of the index buffer.");
-
             uint32_t byteOffset = 0;
             auto byteOffsetIt = accessor.find("byteOffset");
             if (byteOffsetIt != accessor.end())
                 byteOffset = byteOffsetIt->get<uint32_t>();
+
+            info.Count = accessor["count"].get<uint32_t>();
+
+            std::string& type = accessor["type"].get<std::string>();
+            CauldronAssert(ASSERT_ERROR, type == "SCALAR", L"Indices types are only scalar");
+
+            // create buffer
+            BufferViewInfo bufferViewInfo = GetBufferInfo(accessor, bufferViews);
+            const char* data = params.pGLTFData->GLTFBufferData[bufferViewInfo.BufferID].data();
+            data += bufferViewInfo.Offset + byteOffset;
+
+            int componentType = accessor["componentType"];
+            uint32_t stride = ResourceDataStride(componentType);
+            // only support tightly packed data
+            CauldronAssert(ASSERT_WARNING, bufferViewInfo.Stride == 0 || bufferViewInfo.Stride == stride, L"Stride doesn't match between the type of the accessor and the type of the index buffer.");
 
             // verify that the buffer is big enough
             uint32_t totalLength = info.Count * stride;
@@ -916,9 +957,37 @@ namespace cauldron
             size_t bufferLength = buffers[bufferViewInfo.BufferID]["byteLength"].get<size_t>();
             CauldronAssert(ASSERT_CRITICAL, bufferViewInfo.Offset + byteOffset + totalLength <= bufferLength, L"Index buffer out of buffer bounds.");
 
-            BufferDesc desc = BufferDesc::Index(L"IndexBuffer", totalLength, info.IndexFormat);
+            std::vector<uint16_t> convertedData;
+            const uint8_t* dataPtr = (uint8_t*)data;
+            switch (componentType)
+            {
+            case g_GLTFComponentType_UnsignedByte:
+                convertedData.resize(info.Count);
+                for (uint32_t i = 0; i < info.Count; i++)
+                {
+                    convertedData[i] = uint16_t(dataPtr[i]);
+                }
+                data = (char*)convertedData.data();
+                totalLength = info.Count * 2;
+                info.IndexFormat = ResourceFormat::R16_UINT;
+                break;
+            case g_GLTFComponentType_UnsignedShort:
+                info.IndexFormat = ResourceFormat::R16_UINT;
+                break;
+            case g_GLTFComponentType_UnsignedInt:
+                info.IndexFormat = ResourceFormat::R32_UINT;
+                break;
+            default:
+                CauldronWarning(L"Unsupported component type for index buffer.");
+                return;
+            }
+
+            // align buffer size up to 4-bytes for compatibility with StructuredBuffers with uints.
+            uint32_t totalAlignedLength = AlignUp(totalLength, 4u);
+
+            BufferDesc desc = BufferDesc::Index(L"IndexBuffer", totalAlignedLength, info.IndexFormat);
             info.pBuffer = Buffer::CreateBufferResource(&desc, ResourceState::CopyDest);
-            info.pBuffer->CopyData(data + bufferViewInfo.Offset + byteOffset, totalLength, params.pUploadCtx, ResourceState::IndexBufferResource);
+            info.pBuffer->CopyData(data, totalLength, params.pUploadCtx, ResourceState::IndexBufferResource);
         }
     }
 
@@ -1052,6 +1121,7 @@ namespace cauldron
         pBufferLoadParams->pUploadCtx = pUploadContext;
 
         // Start loading all of the surfaces for it (a surface in our context is mesh geometry that is associated with a particular material)
+        std::vector<VertexBufferInformation> vertexBufferPositions;
         for (uint32_t i = 0; i < (uint32_t)primitives.size(); ++i)
         {
             auto& primitive = primitives[i];
@@ -1071,6 +1141,7 @@ namespace cauldron
                 pSurface->Radius() = max - pMeshResource->GetSurface(i)->Center();
                 pSurface->Center().setW(1.f);
             }
+            vertexBufferPositions.push_back(pSurface->GetVertexBuffer(VertexAttributeType::Position));
 
             LoadVertexBuffer(attributes, "NORMAL",      accessors, bufferViews, buffers, *pBufferLoadParams, pSurface->GetVertexBuffer(VertexAttributeType::Normal),    false);
             LoadVertexBuffer(attributes, "TANGENT",     accessors, bufferViews, buffers, *pBufferLoadParams, pSurface->GetVertexBuffer(VertexAttributeType::Tangent),   false);
@@ -1084,6 +1155,24 @@ namespace cauldron
             LoadVertexBuffer(attributes, "JOINTS_1",    accessors, bufferViews, buffers, *pBufferLoadParams, pSurface->GetVertexBuffer(VertexAttributeType::Joints1),   false);
             LoadIndexBuffer(primitive, accessors, bufferViews, buffers, *pBufferLoadParams, pSurface->GetIndexBuffer());
 
+            bool hasAnimationSkins = glTFData.find("skins") != glTFData.end();
+            if (hasAnimationSkins)
+            {
+                // Previous Positions
+                {
+                    VertexBufferInformation previousPosInfo = pSurface->GetVertexBuffer(VertexAttributeType::Position);
+                    BufferDesc              desc            = previousPosInfo.pBuffer->GetDesc();
+                    desc.Name                               = L"PreviousPositions";
+                    desc.Flags                              = ResourceFlags::AllowUnorderedAccess;
+                    previousPosInfo.pBuffer                 = Buffer::CreateBufferResource(&desc, ResourceState::VertexBufferResource);
+
+                    pSurface->GetVertexBuffer(VertexAttributeType::PreviousPosition) = previousPosInfo;
+                }
+
+                // Set Mesh to have animated BLAS for raytracing
+                pMeshResource->setAnimatedBlas(true);
+            }
+
             int  materialIndex = 0;
             auto materialIndexIt = primitive.find("material");
             if (materialIndexIt != primitive.end())
@@ -1091,17 +1180,16 @@ namespace cauldron
             CauldronAssert(ASSERT_ERROR, materialIndex >= 0 && materialIndex < pBufferLoadParams->pGLTFData->pLoadedContentRep->Materials.size(), L"Referenced material out of bounds");
             pSurface->SetMaterial(pBufferLoadParams->pGLTFData->pLoadedContentRep->Materials[materialIndex]);
         }
-        
+
         pUploadContext->Execute();
         delete pUploadContext;
-        
+
         // Add BLAS info
         if (GetConfig()->BuildRayTracingAccelerationStructure)
         {
-            pMeshResource->GetBlas()->AddGeometry(pMeshResource);
-            pMeshResource->GetBlas()->InitBufferResources();
+            pMeshResource->GetStaticBlas()->AddGeometry(pMeshResource, vertexBufferPositions);
+            pMeshResource->GetStaticBlas()->InitBufferResources();
         }
-
 
         pBufferLoadParams->pGLTFData->pLoadedContentRep->Meshes[pBufferLoadParams->BufferIndex] = pMeshResource;
 
@@ -1151,6 +1239,61 @@ namespace cauldron
         }
     }
 
+    void GLTFLoader::LoadGLTFSkin(void* pParam)
+    {
+        GLTFBufferLoadParams* pBufferLoadParams = reinterpret_cast<GLTFBufferLoadParams*>(pParam);
+
+        const json& glTFData = *pBufferLoadParams->pGLTFData->pGLTFJsonData;
+
+        const json& skinEntry = glTFData["skins"][pBufferLoadParams->BufferIndex];
+
+        pBufferLoadParams->pGLTFData->pLoadedContentRep->Skins[pBufferLoadParams->BufferIndex] = new AnimationSkin();
+        AnimationSkin* skin = pBufferLoadParams->pGLTFData->pLoadedContentRep->Skins[pBufferLoadParams->BufferIndex];
+
+        GetBufferDetails(skinEntry["inverseBindMatrices"].get<int>(), &skin->m_InverseBindMatrices, pBufferLoadParams);
+
+        skin->m_skeletonId = -1;
+        auto skeletonIt    = skinEntry.find("skeleton");
+        if (skeletonIt != skinEntry.end())
+            skin->m_skeletonId = skinEntry["skeleton"].get<int>();
+
+        const json& jointsJson = skinEntry["joints"];
+        for (uint32_t n = 0; n < jointsJson.size(); n++)
+        {
+            skin->m_jointsNodeIdx.push_back(jointsJson[n]);
+        }
+    }
+
+    void GLTFLoader::GetBufferDetails(int accessor, AnimInterpolants* pAccessor, GLTFBufferLoadParams* pBufferLoadParams)
+    {
+        const json& gltfData    = *pBufferLoadParams->pGLTFData->pGLTFJsonData;
+        auto&       accessors   = gltfData["accessors"];
+        auto&       bufferViews = gltfData["bufferViews"];
+
+        const json& inAccessor = accessors.at(accessor);
+
+        int32_t bufferViewIdx = inAccessor.value("bufferView", -1);
+        assert(bufferViewIdx >= 0);
+        const json& bufferView = bufferViews.at(bufferViewIdx);
+
+        int32_t bufferIdx = bufferView.value("buffer", -1);
+        assert(bufferIdx >= 0);
+
+        std::vector<char> animData = pBufferLoadParams->pGLTFData->GLTFBufferData[bufferIdx];
+
+        int32_t offset     = bufferView.value("byteOffset", 0);
+        int32_t byteLength = bufferView["byteLength"];
+        int32_t byteOffset = inAccessor.value("byteOffset", 0);
+
+        offset += byteOffset;
+        byteLength -= byteOffset;
+
+        pAccessor->Data      = std::vector<char>(animData.begin() + offset, animData.end());
+        pAccessor->Dimension = ResourceFormatDimension(inAccessor["type"]);
+        pAccessor->Stride    = pAccessor->Dimension * ResourceDataStride(inAccessor["componentType"]);
+        pAccessor->Count     = inAccessor["count"];
+    }
+
     // Called once all buffer-related assets have been created and uploaded (i.e. Mesh, Animations, etc.)
     void GLTFLoader::GLTFAllBufferAssetLoadsCompleted(void* pParam)
     {
@@ -1165,23 +1308,113 @@ namespace cauldron
     void GLTFLoader::BuildBLAS(std::vector<Mesh*> meshes)
     {
         std::vector<CommandList*> cmdLists(1);
-        cmdLists[0] = GetDevice()->CreateCommandList(L"Build BLAS cmdList", CommandQueue::Compute);
+        cmdLists[0] = GetDevice()->CreateCommandList(L"Build BLAS cmdList", CommandQueue::Graphics);
 
+        std::vector<Barrier> blasBarriers;
         for (Mesh* pMesh : meshes)
         {
-            pMesh->GetBlas()->Build(cmdLists[0]);
+            pMesh->GetStaticBlas()->Build(cmdLists[0]);
+            blasBarriers.push_back(Barrier::UAV(pMesh->GetStaticBlas()->GetBuffer()->GetResource()));
         }
+        ResourceBarrier(cmdLists[0], (uint32_t)blasBarriers.size(), blasBarriers.data());
 
         CloseCmdList(cmdLists[0]);
-        GetDevice()->ExecuteCommandListsImmediate(cmdLists, CommandQueue::Compute);
+        GetDevice()->ExecuteCommandListsImmediate(cmdLists, CommandQueue::Graphics);
 
         delete cmdLists[0];
     }
+
+    void GLTFLoader::InitSkinningData(const Mesh* pMesh, AnimationComponentData* pComponentData)
+    {
+        const size_t numSurfaces = pMesh->GetNumSurfaces();
+        pComponentData->m_skinnedPositions.resize(numSurfaces);
+        pComponentData->m_skinnedNormals.resize(numSurfaces);
+        pComponentData->m_skinnedPreviousPosition.resize(numSurfaces);
+
+        for (uint32_t i = 0; i < numSurfaces; ++i)
+        {
+            const Surface* pSurface = pMesh->GetSurface(i);
+
+            // Skinned Positions
+            {
+                VertexBufferInformation skinnedPosInfo = pSurface->GetVertexBuffer(VertexAttributeType::Position);
+                BufferDesc              desc           = skinnedPosInfo.pBuffer->GetDesc();
+                desc.Name                              = L"SkinnedPositions";
+                desc.Flags                             = ResourceFlags::AllowUnorderedAccess;
+                skinnedPosInfo.pBuffer                 = Buffer::CreateBufferResource(&desc, ResourceState::VertexBufferResource);
+
+                pComponentData->m_skinnedPositions[i] = skinnedPosInfo;
+            }
+
+            // Previous Positions
+            {
+                VertexBufferInformation previousPosInfo = pSurface->GetVertexBuffer(VertexAttributeType::Position);
+                BufferDesc              desc            = previousPosInfo.pBuffer->GetDesc();
+                desc.Name                               = L"PreviousPositions";
+                desc.Flags                              = ResourceFlags::AllowUnorderedAccess;
+                previousPosInfo.pBuffer                 = Buffer::CreateBufferResource(&desc, ResourceState::VertexBufferResource);
+
+                pComponentData->m_skinnedPreviousPosition[i] = previousPosInfo;
+            }
+
+            // Skinned Normals
+            {
+                if (!pSurface->GetVertexBuffer(VertexAttributeType::Normal).pBuffer)
+                {
+                    CauldronError(L"Skinned Meshes must have normal attribute");
+                }
+
+                VertexBufferInformation skinnedNormalsInfo = pSurface->GetVertexBuffer(VertexAttributeType::Normal);
+                BufferDesc              desc               = skinnedNormalsInfo.pBuffer->GetDesc();
+                desc.Name                                  = L"SkinnedNormals";
+                desc.Flags                                 = ResourceFlags::AllowUnorderedAccess;
+                skinnedNormalsInfo.pBuffer                 = Buffer::CreateBufferResource(&desc, ResourceState::VertexBufferResource);
+
+                pComponentData->m_skinnedNormals[i] = skinnedNormalsInfo;
+            }
+        }
+
+        // Add BLAS info
+        if (GetConfig()->BuildRayTracingAccelerationStructure)
+        {
+            pComponentData->m_animatedBlas->AddGeometry(pMesh, pComponentData->m_skinnedPositions);
+            pComponentData->m_animatedBlas->InitBufferResources();
+        }
+    }
+
+    bool isAnimationTarget(const json& pGLTFData, const uint32_t nodeIndex)
+    {
+        for (const auto& animationEntry : pGLTFData["animations"])
+        {
+            for (const auto& channels : animationEntry["channels"])
+            {
+                if (nodeIndex == channels["target"]["node"])
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool entityInAnimatedSubTree(Entity* pParentEntity)
+    {
+        if (pParentEntity != nullptr)
+        {
+            if (pParentEntity->HasComponent(AnimationComponentMgr::Get()))
+                return true;
+            entityInAnimatedSubTree(pParentEntity->GetParent());
+        }
+
+        return false;
+    };
 
     void GLTFLoader::PostGLTFContentLoadCompleted(void* pParam)
     {
         GLTFDataRep* pGLTFData = reinterpret_cast<GLTFDataRep*>(pParam);
         const json& glTFData = *pGLTFData->pGLTFJsonData;
+
+        // ID of the current model being loaded
+        static uint32_t modelIndex = 0;
 
         // create entities and component data
         // If we had buffers, make sure all content was created/loaded
@@ -1197,10 +1430,6 @@ namespace cauldron
             std::unique_lock<std::mutex> lock(pGLTFData->CriticalSection);
             pGLTFData->TextureCV.wait(lock, [pGLTFData] { return pGLTFData->TexturesLoaded; });
         }
-
-        // Process Bottom Level Acceleration Structures
-        if (GetFramework()->GetConfig()->BuildRayTracingAccelerationStructure)
-            BuildBLAS(pGLTFData->pLoadedContentRep->Meshes);
 
         bool hasNodes = glTFData.find("nodes") != glTFData.end();
         bool hasScene = glTFData.find("scenes") != glTFData.end();
@@ -1283,20 +1512,6 @@ namespace cauldron
 
                 // Next, do any component creation needed by this entity
 
-                // Add animation component (if present)
-                if (AnimationComponentMgr::Get != nullptr && pGLTFData->pLoadedContentRep->Animations.size() > 0)
-                {
-                    AnimationComponentData* pComponentData = new AnimationComponentData();
-                    pComponentData->m_pAnimRef             = &(pGLTFData->pLoadedContentRep->Animations);
-                    pComponentData->m_nodeId               = nodeIndex;
-                    pBackingMem->ComponentsData.push_back(pComponentData);
-
-                    AnimationComponent* pComponent = AnimationComponentMgr::Get()->SpawnAnimationComponent(pNewEntity, pComponentData);
-
-                    pComponent->SetLocalTransform(transform);
-                    pBackingMem->Components.push_back(pComponent);
-                }
-
                 // Add light component (if present)
                 if (LightComponentMgr::Get() != nullptr && pGLTFData->LightData.size() > 0)
                 {
@@ -1331,6 +1546,40 @@ namespace cauldron
                         const_cast<cauldron::Mesh*>(pComponentData->pMesh)->setMeshIndex(meshIndex);
                         pBackingMem->ComponentsData.push_back(pComponentData);
                         MeshComponent* pComponent = MeshComponentMgr::Get()->SpawnMeshComponent(pNewEntity, pComponentData);
+                        pBackingMem->Components.push_back(pComponent);
+                    }
+                }
+
+
+
+                // Add animation component (if present)
+                if (AnimationComponentMgr::Get != nullptr && pGLTFData->pLoadedContentRep->Animations.size() > 0)
+                {
+                    bool isSkiningTarget = node.find("skin") != node.end();
+
+                    // if node is the target of an animation, or is in a subtree of an animated node: attach the animation component
+                    if (isAnimationTarget(glTFData, nodeIndex) || entityInAnimatedSubTree(pParentEntity) || isSkiningTarget)
+                    {
+                        AnimationComponentData* pComponentData = new AnimationComponentData();
+                        pComponentData->m_pAnimRef             = &(pGLTFData->pLoadedContentRep->Animations);
+                        pComponentData->m_nodeId               = nodeIndex;
+                        pComponentData->m_modelId              = modelIndex;
+                        pComponentData->m_skinId               = isSkiningTarget ? node["skin"].get<int>() : -1;
+
+                        pBackingMem->ComponentsData.push_back(pComponentData);
+
+                        AnimationComponent* pComponent = AnimationComponentMgr::Get()->SpawnAnimationComponent(pNewEntity, pComponentData);
+
+                        // Skinning and the Mesh component are available
+                        if (pComponentData->m_skinId != -1 && MeshComponentMgr::Get() != nullptr && pGLTFData->pLoadedContentRep->Meshes.size() > 0)
+                        {
+                            Component*  pMeshComponent = pBackingMem->Components.back();
+                            const Mesh* pMesh          = reinterpret_cast<MeshComponent*>(pMeshComponent)->GetData().pMesh;
+
+                            InitSkinningData(pMesh, pComponentData);
+                        }
+
+                        pComponent->SetLocalTransform(transform);
                         pBackingMem->Components.push_back(pComponent);
                     }
                 }
@@ -1393,9 +1642,35 @@ namespace cauldron
                     }
                 }
             }
+
+            // Update the component manager with skinning information
+            if (AnimationComponentMgr::Get != nullptr && pGLTFData->pLoadedContentRep->Animations.size() > 0)
+            {
+                const auto& skins = pGLTFData->pLoadedContentRep->Skins;
+
+                AnimationComponentMgr::Get()->m_skinningData.insert({modelIndex, {}});
+                AnimationComponentMgr::Get()->m_skinningData[modelIndex].m_SkinningMatrices.resize(skins.size());
+                AnimationComponentMgr::Get()->m_skinningData[modelIndex].m_pSkins = &skins;
+
+                for (size_t i = 0; i < skins.size(); ++i)
+                {
+                    AnimationComponentMgr::Get()->m_skinningData[modelIndex].m_SkinningMatrices[i].resize(skins[i]->m_jointsNodeIdx.size());
+                }
+            }
+
+            ++modelIndex;
         }
 
-        GetContentManager()->StartManagingContent(pGLTFData->GLTFFilePath, pGLTFData->pLoadedContentRep);
+        // Process Bottom Level Acceleration Structures
+        if (GetFramework()->GetConfig()->BuildRayTracingAccelerationStructure)
+            BuildBLAS(pGLTFData->pLoadedContentRep->Meshes);
+
+        GetContentManager()->StartManagingContent(pGLTFData->GLTFFileName, pGLTFData->pLoadedContentRep);
+
+        std::chrono::nanoseconds endLoad = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch());
+        std::chrono::nanoseconds loadDuration = endLoad - pGLTFData->loadStartTime;
+        float loadTime = loadDuration.count() * 0.000000001f;
+        Log::Write(LOGLEVEL_TRACE, L"GLTF file %ls took %f seconds to load.", pGLTFData->GLTFFileName.c_str(), loadTime);
 
         // Clear out the gltfContent rep memory
         delete pGLTFData;

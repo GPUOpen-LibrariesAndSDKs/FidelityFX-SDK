@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 /// @defgroup ffxBlur FidelityFX Blur
@@ -41,30 +41,30 @@
 
 /// FidelityFX Blur major version.
 ///
-/// @ffxBlur
+/// @ingroup ffxBlur
 #define FFX_BLUR_VERSION_MAJOR (1)
 
 /// FidelityFX Blur minor version.
 ///
-/// @ffxBlur
-#define FFX_BLUR_VERSION_MINOR (0)
+/// @ingroup ffxBlur
+#define FFX_BLUR_VERSION_MINOR (1)
 
 /// FidelityFX Blur patch version.
 ///
-/// @ffxBlur
+/// @ingroup ffxBlur
 #define FFX_BLUR_VERSION_PATCH (0)
 
 /// FidelityFX Blur context count
 /// 
 /// Defines the number of internal effect contexts required by Blur
 ///
-/// @ffxBlur
+/// @ingroup ffxBlur
 #define FFX_BLUR_CONTEXT_COUNT   1
 
 /// The size of the context specified in uint32_t units.
 ///
-/// @ffxBlur
-#define FFX_BLUR_CONTEXT_SIZE (16536)
+/// @ingroup ffxBlur
+#define FFX_BLUR_CONTEXT_SIZE (1024)
 
 #if defined(__cplusplus)
 extern "C" {
@@ -72,7 +72,7 @@ extern "C" {
 
 /// Enum to specify which blur pass (currently only one).
 ///
-/// @ffxBlur
+/// @ingroup ffxBlur
 typedef enum FfxBlurPass
 {
     FFX_BLUR_PASS_BLUR = 0,  ///< A pass which which blurs the input
@@ -81,7 +81,7 @@ typedef enum FfxBlurPass
 
 /// Use this macro for FfxBlurContextDescription::kernelSizes to enable all kernel sizes.
 ///
-/// @ffxBlur
+/// @ingroup ffxBlur
 #define FFX_BLUR_KERNEL_SIZE_ALL ((1 << FFX_BLUR_KERNEL_SIZE_COUNT) - 1)
 
 typedef enum FfxBlurKernelPermutation
@@ -94,14 +94,14 @@ typedef enum FfxBlurKernelPermutation
 
 /// Use this macro for FfxBlurContextDescription::sigmaPermutations to enable all sigma permutations.
 ///
-/// @ffxBlur
+/// @ingroup ffxBlur
 #define FFX_BLUR_KERNEL_PERMUTATIONS_ALL ((1 << FFX_BLUR_KERNEL_PERMUTATION_COUNT) - 1)
 
 /// Enum to specify the size of the blur kernel. Use logical OR to enable multiple kernels
 /// when setting the FfxBlurContextDescription::kernelSizes parameter prior to calling
 /// ffxBlurContextCreate.
 ///
-/// @ffxBlur
+/// @ingroup ffxBlur
 typedef enum FfxBlurKernelSize
 {
     FFX_BLUR_KERNEL_SIZE_3x3   = (1 << 0),
@@ -121,7 +121,7 @@ typedef enum FfxBlurKernelSize
 /// Use this when setting the FfxBlurContextDescription::floatPrecision parameter prior to calling
 /// ffxBlurContextCreate.
 ///
-/// @ffxBlur
+/// @ingroup ffxBlur
 typedef enum FfxBlurFloatPrecision
 {
     FFX_BLUR_FLOAT_PRECISION_32BIT = 0,
@@ -134,18 +134,18 @@ typedef uint32_t FfxBlurKernelSizes;
 
 /// FfxBlurContextDescription struct is used to create/initialize an FfxBlurContext.
 ///
-/// @ffxBlur
+/// @ingroup ffxBlur
 typedef struct FfxBlurContextDescription
 {
-    FfxBlurKernelPermutations kernelPermutations; ///< A bit mask of FfxBlurKernelPermutation values to indicate which kernels to enable for use.
-    FfxBlurKernelSizes        kernelSizes;        ///< A bit mask of FfxBlurKernelSize values to indicated which kernel sizes to enable for use.
-    FfxBlurFloatPrecision     floatPrecision;     ///< A flag indicating the desired floating point precision for use in ffxBlurContextDispatch
-    FfxInterface              backendInterface;   ///< A set of pointers to the backend implementation for FidelityFX.
+    FfxBlurKernelPermutations   kernelPermutations;     ///< A bit mask of FfxBlurKernelPermutation values to indicate which kernels to enable for use.
+    FfxBlurKernelSizes          kernelSizes;            ///< A bit mask of FfxBlurKernelSize values to indicated which kernel sizes to enable for use.
+    FfxBlurFloatPrecision       floatPrecision;         ///< A flag indicating the desired floating point precision for use in ffxBlurContextDispatch
+    FfxInterface                backendInterface;       ///< A set of pointers to the backend implementation for FidelityFX.
 } FfxBlurContextDescription;
 
 /// FfxBlurContext must be created via ffxBlurContextCreate to use the FFX Blur effect.
 ///
-/// @ffxBlur
+/// @ingroup ffxBlur
 typedef struct FfxBlurContext
 {
     uint32_t data[FFX_BLUR_CONTEXT_SIZE];  ///< An opaque set of <c>uint32_t</c> which contain the data for the context.
@@ -156,19 +156,19 @@ typedef struct FfxBlurContext
 /// @param [out] pContext             The FfxBlurContext to create and initialize.
 /// @param [in] pContextDescription   The initialization configuration parameters.
 ///
-/// @ffxBlur
+/// @ingroup ffxBlur
 FFX_API FfxErrorCode ffxBlurContextCreate(FfxBlurContext* pContext, const FfxBlurContextDescription* pContextDescription);
 
 /// Destroy and free resources associated with the FfxBlurContext.
 ///
 /// @param [inout] pContext           The FfxBlurContext to destroy.
 ///
-/// @ffxBlur
+/// @ingroup ffxBlur
 FFX_API FfxErrorCode ffxBlurContextDestroy(FfxBlurContext* pContext);
 
 /// FfxBlurDispatchDescription struct defines configuration of a blur dispatch (see ffxBlurContextDispatch).
 ///
-/// @ffxBlur
+/// @ingroup ffxBlur
 typedef struct FfxBlurDispatchDescription
 {
     FfxCommandList           commandList;        ///< The <c><i>FfxCommandList</i></c> to record rendering commands into.
@@ -184,8 +184,16 @@ typedef struct FfxBlurDispatchDescription
 /// @param [in] pContext             The FfxBlurContext to use for the dispatch.
 /// @param [in] pDispatchDescription The dispatch configuration parameters (see FfxBlurDispatchDescription).
 ///
-/// @ffxBlur
+/// @ingroup ffxBlur
 FFX_API FfxErrorCode ffxBlurContextDispatch(FfxBlurContext* pContext, const FfxBlurDispatchDescription* pDispatchDescription);
+
+/// Queries the effect version number.
+///
+/// @returns
+/// The SDK version the effect was built with.
+///
+/// @ingroup ffxBlur
+FFX_API FfxVersionNumber ffxBlurGetEffectVersion();
 
 #if defined(__cplusplus)
 }

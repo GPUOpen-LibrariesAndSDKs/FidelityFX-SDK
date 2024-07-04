@@ -1,28 +1,28 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #include "spdrendermodule.h"
-#include "validation_remap.h"
 
+#include "core/backend_interface.h"
 #include "core/contentmanager.h"
 #include "core/framework.h"
 #include "core/loaders/textureloader.h"
@@ -49,9 +49,7 @@ void SPDRenderModule::Init(const json& initData)
     m_pColorRasterView = GetRasterViewAllocator()->RequestRasterView(m_pColorTarget, ViewDimension::Texture2D);
 
     // Register UI for SPD
-    UISection uiSection;
-    uiSection.SectionName = "Downsampler";
-    uiSection.SectionType = UISectionType::Sample;
+    UISection* uiSection = GetUIManager()->RegisterUIElements("Downsampler", UISectionType::Sample);
 
     const char* downsamplers[] = { "Multipass PS", "Multipass CS", "SPD CS" };
     const char* loadOptions[] = { "Load", "Linear Sampler" };
@@ -59,68 +57,56 @@ void SPDRenderModule::Init(const json& initData)
     const char* mathOptions[] = { "Non-Packed", "Packed" };
     const char* sliceOptions[] = { "0", "1", "2", "3", "4", "5" };
 
-    std::vector<std::string> comboOptions;
+    std::vector<const char*> comboOptions;
 
     // Add down sampler combo
     comboOptions.assign(downsamplers, downsamplers + _countof(downsamplers));
-    std::function<void(void*)> downsamplerCallback = [this](void* pParams) {
-        int32_t oldMethod = *static_cast<int32_t*>(pParams);
-        if (oldMethod == m_DownsamplerUsed)
-            return;
-
-        if (oldMethod == static_cast<int32_t>(DownsampleTechnique::SPDDownsample)) {
-            UpdateSPDContext(false);
+    uiSection->RegisterUIElement<UICombo>(
+        "Downsampler options",
+        m_DownsamplerUsed,
+        std::move(comboOptions),
+        [this](int32_t cur, int32_t old) {
+            if (cur != old)
+            {
+                UpdateSPDContext(false);
+                UpdateSPDContext(true);
+            }
         }
+    );
 
-        else if (m_DownsamplerUsed == static_cast<int32_t>(DownsampleTechnique::SPDDownsample)) {
+    // Use the same callback for all option changes, which will always destroy/create the context
+    std::function<void(int32_t, int32_t)> optionChangeCallback = [this](int32_t, int32_t) {
+        if (m_ContextCreated)
+        {
+            // Refresh
+            UpdateSPDContext(false);
             UpdateSPDContext(true);
         }
     };
-    uiSection.AddCombo("Downsampler options", &m_DownsamplerUsed, &comboOptions, downsamplerCallback);
-
-    // Use the same callback for all option changes, which will always destroy/create the context
-    std::function<void(void*)> optionChangeCallback = [this](void* pParams) {
-        if (!m_ContextCreated)
-            return;
-
-        // Refresh
-        UpdateSPDContext(false);
-        UpdateSPDContext(true);
-    };
 
     // Add load/linear combo
-    comboOptions.clear();
     comboOptions.assign(loadOptions, loadOptions + _countof(loadOptions));
-    uiSection.AddCombo("SPD Load / Linear", &m_SPDLoadLinear, &comboOptions, optionChangeCallback);
+    uiSection->RegisterUIElement<UICombo>("SPD Load / Linear", m_SPDLoadLinear, std::move(comboOptions), optionChangeCallback);
 
     // Add wave op combo
-    comboOptions.clear();
     comboOptions.assign(waveOptions, waveOptions + _countof(waveOptions));
-    uiSection.AddCombo("SPD Wave Interop", &m_SPDWaveInterop, &comboOptions, optionChangeCallback);
+    uiSection->RegisterUIElement<UICombo>("SPD Wave Interop", m_SPDWaveInterop, std::move(comboOptions), optionChangeCallback);
 
     // Add math combo
-    comboOptions.clear();
     comboOptions.assign(mathOptions, mathOptions + _countof(mathOptions));
-    uiSection.AddCombo("SPD Math", &m_SPDMath, &comboOptions, optionChangeCallback);
+    uiSection->RegisterUIElement<UICombo>("SPD Math", m_SPDMath, std::move(comboOptions), optionChangeCallback);
 
     // Add a combo for the slice to view (assumes a cubemap, if ever we are viewing a 2d texture, disable UI)
-    comboOptions.clear();
     comboOptions.assign(sliceOptions, sliceOptions + _countof(sliceOptions));
-    uiSection.AddCombo("Slice to View", (int32_t*)&m_ViewSlice, &comboOptions);
+    uiSection->RegisterUIElement<UICombo>("Slice to View", (int32_t&)m_ViewSlice, std::move(comboOptions));
 
-    // Register the SPD section
-    GetUIManager()->RegisterUIElements(uiSection);
+    GetFramework()->ConfigureRuntimeShaderRecompiler(
+        [this](void) { DestroyFfxContext(); }, [this](void) { InitFfxContext(); });
 
     // Initialize common resources that aren't pipeline dependent
     m_LinearSamplerDesc.Filter = FilterFunc::MinMagLinearMipPoint;
     m_LinearSamplerDesc.MaxLOD = std::numeric_limits<float>::max();
     m_LinearSamplerDesc.MaxAnisotropy = 1;
-
-    // Initialize the FFX backend
-    const size_t scratchBufferSize = ffxGetScratchMemorySize(FFX_SPD_CONTEXT_COUNT);
-    void* scratchBuffer = malloc(scratchBufferSize);
-    FfxErrorCode errorCode = ffxGetInterface(&m_InitializationParameters.backendInterface, GetDevice(), scratchBuffer, scratchBufferSize, FFX_SPD_CONTEXT_COUNT);
-    FFX_ASSERT(errorCode == FFX_OK);
 
     // Pipelines will be initialized after the texture is loaded
 
@@ -139,11 +125,7 @@ void SPDRenderModule::Init(const json& initData)
 
 SPDRenderModule::~SPDRenderModule()
 {
-    // Tear down SPD context
-    UpdateSPDContext(false);
-
-    // Destroy the FidelityFX interface memory
-    free(m_InitializationParameters.backendInterface.scratchBuffer);
+    DestroyFfxContext();
     
     // Delete pipeline objects and resources
     for (int32_t i = 0; i < static_cast<int32_t>(DownsampleTechnique::Count); ++i)
@@ -168,6 +150,19 @@ SPDRenderModule::~SPDRenderModule()
 
     // Don't own this memory
     m_pCubeTexture = nullptr;
+}
+
+void SPDRenderModule::DestroyFfxContext()
+{
+    // Tear down SPD context
+    UpdateSPDContext(false);
+
+    // Destroy the FidelityFX interface memory
+    if (m_InitializationParameters.backendInterface.scratchBuffer != nullptr)
+    {
+        free(m_InitializationParameters.backendInterface.scratchBuffer);
+        m_InitializationParameters.backendInterface.scratchBuffer = nullptr;
+    }
 }
 
 void SPDRenderModule::InitTraditionalDSPipeline(bool computeDownsample)
@@ -283,7 +278,7 @@ void SPDRenderModule::InitVerificationPipeline()
 
 void SPDRenderModule::UpdateSPDContext(bool enabled)
 {
-    if (enabled)
+    if (enabled && !m_ContextCreated)
     {
         // Setup all the parameters for this SPD run
         m_InitializationParameters.flags = 0;   // Reset
@@ -296,7 +291,7 @@ void SPDRenderModule::UpdateSPDContext(bool enabled)
         m_ContextCreated = true;
         
     }
-    else
+    else if (!enabled && m_ContextCreated)
     {
         // Flush anything out of the pipes before destroying the context
         GetDevice()->FlushAllCommandQueues();
@@ -334,11 +329,27 @@ void SPDRenderModule::TextureLoadComplete(const std::vector<const Texture*>& tex
     InitTraditionalDSPipeline(true);    // CS version
     InitVerificationPipeline();         // Result verification pipeline set
 
-    // Init SPD
-    UpdateSPDContext(m_DownsamplerUsed == static_cast<int32_t>(DownsampleTechnique::SPDDownsample));
+    InitFfxContext();
 
     // We are now ready for use
     SetModuleReady(true);
+}
+
+void SPDRenderModule::InitFfxContext()
+{
+    // Initialize the FFX backend
+    const size_t scratchBufferSize = SDKWrapper::ffxGetScratchMemorySize(FFX_SPD_CONTEXT_COUNT);
+    void* scratchBuffer = calloc(scratchBufferSize, 1u);
+    FfxErrorCode errorCode = SDKWrapper::ffxGetInterface(&m_InitializationParameters.backendInterface, GetDevice(), scratchBuffer, scratchBufferSize, FFX_SPD_CONTEXT_COUNT);
+    CAULDRON_ASSERT(errorCode == FFX_OK);
+    CauldronAssert(ASSERT_CRITICAL, m_InitializationParameters.backendInterface.fpGetSDKVersion(&m_InitializationParameters.backendInterface) == FFX_SDK_MAKE_VERSION(1, 1, 0),
+        L"FidelityFX SPD 2.1 sample requires linking with a 1.1 version SDK backend");
+    CauldronAssert(ASSERT_CRITICAL, ffxSpdGetEffectVersion() == FFX_SDK_MAKE_VERSION(2, 2, 0),
+                       L"FidelityFX SPD 2.1 sample requires linking with a 2.2 version FidelityFX SPD library");
+
+    m_InitializationParameters.backendInterface.fpRegisterConstantBufferAllocator(&m_InitializationParameters.backendInterface, SDKWrapper::ffxAllocateConstantBuffer);
+    // Init SPD
+    UpdateSPDContext(m_DownsamplerUsed == static_cast<int32_t>(DownsampleTechnique::SPDDownsample));
 }
 
 void SPDRenderModule::Execute(double deltaTime, CommandList* pCmdList)
@@ -516,11 +527,11 @@ void SPDRenderModule::ExecuteSPDDownsample(double deltaTime, cauldron::CommandLi
     GPUScopedProfileCapture sampleMarker(pCmdList, L"SPD");
 
     FfxSpdDispatchDescription dispatchParameters = {};
-    dispatchParameters.commandList = ffxGetCommandList(pCmdList);
-    dispatchParameters.resource    = ffxGetResource(m_pCubeTexture->GetResource(), L"SPD_Downsample_Resource", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ, FFX_RESOURCE_USAGE_ARRAYVIEW);
+    dispatchParameters.commandList = SDKWrapper::ffxGetCommandList(pCmdList);
+    dispatchParameters.resource    = SDKWrapper::ffxGetResource(m_pCubeTexture->GetResource(), L"SPD_Downsample_Resource", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ, FFX_RESOURCE_USAGE_ARRAYVIEW);
 
     FfxErrorCode errorCode = ffxSpdContextDispatch(&m_Context, &dispatchParameters);
-    FFX_ASSERT(errorCode == FFX_OK);
+    CAULDRON_ASSERT(errorCode == FFX_OK);
 
     // FidelityFX contexts modify the set resource view heaps, so set the cauldron one back
     SetAllResourceViewHeaps(pCmdList);

@@ -1,13 +1,14 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
-//
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
+// furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
@@ -20,7 +21,7 @@
 // THE SOFTWARE.
 
 /// @defgroup FfxGPUClassifier FidelityFX Classifier
-/// /// FidelityFX Classifier GPU documentation
+/// FidelityFX Classifier GPU documentation
 ///
 /// @ingroup FfxGPUEffects
 
@@ -200,8 +201,8 @@ void FfxClassifyShadows(FfxUInt32 LocalThreadId, FfxUInt32x3 WorkGroupId)
     {
         // At lest one lane must be active for the tile to be written out, so the infinitly and zero will be emoved by the wave min and max.
         // Otherwise we will get minT to be infinite and maxT to be 0
-        currentTile.minT = max(WaveMin(results.minT), currentTile.minT);
-        currentTile.maxT = min(WaveMax(results.maxT), currentTile.maxT);
+        currentTile.minT = max(ffxWaveMin(results.minT), currentTile.minT);
+        currentTile.maxT = min(ffxWaveMax(results.maxT), currentTile.maxT);
     }
 #endif
 

@@ -29,7 +29,7 @@ In addition to the cases mentioned above, some pixels might be known to be of li
 
 Due to saving computational power by focusing usage of GPU resources where it matters most, VRS can be used to make sure target frame times are achieved (similar to dynamic resolution scaling but with more fine-grained control over where detail needs to be preserved), as well as for power saving on portable devices without noticeably sacrificing image quality.
 
-<h3>VRS Control Options</h3>
+<h3>VRS control options</h3>
 
 VRS support in DirectX12 comes in 2 tiers:
 
@@ -40,7 +40,7 @@ VRS support in DirectX12 comes in 2 tiers:
 
 All three modes can be used simultaneously: Tier 2 defines a combiner tree which determines how the result of each state should be combined with the result of the previous state to compute the final shading rate. The options for each combiner are: passthrough the previous state (i.e. disable the current stage), override (ignore previous stages), min, max and sum.
 
-<h2>Technical Details</h2>
+<h2>Technical details</h2>
 
 VRS works similarly to MSAA, where the pixel shader usually gets executed once per pixel and the resulting value gets written to all fragments of a pixel which are covered by the primitive. VRS executes one pixel shader thread per VRS coarse pixel, which can contain 1, 2 or 4 pixels (or up to 16 if additional shading rates are supported), and then writes the result to all pixels within the coarse pixel region that are covered by the primitive.
 

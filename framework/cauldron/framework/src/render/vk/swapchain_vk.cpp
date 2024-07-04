@@ -1,17 +1,20 @@
-// AMD Cauldron code
+// This file is part of the FidelityFX SDK.
 //
-// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sub-license, and / or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -58,19 +61,27 @@ namespace cauldron
 
         DeviceInternal* pDevice = GetDevice()->GetImpl();
 
-        if (wcsstr(pDevice->GetDeviceName(), L"AMD") != nullptr)
+        bool isAMD = (wcsstr(pDevice->GetDeviceName(), L"AMD") != nullptr);
+
+        details.capabilities2.sType = VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_KHR;
+        details.capabilities2.pNext = nullptr;
+
+        if (isAMD)
         {
-            details.capabilities2.sType = VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_KHR;
+            // checking Local dimming support
             details.capabilities2.pNext = &details.displayNativeHdrSurfaceCapabilitiesAMD;
 
             details.displayNativeHdrSurfaceCapabilitiesAMD.sType = VK_STRUCTURE_TYPE_DISPLAY_NATIVE_HDR_SURFACE_CAPABILITIES_AMD;
             details.displayNativeHdrSurfaceCapabilitiesAMD.pNext = nullptr;
+        }
 
-            // Calling this to check Local dimming support
-            pDevice->GetPhysicalDeviceSurfaceCapabilities2KHR()(PhysicalDevice, &details.physicalDeviceSurfaceInfo2, &details.capabilities2);
+        // Calling this to check surface capabilities, and Local dimming support (AMD only)
+        pDevice->GetPhysicalDeviceSurfaceCapabilities2KHR()(PhysicalDevice, &details.physicalDeviceSurfaceInfo2, &details.capabilities2);
 
-            details.swapchainDisplayNativeHdrCreateInfoAMD.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_DISPLAY_NATIVE_HDR_CREATE_INFO_AMD;
-            details.swapchainDisplayNativeHdrCreateInfoAMD.pNext = nullptr;
+        if (isAMD)
+        {
+            details.swapchainDisplayNativeHdrCreateInfoAMD.sType              = VK_STRUCTURE_TYPE_SWAPCHAIN_DISPLAY_NATIVE_HDR_CREATE_INFO_AMD;
+            details.swapchainDisplayNativeHdrCreateInfoAMD.pNext              = nullptr;
             details.swapchainDisplayNativeHdrCreateInfoAMD.localDimmingEnable = details.displayNativeHdrSurfaceCapabilitiesAMD.localDimmingSupport;
         }
 
@@ -102,7 +113,11 @@ namespace cauldron
         for (const auto& surfaceFormat2 : surfaceFormats2)
         {
             VkSurfaceFormatKHR surfaceFormat = surfaceFormat2.surfaceFormat;
-            if ((surfaceFormat.format == VK_FORMAT_R8G8B8A8_SRGB || surfaceFormat.format == VK_FORMAT_B8G8R8A8_SRGB) && surfaceFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+            if (surfaceFormat.format == VK_FORMAT_R8G8B8A8_UNORM && surfaceFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+            {
+                modes[DisplayMode::DISPLAYMODE_LDR] = surfaceFormat;
+            }
+            else if (surfaceFormat.format == VK_FORMAT_B8G8R8A8_UNORM && surfaceFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
             {
                 modes[DisplayMode::DISPLAYMODE_LDR] = surfaceFormat;
             }
@@ -134,7 +149,7 @@ namespace cauldron
     {
         for (const auto& availableFormat : availableFormats)
         {
-            if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+            if (availableFormat.format == VK_FORMAT_R8G8B8A8_UNORM && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
                 return availableFormat;
         }
 
@@ -144,7 +159,7 @@ namespace cauldron
         return errorFormat;
     }
 
-    VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes, bool vsync, bool tearing)
+    VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes, bool vsync)
     {
         auto search = [&availablePresentModes](VkPresentModeKHR Mode) {
             return std::find(availablePresentModes.begin(), availablePresentModes.end(), Mode) != availablePresentModes.end();
@@ -152,7 +167,7 @@ namespace cauldron
 
         if (vsync)
         {
-            if (tearing && search(VK_PRESENT_MODE_FIFO_RELAXED_KHR)) // adaptive vsync
+            if (search(VK_PRESENT_MODE_FIFO_RELAXED_KHR)) // adaptive vsync
             {
                 return VK_PRESENT_MODE_FIFO_RELAXED_KHR;
             }
@@ -221,16 +236,16 @@ namespace cauldron
         // 32-bit
         case VK_FORMAT_R8G8B8A8_UNORM:
             return ResourceFormat::RGBA8_UNORM;
+        case VK_FORMAT_B8G8R8A8_UNORM:
+            return ResourceFormat::BGRA8_UNORM;
         case VK_FORMAT_R8G8B8A8_SNORM:
             return ResourceFormat::RGBA8_SNORM;
         case VK_FORMAT_R8G8B8A8_SRGB:
             return ResourceFormat::RGBA8_SRGB;
         case VK_FORMAT_B8G8R8A8_SRGB:
             return ResourceFormat::BGRA8_SRGB;
-        case VK_FORMAT_A2R10G10B10_UNORM_PACK32:
-            return ResourceFormat::RGB10A2_UNORM;
         case VK_FORMAT_A2B10G10R10_UNORM_PACK32:
-            return ResourceFormat::BGR10A2_UNORM;
+            return ResourceFormat::RGB10A2_UNORM;
         case VK_FORMAT_R16G16_SFLOAT:
             return ResourceFormat::RG16_FLOAT;
         case VK_FORMAT_R32_SFLOAT:
@@ -299,35 +314,51 @@ namespace cauldron
 
         DeviceInternal* pDevice = GetDevice()->GetImpl();
 
+        // create semaphores to acquire the swapchain images
+        m_ImageAvailableSemaphores.resize(pConfig->BackBufferCount + 1);
+        VkSemaphoreCreateInfo info = {};
+        info.sType             = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+        info.flags             = 0;
+        for (uint8_t i = 0; i < pConfig->BackBufferCount + 1; ++i)
+        {
+            VkResult res = vkCreateSemaphore(pDevice->VKDevice(), &info, nullptr, &m_ImageAvailableSemaphores[i]);
+            CauldronAssert(ASSERT_CRITICAL, res == VK_SUCCESS, L"Unable to create semaphore to acquire swapchain images");
+
+            char buf[48];
+            snprintf(buf, 48 * sizeof(char), "CauldronImageAcquireSemaphore %d", i);
+            pDevice->SetResourceName(VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)(m_ImageAvailableSemaphores[i]), buf);
+        }
+
         // create the swapchain
         CreateSwapChain(pConfig->Width, pConfig->Height);
 
         // create the rendertargets
         CreateSwapChainRenderTargets();
-
-        // create fences and semaphores
-        VkFenceCreateInfo fence_ci = {};
-        fence_ci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        fence_ci.flags = 0;
-        VkResult res = vkCreateFence(pDevice->VKDevice(), &fence_ci, nullptr, &m_ImageAvailableFence);
-        CauldronAssert(ASSERT_CRITICAL, res == VK_SUCCESS, L"Unable to create fence");
     }
 
     SwapChainInternal::~SwapChainInternal()
     {
         DeviceInternal* pDevice = GetDevice()->GetImpl();
 
-        vkDestroyFence(pDevice->VKDevice(), m_ImageAvailableFence, nullptr);
-        vkDestroySwapchainKHR(pDevice->VKDevice(), m_SwapChain, nullptr);
+        for (VkSemaphore semaphore : m_ImageAvailableSemaphores)
+            vkDestroySemaphore(pDevice->VKDevice(), semaphore, nullptr);
+        m_ImageAvailableSemaphores.clear();
+
+        pDevice->DestroySwapchainKHR(m_SwapChain, nullptr);
     }
 
     void SwapChainInternal::CreateSwapChain(uint32_t width, uint32_t height)
     {
         m_Width = width;
         m_Height = height;
+        m_CurrentVSync = m_VSyncEnabled;
 
         DeviceInternal* pDevice = GetDevice()->GetImpl();
         const CauldronConfig* pConfig = GetConfig();
+
+        m_BackBufferFences.resize(pConfig->BackBufferCount);
+        for (uint8_t i = 0; i < pConfig->BackBufferCount; ++i)
+            m_BackBufferFences[i] = 0;
 
         // query the swapchain capabilities to find the correct format and the correct present mode
         SwapChainSupportDetails swapChainSupport = {};
@@ -336,45 +367,36 @@ namespace cauldron
         // Find all HDR modes supported by current display and pick surface format
         EnumerateDisplayModesAndFormats(swapChainSupport.formats2);
 
-        SwapChainCreationParams swapchainCreationParams = {};
-        swapchainCreationParams.swapchainCreateInfo = {};
-        swapchainCreationParams.swapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        swapchainCreationParams.swapchainCreateInfo.pNext = wcsstr(pDevice->GetDeviceName(), L"AMD") != nullptr ? &swapChainSupport.swapchainDisplayNativeHdrCreateInfoAMD : nullptr;
-        swapchainCreationParams.swapchainCreateInfo.surface = pDevice->GetSurface();
-        swapchainCreationParams.swapchainCreateInfo.imageFormat = m_SurfaceFormat.format;
-        swapchainCreationParams.swapchainCreateInfo.minImageCount = pConfig->BackBufferCount;
-        swapchainCreationParams.swapchainCreateInfo.imageColorSpace = m_SurfaceFormat.colorSpace;
-        swapchainCreationParams.swapchainCreateInfo.imageExtent.width = m_Width;
-        swapchainCreationParams.swapchainCreateInfo.imageExtent.height = m_Height;
-        swapchainCreationParams.swapchainCreateInfo.preTransform = ChooseSurfaceTransform(swapChainSupport.capabilities2.surfaceCapabilities);
-        swapchainCreationParams.swapchainCreateInfo.compositeAlpha = ChooseCompositeAlpha(swapChainSupport.capabilities2.surfaceCapabilities);
-        swapchainCreationParams.swapchainCreateInfo.imageArrayLayers = 1;
-        swapchainCreationParams.swapchainCreateInfo.presentMode = ChooseSwapPresentMode(swapChainSupport.presentModes, m_VSyncEnabled, m_TearingSupported);
-        swapchainCreationParams.swapchainCreateInfo.oldSwapchain = VK_NULL_HANDLE;
-        swapchainCreationParams.swapchainCreateInfo.clipped = true;
-        swapchainCreationParams.swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-                                                                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                                                                 VK_IMAGE_USAGE_SAMPLED_BIT;  // render to texture, copy and shader access
-        uint32_t queueFamilyIndices[2] = { pDevice->GetQueueFamilies().GraphicsQueueFamilyIndex, pDevice->GetQueueFamilies().PresentQueueFamilyIndex };
-        if (queueFamilyIndices[0] != queueFamilyIndices[1])
-        {
-            // If the graphics and present queues are from different queue families,
-            // we either have to explicitly transfer ownership of images between the
-            // queues, or we have to create the swapchain with imageSharingMode
-            // as VK_SHARING_MODE_CONCURRENT
-            swapchainCreationParams.swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-            swapchainCreationParams.swapchainCreateInfo.queueFamilyIndexCount = 2;
-            swapchainCreationParams.swapchainCreateInfo.pQueueFamilyIndices = queueFamilyIndices;
-        }
-        else
-        {
-            swapchainCreationParams.swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-            swapchainCreationParams.swapchainCreateInfo.queueFamilyIndexCount = 0;
-            swapchainCreationParams.swapchainCreateInfo.pQueueFamilyIndices = nullptr;
-        }
-
+        SwapChainCreationParams swapchainCreationParams                   = {};
+        swapchainCreationParams.swapchainCreateInfo                       = {};
+        swapchainCreationParams.swapchainCreateInfo.sType                 = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+        swapchainCreationParams.swapchainCreateInfo.pNext                 = wcsstr(pDevice->GetDeviceName(), L"AMD") != nullptr ? &swapChainSupport.swapchainDisplayNativeHdrCreateInfoAMD : nullptr;
+        swapchainCreationParams.swapchainCreateInfo.flags                 = 0;
+        swapchainCreationParams.swapchainCreateInfo.surface               = pDevice->GetSurface();
+        swapchainCreationParams.swapchainCreateInfo.imageFormat           = m_SurfaceFormat.format;
+        swapchainCreationParams.swapchainCreateInfo.minImageCount         = pConfig->BackBufferCount;
+        swapchainCreationParams.swapchainCreateInfo.imageColorSpace       = m_SurfaceFormat.colorSpace;
+        swapchainCreationParams.swapchainCreateInfo.imageExtent.width     = m_Width;
+        swapchainCreationParams.swapchainCreateInfo.imageExtent.height    = m_Height;
+        swapchainCreationParams.swapchainCreateInfo.imageArrayLayers      = 1;
+        swapchainCreationParams.swapchainCreateInfo.imageUsage            = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                                                                            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                                                                            VK_IMAGE_USAGE_SAMPLED_BIT;  // render to texture, copy and shader access
+        swapchainCreationParams.swapchainCreateInfo.imageSharingMode      = VK_SHARING_MODE_EXCLUSIVE;
+        swapchainCreationParams.swapchainCreateInfo.queueFamilyIndexCount = 0;
+        swapchainCreationParams.swapchainCreateInfo.pQueueFamilyIndices   = nullptr;
+        swapchainCreationParams.swapchainCreateInfo.preTransform          = ChooseSurfaceTransform(swapChainSupport.capabilities2.surfaceCapabilities);
+        swapchainCreationParams.swapchainCreateInfo.compositeAlpha        = ChooseCompositeAlpha(swapChainSupport.capabilities2.surfaceCapabilities);
+        swapchainCreationParams.swapchainCreateInfo.presentMode           = ChooseSwapPresentMode(swapChainSupport.presentModes, m_VSyncEnabled);
+        swapchainCreationParams.swapchainCreateInfo.clipped               = true;
+        swapchainCreationParams.swapchainCreateInfo.oldSwapchain          = VK_NULL_HANDLE;
+        
         SwapChain* pSwapchain = this;
-        pDevice->CreateSwapChain(pSwapchain, swapchainCreationParams, pDevice->GetQueueFamilies().presentQueueType);
+        pDevice->CreateSwapChain(pSwapchain, swapchainCreationParams, CommandQueue::Graphics);
+
+        // TODO: fix that. Keep all structures in pNext
+        m_CreateInfo = swapchainCreationParams.swapchainCreateInfo;
+        m_CreateInfo.pNext = nullptr;
 
         // Can only do this for Freesync Premium Pro HDR display on AMD hardware
         if (wcsstr(pDevice->GetDeviceName(), L"AMD") != nullptr)
@@ -395,7 +417,7 @@ namespace cauldron
         // delete the swapchain
         if (m_SwapChain != VK_NULL_HANDLE)
         {
-            vkDestroySwapchainKHR(GetDevice()->GetImpl()->VKDevice(), m_SwapChain, nullptr);
+            GetDevice()->GetImpl()->DestroySwapchainKHR(m_SwapChain, nullptr);
             m_SwapChain = VK_NULL_HANDLE;
         }
 
@@ -412,13 +434,13 @@ namespace cauldron
 
         // we are querying the swapchain count so the next call doesn't generate a validation warning
         uint32_t backBufferCount;
-        VkResult res = vkGetSwapchainImagesKHR(pDevice->VKDevice(), m_SwapChain, &backBufferCount, NULL);
+        VkResult res = pDevice->GetSwapchainImagesKHR(m_SwapChain, &backBufferCount, NULL);
         CauldronAssert(ASSERT_CRITICAL, res == VK_SUCCESS, L"Unable to get the swapchain images");
 
         CauldronAssert(ASSERT_CRITICAL, backBufferCount == pConfig->BackBufferCount, L"Requested swapchain images count is different that the available ones");
 
         std::vector<VkImage> images(backBufferCount);
-        res = vkGetSwapchainImagesKHR(pDevice->VKDevice(), m_SwapChain, &backBufferCount, images.data());
+        res = pDevice->GetSwapchainImagesKHR(m_SwapChain, &backBufferCount, images.data());
         CauldronAssert(ASSERT_CRITICAL, res == VK_SUCCESS, L"Unable to get the swapchain images");
 
         std::vector<GPUResource*> gpuResourceArray;
@@ -475,10 +497,19 @@ namespace cauldron
     {
         DeviceInternal* pDevice = GetDevice()->GetImpl();
 
+        if (m_VSyncEnabled != m_CurrentVSync)
+        {
+            GetDevice()->FlushAllCommandQueues();
+
+            // call OnResize to recreate the swapchain
+            OnResize(m_Width, m_Height);
+        }
+
         // get the next image in the swapchain
         uint32_t imageIndex;
-        // this method can return immediately and it doesn't mean that the image is yet available. We need to wait on the fence.
-        VkResult res = vkAcquireNextImageKHR(pDevice->VKDevice(), m_SwapChain, UINT64_MAX, VK_NULL_HANDLE, m_ImageAvailableFence, &imageIndex);
+        m_ImageAvailableSemaphoreIndex      = (m_ImageAvailableSemaphoreIndex + 1) % m_ImageAvailableSemaphores.size();
+        VkSemaphore imageAvailableSemaphore = m_ImageAvailableSemaphores[m_ImageAvailableSemaphoreIndex];
+        VkResult    res                     = pDevice->AcquireNextImageKHR(m_SwapChain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 
         if (res != VK_SUCCESS)
         {
@@ -499,11 +530,9 @@ namespace cauldron
         m_CurrentBackBuffer = static_cast<uint8_t>(imageIndex);
 
         // wait for the last submission to the queue fo finish
-        pDevice->WaitOnQueue(m_BackBufferFences[m_CurrentBackBuffer], pDevice->GetQueueFamilies().presentQueueType);
-
-        // wait for the image to be completely available
-        res = vkWaitForFences(pDevice->VKDevice(), 1, &m_ImageAvailableFence, VK_TRUE, UINT64_MAX);
-        vkResetFences(pDevice->VKDevice(), 1, &m_ImageAvailableFence);
+        pDevice->WaitOnQueue(m_BackBufferFences[m_CurrentBackBuffer], CommandQueue::Graphics);
+        
+        // the command lists will wait for the swapchain image to be available
 
         m_pRenderTarget->SetCurrentBackBufferIndex(imageIndex);
 
@@ -722,6 +751,99 @@ namespace cauldron
 
         DeviceInternal* pDevice = GetDevice()->GetImpl();
         pDevice->GetSetHdrMetadata()(pDevice->VKDevice(), 1, &m_SwapChain, &hdrMetadata);
+    }
+
+    void SwapChainInternal::GetLastPresentCount(UINT* pLastPresentCount)
+    {
+        *pLastPresentCount = static_cast<UINT>(GetDevice()->GetImpl()->GetLastPresentCountFFX(m_SwapChain));
+    }
+
+    #include <dwmapi.h>
+    #pragma comment(lib, "Dwmapi.lib")
+
+    void SwapChainInternal::GetRefreshRate(double* outRefreshRate)
+    {
+        double dwsRate  = 1000.0;
+        *outRefreshRate = 1000.0;
+
+        bool bIsPotentialDirectFlip = false;
+        bool isFullscreen = (GetFramework()->GetImpl()->GetPresentationMode() == PRESENTATIONMODE_BORDERLESS_FULLSCREEN);
+
+        if (!isFullscreen)
+        {
+            DWM_TIMING_INFO compositionTimingInfo{};
+            compositionTimingInfo.cbSize = sizeof(DWM_TIMING_INFO);
+            double  monitorRefreshRate   = 0.0f;
+            HRESULT hr                   = DwmGetCompositionTimingInfo(nullptr, &compositionTimingInfo);
+            if (SUCCEEDED(hr))
+            {
+                dwsRate         = double(compositionTimingInfo.rateRefresh.uiNumerator) / compositionTimingInfo.rateRefresh.uiDenominator;
+                *outRefreshRate = dwsRate;
+            }
+        }
+
+        // if FS this should be the monitor used for FS, in windowed the window containing the main portion of the output
+        {
+            HMONITOR monitor = MonitorFromWindow(GetFramework()->GetImpl()->GetHWND(), MONITOR_DEFAULTTONEAREST);
+
+            MONITORINFOEXW info{};
+            info.cbSize = sizeof(info);
+            if (GetMonitorInfoW(monitor, &info) != 0)
+            {
+                bIsPotentialDirectFlip = false;
+                //isDirectFlip(swapChain, info.rcMonitor);  // TODO: check if the window is fully covering the monitor
+
+                UINT32 numPathArrayElements, numModeInfoArrayElements;
+                if (GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, &numPathArrayElements, &numModeInfoArrayElements) == ERROR_SUCCESS)
+                {
+                    DISPLAYCONFIG_PATH_INFO pathArray[8];
+                    DISPLAYCONFIG_MODE_INFO modeInfoArray[32];
+
+                    CauldronAssert(ASSERT_CRITICAL, _countof(pathArray) >= numPathArrayElements, L"Too many elements");
+                    CauldronAssert(ASSERT_CRITICAL, _countof(modeInfoArray) >= numModeInfoArrayElements, L"Too many elements");
+
+                    if (QueryDisplayConfig(QDC_ONLY_ACTIVE_PATHS, &numPathArrayElements, pathArray, &numModeInfoArrayElements, modeInfoArray, nullptr) ==
+                        ERROR_SUCCESS)
+                    {
+                        bool rateFound = false;
+                        // iterate through all the paths until find the exact source to match
+                        for (size_t i = 0; i < numPathArrayElements && !rateFound; i++)
+                        {
+                            const DISPLAYCONFIG_PATH_INFO&   path = pathArray[i];
+                            DISPLAYCONFIG_SOURCE_DEVICE_NAME sourceName;
+                            sourceName.header = {DISPLAYCONFIG_DEVICE_INFO_GET_SOURCE_NAME, sizeof(sourceName), path.sourceInfo.adapterId, path.sourceInfo.id};
+
+                            if (DisplayConfigGetDeviceInfo(&sourceName.header) == ERROR_SUCCESS)
+                            {
+                                if (wcscmp(info.szDevice, sourceName.viewGdiDeviceName) == 0)
+                                {
+                                    // compute scanout rate using horizontal rate, as its fixed even in VRR
+                                    auto& mode          = modeInfoArray[path.targetInfo.desktopModeInfoIdx];
+                                    auto& signalInfo    = mode.targetMode.targetVideoSignalInfo;
+                                    auto  hSyncFreq     = signalInfo.hSyncFreq;
+                                    auto  scanlineCount = signalInfo.totalSize.cy;
+
+                                    if (hSyncFreq.Denominator > 0 && scanlineCount > 0)
+                                    {
+                                        double refrate = (hSyncFreq.Numerator / (double)hSyncFreq.Denominator) / scanlineCount;
+
+                                        *outRefreshRate = refrate;
+
+                                        // we found a valid rate?
+                                        rateFound = (refrate > 0.0);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!bIsPotentialDirectFlip)
+            {
+                *outRefreshRate = std::min(*outRefreshRate, dwsRate);
+            }
+        }
     }
 
 } // namespace cauldron

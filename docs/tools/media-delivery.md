@@ -18,42 +18,15 @@ The following arguments and options will allow you to use the system outside of 
 
 **Options**
 
-**-help**
-
-  Show the complete usage of the tool.
-
-**-clear-cache**
-
-  Delete all cached media bundles.
-
-**-debug**
-
-  Enabled debug mode (only available in internal builds).
-
-**-download-only**
-
-  Download a media bundle without extracting it.
-
-**-force**
-
-  Skip confirmation when the media directory will be overwritten and always extract the bundle.
-
-**-host**
-
-  The hostname to connect to (only available in internal builds, defaults to `ffx-sdk-assets.amdgameeng.com`).
-
-**-root-dir**
-
-  Set the root directory of the FidelityFX SDK (defaults to the current working directory).
-
-**-target-sha256**
-
-  The SHA256 hash of the media bundle you want to download.
-
-**-latest**
-
-  Downloads the most recent stable media bundle.
-
-**-unstable**
-
-  Downloads the most recent unstable media bundle.
+| Option             | Description                                                                                                  |
+|--------------------|--------------------------------------------------------------------------------------------------------------|
+| **-help**          | Show the complete usage of the tool.                                                                         |
+| **-clear-cache**   | Delete all cached media bundles.                                                                             |
+| **-debug**         | Enabled debug mode (only available in internal builds).                                                      |
+| **-download-only** | Download a media bundle without extracting it.                                                               |
+| **-force**         | Skip confirmation when the media directory will be overwritten and always extract the bundle.                |
+| **-host**          | The hostname to connect to (only available in internal builds, defaults to `ffx-sdk-assets.amdgameeng.com`). |
+| **-root-dir**      | Set the root directory of the FidelityFX SDK (defaults to the current working directory).                    |
+| **-target-sha256** | The SHA256 hash of the media bundle you want to download.                                                    |
+| **-latest**        | Downloads the most recent stable media bundle.                                                               |
+| **-unstable**      | Downloads the most recent unstable media bundle.                                                             |

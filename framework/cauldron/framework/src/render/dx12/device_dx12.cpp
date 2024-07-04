@@ -1,17 +1,20 @@
-// AMD Cauldron code
+// This file is part of the FidelityFX SDK.
 //
-// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sub-license, and / or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -33,10 +36,8 @@
 #pragma comment(lib, "dxguid.lib")
 #include <DXGIDebug.h>
 
-using namespace Microsoft::WRL;
-
 // D3D12SDKVersion needs to line up with the version number on Microsoft's DirectX12 Agility SDK Download page
-extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 608; }
+extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 613; }
 extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\D3D12\\"; }
 
 namespace cauldron
@@ -44,7 +45,7 @@ namespace cauldron
     // To track memory leaks in COM
     void ReportLiveObjects()
     {
-        ComPtr<IDXGIDebug1> pDxgiDebug;
+        MSComPtr<IDXGIDebug1> pDxgiDebug;
         if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&pDxgiDebug))))
             pDxgiDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_DETAIL | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
     }
@@ -62,6 +63,7 @@ namespace cauldron
         case D3D_SHADER_MODEL_6_5: return ShaderModel::SM6_5;
         case D3D_SHADER_MODEL_6_6: return ShaderModel::SM6_6;
         case D3D_SHADER_MODEL_6_7: return ShaderModel::SM6_7;
+        case D3D_SHADER_MODEL_6_8: return ShaderModel::SM6_8;
         default:
             CauldronError(L"device_dx12::DxToCauldronShaderModel: Unsupported ShaderModel detected. Please add it.");
             return ShaderModel::SM5_1;
@@ -101,7 +103,7 @@ namespace cauldron
         // is 0 and full screen is used
         if (validationEnabled)
         {
-            ComPtr<ID3D12Debug1> pDebugController1;
+            MSComPtr<ID3D12Debug1> pDebugController1;
             CauldronThrowOnFail(D3D12GetDebugInterface(IID_PPV_ARGS(&pDebugController1)));
 
             pDebugController1->EnableDebugLayer();    // CPU Only (but also needed for GPU)
@@ -113,8 +115,8 @@ namespace cauldron
         if (validationEnabled)
             factoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
 
-        ComPtr<IDXGIFactory> pFactory;
-        ComPtr<IDXGIFactory6> pFactory6;
+        MSComPtr<IDXGIFactory> pFactory;
+        MSComPtr<IDXGIFactory6> pFactory6;
         CauldronThrowOnFail(CreateDXGIFactory2(factoryFlags, IID_PPV_ARGS(&pFactory)));
 
         // Try to get Factory6 in order to use EnumAdapterByGpuPreference method. If it fails, fall back to regular EnumAdapters.
@@ -173,6 +175,13 @@ namespace cauldron
         HRESULT featureSupportInitResult = features.Init(m_pDevice);
         CauldronAssert(ASSERT_ERROR, !FAILED(featureSupportInitResult), L"Could not init feature support check.");
 
+        // Committed is always present for D3D12
+        m_SupportedFeatures |= DeviceFeature::DedicatedAllocs;
+        // Shader storage buffer array non uniform indexing is always available for D3D12
+        m_SupportedFeatures |= DeviceFeature::ShaderStorageBufferArrayNonUniformIndexing;
+        // DeviceFeature_CoherentMemoryAMD and DeviceFeature_BufferMarkerAMD are only present in Vulkan
+        // Same currently with DeviceFeature_ExtendedSynch but can be repurposed for later extensions
+
         if (!FAILED(featureSupportInitResult))
         {
             // FP16 support
@@ -224,6 +233,8 @@ namespace cauldron
         initQueue(CommandQueue::Graphics, L"CauldronGraphicsQueue");
         initQueue(CommandQueue::Compute,  L"CauldronComputeQueue");
         initQueue(CommandQueue::Copy,     L"CauldronCopyQueue");
+
+   
     }
 
     DeviceInternal::~DeviceInternal()
@@ -234,7 +245,7 @@ namespace cauldron
         // Clear queue allocators
         for (uint32_t i = 0; i < static_cast<int32_t>(CommandQueue::Count); ++i)
         {
-            Microsoft::WRL::ComPtr<ID3D12CommandAllocator> pCmdAllocator;
+            MSComPtr<ID3D12CommandAllocator> pCmdAllocator;
             while (m_QueueSyncPrims[i].m_AvailableQueueAllocators.PopFront(pCmdAllocator)) {}
         }
 
@@ -284,7 +295,7 @@ namespace cauldron
         pSwapChain->GetImpl()->m_CreationQueue = queueType;
 
         // Create base swap chain
-        ComPtr<IDXGISwapChain1> pSwapChain1;
+        MSComPtr<IDXGISwapChain1> pSwapChain1;
         CauldronThrowOnFail(params.pFactory->CreateSwapChainForHwnd(m_QueueSyncPrims[static_cast<uint32_t>(queueType)].m_pQueue.Get(),
                             params.WndHandle,
                             &params.DX12Desc, nullptr, nullptr, &pSwapChain1));
@@ -298,11 +309,15 @@ namespace cauldron
 
     uint64_t DeviceInternal::PresentSwapChain(SwapChain* pSwapChain)
     {
+        HRESULT hrCode = S_OK;
         if (pSwapChain->GetImpl()->m_VSyncEnabled)
-            CauldronThrowOnFail(pSwapChain->GetImpl()->m_pSwapChain->Present(1, 0));
-
+            hrCode = pSwapChain->GetImpl()->m_pSwapChain->Present(1, 0);
         else
-            CauldronThrowOnFail(pSwapChain->GetImpl()->m_pSwapChain->Present(0, pSwapChain->GetImpl()->m_TearingSupported ? DXGI_PRESENT_ALLOW_TEARING : 0));
+            hrCode = pSwapChain->GetImpl()->m_pSwapChain->Present(0, pSwapChain->GetImpl()->m_TearingSupported ? DXGI_PRESENT_ALLOW_TEARING : 0);
+
+        if ((hrCode == DXGI_ERROR_DEVICE_REMOVED || hrCode == DXGI_ERROR_DEVICE_RESET || hrCode == DXGI_ERROR_DEVICE_HUNG) && m_DeviceRemovedCallback)
+            m_DeviceRemovedCallback(m_DeviceRemovedCustomData);
+        CauldronThrowOnFail(hrCode);
 
         uint32_t queueID = static_cast<uint32_t>(pSwapChain->GetImpl()->m_CreationQueue);
         uint64_t signalValue;
@@ -314,6 +329,29 @@ namespace cauldron
 
         return signalValue;
     };
+
+    uint64_t DeviceInternal::SignalQueue(CommandQueue queueType)
+    {
+        int32_t  queueID = static_cast<int32_t>(queueType);
+        uint64_t signalValue;
+        {
+            std::unique_lock<std::mutex> critSection(m_QueueSyncPrims[queueID].m_QueueAccessMutex);
+            signalValue = ++m_QueueSyncPrims[queueID].m_QueueSignalValue;
+            m_QueueSyncPrims[queueID].m_pQueue->Signal(m_QueueSyncPrims[queueID].m_pQueueFence.Get(), signalValue);
+        }
+        return signalValue;
+    }
+
+    uint64_t DeviceInternal::QueryLastCompletedValue(CommandQueue queueType)
+    {
+        int32_t  queueID = static_cast<int32_t>(queueType);
+        uint64_t lastCompletedValue = 0;
+        {
+            std::unique_lock<std::mutex> critSection(m_QueueSyncPrims[queueID].m_QueueAccessMutex);
+            lastCompletedValue = m_QueueSyncPrims[queueID].m_pQueueFence->GetCompletedValue();
+        }
+        return lastCompletedValue;
+    }
 
     void DeviceInternal::WaitOnQueue(uint64_t waitValue, CommandQueue queueType) const
     {
@@ -384,7 +422,7 @@ namespace cauldron
             // If we are running with validation enabled, also enable break on validation errors
             if (validationEnabled)
             {
-                ComPtr<ID3D12InfoQueue> pInfoQueue;
+                MSComPtr<ID3D12InfoQueue> pInfoQueue;
                 if (m_pDevice->QueryInterface(IID_PPV_ARGS(&pInfoQueue)) == S_OK)
                 {
                     pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
@@ -401,10 +439,10 @@ namespace cauldron
         m_pDevice->SetName(L"CauldronDevice");  // Give it a useful name
     }
 
-    ComPtr<ID3D12CommandAllocator> DeviceInternal::GetAllocator(CommandQueue queueType, QueueSyncPrimitive& queueSyncPrim, const wchar_t* allocatorName)
+    MSComPtr<ID3D12CommandAllocator> DeviceInternal::GetAllocator(CommandQueue queueType, QueueSyncPrimitive& queueSyncPrim, const wchar_t* allocatorName)
     {
         // Start by getting an allocator to create a temporary command list with (thread-safe)
-        ComPtr<ID3D12CommandAllocator> pCmdAllocator;
+        MSComPtr<ID3D12CommandAllocator> pCmdAllocator;
         if (queueSyncPrim.m_AvailableQueueAllocators.PopFront(pCmdAllocator))
         {
             pCmdAllocator->Reset();  // Reset allocator before re-using it
@@ -520,8 +558,8 @@ namespace cauldron
         D3D12_COMMAND_LIST_TYPE queueListType = QueueTypeToCommandListType(queueType);
 
         // Create a new command list for this frame that will be backed by the appropriate allocator
-        ComPtr<ID3D12GraphicsCommandList2> pCmdList;
-        ComPtr<ID3D12CommandAllocator>     pCmdAllocator = GetAllocator(queueType, queueSyncPrim, allocatorName);
+        MSComPtr<ID3D12GraphicsCommandList2> pCmdList;
+        MSComPtr<ID3D12CommandAllocator>     pCmdAllocator = GetAllocator(queueType, queueSyncPrim, allocatorName);
 
         m_pDevice->CreateCommandList(0, queueListType, pCmdAllocator.Get(), nullptr, IID_PPV_ARGS(&pCmdList));
         CauldronAssert(ASSERT_CRITICAL, pCmdList, L"Could not create D3D command list %ls.", name);
@@ -583,7 +621,7 @@ namespace cauldron
         delete pImmediateCmdList;
     }
 
-    uint64_t DeviceInternal::ExecuteCommandLists(std::vector<CommandList*>& cmdLists, CommandQueue queueType, bool isLastSubmissionOfFrame)
+    uint64_t DeviceInternal::ExecuteCommandLists(std::vector<CommandList*>& cmdLists, CommandQueue queueType, bool isFirstSubmissionOfFrame, bool isLastSubmissionOfFrame)
     {
         std::vector<ID3D12CommandList*> d3dCommandList;
         std::vector<CommandList*>::iterator it = cmdLists.begin();

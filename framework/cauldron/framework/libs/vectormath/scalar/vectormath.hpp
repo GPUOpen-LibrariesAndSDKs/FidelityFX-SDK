@@ -487,6 +487,14 @@ public:
     //
     inline const Vector4 operator - () const;
 
+    // Perform equality comparison.
+    //
+    inline bool operator == (const Vector4 & other) const;
+
+    // Perform inequality comparison.
+    //
+    inline bool operator != (const Vector4 & other) const;
+
     // Construct x axis
     //
     static inline const Vector4 xAxis();

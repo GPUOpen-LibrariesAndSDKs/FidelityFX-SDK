@@ -654,6 +654,23 @@ inline const Vector4 operator * (float scalar, const Vector4 & vec)
     return vec * scalar;
 }
 
+inline bool Vector4::operator == (const Vector4& vec) const
+{
+    for (int i = 0; i < 4; i++)
+    {
+        if (getElem(i) != vec[i])
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+inline bool Vector4::operator != (const Vector4& vec) const
+{
+    return !operator==(vec);
+}
+
 inline const Vector4 mulPerElem(const Vector4 & vec0, const Vector4 & vec1)
 {
     return Vector4((vec0.getX() * vec1.getX()),

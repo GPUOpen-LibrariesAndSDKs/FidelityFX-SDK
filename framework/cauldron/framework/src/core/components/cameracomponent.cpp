@@ -1,17 +1,20 @@
-// AMD Cauldron code
+// This file is part of the FidelityFX SDK.
 //
-// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sub-license, and / or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -68,6 +71,8 @@ namespace cauldron
         CauldronAssert(ASSERT_ERROR, s_pComponentManager, L"CameraComponentMgr instance is null. Component managers can ONLY be destroyed through framework shutdown");
         s_pComponentManager = nullptr;
     }
+
+    CameraJitterCallback CameraComponent::s_pSetJitterCallback = nullptr;
 
     CameraComponent::CameraComponent(Entity* pOwner, ComponentData* pData, CameraComponentMgr* pManager) :
         Component(pOwner, pData, pManager),
@@ -151,6 +156,7 @@ namespace cauldron
         m_PrevProjJittered         = m_ProjJittered;
 
         m_Dirty = true;
+        m_CameraReset = true;
     }
 
     void CameraComponent::SetViewBasedMatrices()
@@ -175,7 +181,6 @@ namespace cauldron
         m_ViewMatrix = LookAtMatrix(eyePos, lookAt, Vec4(0, 1, 0, 0));
         m_InvViewMatrix = inverse(m_ViewMatrix);
         m_pOwner->SetTransform(m_InvViewMatrix);
-        m_Dirty = true; // Need to recalculate all other information
 
         // Update our distance
         m_Distance = length(eyePos - lookAt);
@@ -208,12 +213,27 @@ namespace cauldron
         m_ProjJittered = jitterMat * m_ProjectionMatrix;
     }
 
+    void CameraComponent::OnFocusGained()
+    {
+        // Right after focus is regained the mouse delta is often very large, so we should skip updating
+        // the camera until at least one Update has happened.
+        m_SkipUpdate = true;
+    }
+
     void CameraComponent::Update(double deltaTime)
     {
+        if (m_SkipUpdate)
+        {
+            m_SkipUpdate = false;
+            return;
+        }
         // Always update temporal information
         m_PrevViewMatrix = m_ViewMatrix;
         m_PrevViewProjectionMatrix = m_ViewProjectionMatrix;
         m_PrevProjJittered         = m_ProjJittered;
+        
+        // Reset camera reset status (in case it was set)
+        m_CameraReset              = false;
 
         // If this camera is the currently active camera for the scene, check for input
         if (GetScene()->GetCurrentCamera() == this)
@@ -233,6 +253,23 @@ namespace cauldron
                 // Camera mode toggle
                 if (inputState.GetMouseButtonUpState(Mouse_RButton) || inputState.GetGamePadButtonUpState(Pad_L3))
                     m_ArcBallMode = !m_ArcBallMode;
+
+                // We will scale camera displacement according to the size of the scene
+                const BoundingBox& boundingBox = GetScene()->GetBoundingBox();
+                float sceneSize = length(boundingBox.GetMax().getXYZ() - boundingBox.GetMin().getXYZ());
+                float displacementIncr = 0.05f * sceneSize;  // Displacements are 5% of scene size by default
+
+                // If we are holding down ctrl, magnify the displacement by 10
+                if (inputState.GetKeyState(Key_Ctrl))
+                {
+                    displacementIncr *= 10.f;
+                }
+
+                // If we are holding down shift, magnify the displacement by 0.1
+                else if (inputState.GetKeyState(Key_Shift))
+                {
+                    displacementIncr *= 0.1f;
+                }
 
                 // Read in inputs
 
@@ -273,7 +310,7 @@ namespace cauldron
                     m_Pitch = std::max(-CAULDRON_PI2 + DEG_TO_RAD(1), std::min(m_Pitch, CAULDRON_PI2 - DEG_TO_RAD(1)));
 
                     // Mouse wheel
-                    float wheel = inputState.GetMouseAxisDelta(Mouse_Wheel) / 3.f;
+                    float wheel = inputState.GetMouseAxisDelta(Mouse_Wheel) * displacementIncr / 3.f;
                     float distanceMod = m_Distance - wheel;
                     distanceMod = std::max(distanceMod, 0.01f);
 
@@ -283,6 +320,7 @@ namespace cauldron
                     lookAt = eyePos - (dir * m_Distance);
 
                     eyePos = lookAt + (polarVector * distanceMod);
+                    m_Dirty = true;
                 }
 
                 // Otherwise, we are either translating or free rotating (or both)
@@ -290,18 +328,18 @@ namespace cauldron
                 {
                     // WASDQE == camera translation
                     float x(0.f), y(0.f), z(0.f);
-                    x -= (inputState.GetKeyState(Key_A)) ? 1.f : 0.f;
-                    x += (inputState.GetKeyState(Key_D)) ? 1.f : 0.f;
-                    y -= (inputState.GetKeyState(Key_Q)) ? 1.f : 0.f;
-                    y += (inputState.GetKeyState(Key_E)) ? 1.f : 0.f;
-                    z -= (inputState.GetKeyState(Key_W)) ? 1.f : 0.f;
-                    z += (inputState.GetKeyState(Key_S)) ? 1.f : 0.f;
+                    x -= (inputState.GetKeyState(Key_A)) ? displacementIncr : 0.f;
+                    x += (inputState.GetKeyState(Key_D)) ? displacementIncr : 0.f;
+                    y -= (inputState.GetKeyState(Key_Q)) ? displacementIncr : 0.f;
+                    y += (inputState.GetKeyState(Key_E)) ? displacementIncr : 0.f;
+                    z -= (inputState.GetKeyState(Key_W)) ? displacementIncr : 0.f;
+                    z += (inputState.GetKeyState(Key_S)) ? displacementIncr : 0.f;
 
                     // Controller input can also translate
-                    x += inputState.GetGamePadAxisState(Pad_LeftThumbX);
-                    z -= inputState.GetGamePadAxisState(Pad_LeftThumbY);
-                    y -= inputState.GetGamePadAxisState(Pad_LTrigger);
-                    y += inputState.GetGamePadAxisState(Pad_RTrigger);
+                    x += inputState.GetGamePadAxisState(Pad_LeftThumbX) * displacementIncr;
+                    z -= inputState.GetGamePadAxisState(Pad_LeftThumbY) * displacementIncr;
+                    y -= inputState.GetGamePadAxisState(Pad_LTrigger) * displacementIncr;
+                    y += inputState.GetGamePadAxisState(Pad_RTrigger) * displacementIncr;
                     Vec4 movement = Vec4(x, y, z, 0.f);
 
                     Mat4& transform = m_pOwner->GetTransform();
@@ -310,39 +348,56 @@ namespace cauldron
                     if (hasRotation || dot(movement.getXYZ(), movement.getXYZ()))
                     {
                         // Setup new eye position
-                        eyePos = m_InvViewMatrix.getCol3() + (m_InvViewMatrix * movement * m_Speed * static_cast<float>(deltaTime));  // InvViewMatrix is the owner's transform
+                        eyePos = m_InvViewMatrix.getCol3() + (m_InvViewMatrix * movement * static_cast<float>(deltaTime));  // InvViewMatrix is the owner's transform
 
                         // Update everything
                         lookAt = eyePos - polarVector;
+                        m_Dirty = true;
                     }
                 }
 
-                LookAt(eyePos, lookAt);
-                UpdateMatrices();
+                // Update camera jitter if we need it
+                if (CameraComponent::s_pSetJitterCallback)
+                {
+                    s_pSetJitterCallback(m_jitterValues);
+                    m_Dirty = true;
+                }
+                else
+                {
+                    // Reset jitter if disabled
+                    if (m_jitterValues.getX() != 0.f || m_jitterValues.getY() != 0.f)
+                    {
+                        m_jitterValues = Vec2(0.f, 0.f);
+                        m_Dirty        = true;
+                    }
+                }
+
+                if (m_Dirty)
+                {
+                    LookAt(eyePos, lookAt);
+                    UpdateMatrices();         
+                }
             }
         }
     }
 
-     void CameraComponent::UpdateMatrices()
-     {
-         if (m_Dirty)
-         {
-             // Check if we need to update our projection
-             if (m_pData->Type == CameraType::Perspective && GetFramework()->GetAspectRatio() != m_pData->Perspective.AspectRatio)
-                 m_ProjectionMatrix = CalculatePerspectiveMatrix();
+    void CameraComponent::UpdateMatrices()
+    {
+        // Check if we need to update our projection
+        if (m_pData->Type == CameraType::Perspective && GetFramework()->GetAspectRatio() != m_pData->Perspective.AspectRatio)
+            m_ProjectionMatrix = CalculatePerspectiveMatrix();
 
-             // Initialize arc-ball distance with distance to origin
-             m_Distance = length(m_pOwner->GetTransform().getTranslation());
+        // Initialize arc-ball distance with distance to origin
+        m_Distance = length(m_pOwner->GetTransform().getTranslation());
 
-             // Update m_ProjJittered according to current jitterValues
-             SetProjectionJitteredMatrix();
+        // Update m_ProjJittered according to current jitterValues
+        SetProjectionJitteredMatrix();
 
-             // View and InvView are setup during input handling, so just calculate remaining matrices
-             SetViewBasedMatrices();
+        // View and InvView are setup during input handling, so just calculate remaining matrices
+        SetViewBasedMatrices();
 
-             // No longer dirty
-             m_Dirty = false;
-         }
+        // No longer dirty
+        m_Dirty = false;
      }
 
 } // namespace cauldron

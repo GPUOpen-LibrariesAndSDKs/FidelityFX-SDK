@@ -1,9 +1,9 @@
 # This file is part of the FidelityFX SDK.
-#
-# Copyright © 2023 Advanced Micro Devices, Inc.
+# 
+# Copyright (C) 2024 Advanced Micro Devices, Inc.
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files(the “Software”), to deal
+# of this software and associated documentation files(the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 # copies of the Software, and to permit persons to whom the Software is
@@ -12,9 +12,9 @@
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
 # 
-# THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -39,6 +39,8 @@ endif()
 # Define various roots
 set(SAMPLE_ROOT ${CMAKE_HOME_DIRECTORY}/samples)
 set(SDK_ROOT ${CMAKE_HOME_DIRECTORY}/sdk)
+set(API_ROOT ${CMAKE_HOME_DIRECTORY}/ffx-api)
+set(PREBUILT_SIGNED_DLL_ROOT ${CMAKE_HOME_DIRECTORY}/PrebuiltSignedDLL)
 set(FRAMEWORK_ROOT ${CMAKE_HOME_DIRECTORY}/framework)
 set(BIN_OUTPUT ${CMAKE_HOME_DIRECTORY}/bin)
 set(CAULDRON_ROOT ${FRAMEWORK_ROOT}/cauldron)
@@ -47,11 +49,25 @@ set(FFX_API_CAULDRON_ROOT ${SAMPLE_ROOT}/ffx_cauldron)
 set(SHADER_OUTPUT ${BIN_OUTPUT}/shaders)
 set(CONFIG_OUTPUT ${BIN_OUTPUT}/configs)
 set(RENDERMODULE_MEDIA_OUTPUT ${BIN_OUTPUT}/media/rendermodule)
+set(SUPPORT_RUNTIME_SHADER_RECOMPILE 0)
+
+# Define common sdk variables
+set(FFX_SC_EXECUTABLE ${SDK_ROOT}/tools/binary_store/FidelityFX_SC.exe)
+set(FFX_INCLUDE_PATH ${SDK_ROOT}/include)
+set(FFX_LIB_PATH ${SDK_ROOT}/libs)
+set(FFX_BIN_PATH ${SDK_ROOT}/bin/ffx_sdk)
+set(FFX_SHARED_PATH ${SDK_ROOT}/src/shared)
+set(FFX_HOST_PATH ${SDK_ROOT}/include/FidelityFX/host)
+set(FFX_GPU_PATH ${SDK_ROOT}/include/FidelityFX/gpu)
+set(FFX_COMPONENTS_PATH ${SDK_ROOT}/src/components)
+set(FFX_HOST_BACKENDS_PATH ${FFX_HOST_PATH}/backends)
+set(FFX_SRC_BACKENDS_PATH ${SDK_ROOT}/src/backends)
 
 # Set top level includes (all projects will need these to some extent)
 include_directories(${CAULDRON_ROOT}/framework/inc)
 include_directories(${CAULDRON_ROOT}/framework/libs)
 include_directories(${CAULDRON_ROOT}/framework/src)
+include_directories(${CAULDRON_ROOT}/framework/src/render/rendermodules)
 include_directories(${RENDERMODULE_ROOT})
 include_directories(${SAMPLE_ROOT})
 include_directories(${SDK_ROOT}/include)
@@ -60,6 +76,7 @@ include_directories(${SDK_ROOT}/include)
 if (CMAKE_GENERATOR_PLATFORM STREQUAL x64)
 	#Set so taken by default when creating custom configs
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD")
+	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /MD")
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MDd")
 	set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<OR:$<CONFIG:DebugDX12>,$<CONFIG:DebugVK>>:Debug>DLL")
 endif()

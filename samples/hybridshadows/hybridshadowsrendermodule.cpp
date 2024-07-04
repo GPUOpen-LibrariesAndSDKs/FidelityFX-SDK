@@ -1,25 +1,28 @@
-// AMD Cauldron code
+// This file is part of the FidelityFX SDK.
 //
-// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sub-license, and / or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #include "hybridshadowsrendermodule.h"
-#include "validation_remap.h"
 
+#include "core/backend_interface.h"
 #include "core/framework.h"
 #include "core/uimanager.h"
 #include "render/parameterset.h"
@@ -324,24 +327,19 @@ void HybridShadowsRenderModule::Init(const json&)
     CreateResources();
 
     // UI elements
-    UISection uiSection;
-    uiSection.SectionName = "Hybrid Shadows";
-    uiSection.SectionType = UISectionType::Sample;
-    uiSection.AddCheckBox("Run Hybrid Shadows", &m_bRunHybridShadows);
-    uiSection.AddCheckBox("Use Denoiser", &m_bUseDenoiser);
-    uiSection.AddFloatSlider("Sun solid angle", &m_sunSolidAngle, 0.f, 1.f, nullptr, nullptr, false, "%.2f deg");
+    UISection* uiSection = GetUIManager()->RegisterUIElements("Hybrid Shadows", UISectionType::Sample);
+    uiSection->RegisterUIElement<UICheckBox>("Run Hybrid Shadows", m_bRunHybridShadows);
+    uiSection->RegisterUIElement<UICheckBox>("Use Denoiser", m_bUseDenoiser);
+    uiSection->RegisterUIElement<UISlider<float>>("Sun solid angle", m_sunSolidAngle, 0.f, 1.f, nullptr, true, false, "%.2f deg");
 
-    const static std::vector<std::string> debugOptions = {"Disabled", "Show RayTraced Tiles", "Show Ray minT", "Show Ray maxT", "Show Ray length", "Show RayTracing Texture"};
-    uiSection.AddCombo("Debug Mode", &m_DebugMode, &debugOptions);
+    const static std::vector<const char*> debugOptions = {"Disabled", "Show RayTraced Tiles", "Show Ray minT", "Show Ray maxT", "Show Ray length", "Show RayTracing Texture"};
+    uiSection->RegisterUIElement<UICombo>("Debug Mode", m_DebugMode, debugOptions);
 
-    uiSection.AddIntSlider("TileCutOff", (int*)&m_TileCutoff, 0, 32);
-    uiSection.AddFloatSlider("PCF offset", &m_blockerOffset, 0.0f, 0.008f);
+    uiSection->RegisterUIElement<UISlider<int32_t>>("TileCutOff", (int&)m_TileCutoff, 0, 32);
+    uiSection->RegisterUIElement<UISlider<float>>("PCF offset", m_blockerOffset, 0.0f, 0.008f);
 
-    uiSection.AddCheckBox("Reject Lit Pixels for Ray Tracing", &m_bRejectLitPixels);
-    uiSection.AddCheckBox("Use Shadow Maps to determine RayT", &m_bUseCascadesForRayT);
-
-    // ... and register UI elements
-    GetUIManager()->RegisterUIElements(uiSection);
+    uiSection->RegisterUIElement<UICheckBox>("Reject Lit Pixels for Ray Tracing", m_bRejectLitPixels);
+    uiSection->RegisterUIElement<UICheckBox>("Use Shadow Maps to determine RayT", m_bUseCascadesForRayT);    
 
     m_pIndirectWorkLoad = IndirectWorkload::CreateIndirectWorkload(IndirectCommandType::Dispatch);
     CreateCopyDepthPipeline();
@@ -349,25 +347,15 @@ void HybridShadowsRenderModule::Init(const json&)
     CreateDebugTilesPipeline();
     CreateDebugRayTracingPipeline();
 
-    // Init effect
-    // Setup FidelityFX interface.
-    {
-        const size_t scratchBufferSize = ffxGetScratchMemorySize(FFX_CLASSIFIER_CONTEXT_COUNT + FFX_DENOISER_CONTEXT_COUNT);
-        void*        scratchBuffer     = malloc(scratchBufferSize);
-        FfxErrorCode errorCode         = ffxGetInterface(
-                                                 &m_SDKInterface,
-                                                 GetDevice(),
-                                                 scratchBuffer,
-                                                 scratchBufferSize,
-                                                 FFX_CLASSIFIER_CONTEXT_COUNT + FFX_DENOISER_CONTEXT_COUNT);
-        FFX_ASSERT(errorCode == FFX_OK);
-    }
+    InitEffect();
 
-    m_ClassifierCtxDesc.backendInterface = m_SDKInterface;
-    m_DenoiserCtxDesc.backendInterface = m_SDKInterface;
-
-    // Create the context
-    UpdateEffectContext(true);
+    GetFramework()->ConfigureRuntimeShaderRecompiler(
+        [this](void) {
+            DestroyEffect();
+        },
+        [this](void) {
+            InitEffect();
+        });
 
 
     //////////////////////////////////////////////////////////////////////////
@@ -462,6 +450,9 @@ HybridShadowsRenderModule::~HybridShadowsRenderModule()
         // Destroy the FidelityFX interface memory
         free(m_ClassifierCtxDesc.backendInterface.scratchBuffer);
 
+        delete m_pDebugRayTracingPipelineObj;
+        delete m_pDebugRayTracingRootSignature;
+        delete m_pDebugRayTracingParameters;
         delete m_pIndirectWorkLoad;
         delete m_pRayTracingRootSignature;
         delete m_pRayTracingPipelineObj;
@@ -479,6 +470,49 @@ HybridShadowsRenderModule::~HybridShadowsRenderModule()
         delete m_pBlueNoise;
     }
 
+}
+
+void HybridShadowsRenderModule::InitEffect()
+{
+    // Setup FidelityFX interface.
+    {
+        const size_t scratchBufferSize = SDKWrapper::ffxGetScratchMemorySize(FFX_CLASSIFIER_CONTEXT_COUNT + FFX_DENOISER_CONTEXT_COUNT);
+        void*        scratchBuffer     = calloc(scratchBufferSize, 1u);
+        FfxErrorCode errorCode         = SDKWrapper::ffxGetInterface(
+                                                 &m_SDKInterface,
+                                                 GetDevice(),
+                                                 scratchBuffer,
+                                                 scratchBufferSize,
+                                                 FFX_CLASSIFIER_CONTEXT_COUNT + FFX_DENOISER_CONTEXT_COUNT);
+        CAULDRON_ASSERT(errorCode == FFX_OK);
+        CauldronAssert(ASSERT_CRITICAL, m_SDKInterface.fpGetSDKVersion(&m_SDKInterface) == FFX_SDK_MAKE_VERSION(1, 1, 0),
+            L"FidelityFX HybridShadows 2.1 sample requires linking with a 1.1 version SDK backend");
+        CauldronAssert(ASSERT_CRITICAL, ffxClassifierGetEffectVersion() == FFX_SDK_MAKE_VERSION(1, 3, 0),
+                           L"FidelityFX HybridShadows 2.1 sample requires linking with a 1.3 version FidelityFX Classifier library");
+        CauldronAssert(ASSERT_CRITICAL, ffxDenoiserGetEffectVersion() == FFX_SDK_MAKE_VERSION(1, 3, 0),
+                           L"FidelityFX HybridShadows 2.1 sample requires linking with a 1.3 version FidelityFX Denoiser library");
+                           
+        m_SDKInterface.fpRegisterConstantBufferAllocator(&m_SDKInterface, SDKWrapper::ffxAllocateConstantBuffer);
+    }
+
+    m_ClassifierCtxDesc.backendInterface = m_SDKInterface;
+    m_DenoiserCtxDesc.backendInterface = m_SDKInterface;
+
+    // Create the context
+    UpdateEffectContext(true);
+}
+
+void HybridShadowsRenderModule::DestroyEffect()
+{
+    // Destroy the context
+    UpdateEffectContext(false);
+
+    // Destroy the FidelityFX interface memory
+    if (m_ClassifierCtxDesc.backendInterface.scratchBuffer != nullptr)
+    {
+        free(m_ClassifierCtxDesc.backendInterface.scratchBuffer);
+        m_ClassifierCtxDesc.backendInterface.scratchBuffer = nullptr;
+    }
 }
 
  void HybridShadowsRenderModule::UpdateEffectContext(bool enabled)
@@ -623,17 +657,17 @@ void HybridShadowsRenderModule::RunFfxShadowDenoiser(cauldron::CommandList* pCmd
 
     static uint32_t                       frameIndex = 0;
     FfxDenoiserShadowsDispatchDescription denoiserDispatchDescription{};
-    denoiserDispatchDescription.commandList = ffxGetCommandList(pCmdList);
+    denoiserDispatchDescription.commandList = SDKWrapper::ffxGetCommandList(pCmdList);
     denoiserDispatchDescription.hitMaskResults =
-        ffxGetResource(m_pRayHitTexture->GetResource(), L"FidelityFX_ShadowDenoiser_RayHit", FFX_RESOURCE_STATE_GENERIC_READ);
+        SDKWrapper::ffxGetResource(m_pRayHitTexture->GetResource(), L"FidelityFX_ShadowDenoiser_RayHit", FFX_RESOURCE_STATE_GENERIC_READ);
     denoiserDispatchDescription.depth =
-        ffxGetResource(m_pCopyDepth->GetResource(), L"FidelityFX_ShadowDenoiser_InputDepth", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+        SDKWrapper::ffxGetResource(m_pCopyDepth->GetResource(), L"FidelityFX_ShadowDenoiser_InputDepth", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
     denoiserDispatchDescription.velocity =
-        ffxGetResource(m_pMotionVectors->GetResource(), L"FidelityFX_ShadowDenoiser_InputVelocity", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+        SDKWrapper::ffxGetResource(m_pMotionVectors->GetResource(), L"FidelityFX_ShadowDenoiser_InputVelocity", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
     denoiserDispatchDescription.normal =
-        ffxGetResource(m_pNormalTarget->GetResource(), L"FidelityFX_ShadowDenoiser_InputNormals", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+        SDKWrapper::ffxGetResource(m_pNormalTarget->GetResource(), L"FidelityFX_ShadowDenoiser_InputNormals", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
     denoiserDispatchDescription.shadowMaskOutput =
-        ffxGetResource(m_pShadowMaskOutput->GetResource(), L"FidelityFX_ShadowDenoiser_ShadowMaskOutput", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
+        SDKWrapper::ffxGetResource(m_pShadowMaskOutput->GetResource(), L"FidelityFX_ShadowDenoiser_ShadowMaskOutput", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
 
     // Cauldron's GBuffer stores normals in the [0, 1] range, the FidelityFX Shadow Denoiser expects them in the [-1, 1] range.
     denoiserDispatchDescription.normalsUnpackMul =  2.f;
@@ -651,7 +685,7 @@ void HybridShadowsRenderModule::RunFfxShadowDenoiser(cauldron::CommandList* pCmd
     float mvScale[2] = {1.f, 1.f};
     memcpy(denoiserDispatchDescription.motionVectorScale, mvScale, sizeof(mvScale));
 
-    FFX_ASSERT(FFX_OK == ffxDenoiserContextDispatchShadows(&m_DenoiserContext, &denoiserDispatchDescription));
+    CAULDRON_ASSERT(FFX_OK == ffxDenoiserContextDispatchShadows(&m_DenoiserContext, &denoiserDispatchDescription));
     // FidelityFX contexts modify the set resource view heaps, so set the cauldron one back
     SetAllResourceViewHeaps(pCmdList);
 
@@ -685,13 +719,12 @@ void HybridShadowsRenderModule::Execute(double deltaTime, CommandList* pCmdList)
          Barrier barrier = Barrier::Transition(m_pWorkQueueCount->GetResource(), ResourceState::CopyDest, ResourceState::UnorderedAccess);
          ResourceBarrier(pCmdList, 1, &barrier);
 
-         shadowClassifierDispatchParams.commandList    = ffxGetCommandList(pCmdList);
-         shadowClassifierDispatchParams.depth          = ffxGetResource(m_pDepthTarget->GetResource(), L"FidelityFXClassifier_InputDepth", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-         shadowClassifierDispatchParams.normals        = ffxGetResource(m_pNormalTarget->GetResource(), L"FidelityFXClassifier_InputNormals", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-         shadowClassifierDispatchParams.workQueue      = ffxGetResource(m_pWorkQueue->GetResource(), L"FidelityFXClassifier_WorkQueue", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
-         shadowClassifierDispatchParams.workQueueCount = ffxGetResource(m_pWorkQueueCount->GetResource(), L"FidelityFXClassifier_WorkQueueCount", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
-         shadowClassifierDispatchParams.rayHitTexture  = ffxGetResource(m_pRayHitTexture->GetResource(), L"FidelityFXClassifier_RayHit", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
-         shadowClassifierDispatchParams.outputColor    = ffxGetResource(m_pColorOutput->GetResource(), L"FidelityFXClassifier_OutPutColor", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+         shadowClassifierDispatchParams.commandList    = SDKWrapper::ffxGetCommandList(pCmdList);
+         shadowClassifierDispatchParams.depth          = SDKWrapper::ffxGetResource(m_pDepthTarget->GetResource(), L"FidelityFXClassifier_InputDepth", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+         shadowClassifierDispatchParams.normals        = SDKWrapper::ffxGetResource(m_pNormalTarget->GetResource(), L"FidelityFXClassifier_InputNormals", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+         shadowClassifierDispatchParams.workQueue      = SDKWrapper::ffxGetResource(m_pWorkQueue->GetResource(), L"FidelityFXClassifier_WorkQueue", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
+         shadowClassifierDispatchParams.workQueueCount = SDKWrapper::ffxGetResource(m_pWorkQueueCount->GetResource(), L"FidelityFXClassifier_WorkQueueCount", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
+         shadowClassifierDispatchParams.rayHitTexture  = SDKWrapper::ffxGetResource(m_pRayHitTexture->GetResource(), L"FidelityFXClassifier_RayHit", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
 
          // Cauldron's GBuffer stores normals in the [0, 1] range, the FidelityFX Classifier expects them in the [-1, 1] range.
          shadowClassifierDispatchParams.normalsUnPackMul =  2.f;
@@ -732,7 +765,7 @@ void HybridShadowsRenderModule::Execute(double deltaTime, CommandList* pCmdList)
             for (uint32_t cascade = 0; cascade < shadowClassifierDispatchParams.cascadeCount; ++cascade)
             {
                 int shadowMapIndex                 = pLightComp->GetShadowMapIndex(cascade);
-                shadowClassifierDispatchParams.shadowMaps[cascade] = ffxGetResource(pShadowMapResourcePool->GetRenderTarget(shadowMapIndex)->GetResource(),
+                shadowClassifierDispatchParams.shadowMaps[cascade] = SDKWrapper::ffxGetResource(pShadowMapResourcePool->GetRenderTarget(shadowMapIndex)->GetResource(),
                                                                     L"FidelityFXClassifier_ShadowMap",
                                                                     FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
 
@@ -755,7 +788,7 @@ void HybridShadowsRenderModule::Execute(double deltaTime, CommandList* pCmdList)
             break;
          }
 
-         FFX_ASSERT(FFX_OK == ffxClassifierContextShadowDispatch(&m_ClassifierContext, &shadowClassifierDispatchParams));
+         CAULDRON_ASSERT(FFX_OK == ffxClassifierContextShadowDispatch(&m_ClassifierContext, &shadowClassifierDispatchParams));
          // FidelityFX contexts modify the set resource view heaps, so set the cauldron one back
          SetAllResourceViewHeaps(pCmdList);
     }

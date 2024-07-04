@@ -1,7 +1,7 @@
 # dxc
 
 ## Current Version
-1.7.2212 - DirectX12 Agility SDK compatible compiler
+1.8.2403.2 - DirectX12 Agility SDK compatible compiler
 
 ## How to update
 1. Download the latest version zip from https://github.com/Microsoft/DirectXShaderCompiler/releases

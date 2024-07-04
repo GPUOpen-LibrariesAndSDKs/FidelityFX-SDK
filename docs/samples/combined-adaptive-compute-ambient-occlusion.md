@@ -10,7 +10,9 @@ For details on the technique that underpins the FidelityFX CACAO effect you can 
 
 <h2>Requirements</h2>
 
-`Windows` `DirectX(R)12` `Vulkan(R)`
+ - Windows
+ - DirectX(R)12
+ - Vulkan(R)
 
 <h2>UI elements</h2>
 
@@ -68,7 +70,7 @@ GLSL:
 #include "ffx_cacao.h"
 ```
 
-<h3>Shader Options</h3>
+<h3>Shader options</h3>
 
 Some of the FidelityFX CACAO passes support different options. 
 
@@ -78,9 +80,9 @@ The shaders can also be run in Wave64 or Wave32. How shaders are run is largely 
 
 Lastly, some passes can run with the `Apply Smart` option, enabling edge aware execution for passes such as `Apply` and `Bilateral Upscale`.
 
-<h2>Sample Controls and Configurations</h2>
+<h2>Sample controls and configurations</h2>
 
-For sample controls, configuration and Cauldron UI element details, please see [Running the samples](../getting-started/running-samples.md)
+For sample controls, configuration, and FidelityFX Cauldron Framework UI element details, see [Running the samples](../getting-started/running-samples.md).
 
 <h2>See also</h2>
 

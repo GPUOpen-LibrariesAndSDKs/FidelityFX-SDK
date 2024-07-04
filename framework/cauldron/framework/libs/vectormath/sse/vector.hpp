@@ -820,6 +820,16 @@ inline Vector4 & Vector4::operator /= (const FloatInVec & scalar)
     return *this;
 }
 
+inline const bool Vector4::operator == (const Vector4& vec)
+{
+    return _mm_comieq_ss(mVec128, vec.get128());
+}
+
+inline const bool Vector4::operator != (const Vector4& vec)
+{
+    return !_mm_comieq_ss(mVec128, vec.get128());
+}
+
 inline const Vector4 Vector4::operator - () const
 {
     return Vector4(_mm_sub_ps(_mm_setzero_ps(), mVec128));

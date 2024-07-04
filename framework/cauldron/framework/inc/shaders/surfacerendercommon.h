@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -34,11 +34,41 @@
 #define MAX_SAMPLERS_COUNT            20
 #define MAX_SHADOW_MAP_TEXTURES_COUNT 15
 
+// Vertex Skinning
+#ifndef MAX_NUM_BONES
+    #define MAX_NUM_BONES 200
+#endif
+
+struct VertexStrides
+{
+#if __cplusplus
+    uint32_t positionStride, normalStride, weights0Stride, joints0Stride;
+    uint32_t numVertices; ///< number of vertices 
+#else
+    uint positionStride, normalStride, weights0Stride, joints0Stride;
+    uint numVertices;
+#endif
+};
+
+struct MatrixPair
+{
+#if __cplusplus
+    Mat4 m_Current, m_Previous;
+    void Set(const Mat4& matrix)
+    {
+        m_Previous = m_Current;
+        m_Current  = matrix;
+    }
+#else
+    matrix Current, Previous;
+#endif
+};
+
 struct MaterialInformation
 {
 #if __cplusplus
     Vec4   EmissiveFactor;
-    Vec4   AlbedoFactor;
+    Vec4 AlbedoFactor{1.0f}; // Initializing factor value to 1.0f makes more scense than .0f and also less error-prone.
 
     // Metal-Rough / Spec-Gloss share the same info space for convenience
     Vec4 PBRParams;    // (Metallic, Roughness, x, x) - Metal-Rough
@@ -282,8 +312,8 @@ float3 GetAoRoughnessMetallic(VS_SURFACE_OUTPUT Input, MaterialInformation Mater
 
     float4 SpecGloss = GetSpecularGlossinessTexture(Input, Textures, AllTextures, AllSamplers, MipLODBias);
     AoRoughnessMetallic.g = (1.0 - SpecGloss.a * MaterialInfo.PBRParams.w);  // Material Glossiness to roughness
-   
-    F0 = SpecGloss.rgb * MaterialInfo.PBRParams.xyz;      // Material Specular
+
+    float3 F0 = SpecGloss.rgb * MaterialInfo.PBRParams.xyz;      // Material Specular
     float OneMinusSpecularStrength = 1.0 - max(max(F0.r, F0.g), F0.b);
     AoRoughnessMetallic.b = SolveMetallic(BaseColor, F0, OneMinusSpecularStrength);
 #endif  // ! MATERIAL_SPECULARGLOSSINESS
@@ -376,4 +406,15 @@ float3 GetPixelNormal(VS_SURFACE_OUTPUT Input, TextureIndices Textures, SceneInf
 
     return n;
 }
+
+float3 CompressNormals(const float3 normal)
+{
+    return normal * 0.5 + 0.5;
+}
+
+float3 DeCompressNormals(const float3 normal)
+{
+    return 2 * normal - 1;
+}
+
 #endif // !__cplusplus

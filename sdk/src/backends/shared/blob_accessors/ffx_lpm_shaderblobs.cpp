@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this softwareand associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright noticeand this permission notice shall be included in
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -34,14 +34,13 @@
 #if defined(POPULATE_PERMUTATION_KEY)
 #undef POPULATE_PERMUTATION_KEY
 #endif // #if defined(POPULATE_PERMUTATION_KEY)
-#define POPULATE_PERMUTATION_KEY(options, key)                                                                              \
-key.index = 0;
+#define POPULATE_PERMUTATION_KEY(key) key.index = 0;
 
-static FfxShaderBlob lpmGetFilterPermutationBlobByIndex(uint32_t permutationOptions, bool isWave64, bool is16bit)
+static FfxShaderBlob lpmGetFilterPermutationBlobByIndex(uint32_t, bool isWave64, bool is16bit)
 {
 
     ffx_lpm_filter_pass_PermutationKey key;
-    POPULATE_PERMUTATION_KEY(permutationOptions, key);
+    POPULATE_PERMUTATION_KEY(key);
 
     if (isWave64) {
         if (is16bit) {
@@ -88,7 +87,7 @@ FfxErrorCode lpmGetPermutationBlobByIndex(
     }
 
     // return an empty blob
-    memset(&outBlob, 0, sizeof(FfxShaderBlob));
+    memset(outBlob, 0, sizeof(FfxShaderBlob));
     return FFX_OK;
 }
 

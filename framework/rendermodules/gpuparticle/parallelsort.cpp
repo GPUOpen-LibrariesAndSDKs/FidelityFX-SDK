@@ -1,9 +1,9 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
-//
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
@@ -12,9 +12,9 @@
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -29,7 +29,7 @@
 #include "render/parameterset.h"
 #include "render/indirectworkload.h"
 
-#include "shaders/parallelsort/parallelsortcommon.h"
+#include "shaders/parallelsort_common_ffx.h"
 
 using namespace cauldron;
 
@@ -107,7 +107,7 @@ void ParallelSort::Init(uint32_t maxEntries, bool bHasPayload, bool bIndirect)
         DefineList defineList;
 
         // Setup the shaders to build on the pipeline object
-        std::wstring    shaderPath  = L"parallelsortsetupindirectargs.hlsl";
+        std::wstring    shaderPath  = L"parallelsort_setup_indirect_args.hlsl";
         ShaderBuildDesc shaderDesc  = ShaderBuildDesc::Compute(shaderPath.c_str(), L"CS", ShaderModel::SM6_2, &defineList);
         shaderDesc.AdditionalParams = L"-Wno-for-redefinition -Wno-ambig-lit-shift";
         psoDesc.AddShaderDesc(shaderDesc);
@@ -136,13 +136,11 @@ void ParallelSort::Init(uint32_t maxEntries, bool bHasPayload, bool bIndirect)
             psoDesc.SetRootSignature(m_pCountRootSignature[i]);
 
             DefineList defineList;
-            defineList.insert(std::make_pair(L"FFX_GPU", L"1"));
-            defineList.insert(std::make_pair(L"FFX_HLSL", L"1"));
             if (m_bHasPayload)
                 defineList.insert(std::make_pair(L"FFX_PARALLELSORT_OPTION_HAS_PAYLOAD", L"1"));
 
             // Setup the shaders to build on the pipeline object
-            std::wstring    shaderPath  = L"ffx_parallelsort_sum_pass.hlsl";
+            std::wstring    shaderPath  = L"parallelsort_sum_pass.hlsl";
             ShaderBuildDesc shaderDesc  = ShaderBuildDesc::Compute(shaderPath.c_str(), L"CS", ShaderModel::SM6_2, &defineList);
             shaderDesc.AdditionalParams = L"-Wno-for-redefinition -Wno-ambig-lit-shift";
             psoDesc.AddShaderDesc(shaderDesc);
@@ -171,13 +169,11 @@ void ParallelSort::Init(uint32_t maxEntries, bool bHasPayload, bool bIndirect)
             psoDesc.SetRootSignature(m_pCountReduceRootSignature[i]);
 
             DefineList defineList;
-            defineList.insert(std::make_pair(L"FFX_GPU", L"1"));
-            defineList.insert(std::make_pair(L"FFX_HLSL", L"1"));
             if (m_bHasPayload)
                 defineList.insert(std::make_pair(L"FFX_PARALLELSORT_OPTION_HAS_PAYLOAD", L"1"));
 
             // Setup the shaders to build on the pipeline object
-            std::wstring    shaderPath  = L"ffx_parallelsort_reduce_pass.hlsl";
+            std::wstring    shaderPath  = L"parallelsort_reduce_pass.hlsl";
             ShaderBuildDesc shaderDesc  = ShaderBuildDesc::Compute(shaderPath.c_str(), L"CS", ShaderModel::SM6_2, &defineList);
             shaderDesc.AdditionalParams = L"-Wno-for-redefinition -Wno-ambig-lit-shift";
             psoDesc.AddShaderDesc(shaderDesc);
@@ -205,13 +201,11 @@ void ParallelSort::Init(uint32_t maxEntries, bool bHasPayload, bool bIndirect)
             psoDesc.SetRootSignature(m_pScanRootSignature[i]);
 
             DefineList defineList;
-            defineList.insert(std::make_pair(L"FFX_GPU", L"1"));
-            defineList.insert(std::make_pair(L"FFX_HLSL", L"1"));
             if (m_bHasPayload)
                 defineList.insert(std::make_pair(L"FFX_PARALLELSORT_OPTION_HAS_PAYLOAD", L"1"));
 
             // Setup the shaders to build on the pipeline object
-            std::wstring    shaderPath  = L"ffx_parallelsort_scan_pass.hlsl";
+            std::wstring    shaderPath  = L"parallelsort_scan_pass.hlsl";
             ShaderBuildDesc shaderDesc  = ShaderBuildDesc::Compute(shaderPath.c_str(), L"CS", ShaderModel::SM6_2, &defineList);
             shaderDesc.AdditionalParams = L"-Wno-for-redefinition -Wno-ambig-lit-shift";
             psoDesc.AddShaderDesc(shaderDesc);
@@ -241,13 +235,11 @@ void ParallelSort::Init(uint32_t maxEntries, bool bHasPayload, bool bIndirect)
             psoDesc.SetRootSignature(m_pScanAddRootSignature[i]);
 
             DefineList defineList;
-            defineList.insert(std::make_pair(L"FFX_GPU", L"1"));
-            defineList.insert(std::make_pair(L"FFX_HLSL", L"1"));
             if (m_bHasPayload)
                 defineList.insert(std::make_pair(L"FFX_PARALLELSORT_OPTION_HAS_PAYLOAD", L"1"));
 
             // Setup the shaders to build on the pipeline object
-            std::wstring    shaderPath  = L"ffx_parallelsort_scan_add_pass.hlsl";
+            std::wstring    shaderPath  = L"parallelsort_scan_add_pass.hlsl";
             ShaderBuildDesc shaderDesc  = ShaderBuildDesc::Compute(shaderPath.c_str(), L"CS", ShaderModel::SM6_2, &defineList);
             shaderDesc.AdditionalParams = L"-Wno-for-redefinition -Wno-ambig-lit-shift";
             psoDesc.AddShaderDesc(shaderDesc);
@@ -282,13 +274,11 @@ void ParallelSort::Init(uint32_t maxEntries, bool bHasPayload, bool bIndirect)
             psoDesc.SetRootSignature(m_pScatterRootSignature[i]);
 
             DefineList defineList;
-            defineList.insert(std::make_pair(L"FFX_GPU", L"1"));
-            defineList.insert(std::make_pair(L"FFX_HLSL", L"1"));
             if (m_bHasPayload)
                 defineList.insert(std::make_pair(L"FFX_PARALLELSORT_OPTION_HAS_PAYLOAD", L"1"));
 
             // Setup the shaders to build on the pipeline object
-            std::wstring    shaderPath  = L"ffx_parallelsort_scatter_pass.hlsl";
+            std::wstring    shaderPath  = L"parallelsort_scatter_pass.hlsl";
             ShaderBuildDesc shaderDesc  = ShaderBuildDesc::Compute(shaderPath.c_str(), L"CS", ShaderModel::SM6_2, &defineList);
             shaderDesc.AdditionalParams = L"-Wno-for-redefinition -Wno-ambig-lit-shift";
             psoDesc.AddShaderDesc(shaderDesc);

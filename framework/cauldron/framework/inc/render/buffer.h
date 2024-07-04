@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -61,7 +61,7 @@ namespace cauldron
         const BufferCopyDescInternal* GetImpl() const { return (const BufferCopyDescInternal*)bufferCopyDescMem; }
     };
 
-    /// An enumeration for various types of buffers which can be created through <c><i>Cauldron</i></c>
+    /// An enumeration for various types of buffers which can be created through <c><i>FidelityFX Cauldron Framework</i></c>
     ///
     /// @ingroup CauldronRender
     enum class BufferType
@@ -177,7 +177,7 @@ namespace cauldron
     /**
      * @class Buffer
      *
-     * The <c><i>Cauldron</i></c> api/platform-agnostic representation of a buffer gpu resource.
+     * The <c><i>FidelityFX Cauldron Framework</i></c> api/platform-agnostic representation of a buffer gpu resource.
      *
      * @ingroup CauldronRender
      */
@@ -198,7 +198,7 @@ namespace cauldron
          * @brief   Buffer instance creation function. Implemented per api/platform to return the correct
          *          internal resource type.
          */
-        static Buffer* CreateBufferResource(const BufferDesc* pDesc, ResourceState initialState, ResizeFunction fn = nullptr);
+        static Buffer* CreateBufferResource(const BufferDesc* pDesc, ResourceState initialState, ResizeFunction fn = nullptr, void* customOwner = nullptr);
 
         /**
          * @brief   Gets a constant view on the buffer's <c><i>BufferDesc</i></c> description.
@@ -209,6 +209,11 @@ namespace cauldron
          * @brief   Gets a constant pointer to the buffer's underlaying <c><i>GPUResource</i></c>.
          */
         const GPUResource* GetResource() const { return m_pResource; }
+
+        /**
+         * @brief   Gets a modifiable pointer to the buffer's underlaying <c><i>GPUResource</i></c>.
+         */
+        GPUResource* GetResource() { return m_pResource; }
 
         /**
         * @brief   Copy callback used when loading buffer data. Implemented internally per api/platform.

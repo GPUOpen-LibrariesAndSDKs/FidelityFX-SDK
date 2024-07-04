@@ -1,9 +1,9 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
-//
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
@@ -12,9 +12,9 @@
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -262,13 +262,13 @@ static FfxErrorCode createShadowsPipelineStates(FfxDenoiserContext_Private* cont
     context->contextDescription.backendInterface.fpGetDeviceCapabilities(&context->contextDescription.backendInterface, &capabilities);
 
     // Setup a few options used to determine permutation flags
-    bool haveShaderModel66 = capabilities.minimumSupportedShaderModel >= FFX_SHADER_MODEL_6_6;
+    bool haveShaderModel66 = capabilities.maximumSupportedShaderModel >= FFX_SHADER_MODEL_6_6;
     bool supportedFP16 = capabilities.fp16Supported;
     bool canForceWave64 = false;
 
     const uint32_t waveLaneCountMin = capabilities.waveLaneCountMin;
     const uint32_t waveLaneCountMax = capabilities.waveLaneCountMax;
-    if (waveLaneCountMin == 32 && waveLaneCountMax == 64)
+    if (waveLaneCountMin <= 64 && waveLaneCountMax >= 64)
         canForceWave64 = haveShaderModel66;
     else
         canForceWave64 = false;
@@ -327,14 +327,14 @@ static FfxErrorCode createReflectionsPipelineStates(FfxDenoiserContext_Private* 
     context->contextDescription.backendInterface.fpGetDeviceCapabilities(&context->contextDescription.backendInterface, &capabilities);
 
     // Setup a few options used to determine permutation flags
-    bool haveShaderModel66 = capabilities.minimumSupportedShaderModel >= FFX_SHADER_MODEL_6_6;
+    bool haveShaderModel66 = capabilities.maximumSupportedShaderModel >= FFX_SHADER_MODEL_6_6;
     bool supportedFP16 = capabilities.fp16Supported;
     bool canForceWave64 = false;
     bool useLut = false;
 
     const uint32_t waveLaneCountMin = capabilities.waveLaneCountMin;
     const uint32_t waveLaneCountMax = capabilities.waveLaneCountMax;
-    if (waveLaneCountMin == 32 && waveLaneCountMax == 64)
+    if (waveLaneCountMin <= 64 && waveLaneCountMax >= 64)
     {
         useLut = true;
         canForceWave64 = haveShaderModel66;
@@ -369,26 +369,27 @@ static void populateReflectionsJobResources(FfxDenoiserContext_Private* context,
 
         const uint32_t currentResourceId = pipeline->srvTextureBindings[currentShaderResourceViewIndex].resourceIdentifier;
         const FfxResourceInternal currentResource = context->srvResources[currentResourceId];
-        jobDescriptor->srvTextures[currentShaderResourceViewIndex] = currentResource;
-        wcscpy_s(jobDescriptor->srvTextureNames[currentShaderResourceViewIndex], pipeline->srvTextureBindings[currentShaderResourceViewIndex].name);
+        jobDescriptor->srvTextures[currentShaderResourceViewIndex].resource = currentResource;
+#ifdef FFX_DEBUG
+        wcscpy_s(jobDescriptor->srvTextures[currentShaderResourceViewIndex].name, pipeline->srvTextureBindings[currentShaderResourceViewIndex].name);
+#endif
     }
 
     uint32_t uavEntry = 0;  // Uav resource offset (accounts for uav arrays)
     for (uint32_t currentUnorderedAccessViewIndex = 0; currentUnorderedAccessViewIndex < pipeline->uavTextureCount; ++currentUnorderedAccessViewIndex) {
 
-        wcscpy_s(jobDescriptor->uavTextureNames[currentUnorderedAccessViewIndex], pipeline->uavTextureBindings[currentUnorderedAccessViewIndex].name);
+        const FfxResourceBinding binding = pipeline->uavTextureBindings[currentUnorderedAccessViewIndex];
+#ifdef FFX_DEBUG
+        wcscpy_s(jobDescriptor->uavTextures[currentUnorderedAccessViewIndex].name, binding.name);
+#endif
+        const uint32_t            bindEntry         = binding.arrayIndex;
+        const uint32_t            currentResourceId = binding.resourceIdentifier;
+        const FfxResourceInternal currentResource   = context->uavResources[currentResourceId];
 
-        const uint32_t numBindings = pipeline->uavTextureBindings[currentUnorderedAccessViewIndex].bindCount;
-        const uint32_t currentResourceId = pipeline->uavTextureBindings[currentUnorderedAccessViewIndex].resourceIdentifier;
-        const FfxResourceInternal currentResource = context->uavResources[currentResourceId];
-
-        for (uint32_t bindEntry = 0; bindEntry < numBindings; ++bindEntry)
-        {
-            // Don't over-subscribe mips (default to mip 0 once we've exhausted min mip)
-            FfxResourceDescription resDesc = context->contextDescription.backendInterface.fpGetResourceDescription(&context->contextDescription.backendInterface, currentResource);
-            jobDescriptor->uavTextures[uavEntry] = currentResource;
-            jobDescriptor->uavTextureMips[uavEntry++] = (bindEntry < resDesc.mipCount) ? bindEntry : 0;
-        }
+        // Don't over-subscribe mips (default to mip 0 once we've exhausted min mip)
+        FfxResourceDescription resDesc = context->contextDescription.backendInterface.fpGetResourceDescription(&context->contextDescription.backendInterface, currentResource);
+        jobDescriptor->uavTextures[uavEntry].resource = currentResource;
+        jobDescriptor->uavTextures[uavEntry++].mip    = (bindEntry < resDesc.mipCount) ? bindEntry : 0;
     }
 
     // Buffer uav
@@ -396,13 +397,17 @@ static void populateReflectionsJobResources(FfxDenoiserContext_Private* context,
 
         const uint32_t currentResourceId = pipeline->uavBufferBindings[currentUnorderedAccessViewIndex].resourceIdentifier;
         const FfxResourceInternal currentResource = context->uavResources[currentResourceId];
-        jobDescriptor->uavBuffers[currentUnorderedAccessViewIndex] = currentResource;
-        wcscpy_s(jobDescriptor->uavBufferNames[currentUnorderedAccessViewIndex], pipeline->uavBufferBindings[currentUnorderedAccessViewIndex].name);
+        jobDescriptor->uavBuffers[currentUnorderedAccessViewIndex].resource = currentResource;
+#ifdef FFX_DEBUG
+        wcscpy_s(jobDescriptor->uavBuffers[currentUnorderedAccessViewIndex].name, pipeline->uavBufferBindings[currentUnorderedAccessViewIndex].name);
+#endif
     }
 
     // Constant buffers
     for (uint32_t currentRootConstantIndex = 0; currentRootConstantIndex < pipeline->constCount; ++currentRootConstantIndex) {
+#ifdef FFX_DEBUG
         wcscpy_s(jobDescriptor->cbNames[currentRootConstantIndex], pipeline->constantBufferBindings[currentRootConstantIndex].name);
+#endif
         jobDescriptor->cbs[currentRootConstantIndex] = context->reflectionsConstants[pipeline->constantBufferBindings[currentRootConstantIndex].resourceIdentifier];
     }
 }
@@ -416,6 +421,7 @@ static void scheduleIndirectReflectionsDispatch(FfxDenoiserContext_Private* cont
     populateReflectionsJobResources(context, pipeline, &jobDescriptor);
 
     FfxGpuJobDescription dispatchJob = { FFX_GPU_JOB_COMPUTE };
+    wcscpy_s(dispatchJob.jobLabel, pipeline->name);
     dispatchJob.computeJobDescriptor = jobDescriptor;
     context->contextDescription.backendInterface.fpScheduleGpuJob(&context->contextDescription.backendInterface, &dispatchJob);
 }
@@ -428,34 +434,42 @@ static void scheduleDispatch(FfxDenoiserContext_Private* context, const FfxDenoi
 
         const uint32_t currentResourceId = pipeline->srvTextureBindings[currentShaderResourceViewIndex].resourceIdentifier;
         const FfxResourceInternal currentResource = context->srvResources[currentResourceId];
-        jobDescriptor.srvTextures[currentShaderResourceViewIndex] = currentResource;
-        wcscpy_s(jobDescriptor.srvTextureNames[currentShaderResourceViewIndex], pipeline->srvTextureBindings[currentShaderResourceViewIndex].name);
+        jobDescriptor.srvTextures[currentShaderResourceViewIndex].resource = currentResource;
+#ifdef FFX_DEBUG
+        wcscpy_s(jobDescriptor.srvTextures[currentShaderResourceViewIndex].name, pipeline->srvTextureBindings[currentShaderResourceViewIndex].name);
+#endif
     }
 
     for (uint32_t currentUnorderedAccessViewIndex = 0; currentUnorderedAccessViewIndex < pipeline->uavTextureCount; ++currentUnorderedAccessViewIndex) {
 
         const uint32_t currentResourceId = pipeline->uavTextureBindings[currentUnorderedAccessViewIndex].resourceIdentifier;
-        wcscpy_s(jobDescriptor.uavTextureNames[currentUnorderedAccessViewIndex], pipeline->uavTextureBindings[currentUnorderedAccessViewIndex].name);
+#ifdef FFX_DEBUG
+        wcscpy_s(jobDescriptor.uavTextures[currentUnorderedAccessViewIndex].name, pipeline->uavTextureBindings[currentUnorderedAccessViewIndex].name);
+#endif
 
-        const FfxResourceInternal currentResource                       = context->uavResources[currentResourceId];
-        jobDescriptor.uavTextures[currentUnorderedAccessViewIndex]      = currentResource;
-        jobDescriptor.uavTextureMips[currentUnorderedAccessViewIndex]   = 0;
+        const FfxResourceInternal currentResource                           = context->uavResources[currentResourceId];
+        jobDescriptor.uavTextures[currentUnorderedAccessViewIndex].resource = currentResource;
+        jobDescriptor.uavTextures[currentUnorderedAccessViewIndex].mip      = 0;
     }
 
     for (uint32_t currentUnorderedAccessViewIndex = 0; currentUnorderedAccessViewIndex < pipeline->uavBufferCount; ++currentUnorderedAccessViewIndex) {
 
         const uint32_t currentResourceId = pipeline->uavBufferBindings[currentUnorderedAccessViewIndex].resourceIdentifier;
         const FfxResourceInternal currentResource = context->uavResources[currentResourceId];
-        jobDescriptor.uavBuffers[currentUnorderedAccessViewIndex] = currentResource;
-        wcscpy_s(jobDescriptor.uavBufferNames[currentUnorderedAccessViewIndex], pipeline->uavBufferBindings[currentUnorderedAccessViewIndex].name);
+        jobDescriptor.uavBuffers[currentUnorderedAccessViewIndex].resource = currentResource;
+#ifdef FFX_DEBUG
+        wcscpy_s(jobDescriptor.uavBuffers[currentUnorderedAccessViewIndex].name, pipeline->uavBufferBindings[currentUnorderedAccessViewIndex].name);
+#endif
     }
 
     for (uint32_t currentShaderResourceViewIndex = 0; currentShaderResourceViewIndex < pipeline->srvBufferCount; ++currentShaderResourceViewIndex) {
 
         const uint32_t currentResourceId = pipeline->srvBufferBindings[currentShaderResourceViewIndex].resourceIdentifier;
         const FfxResourceInternal currentResource = context->srvResources[currentResourceId];
-        jobDescriptor.srvBuffers[currentShaderResourceViewIndex] = currentResource;
-        wcscpy_s(jobDescriptor.srvBufferNames[currentShaderResourceViewIndex], pipeline->srvBufferBindings[currentShaderResourceViewIndex].name);
+        jobDescriptor.srvBuffers[currentShaderResourceViewIndex].resource = currentResource;
+#ifdef FFX_DEBUG
+        wcscpy_s(jobDescriptor.srvBuffers[currentShaderResourceViewIndex].name, pipeline->srvBufferBindings[currentShaderResourceViewIndex].name);
+#endif
     }
 
     jobDescriptor.dimensions[0] = dispatchX;
@@ -464,12 +478,14 @@ static void scheduleDispatch(FfxDenoiserContext_Private* context, const FfxDenoi
     jobDescriptor.pipeline      = *pipeline;
 
     for (uint32_t currentRootConstantIndex = 0; currentRootConstantIndex < pipeline->constCount; ++currentRootConstantIndex) {
-
+#ifdef FFX_DEBUG
         wcscpy_s(jobDescriptor.cbNames[currentRootConstantIndex], pipeline->constantBufferBindings[currentRootConstantIndex].name);
+#endif
         jobDescriptor.cbs[currentRootConstantIndex] = context->shadowsConstants[pipeline->constantBufferBindings[currentRootConstantIndex].resourceIdentifier];
     }
 
     FfxGpuJobDescription dispatchJob = {FFX_GPU_JOB_COMPUTE};
+    wcscpy_s(dispatchJob.jobLabel, pipeline->name);
     dispatchJob.computeJobDescriptor = jobDescriptor;
 
     context->contextDescription.backendInterface.fpScheduleGpuJob(&context->contextDescription.backendInterface, &dispatchJob);
@@ -504,6 +520,7 @@ static FfxErrorCode denoiserDispatchShadows(FfxDenoiserContext_Private* context,
     {
         FfxGpuJobDescription job        = {};
         job.jobType                     = FFX_GPU_JOB_CLEAR_FLOAT;
+        wcscpy_s(job.jobLabel, L"Clear shadow map");
         job.clearJobDescriptor.color[0] = 0.0f;
         job.clearJobDescriptor.color[1] = 0.0f;
         job.clearJobDescriptor.color[2] = 0.0f;
@@ -526,10 +543,11 @@ static FfxErrorCode denoiserDispatchShadows(FfxDenoiserContext_Private* context,
     // Get DenoiserShadows info for run
     uint32_t bufferDimensions[2] = {context->contextDescription.windowSize.width, context->contextDescription.windowSize.height};
     float invBufferDimensions[2] = {1.f / bufferDimensions[0], 1.f / bufferDimensions[1]};
-    memcpy(&context->shadowsConstants[0].data,
-           &bufferDimensions,
-           DENOISER_SHADOWS_CONSTANT_BUFFER_0_SIZE * sizeof(uint32_t));
-
+    context->contextDescription.backendInterface.fpStageConstantBufferDataFunc(&context->contextDescription.backendInterface,
+                                                                               &bufferDimensions,
+                                                                               DENOISER_SHADOWS_CONSTANT_BUFFER_0_SIZE * sizeof(uint32_t),
+                                                                               &context->shadowsConstants[0]);
+    
     DenoiserShadowsTileClassificationConstants tileClassificationConstants;
     memcpy(&tileClassificationConstants.eye, params->eye, sizeof(params->eye));
     tileClassificationConstants.isFirstFrame = context->isFirstShadowFrame;
@@ -542,7 +560,10 @@ static FfxErrorCode denoiserDispatchShadows(FfxDenoiserContext_Private* context,
     memcpy(&tileClassificationConstants.reprojectionMatrix, &params->reprojectionMatrix, sizeof(params->reprojectionMatrix));
     memcpy(&tileClassificationConstants.viewProjectionInverse, &params->viewProjectionInverse, sizeof(params->viewProjectionInverse));
 
-    memcpy(&context->shadowsConstants[1].data, &tileClassificationConstants, DENOISER_SHADOWS_CONSTANT_BUFFER_1_SIZE* sizeof(uint32_t));
+    context->contextDescription.backendInterface.fpStageConstantBufferDataFunc(&context->contextDescription.backendInterface,
+                                                                               &tileClassificationConstants,
+                                                                               DENOISER_SHADOWS_CONSTANT_BUFFER_1_SIZE * sizeof(uint32_t),
+                                                                               &context->shadowsConstants[1]);
 
     uint32_t dispatchX = FFX_DIVIDE_ROUNDING_UP(context->contextDescription.windowSize.width, k_tileSizeX);
     uint32_t dispatchY = FFX_DIVIDE_ROUNDING_UP(context->contextDescription.windowSize.height, k_tileSizeY);
@@ -571,19 +592,24 @@ static FfxErrorCode denoiserDispatchShadows(FfxDenoiserContext_Private* context,
 
     // Copy current depth to previous depth
     FfxGpuJobDescription copyJob = { FFX_GPU_JOB_COPY };
-    copyJob.copyJobDescriptor.src = context->srvResources[FFX_DENOISER_RESOURCE_IDENTIFIER_DEPTH];
-    copyJob.copyJobDescriptor.dst = context->srvResources[FFX_DENOISER_RESOURCE_IDENTIFIER_PREVIOUS_DEPTH];
+    wcscpy_s(copyJob.jobLabel, L"Copy current depth -> previous depth");
+    copyJob.copyJobDescriptor.src       = context->srvResources[FFX_DENOISER_RESOURCE_IDENTIFIER_DEPTH];
+    copyJob.copyJobDescriptor.dst       = context->srvResources[FFX_DENOISER_RESOURCE_IDENTIFIER_PREVIOUS_DEPTH];
+    copyJob.copyJobDescriptor.srcOffset = 0; 
+    copyJob.copyJobDescriptor.dstOffset = 0;
+    copyJob.copyJobDescriptor.size      = 0;
     context->contextDescription.backendInterface.fpScheduleGpuJob(&context->contextDescription.backendInterface, &copyJob);
-
+    
     DenoiserShadowsFilterConstants filterConstants;
     memcpy(&filterConstants.bufferDimensions, bufferDimensions, sizeof(bufferDimensions));
     memcpy(&filterConstants.invBufferDimensions, invBufferDimensions, sizeof(invBufferDimensions));
     memcpy(&filterConstants.normalsUnpackMul_unpackAdd, &local_normalsUnpackMul_unpackAdd, sizeof(local_normalsUnpackMul_unpackAdd));
     memcpy(&filterConstants.projectionInverse, &params->projectionInverse, sizeof(params->projectionInverse));
     filterConstants.depthSimilaritySigma = params->depthSimilaritySigma;
-    memcpy(&context->shadowsConstants[2].data,
-           &filterConstants,
-           DENOISER_SHADOWS_CONSTANT_BUFFER_2_SIZE * sizeof(uint32_t));
+    context->contextDescription.backendInterface.fpStageConstantBufferDataFunc(&context->contextDescription.backendInterface,
+                                                                               &filterConstants,
+                                                                               DENOISER_SHADOWS_CONSTANT_BUFFER_2_SIZE * sizeof(uint32_t),
+                                                                               &context->shadowsConstants[2]);
     context->srvResources[FFX_DENOISER_RESOURCE_IDENTIFIER_FILTER_INPUT] = context->srvResources[FFX_DENOISER_RESOURCE_IDENTIFIER_SCRATCH0];
     context->uavResources[FFX_DENOISER_RESOURCE_IDENTIFIER_HISTORY] = context->uavResources[FFX_DENOISER_RESOURCE_IDENTIFIER_SCRATCH1];
     scheduleDispatch(context, params,&context->pipelineFilterSoftShadows0, dispatchX, dispatchY);
@@ -596,7 +622,7 @@ static FfxErrorCode denoiserDispatchShadows(FfxDenoiserContext_Private* context,
     scheduleDispatch(context, params,&context->pipelineFilterSoftShadows2, dispatchX, dispatchY);
 
     // Execute all the work for the frame
-    context->contextDescription.backendInterface.fpExecuteGpuJobs(&context->contextDescription.backendInterface, commandList);
+    context->contextDescription.backendInterface.fpExecuteGpuJobs(&context->contextDescription.backendInterface, commandList, context->effectContextId);
 
     // Release dynamic resources
     context->contextDescription.backendInterface.fpUnregisterResources(&context->contextDescription.backendInterface, commandList, context->effectContextId);
@@ -630,6 +656,7 @@ static FfxErrorCode denoiserDispatchReflections(FfxDenoiserContext_Private* cont
     if (context->isFirstReflectionsFrame) {
         FfxGpuJobDescription job = {};
         job.jobType = FFX_GPU_JOB_CLEAR_FLOAT;
+        wcscpy_s(job.jobLabel, L"Zero initialize resource");
         job.clearJobDescriptor.color[0] = 0.0f;
         job.clearJobDescriptor.color[1] = 0.0f;
         job.clearJobDescriptor.color[2] = 0.0f;
@@ -687,6 +714,7 @@ static FfxErrorCode denoiserDispatchReflections(FfxDenoiserContext_Private* cont
     {
         FfxGpuJobDescription job = {};
         job.jobType = FFX_GPU_JOB_CLEAR_FLOAT;
+        wcscpy_s(job.jobLabel, L"Zero initialize resource");
         job.clearJobDescriptor.color[0] = 0.0f;
         job.clearJobDescriptor.color[1] = 0.0f;
         job.clearJobDescriptor.color[2] = 0.0f;
@@ -719,7 +747,11 @@ static FfxErrorCode denoiserDispatchReflections(FfxDenoiserContext_Private* cont
     reflectionsConstants.roughnessThreshold        = params->roughnessThreshold;
 
     // initialize constantBuffers data
-    memcpy(&context->reflectionsConstants[FFX_DENOISER_REFLECTIONS_CONSTANTBUFFER_IDENTIFIER].data, &reflectionsConstants, context->reflectionsConstants[FFX_DENOISER_REFLECTIONS_CONSTANTBUFFER_IDENTIFIER].num32BitEntries * sizeof(uint32_t));
+    context->contextDescription.backendInterface.fpStageConstantBufferDataFunc(
+        &context->contextDescription.backendInterface,
+        &reflectionsConstants,
+        sizeof(reflectionsConstants),
+        &context->reflectionsConstants[FFX_DENOISER_REFLECTIONS_CONSTANTBUFFER_IDENTIFIER]);
 
     // Denoising
     scheduleIndirectReflectionsDispatch(context, &context->pipelineReprojectReflections, &context->uavResources[FFX_DENOISER_RESOURCE_IDENTIFIER_INDIRECT_ARGS], 12);
@@ -738,26 +770,39 @@ static FfxErrorCode denoiserDispatchReflections(FfxDenoiserContext_Private* cont
 
     // Copy Final result to output target
     FfxGpuJobDescription dispatchCopyJobDescriptor = { FFX_GPU_JOB_COPY };
+    wcscpy_s(dispatchCopyJobDescriptor.jobLabel, L"Copy to output");
     dispatchCopyJobDescriptor.copyJobDescriptor.src = context->srvResources[radianceAResourceIndex];
     dispatchCopyJobDescriptor.copyJobDescriptor.dst = context->srvResources[FFX_DENOISER_RESOURCE_IDENTIFIER_OUTPUT];
+    dispatchCopyJobDescriptor.copyJobDescriptor.srcOffset = 0;
+    dispatchCopyJobDescriptor.copyJobDescriptor.dstOffset = 0;
+    dispatchCopyJobDescriptor.copyJobDescriptor.size      = 0;
     context->contextDescription.backendInterface.fpScheduleGpuJob(&context->contextDescription.backendInterface, &dispatchCopyJobDescriptor);
 
     // Normal history
     dispatchCopyJobDescriptor.copyJobDescriptor.src = context->srvResources[FFX_DENOISER_RESOURCE_IDENTIFIER_INPUT_NORMAL];
     dispatchCopyJobDescriptor.copyJobDescriptor.dst = context->srvResources[FFX_DENOISER_RESOURCE_IDENTIFIER_NORMAL_HISTORY];
+    dispatchCopyJobDescriptor.copyJobDescriptor.srcOffset = 0;
+    dispatchCopyJobDescriptor.copyJobDescriptor.dstOffset = 0;
+    dispatchCopyJobDescriptor.copyJobDescriptor.size      = 0;
     context->contextDescription.backendInterface.fpScheduleGpuJob(&context->contextDescription.backendInterface, &dispatchCopyJobDescriptor);
 
     // Roughness history
     dispatchCopyJobDescriptor.copyJobDescriptor.src = context->srvResources[FFX_DENOISER_RESOURCE_IDENTIFIER_EXTRACTED_ROUGHNESS];
     dispatchCopyJobDescriptor.copyJobDescriptor.dst = context->srvResources[FFX_DENOISER_RESOURCE_IDENTIFIER_ROUGHNESS_HISTORY];
+    dispatchCopyJobDescriptor.copyJobDescriptor.srcOffset = 0;
+    dispatchCopyJobDescriptor.copyJobDescriptor.dstOffset = 0;
+    dispatchCopyJobDescriptor.copyJobDescriptor.size      = 0;
     context->contextDescription.backendInterface.fpScheduleGpuJob(&context->contextDescription.backendInterface, &dispatchCopyJobDescriptor);
 
     // Depth history
     dispatchCopyJobDescriptor.copyJobDescriptor.src = context->srvResources[FFX_DENOISER_RESOURCE_IDENTIFIER_INPUT_DEPTH_HIERARCHY];
     dispatchCopyJobDescriptor.copyJobDescriptor.dst = context->srvResources[FFX_DENOISER_RESOURCE_IDENTIFIER_DEPTH_HISTORY];
+    dispatchCopyJobDescriptor.copyJobDescriptor.srcOffset = 0;
+    dispatchCopyJobDescriptor.copyJobDescriptor.dstOffset = 0;
+    dispatchCopyJobDescriptor.copyJobDescriptor.size      = 0;
     context->contextDescription.backendInterface.fpScheduleGpuJob(&context->contextDescription.backendInterface, &dispatchCopyJobDescriptor);
 
-    context->contextDescription.backendInterface.fpExecuteGpuJobs(&context->contextDescription.backendInterface, commandList);
+    context->contextDescription.backendInterface.fpExecuteGpuJobs(&context->contextDescription.backendInterface, commandList, context->effectContextId);
 
     // release dynamic resources
     context->contextDescription.backendInterface.fpUnregisterResources(&context->contextDescription.backendInterface, commandList, context->effectContextId);
@@ -773,28 +818,82 @@ static FfxErrorCode denoiserShadowsCreateResources(FfxDenoiserContext_Private* c
     uint32_t const tileCount = FFX_DIVIDE_ROUNDING_UP(contextDescription->windowSize.width, k_tileSizeX) * FFX_DIVIDE_ROUNDING_UP(contextDescription->windowSize.height, k_tileSizeY);
 
     // Declare internal resources needed
-    const FfxInternalResourceDescription internalSurfaceDesc[] = {
-        {   FFX_DENOISER_RESOURCE_IDENTIFIER_PREVIOUS_DEPTH, L"DenoiserShadows_PreviousDepth", FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_READ_ONLY,
-            FFX_SURFACE_FORMAT_R32_FLOAT, contextDescription->windowSize.width, contextDescription->windowSize.height, 1, FFX_RESOURCE_FLAGS_NONE },
+    const FfxInternalResourceDescription internalSurfaceDesc[] = {{FFX_DENOISER_RESOURCE_IDENTIFIER_PREVIOUS_DEPTH,
+                                                                   L"DenoiserShadows_PreviousDepth",
+                                                                   FFX_RESOURCE_TYPE_TEXTURE2D,
+                                                                   FFX_RESOURCE_USAGE_READ_ONLY,
+                                                                   FFX_SURFACE_FORMAT_R32_FLOAT,
+                                                                   contextDescription->windowSize.width,
+                                                                   contextDescription->windowSize.height,
+                                                                   1,
+                                                                   FFX_RESOURCE_FLAGS_NONE,
+                                                                   {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
 
-        {   FFX_DENOISER_RESOURCE_IDENTIFIER_MOMENTS0, L"DenoiserShadows_Moments0", FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_UAV,
-            FFX_SURFACE_FORMAT_R11G11B10_FLOAT, contextDescription->windowSize.width, contextDescription->windowSize.height, 1, FFX_RESOURCE_FLAGS_NONE },
+                                                                  {FFX_DENOISER_RESOURCE_IDENTIFIER_MOMENTS0,
+                                                                   L"DenoiserShadows_Moments0",
+                                                                   FFX_RESOURCE_TYPE_TEXTURE2D,
+                                                                   FFX_RESOURCE_USAGE_UAV,
+                                                                   FFX_SURFACE_FORMAT_R11G11B10_FLOAT,
+                                                                   contextDescription->windowSize.width,
+                                                                   contextDescription->windowSize.height,
+                                                                   1,
+                                                                   FFX_RESOURCE_FLAGS_NONE,
+                                                                   {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
 
-        {   FFX_DENOISER_RESOURCE_IDENTIFIER_MOMENTS1, L"DenoiserShadows_Moments1", FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_UAV,
-            FFX_SURFACE_FORMAT_R11G11B10_FLOAT, contextDescription->windowSize.width, contextDescription->windowSize.height, 1, FFX_RESOURCE_FLAGS_NONE },
+                                                                  {FFX_DENOISER_RESOURCE_IDENTIFIER_MOMENTS1,
+                                                                   L"DenoiserShadows_Moments1",
+                                                                   FFX_RESOURCE_TYPE_TEXTURE2D,
+                                                                   FFX_RESOURCE_USAGE_UAV,
+                                                                   FFX_SURFACE_FORMAT_R11G11B10_FLOAT,
+                                                                   contextDescription->windowSize.width,
+                                                                   contextDescription->windowSize.height,
+                                                                   1,
+                                                                   FFX_RESOURCE_FLAGS_NONE,
+                                                                   {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
 
-        {   FFX_DENOISER_RESOURCE_IDENTIFIER_SCRATCH0, L"DenoiserShadows_Scratch0", FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_UAV,
-            FFX_SURFACE_FORMAT_R16G16_FLOAT, contextDescription->windowSize.width, contextDescription->windowSize.height, 1, FFX_RESOURCE_FLAGS_NONE },
+                                                                  {FFX_DENOISER_RESOURCE_IDENTIFIER_SCRATCH0,
+                                                                   L"DenoiserShadows_Scratch0",
+                                                                   FFX_RESOURCE_TYPE_TEXTURE2D,
+                                                                   FFX_RESOURCE_USAGE_UAV,
+                                                                   FFX_SURFACE_FORMAT_R16G16_FLOAT,
+                                                                   contextDescription->windowSize.width,
+                                                                   contextDescription->windowSize.height,
+                                                                   1,
+                                                                   FFX_RESOURCE_FLAGS_NONE,
+                                                                   {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
 
-        {   FFX_DENOISER_RESOURCE_IDENTIFIER_SCRATCH1, L"DenoiserShadows_Scratch1", FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_UAV,
-            FFX_SURFACE_FORMAT_R16G16_FLOAT, contextDescription->windowSize.width, contextDescription->windowSize.height, 1, FFX_RESOURCE_FLAGS_NONE },
+                                                                  {FFX_DENOISER_RESOURCE_IDENTIFIER_SCRATCH1,
+                                                                   L"DenoiserShadows_Scratch1",
+                                                                   FFX_RESOURCE_TYPE_TEXTURE2D,
+                                                                   FFX_RESOURCE_USAGE_UAV,
+                                                                   FFX_SURFACE_FORMAT_R16G16_FLOAT,
+                                                                   contextDescription->windowSize.width,
+                                                                   contextDescription->windowSize.height,
+                                                                   1,
+                                                                   FFX_RESOURCE_FLAGS_NONE,
+                                                                   {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
 
-        {   FFX_DENOISER_RESOURCE_IDENTIFIER_TILE_BUFFER, L"DenoiserShadows_TileBuffer", FFX_RESOURCE_TYPE_BUFFER, FFX_RESOURCE_USAGE_UAV,
-            FFX_SURFACE_FORMAT_UNKNOWN, sizeof(uint32_t) * tileCount, sizeof(uint32_t), 1, FFX_RESOURCE_FLAGS_NONE },
+                                                                  {FFX_DENOISER_RESOURCE_IDENTIFIER_TILE_BUFFER,
+                                                                   L"DenoiserShadows_TileBuffer",
+                                                                   FFX_RESOURCE_TYPE_BUFFER,
+                                                                   FFX_RESOURCE_USAGE_UAV,
+                                                                   FFX_SURFACE_FORMAT_UNKNOWN,
+                                                                   sizeof(uint32_t) * tileCount,
+                                                                   sizeof(uint32_t),
+                                                                   1,
+                                                                   FFX_RESOURCE_FLAGS_NONE,
+                                                                   {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
 
-        {   FFX_DENOISER_RESOURCE_IDENTIFIER_TILE_META_DATA, L"DenoiserShadows_TileMetadata", FFX_RESOURCE_TYPE_BUFFER, FFX_RESOURCE_USAGE_UAV,
-            FFX_SURFACE_FORMAT_UNKNOWN, sizeof(uint32_t) * tileCount, sizeof(uint32_t), 1, FFX_RESOURCE_FLAGS_NONE }
-    };
+                                                                  {FFX_DENOISER_RESOURCE_IDENTIFIER_TILE_META_DATA,
+                                                                   L"DenoiserShadows_TileMetadata",
+                                                                   FFX_RESOURCE_TYPE_BUFFER,
+                                                                   FFX_RESOURCE_USAGE_UAV,
+                                                                   FFX_SURFACE_FORMAT_UNKNOWN,
+                                                                   sizeof(uint32_t) * tileCount,
+                                                                   sizeof(uint32_t),
+                                                                   1,
+                                                                   FFX_RESOURCE_FLAGS_NONE,
+                                                                   {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}}};
 
     for (int32_t currentSurfaceIndex = 0; currentSurfaceIndex < FFX_ARRAY_ELEMENTS(internalSurfaceDesc); ++currentSurfaceIndex) {
 
@@ -803,7 +902,7 @@ static FfxErrorCode denoiserShadowsCreateResources(FfxDenoiserContext_Private* c
         uint32_t depth = 1, alignment = 0;
         const FfxResourceDescription resourceDescription = { currentSurfaceDescription->type, currentSurfaceDescription->format, currentSurfaceDescription->width, currentSurfaceDescription->height, isBuffer ? alignment : depth, isBuffer ? 0 : currentSurfaceDescription->mipCount, currentSurfaceDescription->flags, currentSurfaceDescription->usage };
         const FfxResourceStates initialState = (currentSurfaceDescription->usage == FFX_RESOURCE_USAGE_READ_ONLY) ? FFX_RESOURCE_STATE_COMPUTE_READ : FFX_RESOURCE_STATE_UNORDERED_ACCESS;
-        const FfxCreateResourceDescription createResourceDescription = { FFX_HEAP_TYPE_DEFAULT, resourceDescription, initialState, currentSurfaceDescription->initDataSize, currentSurfaceDescription->initData, currentSurfaceDescription->name, currentSurfaceDescription->id };
+        const FfxCreateResourceDescription createResourceDescription = { FFX_HEAP_TYPE_DEFAULT, resourceDescription, initialState, currentSurfaceDescription->name, currentSurfaceDescription->id, currentSurfaceDescription->initData };
 
         FFX_VALIDATE(context->contextDescription.backendInterface.fpCreateResource(&context->contextDescription.backendInterface, &createResourceDescription, context->effectContextId, &context->srvResources[currentSurfaceDescription->id]));
     }
@@ -818,31 +917,93 @@ static FfxErrorCode denoiserReflectionsCreateResources(FfxDenoiserContext_Privat
 {
 
     // Declare internal resources needed
-    const FfxInternalResourceDescription internalSurfaceDesc[] = {
-        {   FFX_DENOISER_RESOURCE_IDENTIFIER_DEPTH_HISTORY, L"DENOISER_DepthHistory", FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_READ_ONLY,
-            FFX_SURFACE_FORMAT_R32_FLOAT, contextDescription->windowSize.width, contextDescription->windowSize.height, 1, FFX_RESOURCE_FLAGS_NONE },
+    const FfxInternalResourceDescription internalSurfaceDesc[] = {{FFX_DENOISER_RESOURCE_IDENTIFIER_DEPTH_HISTORY,
+                                                                   L"DENOISER_DepthHistory",
+                                                                   FFX_RESOURCE_TYPE_TEXTURE2D,
+                                                                   FFX_RESOURCE_USAGE_READ_ONLY,
+                                                                   FFX_SURFACE_FORMAT_R32_FLOAT,
+                                                                   contextDescription->windowSize.width,
+                                                                   contextDescription->windowSize.height,
+                                                                   1,
+                                                                   FFX_RESOURCE_FLAGS_NONE,
+                                                                   {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
 
-        {   FFX_DENOISER_RESOURCE_IDENTIFIER_NORMAL_HISTORY, L"DENOISER_NormalHistory", FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_READ_ONLY,
-            contextDescription->normalsHistoryBufferFormat, contextDescription->windowSize.width, contextDescription->windowSize.height, 1, FFX_RESOURCE_FLAGS_NONE },
+                                                                  {FFX_DENOISER_RESOURCE_IDENTIFIER_NORMAL_HISTORY,
+                                                                   L"DENOISER_NormalHistory",
+                                                                   FFX_RESOURCE_TYPE_TEXTURE2D,
+                                                                   FFX_RESOURCE_USAGE_READ_ONLY,
+                                                                   contextDescription->normalsHistoryBufferFormat,
+                                                                   contextDescription->windowSize.width,
+                                                                   contextDescription->windowSize.height,
+                                                                   1,
+                                                                   FFX_RESOURCE_FLAGS_NONE,
+                                                                   {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
 
-        {   FFX_DENOISER_RESOURCE_IDENTIFIER_ROUGHNESS_HISTORY, L"DENOISER_RoughnessHistory", FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_READ_ONLY,
-            FFX_SURFACE_FORMAT_R8_UNORM, contextDescription->windowSize.width, contextDescription->windowSize.height, 1, FFX_RESOURCE_FLAGS_NONE },
+                                                                  {FFX_DENOISER_RESOURCE_IDENTIFIER_ROUGHNESS_HISTORY,
+                                                                   L"DENOISER_RoughnessHistory",
+                                                                   FFX_RESOURCE_TYPE_TEXTURE2D,
+                                                                   FFX_RESOURCE_USAGE_READ_ONLY,
+                                                                   FFX_SURFACE_FORMAT_R8_UNORM,
+                                                                   contextDescription->windowSize.width,
+                                                                   contextDescription->windowSize.height,
+                                                                   1,
+                                                                   FFX_RESOURCE_FLAGS_NONE,
+                                                                   {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
 
-        {   FFX_DENOISER_RESOURCE_IDENTIFIER_SAMPLE_COUNT_0, L"DENOISER_SampleCount0", FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_UAV,
-            FFX_SURFACE_FORMAT_R16_FLOAT, contextDescription->windowSize.width, contextDescription->windowSize.height, 1, FFX_RESOURCE_FLAGS_NONE },
+                                                                  {FFX_DENOISER_RESOURCE_IDENTIFIER_SAMPLE_COUNT_0,
+                                                                   L"DENOISER_SampleCount0",
+                                                                   FFX_RESOURCE_TYPE_TEXTURE2D,
+                                                                   FFX_RESOURCE_USAGE_UAV,
+                                                                   FFX_SURFACE_FORMAT_R16_FLOAT,
+                                                                   contextDescription->windowSize.width,
+                                                                   contextDescription->windowSize.height,
+                                                                   1,
+                                                                   FFX_RESOURCE_FLAGS_NONE,
+                                                                   {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
 
-        {   FFX_DENOISER_RESOURCE_IDENTIFIER_SAMPLE_COUNT_1, L"DENOISER_SampleCount1", FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_UAV,
-            FFX_SURFACE_FORMAT_R16_FLOAT, contextDescription->windowSize.width, contextDescription->windowSize.height, 1, FFX_RESOURCE_FLAGS_NONE },
+                                                                  {FFX_DENOISER_RESOURCE_IDENTIFIER_SAMPLE_COUNT_1,
+                                                                   L"DENOISER_SampleCount1",
+                                                                   FFX_RESOURCE_TYPE_TEXTURE2D,
+                                                                   FFX_RESOURCE_USAGE_UAV,
+                                                                   FFX_SURFACE_FORMAT_R16_FLOAT,
+                                                                   contextDescription->windowSize.width,
+                                                                   contextDescription->windowSize.height,
+                                                                   1,
+                                                                   FFX_RESOURCE_FLAGS_NONE,
+                                                                   {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
 
-        {   FFX_DENOISER_RESOURCE_IDENTIFIER_AVERAGE_RADIANCE_0, L"DENOISER_AverageRadiance0", FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_UAV,
-            FFX_SURFACE_FORMAT_R11G11B10_FLOAT, FFX_DIVIDE_ROUNDING_UP(contextDescription->windowSize.width, 8u), FFX_DIVIDE_ROUNDING_UP(contextDescription->windowSize.height, 8u), 1, FFX_RESOURCE_FLAGS_NONE },
+                                                                  {FFX_DENOISER_RESOURCE_IDENTIFIER_AVERAGE_RADIANCE_0,
+                                                                   L"DENOISER_AverageRadiance0",
+                                                                   FFX_RESOURCE_TYPE_TEXTURE2D,
+                                                                   FFX_RESOURCE_USAGE_UAV,
+                                                                   FFX_SURFACE_FORMAT_R11G11B10_FLOAT,
+                                                                   FFX_DIVIDE_ROUNDING_UP(contextDescription->windowSize.width, 8u),
+                                                                   FFX_DIVIDE_ROUNDING_UP(contextDescription->windowSize.height, 8u),
+                                                                   1,
+                                                                   FFX_RESOURCE_FLAGS_NONE,
+                                                                   {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
 
-        {   FFX_DENOISER_RESOURCE_IDENTIFIER_AVERAGE_RADIANCE_1, L"DENOISER_AverageRadiance1", FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_UAV,
-            FFX_SURFACE_FORMAT_R11G11B10_FLOAT, FFX_DIVIDE_ROUNDING_UP(contextDescription->windowSize.width, 8u), FFX_DIVIDE_ROUNDING_UP(contextDescription->windowSize.height, 8u), 1, FFX_RESOURCE_FLAGS_NONE },
+                                                                  {FFX_DENOISER_RESOURCE_IDENTIFIER_AVERAGE_RADIANCE_1,
+                                                                   L"DENOISER_AverageRadiance1",
+                                                                   FFX_RESOURCE_TYPE_TEXTURE2D,
+                                                                   FFX_RESOURCE_USAGE_UAV,
+                                                                   FFX_SURFACE_FORMAT_R11G11B10_FLOAT,
+                                                                   FFX_DIVIDE_ROUNDING_UP(contextDescription->windowSize.width, 8u),
+                                                                   FFX_DIVIDE_ROUNDING_UP(contextDescription->windowSize.height, 8u),
+                                                                   1,
+                                                                   FFX_RESOURCE_FLAGS_NONE,
+                                                                   {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
 
-        {   FFX_DENOISER_RESOURCE_IDENTIFIER_REPROJECTED_RADIANCE, L"DENOISER_ReprojectedRadiance", FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_UAV,
-            FFX_SURFACE_FORMAT_R16G16B16A16_FLOAT, contextDescription->windowSize.width, contextDescription->windowSize.height, 1, FFX_RESOURCE_FLAGS_NONE }
-    };
+                                                                  {FFX_DENOISER_RESOURCE_IDENTIFIER_REPROJECTED_RADIANCE,
+                                                                   L"DENOISER_ReprojectedRadiance",
+                                                                   FFX_RESOURCE_TYPE_TEXTURE2D,
+                                                                   FFX_RESOURCE_USAGE_UAV,
+                                                                   FFX_SURFACE_FORMAT_R16G16B16A16_FLOAT,
+                                                                   contextDescription->windowSize.width,
+                                                                   contextDescription->windowSize.height,
+                                                                   1,
+                                                                   FFX_RESOURCE_FLAGS_NONE,
+                                                                   {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}}};
 
     // clear the SRV resources to NULL.
     memset(context->srvResources, 0, sizeof(context->srvResources));
@@ -852,7 +1013,7 @@ static FfxErrorCode denoiserReflectionsCreateResources(FfxDenoiserContext_Privat
         const FfxInternalResourceDescription* currentSurfaceDescription = &internalSurfaceDesc[currentSurfaceIndex];
         const FfxResourceDescription resourceDescription = { currentSurfaceDescription->type, currentSurfaceDescription->format, currentSurfaceDescription->width, currentSurfaceDescription->height, currentSurfaceDescription->type == FFX_RESOURCE_TYPE_BUFFER ? 0u : 1u, currentSurfaceDescription->mipCount, FFX_RESOURCE_FLAGS_NONE, currentSurfaceDescription->usage };
         const FfxResourceStates initialState = (currentSurfaceDescription->usage == FFX_RESOURCE_USAGE_READ_ONLY) ? FFX_RESOURCE_STATE_COMPUTE_READ : FFX_RESOURCE_STATE_UNORDERED_ACCESS;
-        const FfxCreateResourceDescription createResourceDescription = { FFX_HEAP_TYPE_DEFAULT, resourceDescription, initialState, currentSurfaceDescription->initDataSize, currentSurfaceDescription->initData, currentSurfaceDescription->name, currentSurfaceDescription->id };
+        const FfxCreateResourceDescription createResourceDescription = { FFX_HEAP_TYPE_DEFAULT, resourceDescription, initialState, currentSurfaceDescription->name, currentSurfaceDescription->id, currentSurfaceDescription->initData };
 
         FFX_VALIDATE(context->contextDescription.backendInterface.fpCreateResource(&context->contextDescription.backendInterface, &createResourceDescription, context->effectContextId, &context->srvResources[currentSurfaceDescription->id]));
     }
@@ -876,8 +1037,13 @@ static FfxErrorCode denoiserCreate(FfxDenoiserContext_Private* context, const Ff
 
     memcpy(&context->contextDescription, contextDescription, sizeof(FfxDenoiserContextDescription));
 
+    // Check version info - make sure we are linked with the right backend version
+    FfxVersionNumber version = context->contextDescription.backendInterface.fpGetSDKVersion(&context->contextDescription.backendInterface);
+    FFX_RETURN_ON_ERROR(version == FFX_SDK_MAKE_VERSION(1, 1, 0), FFX_ERROR_INVALID_VERSION);
+
     // Create the device.
-    FfxErrorCode errorCode = context->contextDescription.backendInterface.fpCreateBackendContext(&context->contextDescription.backendInterface, &context->effectContextId);
+    FfxErrorCode errorCode =
+        context->contextDescription.backendInterface.fpCreateBackendContext(&context->contextDescription.backendInterface, nullptr, &context->effectContextId);
     FFX_RETURN_ON_ERROR(errorCode == FFX_OK, errorCode);
 
     // Call out for device caps.
@@ -960,7 +1126,7 @@ static FfxErrorCode denoiserRelease(FfxDenoiserContext_Private* context)
     // release internal resources
     for (int32_t currentResourceIndex = 0; currentResourceIndex < FFX_DENOISER_RESOURCE_IDENTIFIER_COUNT; ++currentResourceIndex) {
 
-        ffxSafeReleaseResource(&context->contextDescription.backendInterface, context->srvResources[currentResourceIndex]);
+        ffxSafeReleaseResource(&context->contextDescription.backendInterface, context->srvResources[currentResourceIndex], context->effectContextId);
     }
 
     // Destroy the context
@@ -983,6 +1149,7 @@ FfxErrorCode ffxDenoiserContextCreate(FfxDenoiserContext* context, const FfxDeno
         FFX_ERROR_INVALID_POINTER);
 
     // Validate that all callbacks are set for the interface
+    FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpGetSDKVersion, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpGetDeviceCapabilities, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpCreateBackendContext, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpDestroyBackendContext, FFX_ERROR_INCOMPLETE_INTERFACE);
@@ -992,7 +1159,7 @@ FfxErrorCode ffxDenoiserContextCreate(FfxDenoiserContext* context, const FfxDeno
 
         FFX_RETURN_ON_ERROR(contextDescription->backendInterface.scratchBufferSize, FFX_ERROR_INCOMPLETE_INTERFACE);
     }
-
+    
     // Ensure the context is large enough for the internal context.
     FFX_STATIC_ASSERT(sizeof(FfxDenoiserContext) >= sizeof(FfxDenoiserContext_Private));
 
@@ -1034,11 +1201,16 @@ FfxErrorCode ffxDenoiserContextDispatchReflections(FfxDenoiserContext* context, 
     // check pointers are valid
     FFX_RETURN_ON_ERROR(context, FFX_ERROR_INVALID_POINTER);
     FFX_RETURN_ON_ERROR(dispatchDescription, FFX_ERROR_INVALID_POINTER);
-
+    
     FfxDenoiserContext_Private* contextPrivate = (FfxDenoiserContext_Private*)(context);
 
     FFX_RETURN_ON_ERROR(contextPrivate->device, FFX_ERROR_NULL_DEVICE);
 
     // dispatch the Denoiser pass
     return denoiserDispatchReflections(contextPrivate, dispatchDescription);;
+}
+
+FFX_API FfxVersionNumber ffxDenoiserGetEffectVersion()
+{
+    return FFX_SDK_MAKE_VERSION(FFX_DENOISER_VERSION_MAJOR, FFX_DENOISER_VERSION_MINOR, FFX_DENOISER_VERSION_PATCH);
 }

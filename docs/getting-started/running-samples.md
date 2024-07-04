@@ -2,13 +2,13 @@
 
 <h1>Running the FidelityFX SDK Samples</h1>
 
-<h2>Content Download</h2>
+<h2>Content download</h2>
 
 The SDK samples are configured to load scenes from pre-downloaded content. Please see the [media delivery tool](../tools/media-delivery.md)
 
-<h2>Configuration Files</h2>
+<h2>Configuration files</h2>
 
-The SDK samples (and Cauldron in general) operate via runtime setup driven by various JSON configuration files.
+The SDK samples (and FidelityFX Cauldron Framework in general) operate via runtime setup driven by various JSON configuration files.
 
 There is a hierarchy to how the configuration files are loaded:
 
@@ -21,7 +21,7 @@ There is a hierarchy to how the configuration files are loaded:
   
   ![ConfigurationFlow](media/config_init.jpg)
   
-<h3>Configuration Options</h3>
+<h3>Configuration options</h3>
 
 The following is a list of configuration groups and options that can be overloaded for any sample through a sample's configuration file.
 
@@ -62,8 +62,11 @@ The following is a list of configuration groups and options that can be overload
   - DISPLAYMODE_FSHDR_2084***,		
   - DISPLAYMODE_FSHDR_SCRGB***
   
-  ** (Requires HDR capable monitor)<br>
+  ** (Requires HDR capable monitor)
+  
   *** (Requires Freesync Premium Pro monitor)
+
+  Note: All modes besides DISPLAYMODE_LDR also require the user to enable the HDR display setting in Windows System -> Display settings menu to function properly. 
   
   ```yaml
   "Presentation": {
@@ -156,7 +159,7 @@ The following is a list of configuration groups and options that can be overload
   
   Content blocks are used in sample configuration files to dictate the scene, camera, particles, etc. that should be loaded at runtime when running the sample. These values can be overridden from the command line interface (see below).
   
-  `ParticleSpawners`: This is a list of particle spawners to queue for loading at runtime. For an overview of how particles work in Cauldron, please see the reference documentation on GPUOpen.
+  `ParticleSpawners`: This is a list of particle spawners to queue for loading at runtime. For an overview of how particles work in FidelityFX Cauldron Framework, please see the reference documentation on GPUOpen.
   
   `Scenes`: This is a list of glTF files to queue for loading at runtime. Can contain one or more file paths.
   
@@ -232,7 +235,7 @@ The following is a list of configuration groups and options that can be overload
   "BuildRayTracingAccelerationStructure": false,
   ```
 
-<h2>Command Line Options</h2>
+<h2>Command line options</h2>
 
 By default, each sample is configured to try to load a preconfigured scene and set of options for a sample.
 
@@ -246,7 +249,7 @@ The following are the currently supported command line overrides:
 
   **-devmode**
   
-  Launches the sample with CPU validation enabled, memory leak checks, and building Cauldron framework shaders with debug information. 
+  Launches the sample with CPU validation enabled, memory leak checks, and building FidelityFX Cauldron Framework shaders with debug information. 
 
   **-cpulimiter** \[TARGETFRAMERATE\]
   
@@ -335,11 +338,11 @@ The following are the currently supported command line overrides:
 	  - "DISPLAYMODE_2084_FSHDR"	(PQ) Freesync HDR
 	  - "DISPLAYMODE_SCRGB_FSHDR"	High-precision Freesync HDR
 
-<h2>User Interface and Controls</h2>
+<h2>User interface and controls</h2>
 
-<h3>User Interface</h3>
+<h3>User interface</h3>
 
-Cauldron offers a dynamic UI system built for the sample being run, defined by which render modules are present. Each render module is responsible for its own UI. For individual sample-specific UI elements, please see the corresponding sample documentation for the effect in question.
+FidelityFX Cauldron Framework offers a dynamic UI system built for the sample being run, defined by which render modules are present. Each render module is responsible for its own UI. For individual sample-specific UI elements, please see the corresponding sample documentation for the effect in question.
 
 Depending on which of Cauldron's render modules are active in a sample, the following UI elements may be present
 
@@ -408,7 +411,7 @@ Depending on which of Cauldron's render modules are active in a sample, the foll
   
   - Enable TAA: Enables or disables temporal anti-aliasing.
   
-<h3>User Controls</h3>
+<h3>User controls</h3>
 
 Cauldron defines the following set of controls when navigating a sample.
 

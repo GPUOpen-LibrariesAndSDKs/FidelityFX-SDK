@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
 //
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -51,7 +51,7 @@ FFX_FORWARD_DECLARE(FfxInterface);
 /// FidelityFX SDK minor version.
 ///
 /// @ingroup FfxInterface
-#define FFX_SDK_VERSION_MINOR (0)
+#define FFX_SDK_VERSION_MINOR (1)
 
 /// FidelityFX SDK patch version.
 ///
@@ -63,31 +63,6 @@ FFX_FORWARD_DECLARE(FfxInterface);
 /// @ingroup FfxInterface
 #define FFX_SDK_MAKE_VERSION( major, minor, patch ) ( ( major << 22 ) | ( minor << 12 ) | patch )
 
-/// An enumeration of all the effects which constitute the FidelityFX SDK.
-///
-/// Dictates what effect shader blobs to fetch for pipeline creation
-///
-/// @ingroup FfxInterface
-typedef enum FfxEffect
-{
-
-    FFX_EFFECT_FSR2 = 0,               ///< FidelityFX Super Resolution v2
-    FFX_EFFECT_FSR1,                   ///< FidelityFX Super Resolution
-    FFX_EFFECT_SPD,                    ///< FidelityFX Single Pass Downsampler
-    FFX_EFFECT_BLUR,                   ///< FidelityFX Blur
-    FFX_EFFECT_CACAO,                  ///< FidelityFX Combined Adaptive Compute Ambient Occlusion
-    FFX_EFFECT_CAS,                    ///< FidelityFX Contrast Adaptive Sharpening
-    FFX_EFFECT_DENOISER,               ///< FidelityFX Denoiser
-    FFX_EFFECT_LENS,                   ///< FidelityFX Lens
-    FFX_EFFECT_PARALLEL_SORT,          ///< FidelityFX Parallel Sort
-    FFX_EFFECT_SSSR,                   ///< FidelityFX Stochastic Screen Space Reflections
-    FFX_EFFECT_VARIABLE_SHADING,       ///< FidelityFX Variable Shading
-    FFX_EFFECT_LPM,                    ///< FidelityFX Luma Preserving Mapper
-    FFX_EFFECT_DOF,                    ///< FidelityFX Depth of Field
-    FFX_EFFECT_CLASSIFIER              ///< FidelityFX Classifier
-
-} FfxEffect;
-
 /// Stand in type for FfxPass
 ///
 /// These will be defined for each effect individually (i.e. FfxFsr2Pass).
@@ -98,18 +73,32 @@ typedef uint32_t FfxPass;
 
 /// Get the SDK version of the backend context.
 ///
-/// Newer effects may require support that legacy versions of the SDK will not be
-/// able to provide. A version query is thus required to ensure an effect component
-/// will always be paired with a backend which will support all needed functionality.
-///
 /// @param [in]  backendInterface                    A pointer to the backend interface.
 ///
 /// @returns
 /// The SDK version a backend was built with.
 ///
 /// @ingroup FfxInterface
-typedef FfxUInt32(*FfxGetSDKVersionFunc)(
+typedef FfxVersionNumber(*FfxGetSDKVersionFunc)(
     FfxInterface* backendInterface);
+
+/// Get effect VRAM usage.
+///
+/// Newer effects may require support that legacy versions of the SDK will not be
+/// able to provide. A version query is thus required to ensure an effect component
+/// will always be paired with a backend which will support all needed functionality.
+///
+/// @param [in]  backendInterface                    A pointer to the backend interface.
+/// @param [in]  effectContextId                     The context space to be used for the effect in question.
+/// @param [out] outVramUsage                        The effect memory usage structure to fill out.
+///
+/// @retval
+/// FFX_OK                                          The operation completed successfully.
+/// @retval
+/// Anything else                                   The operation failed.
+///
+/// @ingroup FfxInterface
+typedef FfxErrorCode (*FfxGetEffectGpuMemoryUsageFunc)(FfxInterface* backendInterface, FfxUInt32 effectContextId, FfxEffectMemoryUsage* outVramUsage);
 
 /// Create and initialize the backend context.
 ///
@@ -117,6 +106,7 @@ typedef FfxUInt32(*FfxGetSDKVersionFunc)(
 /// It will create or reference the device and create required internal data structures.
 ///
 /// @param [in]  backendInterface                    A pointer to the backend interface.
+/// @param [in]  bindlessConfig                      A pointer to the bindless configuration, if required by the effect.
 /// @param [out] effectContextId                     The context space to be used for the effect in question.
 ///
 /// @retval
@@ -127,6 +117,7 @@ typedef FfxUInt32(*FfxGetSDKVersionFunc)(
 /// @ingroup FfxInterface
 typedef FfxErrorCode (*FfxCreateBackendContextFunc)(
     FfxInterface* backendInterface,
+    FfxEffectBindlessConfig* bindlessConfig,
     FfxUInt32* effectContextId);
 
 /// Get a list of capabilities of the device.
@@ -270,6 +261,27 @@ typedef FfxErrorCode(*FfxUnregisterResourcesFunc)(
     FfxCommandList commandList,
     FfxUInt32 effectContextId);
 
+/// Register a resource in the static bindless table of the backend.
+///
+/// A static resource will persist in their respective bindless table until it is
+/// overwritten by a different resource at the same index.
+/// The calling code must take care not to immediately register a new resource at an index
+/// that might be in use by an in-flight frame.
+///
+/// @param [in] backendInterface                    A pointer to the backend interface.
+/// @param [in] desc                                A pointer to an <c><i>FfxStaticResourceDescription</i></c>.
+/// @param [in] effectContextId                     The context space to be used for the effect in question.
+///
+/// @retval
+/// FFX_OK                                          The operation completed successfully.
+/// @retval
+/// Anything else                                   The operation failed.
+///
+/// @ingroup FfxInterface
+typedef FfxErrorCode (*FfxRegisterStaticResourceFunc)(FfxInterface*                       backendInterface,
+                                                      const FfxStaticResourceDescription* desc,
+                                                      FfxUInt32                           effectContextId);
+
 /// Retrieve a <c><i>FfxResourceDescription</i></c> matching a
 /// <c><i>FfxResource</i></c> structure.
 ///
@@ -290,6 +302,7 @@ typedef FfxResourceDescription (*FfxGetResourceDescriptionFunc)(
 ///
 /// @param [in] backendInterface                    A pointer to the backend interface.
 /// @param [in] resource                            A pointer to a <c><i>FfxResource</i></c> object.
+/// @param [in] effectContextId                     The context space to be used for the effect in question.
 ///
 /// @retval
 /// FFX_OK                                          The operation completed successfully.
@@ -299,7 +312,58 @@ typedef FfxResourceDescription (*FfxGetResourceDescriptionFunc)(
 /// @ingroup FfxInterface
 typedef FfxErrorCode (*FfxDestroyResourceFunc)(
     FfxInterface* backendInterface,
-    FfxResourceInternal resource);
+    FfxResourceInternal resource,
+	FfxUInt32 effectContextId);
+
+/// Map resource memory
+///
+/// Maps the memory of the resource to a pointer and returns it.
+///
+/// @param [in] backendInterface                    A pointer to the backend interface.
+/// @param [in] resource                            A pointer to a <c><i>FfxResource</i></c> object.
+/// @param [out] ptr                                A pointer to the mapped memory.
+///
+/// @retval
+/// FFX_OK                                          The operation completed successfully.
+/// @retval
+/// Anything else                                   The operation failed.
+///
+/// @ingroup FfxInterface
+typedef FfxErrorCode (*FfxMapResourceFunc)(FfxInterface* backendInterface, FfxResourceInternal resource, void** ptr);
+
+/// Unmap resource memory
+///
+/// Unmaps previously mapped memory of a resource.
+///
+/// @param [in] backendInterface                    A pointer to the backend interface.
+/// @param [in] resource                            A pointer to a <c><i>FfxResource</i></c> object.
+///
+/// @retval
+/// FFX_OK                                          The operation completed successfully.
+/// @retval
+/// Anything else                                   The operation failed.
+///
+/// @ingroup FfxInterface
+typedef FfxErrorCode (*FfxUnmapResourceFunc)(FfxInterface* backendInterface, FfxResourceInternal resource);
+
+/// Destroy a resource
+///
+/// This callback is intended for the backend to release an internal resource.
+///
+/// @param [in] backendInterface                    A pointer to the backend interface.
+/// @param [in] resource                            A pointer to a <c><i>FfxResource</i></c> object.
+///
+/// @retval
+/// FFX_OK                                          The operation completed successfully.
+/// @retval
+/// Anything else                                   The operation failed.
+///
+/// @ingroup FfxInterface
+typedef FfxErrorCode (*FfxStageConstantBufferDataFunc)(
+    FfxInterface* backendInterface, 
+    void* data, 
+    FfxUInt32 size, 
+    FfxConstantBuffer* constantBuffer);
 
 /// Create a render pipeline.
 ///
@@ -326,6 +390,12 @@ typedef FfxErrorCode (*FfxCreatePipelineFunc)(
     const FfxPipelineDescription* pipelineDescription,
     FfxUInt32 effectContextId,
     FfxPipelineState* outPipeline);
+
+typedef FfxErrorCode(*FfxGetPermutationBlobByIndexFunc)(FfxEffect effectId,
+    FfxPass passId,
+    FfxBindStage bindStage,
+    uint32_t permutationOptions,
+    FfxShaderBlob* outBlob);
 
 /// Destroy a render pipeline.
 ///
@@ -379,6 +449,7 @@ typedef FfxErrorCode (*FfxScheduleGpuJobFunc)(
 ///
 /// @param [in] backendInterface                    A pointer to the backend interface.
 /// @param [in] commandList                         A pointer to a <c><i>FfxCommandList</i></c> structure.
+/// @param [in] effectContextId                     The context space to be used for the effect in question.
 ///
 /// @retval
 /// FFX_OK                                          The operation completed successfully.
@@ -388,7 +459,113 @@ typedef FfxErrorCode (*FfxScheduleGpuJobFunc)(
 /// @ingroup FfxInterface
 typedef FfxErrorCode (*FfxExecuteGpuJobsFunc)(
     FfxInterface* backendInterface,
-    FfxCommandList commandList);
+    FfxCommandList commandList, 
+    FfxUInt32 effectContextId);
+
+typedef enum FfxUiCompositionFlags
+{
+    FFX_UI_COMPOSITION_FLAG_USE_PREMUL_ALPHA                    = (1 << 0),  ///< A bit indicating that we use premultiplied alpha for UI composition
+    FFX_UI_COMPOSITION_FLAG_ENABLE_INTERNAL_UI_DOUBLE_BUFFERING = (1 << 1),  ///< A bit indicating that the swapchain should doublebuffer the UI resource
+} FfxUiCompositionFlags;
+
+typedef FfxErrorCode(*FfxPresentCallbackFunc)(const FfxPresentCallbackDescription* params, void*);
+typedef FfxErrorCode(*FfxFrameGenerationDispatchFunc)(const FfxFrameGenerationDispatchDescription* params, void*);
+
+/// A structure representing the configuration options to pass to FfxFrameInterpolation.
+///
+/// @ingroup FfxInterface
+typedef struct FfxFrameGenerationConfig
+{
+    FfxSwapchain                    swapChain;                       ///< The <c><i>FfxSwapchain</i></c> to use with frame interpolation
+    FfxPresentCallbackFunc          presentCallback;                 ///< A UI composition callback to call when finalizing the frame image
+    void*                           presentCallbackContext;          ///< A pointer to be passed to the UI composition callback
+    FfxFrameGenerationDispatchFunc  frameGenerationCallback;         ///< The frame generation callback to use to generate the interpolated frame
+    void*                           frameGenerationCallbackContext;  ///< A pointer to be passed to the frame generation callback
+    bool                            frameGenerationEnabled;          ///< Sets the state of frame generation. Set to false to disable frame generation
+    bool                            allowAsyncWorkloads;             ///< Sets the state of async workloads. Set to true to enable interpolation work on async compute
+    bool                            allowAsyncPresent;               ///< Sets the state of async presentation (console only). Set to true to enable present from async command queue
+    FfxResource                     HUDLessColor;                    ///< The hudless back buffer image to use for UI extraction from backbuffer resource
+    FfxUInt32                       flags;                           ///< Flags
+    bool                            onlyPresentInterpolated;         ///< Set to true to only present interpolated frame
+    FfxRect2D                       interpolationRect;               ///< Set the area in the backbuffer that will be interpolated 
+    uint64_t                        frameID;                         ///< A frame identifier used to synchronize resource usage in workloads
+} FfxFrameGenerationConfig;
+
+typedef FfxErrorCode (*FfxSwapChainConfigureFrameGenerationFunc)(FfxFrameGenerationConfig const* config);
+
+/// Allocate AMD FidelityFX Breadcrumbs Library markers buffer.
+/// 
+/// @param [in] backendInterface                    A pointer to the backend interface.
+/// @param [in] blockBytes                          Size in bytes of the buffer to be allocated.
+/// @param [out] blockData                          Output information about allocated AMD FidelityFX Breadcrumbs Library buffer. Filled only on success of operation.
+/// 
+/// @retval
+/// FFX_OK                                          The operation completed successfully.
+/// @retval
+/// Anything else                                   The operation failed.
+/// 
+/// @ingroup FfxInterface
+typedef FfxErrorCode (*FfxBreadcrumbsAllocBlockFunc)(
+    FfxInterface* backendInterface,
+    uint64_t blockBytes,
+    FfxBreadcrumbsBlockData* blockData
+    );
+
+/// Deallocate AMD FidelityFX Breadcrumbs Library markers buffer.
+/// 
+/// @param [in] backendInterface                    A pointer to the backend interface.
+/// @param [out] blockData                          Information about buffer to be freed. All resource handles are cleared after this operation.
+/// 
+/// @ingroup FfxInterface
+typedef void (*FfxBreadcrumbsFreeBlockFunc)(
+    FfxInterface* backendInterface,
+    FfxBreadcrumbsBlockData* blockData
+    );
+
+/// Write marker to AMD FidelityFX Breadcrumbs Library buffer on the <c><i>comandList</i></c> provided.
+/// 
+/// @param [in] backendInterface                    A pointer to the backend interface.
+/// @param [in] commandList                         GPU command list to record marker writing command.
+/// @param [in] value                               Marker value to be written.
+/// @param [in] gpuLocation                         GPU destination address where marker will be written.
+/// @param [in] gpuBuffer                           Destination AMD FidelityFX Breadcrumbs Library buffer.
+/// @param [in] isBegin                             <c><i>true</i></c> for writing opening marker and <c><i>false</i></c> for ending marker.
+/// 
+/// @ingroup FfxInterface
+typedef void (*FfxBreadcrumbsWriteFunc)(
+    FfxInterface* backendInterface,
+    FfxCommandList commandList,
+    uint32_t value,
+    uint64_t gpuLocation,
+    void* gpuBuffer,
+    bool isBegin
+    );
+
+/// Printing GPU specific info to the AMD FidelityFX Breadcrumbs Library status buffer.
+/// 
+/// @param [in] backendInterface                    A pointer to the backend interface.
+/// @param [in] allocs                              A pointer to the allocation callbacks.
+/// @param [in] extendedInfo                        <c><i>true</i></c> if should print more verbose device info and <c><i>false</i></c> for standard output.
+/// @param [out] printBuffer                        String buffer for writing GPU info.
+/// @param [out] printSize                          Size of string buffer for writing GPU info.
+/// 
+/// @ingroup FfxInterface
+typedef void (*FfxBreadcrumbsPrintDeviceInfoFunc)(
+    FfxInterface* backendInterface,
+    FfxAllocationCallbacks* allocs,
+    bool extendedInfo,
+    char** printBuffer,
+    size_t* printSize
+    );
+
+/// Register a <b>Thread Safe</b> constant buffer allocator to be used by the backend.
+///
+/// @param [in] backendInterface                    A pointer to the backend interface.
+/// @param [in] constantAllocator                   An <c><i>FfxConstantBufferAllocator</i></c> callback to be used by the backend.
+///
+/// @ingroup FfxInterface
+typedef void(*FfxRegisterConstantBufferAllocatorFunc)(FfxInterface* backendInterface,
+    FfxConstantBufferAllocator  constantAllocator);
 
 /// A structure encapsulating the interface between the core implementation of
 /// the FfxInterface and any graphics API that it should ultimately call.
@@ -399,20 +576,22 @@ typedef FfxErrorCode (*FfxExecuteGpuJobsFunc)(
 /// which sit on top of your engine's own abstraction layer. For details on the
 /// expectations of what each function should do you should refer the
 /// description of the following function pointer types:
-///
-///     <c><i>FfxCreateDeviceFunc</i></c>
-///     <c><i>FfxGetDeviceCapabilitiesFunc</i></c>
-///     <c><i>FfxDestroyDeviceFunc</i></c>
-///     <c><i>FfxCreateResourceFunc</i></c>
-///     <c><i>FfxRegisterResourceFunc</i></c>
-///     <c><i>FfxGetResourceFunc</i></c>
-///     <c><i>FfxUnregisterResourcesFunc</i></c>
-///     <c><i>FfxGetResourceDescriptionFunc</i></c>
-///     <c><i>FfxDestroyResourceFunc</i></c>
-///     <c><i>FfxCreatePipelineFunc</i></c>
-///     <c><i>FfxDestroyPipelineFunc</i></c>
-///     <c><i>FfxScheduleGpuJobFunc</i></c>
-///     <c><i>FfxExecuteGpuJobsFunc</i></c>
+///   - <c><i>FfxCreateDeviceFunc</i></c>
+///   - <c><i>FfxGetDeviceCapabilitiesFunc</i></c>
+///   - <c><i>FfxDestroyDeviceFunc</i></c>
+///   - <c><i>FfxCreateResourceFunc</i></c>
+///   - <c><i>FfxRegisterResourceFunc</i></c>
+///   - <c><i>FfxGetResourceFunc</i></c>
+///   - <c><i>FfxUnregisterResourcesFunc</i></c>
+///   - <c><i>FfxGetResourceDescriptionFunc</i></c>
+///   - <c><i>FfxDestroyResourceFunc</i></c>
+///   - <c><i>FfxCreatePipelineFunc</i></c>
+///   - <c><i>FfxDestroyPipelineFunc</i></c>
+///   - <c><i>FfxScheduleGpuJobFunc</i></c>
+///   - <c><i>FfxExecuteGpuJobsFunc</i></c>
+///   - <c><i>FfxBeginMarkerFunc</i></c>
+///   - <c><i>FfxEndMarkerFunc</i></c>
+///   - <c><i>FfxRegisterConstantBufferAllocatorFunc</i></c>
 ///
 /// Depending on the graphics API that is abstracted by the backend, it may be
 /// required that the backend is to some extent stateful. To ensure that
@@ -437,24 +616,41 @@ typedef FfxErrorCode (*FfxExecuteGpuJobsFunc)(
 /// @ingroup FfxInterface
 typedef struct FfxInterface {
 
-    FfxGetSDKVersionFunc            fpGetSDKVersion;           ///< A callback function to query the SDK version.
-    FfxCreateBackendContextFunc     fpCreateBackendContext;    ///< A callback function to create and initialize the backend context.
-    FfxGetDeviceCapabilitiesFunc    fpGetDeviceCapabilities;   ///< A callback function to query device capabilities.
-    FfxDestroyBackendContextFunc    fpDestroyBackendContext;   ///< A callback function to destroy the backend context. This also dereferences the device.
-    FfxCreateResourceFunc           fpCreateResource;          ///< A callback function to create a resource.
-    FfxRegisterResourceFunc         fpRegisterResource;        ///< A callback function to register an external resource.
-    FfxGetResourceFunc              fpGetResource;             ///< A callback function to convert an internal resource to external resource type
-    FfxUnregisterResourcesFunc      fpUnregisterResources;     ///< A callback function to unregister external resource.
-    FfxGetResourceDescriptionFunc   fpGetResourceDescription;  ///< A callback function to retrieve a resource description.
-    FfxDestroyResourceFunc          fpDestroyResource;         ///< A callback function to destroy a resource.
-    FfxCreatePipelineFunc           fpCreatePipeline;          ///< A callback function to create a render or compute pipeline.
-    FfxDestroyPipelineFunc          fpDestroyPipeline;         ///< A callback function to destroy a render or compute pipeline.
-    FfxScheduleGpuJobFunc           fpScheduleGpuJob;          ///< A callback function to schedule a render job.
-    FfxExecuteGpuJobsFunc           fpExecuteGpuJobs;          ///< A callback function to execute all queued render jobs.
+    // FidelityFX SDK 1.0 callback handles
+    FfxGetSDKVersionFunc               fpGetSDKVersion;               ///< A callback function to query the SDK version.
+    FfxGetEffectGpuMemoryUsageFunc     fpGetEffectGpuMemoryUsage;     ///< A callback function to query effect Gpu memory usage
+    FfxCreateBackendContextFunc        fpCreateBackendContext;        ///< A callback function to create and initialize the backend context.
+    FfxGetDeviceCapabilitiesFunc       fpGetDeviceCapabilities;       ///< A callback function to query device capabilites.
+    FfxDestroyBackendContextFunc       fpDestroyBackendContext;       ///< A callback function to destroy the backendcontext. This also dereferences the device.
+    FfxCreateResourceFunc              fpCreateResource;              ///< A callback function to create a resource.
+    FfxRegisterResourceFunc            fpRegisterResource;            ///< A callback function to register an external resource.
+    FfxGetResourceFunc                 fpGetResource;                 ///< A callback function to convert an internal resource to external resource type
+    FfxUnregisterResourcesFunc         fpUnregisterResources;         ///< A callback function to unregister external resource.
+    FfxRegisterStaticResourceFunc      fpRegisterStaticResource;      ///< A callback function to register a static resource.
+    FfxGetResourceDescriptionFunc      fpGetResourceDescription;      ///< A callback function to retrieve a resource description.
+    FfxDestroyResourceFunc             fpDestroyResource;             ///< A callback function to destroy a resource.
+    FfxMapResourceFunc                 fpMapResource;                 ///< A callback function to map a resource.
+    FfxUnmapResourceFunc               fpUnmapResource;               ///< A callback function to unmap a resource.
+    FfxStageConstantBufferDataFunc     fpStageConstantBufferDataFunc; ///< A callback function to copy constant buffer data into staging memory.      
+    FfxCreatePipelineFunc              fpCreatePipeline;              ///< A callback function to create a render or compute pipeline.
+    FfxDestroyPipelineFunc             fpDestroyPipeline;             ///< A callback function to destroy a render or compute pipeline.
+    FfxScheduleGpuJobFunc              fpScheduleGpuJob;              ///< A callback function to schedule a render job.
+    FfxExecuteGpuJobsFunc              fpExecuteGpuJobs;              ///< A callback function to execute all queued render jobs.
+    
+    // FidelityFX SDK 1.1 callback handles
+    FfxBreadcrumbsAllocBlockFunc       fpBreadcrumbsAllocBlock;       ///< A callback function to allocate block of memory for AMD FidelityFX Breadcrumbs Library buffer.
+    FfxBreadcrumbsFreeBlockFunc        fpBreadcrumbsFreeBlock;        ///< A callback function to free AMD FidelityFX Breadcrumbs Library buffer.
+    FfxBreadcrumbsWriteFunc            fpBreadcrumbsWrite;            ///< A callback function to write marker into AMD FidelityFX Breadcrumbs Library.
+    FfxBreadcrumbsPrintDeviceInfoFunc  fpBreadcrumbsPrintDeviceInfo;  ///< A callback function to print active GPU info for AMD FidelityFX Breadcrumbs Library log.
 
-    void*                           scratchBuffer;             ///< A preallocated buffer for memory utilized internally by the backend.
-    size_t                          scratchBufferSize;         ///< Size of the buffer pointed to by <c><i>scratchBuffer</i></c>.
-    FfxDevice                       device;                    ///< A backend specific device
+    FfxGetPermutationBlobByIndexFunc fpGetPermutationBlobByIndex;
+    FfxSwapChainConfigureFrameGenerationFunc    fpSwapChainConfigureFrameGeneration;    ///< A callback function to configure swap chain present callback.
+
+    FfxRegisterConstantBufferAllocatorFunc  fpRegisterConstantBufferAllocator;          ///< A callback function to register a custom <b>Thread Safe</b> constant buffer allocator.
+    
+    void*                              scratchBuffer;                 ///< A preallocated buffer for memory utilized internally by the backend.
+    size_t                             scratchBufferSize;             ///< Size of the buffer pointed to by <c><i>scratchBuffer</i></c>.
+    FfxDevice                          device;                        ///< A backend specific device
 
 } FfxInterface;
 

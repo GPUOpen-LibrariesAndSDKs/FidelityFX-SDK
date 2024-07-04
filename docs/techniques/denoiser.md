@@ -36,20 +36,20 @@ This section describes the inputs to FidelityFX Shadow Denoiser.
 
 The following is a pass by pass breakdown of the FidelityFX Shadow Denoiser<br>
 
-<h4>Denoiser Shadows Prepare</h4>
+<h4>Denoiser shadows prepare</h4>
 
 The output from the raytracing pass is packed into a buffer laid out in a 32bit `uint` bitmask to represent 8x4 pixel tiles. This assists with bandwidth reduction in later passes. An optimization can be made for a raytracing pass to work as a group and write these bitmasks directly. In that case this preparation pass can be skipped. 
 
 While it is possible to extend this idea beyond one ray per pixel in theory, the current implementation is designed with one ray per pixel in mind.<br>
 
-<h4>Denoiser Shadows Tile Classification</h4>
+<h4>Denoiser shadows tile classification</h4>
 
 Tile classification performs three major steps:
 1. Local neighborhood encoding
 2. Disocclusion mask generation
 3. Reprojection
 
-**Local Neighborhood Encoding**
+**Local neighborhood encoding**
 
 Local neighborhood encoding stores the first two moments of the shading values (in this case, the noisy shadow values) surrounding a pixel.
 
@@ -71,7 +71,7 @@ down to 34 across the two passes. Utilizing the compressed bitmask for ray hits 
 Both the horizontal and the vertical pass are integrated into the temporal reprojection pass itself to avoid the memory bandwidth requirements of having to write to and read from an additional intermediate target. That comes with the cost of having to recalculate some of the horizontal values (however this is
 comparably negligeable due to using the compressed shadow mask).
 
-**Disocclusion Mask** 
+**Disocclusion mask** 
 
 The disocclusion mask determines new areas on the screen. These are regions that were previously outside of screen-space but are now visible due to camera motion, or now visible due to occluders moving.
 
@@ -180,7 +180,7 @@ One solution is to choose the blend factor per pixel based on the amount of hist
 
 Notice how the adaptive version produces a more responsive filter, eliminating most of the temporal bleeding from the initial render.
 
-<h4>Denoiser Shadows Filter</h4>
+<h4>Denoiser shadows filter</h4>
 
 The final pass of the FidelityFX Shadow Denoiser is responsible for performing the spatial filtering and is run three times. 
 
@@ -256,7 +256,7 @@ This section describes the inputs to FidelityFX Reflection Denoiser.
 
 The following is a pass by pass breakdown of the FidelityFX Reflection Denoiser
 
-<h4>Reprojection Pass</h4>
+<h4>Reprojection pass</h4>
 
 The reprojection pass detects disocclusions, estimates variance, and computes an 8x8 radiance MIP. There are two reprojection paths.
 
@@ -264,11 +264,11 @@ The fast path either finds mirror reflection parallax based on similarity to the
 
 The slow path, only triggered on edges, tries to construct a better sample out of a 2x2 interpolation neighborhood. The 8x8 average radiance is also used for low sample areas and to filter out outlying results.
 
-<h4>Spatial Denoiser Pass</h4>
+<h4>Spatial denoiser pass</h4>
 
 The spatial denoiser pass makes use of the variance guided edge aware filter to remove outliers and blur in image-space. 15 samples in a 7x7 region are used for the edge aware blur. The weighting of each sample depends on the similarity to the 8x8 average.
 
-<h4>Temporal Denoiser Pass</h4>
+<h4>Temporal denoiser pass</h4>
 
 The temporal denoiser pass removes outliers and uses 9x9 gaussian region statistics to clip history(reprojected results from the reprojection pass). New signals are blended with the history depending on the sample count.
 

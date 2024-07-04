@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C)2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #include "ffx_fsr1_resources.h"
@@ -31,16 +31,12 @@
 #ifdef __hlsl_dx_compiler
 #pragma dxc diagnostic pop
 #endif //__hlsl_dx_compiler
-#endif // #if defined(FFX_GPU)
 
-#if defined(FFX_GPU)
 #ifndef FFX_PREFER_WAVE64
 #define FFX_PREFER_WAVE64
-#endif // #if defined(FFX_GPU)
+#endif // #ifndef FFX_PREFER_WAVE64
 
-#if defined(FFX_GPU)
 #pragma warning(disable: 3205)  // conversion from larger type to smaller
-#endif // #if defined(FFX_GPU)
 
 #define DECLARE_SRV_REGISTER(regIndex)  t##regIndex
 #define DECLARE_UAV_REGISTER(regIndex)  u##regIndex
@@ -72,7 +68,7 @@
 #define FFX_FSR1_ROOTSIG_STR(p) #p
 #define FFX_FSR1_ROOTSIG [RootSignature( "DescriptorTable(UAV(u0, numDescriptors = " FFX_FSR1_ROOTSIG_STRINGIFY(FFX_FSR1_RESOURCE_IDENTIFIER_COUNT) ")), " \
                                     "DescriptorTable(SRV(t0, numDescriptors = " FFX_FSR1_ROOTSIG_STRINGIFY(FFX_FSR1_RESOURCE_IDENTIFIER_COUNT) ")), " \
-                                    "RootConstants(num32BitConstants=" FFX_FSR1_ROOTSIG_STRINGIFY(FFX_FSR1_CONSTANT_BUFFER_1_SIZE) ", b0), " \
+                                    "CBV(b0), " \
                                     "StaticSampler(s0, filter = FILTER_MIN_MAG_MIP_LINEAR, " \
                                                       "addressU = TEXTURE_ADDRESS_CLAMP, " \
                                                       "addressV = TEXTURE_ADDRESS_CLAMP, " \
@@ -149,117 +145,110 @@ SamplerState s_LinearClamp : register(s0);
 
 #if FFX_HALF
 
+#if defined(FSR1_BIND_SRV_INPUT_COLOR)
         FfxFloat16x4 GatherEasuRed(FfxFloat32x2 fPxPos)
         {
-    #if defined(FSR1_BIND_SRV_INPUT_COLOR) 
             return (FfxFloat16x4)r_input_color.GatherRed(s_LinearClamp, fPxPos, FfxInt32x2(0,0));
-    #else
-            return 0.f;
-    #endif // defined(FSR1_BIND_SRV_INPUT_COLOR) 
         }
+#endif // defined(FSR1_BIND_SRV_INPUT_COLOR)
 
+#if defined(FSR1_BIND_SRV_INPUT_COLOR)
         FfxFloat16x4 GatherEasuGreen(FfxFloat32x2 fPxPos)
         {
-    #if defined(FSR1_BIND_SRV_INPUT_COLOR) 
             return (FfxFloat16x4)r_input_color.GatherGreen(s_LinearClamp, fPxPos, FfxInt32x2(0, 0));
-    #else
-            return 0.f;
-    #endif // defined(FSR1_BIND_SRV_INPUT_COLOR) 
         }
+#endif // defined(FSR1_BIND_SRV_INPUT_COLOR)
 
+#if defined(FSR1_BIND_SRV_INPUT_COLOR)
         FfxFloat16x4 GatherEasuBlue(FfxFloat32x2 fPxPos)
         {
-    #if defined(FSR1_BIND_SRV_INPUT_COLOR) 
             return (FfxFloat16x4)r_input_color.GatherBlue(s_LinearClamp, fPxPos, FfxInt32x2(0, 0));
-    #else
-            return 0.f;
-    #endif // defined(FSR1_BIND_SRV_INPUT_COLOR) 
         }
+#endif // defined(FSR1_BIND_SRV_INPUT_COLOR)
 
+#if FFX_FSR1_OPTION_APPLY_RCAS
+    #if defined(FSR1_BIND_UAV_INTERNAL_UPSCALED_COLOR)
         void StoreEASUOutput(FfxUInt32x2 iPxPos, FfxFloat16x3 fColor)
         {
-    #if FFX_FSR1_OPTION_APPLY_RCAS
-        #if defined(FSR1_BIND_UAV_INTERNAL_UPSCALED_COLOR) 
             rw_internal_upscaled_color[iPxPos] = FfxFloat32x4(fColor, 1.f);
-        #endif // defined(FSR1_BIND_UAV_UPSCALED_OUTPUT) 
-    #else
-        #if defined(FSR1_BIND_UAV_UPSCALED_OUTPUT) 
-            rw_upscaled_output[iPxPos] = FfxFloat32x4(fColor, 1.f);
-        #endif // defined(FSR1_BIND_UAV_UPSCALED_OUTPUT) 
-    #endif // FFX_FSR1_OPTION_APPLY_RCAS
         }
+    #endif // #if defined(FSR1_BIND_UAV_INTERNAL_UPSCALED_COLOR)
+#else
+    #if defined(FSR1_BIND_UAV_UPSCALED_OUTPUT)
+        void StoreEASUOutput(FfxUInt32x2 iPxPos, FfxFloat16x3 fColor)
+        {
+            rw_upscaled_output[iPxPos] = FfxFloat32x4(fColor, 1.f);
+        }
+    #endif // #if defined(FSR1_BIND_UAV_UPSCALED_OUTPUT)
+#endif // #if FFX_FSR1_OPTION_APPLY_RCAS
 
+#if defined(FSR1_BIND_SRV_INTERNAL_UPSCALED_COLOR)
         FfxFloat16x4 LoadRCas_Input(FfxInt16x2 iPxPos)
         {
-    #if defined(FSR1_BIND_SRV_INTERNAL_UPSCALED_COLOR) 
             return (FfxFloat16x4)r_internal_upscaled_color[iPxPos];
-    #endif // defined(FSR1_BIND_UAV_INTERNAL_UPSCALED_COLOR) 
-            return 0.f;
         }
+#endif // defined(FSR1_BIND_UAV_INTERNAL_UPSCALED_COLOR)
 
+#if defined(FSR1_BIND_UAV_UPSCALED_OUTPUT)
         void StoreRCasOutput(FfxInt16x2 iPxPos, FfxFloat16x3 fColor)
         {
-    #if defined(FSR1_BIND_UAV_UPSCALED_OUTPUT) 
             rw_upscaled_output[iPxPos] = FfxFloat32x4(fColor, 1.f);
-    #endif // defined(FSR1_BIND_UAV_UPSCALED_OUTPUT) 
         }
+#endif // defined(FSR1_BIND_UAV_UPSCALED_OUTPUT)
 
 #else // FFX_HALF
 
+#if defined(FSR1_BIND_SRV_INPUT_COLOR)
         FfxFloat32x4 GatherEasuRed(FfxFloat32x2 fPxPos)
         {
-    #if defined(FSR1_BIND_SRV_INPUT_COLOR) 
             return r_input_color.GatherRed(s_LinearClamp, fPxPos, FfxInt32x2(0, 0));
-    #else
-            return 0.f;
-    #endif // defined(FSR1_BIND_SRV_INPUT_COLOR) 
         }
+#endif // defined(FSR1_BIND_SRV_INPUT_COLOR)
 
+#if defined(FSR1_BIND_SRV_INPUT_COLOR)
         FfxFloat32x4 GatherEasuGreen(FfxFloat32x2 fPxPos)
         {
-    #if defined(FSR1_BIND_SRV_INPUT_COLOR) 
             return r_input_color.GatherGreen(s_LinearClamp, fPxPos, FfxInt32x2(0, 0));
-    #else
-            return 0.f;
-    #endif // defined(FSR1_BIND_SRV_INPUT_COLOR) 
         }
+#endif // defined(FSR1_BIND_SRV_INPUT_COLOR)
 
+#if defined(FSR1_BIND_SRV_INPUT_COLOR)
         FfxFloat32x4 GatherEasuBlue(FfxFloat32x2 fPxPos)
         {
-    #if defined(FSR1_BIND_SRV_INPUT_COLOR) 
             return r_input_color.GatherBlue(s_LinearClamp, fPxPos, FfxInt32x2(0, 0));
-    #else
-            return 0.f;
-    #endif // defined(FSR1_BIND_SRV_INPUT_COLOR) 
         }
+#endif // defined(FSR1_BIND_SRV_INPUT_COLOR)
 
+
+#if defined(FFX_FSR1_OPTION_APPLY_RCAS)
+    #if defined(FSR1_BIND_UAV_INTERNAL_UPSCALED_COLOR)        
         void StoreEASUOutput(FfxUInt32x2 iPxPos, FfxFloat32x3 fColor)
         {
-    #if FFX_FSR1_OPTION_APPLY_RCAS
-        #if defined(FSR1_BIND_UAV_INTERNAL_UPSCALED_COLOR) 
             rw_internal_upscaled_color[iPxPos] = FfxFloat32x4(fColor, 1.f);
-        #endif // defined(FSR1_BIND_UAV_UPSCALED_OUTPUT) 
-    #else
-        #if defined(FSR1_BIND_UAV_UPSCALED_OUTPUT) 
-            rw_upscaled_output[iPxPos] = FfxFloat32x4(fColor, 1.f);
-        #endif // defined(FSR1_BIND_UAV_UPSCALED_OUTPUT) 
-    #endif // FFX_FSR1_OPTION_APPLY_RCAS
         }
+    #endif // #if defined(FSR1_BIND_UAV_INTERNAL_UPSCALED_COLOR)
+#else
+    #if defined(FSR1_BIND_UAV_UPSCALED_OUTPUT)
+        void StoreEASUOutput(FfxUInt32x2 iPxPos, FfxFloat32x3 fColor)
+        {
+            rw_upscaled_output[iPxPos] = FfxFloat32x4(fColor, 1.f);
+        }
+    #endif // #if defined(FSR1_BIND_UAV_UPSCALED_OUTPUT)
+#endif // #if defined(FFX_FSR1_OPTION_APPLY_RCAS)
 
+#if defined(FSR1_BIND_SRV_INTERNAL_UPSCALED_COLOR)
         FfxFloat32x4 LoadRCas_Input(FfxInt32x2 iPxPos)
         {
-    #if defined(FSR1_BIND_SRV_INTERNAL_UPSCALED_COLOR) 
             return r_internal_upscaled_color[iPxPos];
-    #endif // defined(FSR1_BIND_UAV_INTERNAL_UPSCALED_COLOR) 
-            return 0.f;
         }
+#endif // defined(FSR1_BIND_UAV_INTERNAL_UPSCALED_COLOR)
 
+#if defined(FSR1_BIND_UAV_UPSCALED_OUTPUT)
         void StoreRCasOutput(FfxInt32x2 iPxPos, FfxFloat32x3 fColor)
         {
-    #if defined(FSR1_BIND_UAV_UPSCALED_OUTPUT) 
             rw_upscaled_output[iPxPos] = FfxFloat32x4(fColor, 1.f);
-    #endif // defined(FSR1_BIND_UAV_UPSCALED_OUTPUT) 
         }
+#endif // defined(FSR1_BIND_UAV_UPSCALED_OUTPUT)
 
 #endif // FFX_HALF
 

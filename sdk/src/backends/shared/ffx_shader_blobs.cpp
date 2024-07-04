@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this softwareand associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
 //
-// The above copyright noticeand this permission notice shall be included in
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -22,10 +22,25 @@
 
 #include "ffx_shader_blobs.h"
 
-#if defined(FFX_FSR) || defined(FFX_ALL)
-#include "blob_accessors/ffx_fsr2_shaderblobs.h"
+#if defined(FFX_FSR1) || defined(FFX_ALL)
 #include "blob_accessors/ffx_fsr1_shaderblobs.h"
-#endif // #if defined(FFX_FSR) || defined(FFX_ALL)
+#endif // #if defined(FFX_FSR1) || defined(FFX_ALL)
+
+#if defined(FFX_FSR2) || defined(FFX_ALL)
+#include "blob_accessors/ffx_fsr2_shaderblobs.h"
+#endif  // #if defined(FFX_FSR2) || defined(FFX_ALL)
+
+#if defined(FFX_FSR3UPSCALER) || defined(FFX_ALL)
+#include "blob_accessors/ffx_fsr3upscaler_shaderblobs.h"
+#endif  // #if defined(FFX_FSR3UPSCALER) || defined(FFX_ALL)
+
+#if defined(FFX_FI) || defined(FFX_ALL)
+#include "blob_accessors/ffx_frameinterpolation_shaderblobs.h"
+#endif  // #if defined(FFX_FI) || defined(FFX_ALL)
+
+#if defined(FFX_OF) || defined(FFX_ALL)
+#include "blob_accessors/ffx_opticalflow_shaderblobs.h"
+#endif  // #if defined(FFX_OF) || defined(FFX_ALL)
 
 #if defined(FFX_SPD) || defined(FFX_ALL)
 #include "blob_accessors/ffx_spd_shaderblobs.h"
@@ -75,24 +90,53 @@
 #include "blob_accessors/ffx_classifier_shaderblobs.h"
 #endif  // #if defined(FFX_CLASSIFIER) || defined(FFX_ALL)
 
+#if defined(FFX_BRIXELIZER) || defined(FFX_ALL)
+#include "blob_accessors/ffx_brixelizer_shaderblobs.h"
+#endif  // #if defined(FFX_BRIXELIZER) || defined(FFX_ALL)
+
+#if defined(FFX_BRIXELIZER_GI) || defined(FFX_ALL)
+#include "blob_accessors/ffx_brixelizergi_shaderblobs.h"
+#endif  // #if defined(FFX_BRIXELIZER_GI) || defined(FFX_ALL)
+
 #include <string.h> // for memset
 
 FfxErrorCode ffxGetPermutationBlobByIndex(
     FfxEffect effectId,
     FfxPass passId,
+    FfxBindStage stageId,
     uint32_t permutationOptions,
     FfxShaderBlob* outBlob)
 {
-
+    (void)passId;
+    (void)stageId;
+    (void)permutationOptions;
+    
     switch (effectId)
     {
-#if defined(FFX_FSR) || defined(FFX_ALL)
+#if defined(FFX_FSR1) || defined(FFX_ALL)
+	case FFX_EFFECT_FSR1:
+        return fsr1GetPermutationBlobByIndex((FfxFsr1Pass)passId, permutationOptions, outBlob);
+#endif // #if defined(FFX_FSR1) || defined(FFX_ALL)
+
+#if defined(FFX_FSR2) || defined(FFX_ALL)
     case FFX_EFFECT_FSR2:
         return fsr2GetPermutationBlobByIndex((FfxFsr2Pass)passId, permutationOptions, outBlob);
+#endif // #if defined(FFX_FSR2) || defined(FFX_ALL)
 
-    case FFX_EFFECT_FSR1:
-        return fsr1GetPermutationBlobByIndex((FfxFsr1Pass)passId, permutationOptions, outBlob);
-#endif // #if defined(FFX_FSR) || defined(FFX_ALL)
+#if defined(FFX_FSR3UPSCALER) || defined(FFX_ALL)
+    case FFX_EFFECT_FSR3UPSCALER:
+        return fsr3UpscalerGetPermutationBlobByIndex((FfxFsr3UpscalerPass)passId, permutationOptions, outBlob);
+#endif // #if defined(FFX_FSR3UPSCALER) || defined(FFX_ALL)
+
+#if defined(FFX_FI) || defined(FFX_ALL)
+	case FFX_EFFECT_FRAMEINTERPOLATION:
+		return frameInterpolationGetPermutationBlobByIndex((FfxFrameInterpolationPass)passId, stageId, permutationOptions, outBlob);
+#endif // #if defined(FFX_FI) || defined(FFX_ALL)
+
+#if defined(FFX_OF) || defined(FFX_ALL)
+	case FFX_EFFECT_OPTICALFLOW:
+		return opticalflowGetPermutationBlobByIndex((FfxOpticalflowPass)passId, permutationOptions, outBlob);
+#endif // #if defined(FFX_OF) || defined(FFX_ALL)
 
 #if defined(FFX_SPD) || defined(FFX_ALL)
     case FFX_EFFECT_SPD:
@@ -152,28 +196,62 @@ FfxErrorCode ffxGetPermutationBlobByIndex(
 #if defined(FFX_CLASSIFIER) || defined(FFX_ALL)
     case FFX_EFFECT_CLASSIFIER:
         return classifierGetPermutationBlobByIndex((FfxClassifierPass)passId, permutationOptions, outBlob);
-#endif  // #if defined(FFX_HYBRIDSHADOWS) || defined(FFX_ALL)
+#endif  // #if defined(FFX_CLASSIFIER) || defined(FFX_ALL)
+
+#if defined(FFX_BRIXELIZER) || defined(FFX_ALL)
+    case FFX_EFFECT_BRIXELIZER:
+        return brixelizerGetPermutationBlobByIndex((FfxBrixelizerPass)passId, permutationOptions, outBlob);
+#endif  // #if defined(FFX_BRIXELIZER) || defined(FFX_ALL)
+
+#if defined(FFX_BRIXELIZER_GI) || defined(FFX_ALL)
+    case FFX_EFFECT_BRIXELIZER_GI:
+        return brixelizerGIGetPermutationBlobByIndex((FfxBrixelizerGIPass)passId, permutationOptions, outBlob);
+#endif  // #if defined(FFX_BRIXELIZER_GI) || defined(FFX_ALL)
+
+#if defined(FFX_BREADCRUMBS) || defined(FFX_ALL)
+    case FFX_EFFECT_BREADCRUMBS:
+        break;
+#endif  // #if defined(FFX_BREADCRUMBS) || defined(FFX_ALL)
     default:
         FFX_ASSERT_MESSAGE(false, "Not implemented");
         break;
     }
 
     // return an empty blob
-    memset(&outBlob, 0, sizeof(FfxShaderBlob));
+    memset(outBlob, 0, sizeof(FfxShaderBlob));
     return FFX_OK;
 }
 
 FfxErrorCode ffxIsWave64(FfxEffect effectId, uint32_t permutationOptions, bool& isWave64)
 {
+    (void)permutationOptions;
+
 switch (effectId)
     {
-#if defined(FFX_FSR) || defined(FFX_ALL)
-    case FFX_EFFECT_FSR2:
-        return fsr2IsWave64(permutationOptions, isWave64);
-
+#if defined(FFX_FSR1) || defined(FFX_ALL)
     case FFX_EFFECT_FSR1:
         return fsr1IsWave64(permutationOptions, isWave64);
-#endif // #if defined(FFX_FSR) || defined(FFX_ALL)
+#endif // #if defined(FFX_FSR1) || defined(FFX_ALL)
+
+#if defined(FFX_FSR2) || defined(FFX_ALL)
+    case FFX_EFFECT_FSR2:
+        return fsr2IsWave64(permutationOptions, isWave64);
+#endif // #if defined(FFX_FSR2) || defined(FFX_ALL)
+
+#if defined(FFX_FSR3UPSCALER) || defined(FFX_ALL)
+    case FFX_EFFECT_FSR3UPSCALER:
+        return fsr3UpscalerIsWave64(permutationOptions, isWave64);
+#endif // #if defined(FFX_FSR3UPSCALER) || defined(FFX_ALL)
+
+#if defined(FFX_FI) || defined(FFX_ALL)
+    case FFX_EFFECT_FRAMEINTERPOLATION:
+        return frameInterpolationIsWave64(permutationOptions, isWave64);
+#endif // #if defined(FFX_FI) || defined(FFX_ALL)
+
+#if defined(FFX_OF) || defined(FFX_ALL)
+    case FFX_EFFECT_OPTICALFLOW:
+        return opticalflowIsWave64(permutationOptions, isWave64);
+#endif // #if defined(FFX_OF) || defined(FFX_ALL)
 
 #if defined(FFX_SPD) || defined(FFX_ALL)
     case FFX_EFFECT_SPD:
@@ -233,7 +311,23 @@ switch (effectId)
 #if defined(FFX_CLASSIFIER) || defined(FFX_ALL)
     case FFX_EFFECT_CLASSIFIER:
         return classifierIsWave64(permutationOptions, isWave64);
-#endif  // #if defined(FFX_HYBRIDSHADOWS) || defined(FFX_ALL)
+#endif  // #if defined(FFX_CLASSIFIER) || defined(FFX_ALL)
+
+#if defined(FFX_BRIXELIZER) || defined(FFX_ALL)
+    case FFX_EFFECT_BRIXELIZER:
+        return brixelizerIsWave64(permutationOptions, isWave64);
+#endif  // #if defined(FFX_BRIXELIZER) || defined(FFX_ALL)
+
+#if defined(FFX_BRIXELIZER_GI) || defined(FFX_ALL)
+    case FFX_EFFECT_BRIXELIZER_GI:
+        return brixelizerGIIsWave64(permutationOptions, isWave64);
+#endif  // #if defined(FFX_BRIXELIZER_GI) || defined(FFX_ALL)
+
+#if defined(FFX_BREADCRUMBS) || defined(FFX_ALL)
+    case FFX_EFFECT_BREADCRUMBS:
+        isWave64 = false;
+        return FFX_OK;
+#endif  // #if defined(FFX_BREADCRUMBS) || defined(FFX_ALL)
     default:
         FFX_ASSERT_MESSAGE(false, "Not implemented");
         isWave64 = false;

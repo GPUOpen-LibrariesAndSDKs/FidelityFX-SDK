@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 /// @defgroup ffxFsr1 FidelityFX FSR1
@@ -40,7 +40,7 @@
 /// FidelityFX Super Resolution 1.0 minor version.
 ///
 /// @ingroup ffxFsr1
-#define FFX_FSR1_VERSION_MINOR      (1)
+#define FFX_FSR1_VERSION_MINOR      (2)
 
 /// FidelityFX Super Resolution 1.0 patch version.
 ///
@@ -57,7 +57,7 @@
 /// The size of the context specified in 32bit values.
 ///
 /// @ingroup ffxFsr1
-#define FFX_FSR1_CONTEXT_SIZE       (16536)
+#define FFX_FSR1_CONTEXT_SIZE       (27442)
 
 #if defined(__cplusplus)
 extern "C" {
@@ -124,11 +124,11 @@ typedef enum FfxFsr1InitializationFlagBits {
 /// @ingroup ffxFsr1
 typedef struct FfxFsr1ContextDescription {
 
-    uint32_t                    flags;              ///< A collection of <c><i>FfxFsr1InitializationFlagBits</i></c>.
-    FfxSurfaceFormat            outputFormat;       ///< Format of the output target used for creation of the internal upscale resource
-    FfxDimensions2D             maxRenderSize;      ///< The maximum size that rendering will be performed at.
-    FfxDimensions2D             displaySize;        ///< The size of the presentation resolution targeted by the upscaling process.
-    FfxInterface                backendInterface;   ///< A set of pointers to the backend implementation for FSR1.
+    uint32_t                    flags;                  ///< A collection of <c><i>FfxFsr1InitializationFlagBits</i></c>.
+    FfxSurfaceFormat            outputFormat;           ///< Format of the output target used for creation of the internal upscale resource
+    FfxDimensions2D             maxRenderSize;          ///< The maximum size that rendering will be performed at.
+    FfxDimensions2D             displaySize;            ///< The size of the presentation resolution targeted by the upscaling process.
+    FfxInterface                backendInterface;       ///< A set of pointers to the backend implementation for FSR1.
 } FfxFsr1ContextDescription;
 
 /// A structure encapsulating the parameters for dispatching the various passes
@@ -195,6 +195,19 @@ typedef struct FfxFsr1Context {
 ///
 /// @ingroup ffxFsr1
 FFX_API FfxErrorCode ffxFsr1ContextCreate(FfxFsr1Context* pContext, const FfxFsr1ContextDescription* pContextDescription);
+
+/// Get GPU memory usage of the FidelityFX Super Resolution context.
+///
+/// @param [in]  pContext                A pointer to a <c><i>FfxFsr1Context</i></c> structure.
+/// @param [out] pVramUsage              A pointer to a <c><i>FfxEffectMemoryUsage</i></c> structure.
+///
+/// @retval
+/// FFX_OK                              The operation completed successfully.
+/// @retval
+/// FFX_ERROR_CODE_NULL_POINTER         The operation failed because either <c><i>context</i></c> or <c><i>vramUsage</i></c> were <c><i>NULL</i></c>.
+///
+/// @ingroup ffxFsr1
+FFX_API FfxErrorCode ffxFsr1ContextGetGpuMemoryUsage(FfxFsr1Context* pContext, FfxEffectMemoryUsage* pVramUsage);
 
 /// @param [out] pContext                A pointer to a <c><i>FfxFsr1Context</i></c> structure to populate.
 /// @param [in]  pDispatchDescription    A pointer to a <c><i>FfxFsr1DispatchDescription</i></c> structure.
@@ -270,6 +283,14 @@ FFX_API FfxErrorCode ffxFsr1GetRenderResolutionFromQualityMode(
     uint32_t displayWidth,
     uint32_t displayHeight,
     FfxFsr1QualityMode qualityMode);
+
+/// Queries the effect version number.
+///
+/// @returns
+/// The SDK version the effect was built with.
+///
+/// @ingroup ffxFsr1
+FFX_API FfxVersionNumber ffxFsr1GetEffectVersion();
 
 #if defined(__cplusplus)
 }

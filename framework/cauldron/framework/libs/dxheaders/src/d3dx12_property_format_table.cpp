@@ -1,5 +1,6 @@
 
 
+
 //*********************************************************
 //
 // Copyright (c) Microsoft Corporation.
@@ -11,16 +12,19 @@
     #define WIN32_LEAN_AND_MEAN
 #endif
 #ifndef NOMINMAX
-    #define NOMINMAX
+    #define NOMINMAX 1
 #endif
-#ifndef WIN32
+#ifdef __MINGW32__
+    #include <unknwn.h>
+#endif
+#ifndef _WIN32
     #include <wsl/winadapter.h>
 #endif
+#include "d3dx12_property_format_table.h"
 #include <assert.h>
 #include <algorithm>
-#include "d3dx12_property_format_table.h"
 #include "D3D12TokenizedProgramFormat.hpp"
-
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 606)
 #ifndef ASSUME
   #define ASSUME(x) assert(x)
 #endif
@@ -251,14 +255,6 @@ constexpr DXGI_FORMAT D3DFCS_R32G8X24[] =
     DXGI_FORMAT_UNKNOWN // not part of cast set, just the "null terminator"
 };
 
-constexpr DXGI_FORMAT D3DFCS_R10G10B10A2[] =
-{
-    DXGI_FORMAT_R10G10B10A2_TYPELESS,
-    DXGI_FORMAT_R10G10B10A2_UNORM,
-    DXGI_FORMAT_R10G10B10A2_UINT,
-    DXGI_FORMAT_UNKNOWN // not part of cast set, just the "null terminator"
-};
-
 constexpr DXGI_FORMAT D3DFCS_R11G11B10[] =
 {
     DXGI_FORMAT_R11G11B10_FLOAT,
@@ -422,25 +418,13 @@ constexpr DXGI_FORMAT D3DFCS_B5G5R5A1[] =
 
 constexpr DXGI_FORMAT D3DFCS_B8G8R8A8[] =
 {
-    DXGI_FORMAT_B8G8R8A8_UNORM,
-    DXGI_FORMAT_UNKNOWN // not part of cast set, just the "null terminator"
-};
-
-constexpr DXGI_FORMAT D3DFCS_B8G8R8X8[] =
-{
-    DXGI_FORMAT_B8G8R8X8_UNORM,
-    DXGI_FORMAT_UNKNOWN // not part of cast set, just the "null terminator"
-};
-
-constexpr DXGI_FORMAT D3DFCS_B8G8R8A8_Win7[] =
-{
     DXGI_FORMAT_B8G8R8A8_TYPELESS,
     DXGI_FORMAT_B8G8R8A8_UNORM,
     DXGI_FORMAT_B8G8R8A8_UNORM_SRGB,
     DXGI_FORMAT_UNKNOWN // not part of cast set, just the "null terminator"
 };
 
-constexpr DXGI_FORMAT D3DFCS_B8G8R8X8_Win7[] =
+constexpr DXGI_FORMAT D3DFCS_B8G8R8X8[] =
 {
     DXGI_FORMAT_B8G8R8X8_TYPELESS,
     DXGI_FORMAT_B8G8R8X8_UNORM,
@@ -448,7 +432,7 @@ constexpr DXGI_FORMAT D3DFCS_B8G8R8X8_Win7[] =
     DXGI_FORMAT_UNKNOWN // not part of cast set, just the "null terminator"
 };
 
-constexpr DXGI_FORMAT D3DFCS_R10G10B10A2_XR[] =
+constexpr DXGI_FORMAT D3DFCS_R10G10B10A2[] =
 {
     DXGI_FORMAT_R10G10B10A2_TYPELESS,
     DXGI_FORMAT_R10G10B10A2_UNORM,
@@ -587,6 +571,11 @@ constexpr DXGI_FORMAT D3DFCS_V408[] =
     DXGI_FORMAT_UNKNOWN // not part of cast set, just the "null terminator"
 };
      
+constexpr DXGI_FORMAT D3DFCS_A4B4G4R4[] =
+{
+    DXGI_FORMAT_A4B4G4R4_UNORM,
+    DXGI_FORMAT_UNKNOWN // not part of cast set, just the "null terminator"
+};
 
 constexpr D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::FORMAT_DETAIL D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::s_FormatDetail[] =
 {
@@ -614,9 +603,9 @@ constexpr D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::FORMAT_DETAIL D3D12_PROPERTY_LAYOU
         {    DXGI_FORMAT_D32_FLOAT_S8X24_UINT                 ,DXGI_FORMAT_R32G8X24_TYPELESS,            D3DFCS_R32G8X24,      {32,8,24,0},         64,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_FULL_TYPE,     D,S,X,X,         _FLOAT,_UINT,_TYPELESS,_TYPELESS,                    FALSE,                  FALSE,               FALSE,            TRUE,    FALSE,  FALSE,                  FALSE,    },
         {    DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS             ,DXGI_FORMAT_R32G8X24_TYPELESS,            D3DFCS_R32G8X24,      {32,8,24,0},         64,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_FULL_TYPE,     R,X,X,X,         _FLOAT,_TYPELESS,_TYPELESS,_TYPELESS,                FALSE,                  FALSE,               TRUE,             TRUE,    FALSE,  FALSE,                  FALSE,    },
         {    DXGI_FORMAT_X32_TYPELESS_G8X24_UINT              ,DXGI_FORMAT_R32G8X24_TYPELESS,            D3DFCS_R32G8X24,      {32,8,24,0},         64,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_FULL_TYPE,     X,G,X,X,         _TYPELESS,_UINT,_TYPELESS,_TYPELESS,                 FALSE,                  FALSE,               FALSE,            TRUE,    FALSE,  FALSE,                  FALSE,    },
-        {DXGI_FORMAT_R10G10B10A2_TYPELESS                     ,DXGI_FORMAT_R10G10B10A2_TYPELESS,         D3DFCS_R10G10B10A2_XR,{10,10,10,2},        32,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_PARTIAL_TYPE,  R,G,B,A,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  TRUE,                   FALSE,    },
-        {    DXGI_FORMAT_R10G10B10A2_UNORM                    ,DXGI_FORMAT_R10G10B10A2_TYPELESS,         D3DFCS_R10G10B10A2_XR,{10,10,10,2},        32,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_FULL_TYPE,     R,G,B,A,         _UNORM, _UNORM, _UNORM, _UNORM,                      FALSE,                  TRUE,                TRUE,             FALSE,   FALSE,  TRUE,                   FALSE,    },
-        {    DXGI_FORMAT_R10G10B10A2_UINT                     ,DXGI_FORMAT_R10G10B10A2_TYPELESS,         D3DFCS_R10G10B10A2_XR,{10,10,10,2},        32,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_FULL_TYPE,     R,G,B,A,         _UINT, _UINT, _UINT, _UINT,                          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  TRUE,                   FALSE,    },
+        {DXGI_FORMAT_R10G10B10A2_TYPELESS                     ,DXGI_FORMAT_R10G10B10A2_TYPELESS,         D3DFCS_R10G10B10A2,   {10,10,10,2},        32,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_PARTIAL_TYPE,  R,G,B,A,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  TRUE,                   FALSE,    },
+        {    DXGI_FORMAT_R10G10B10A2_UNORM                    ,DXGI_FORMAT_R10G10B10A2_TYPELESS,         D3DFCS_R10G10B10A2,   {10,10,10,2},        32,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_FULL_TYPE,     R,G,B,A,         _UNORM, _UNORM, _UNORM, _UNORM,                      FALSE,                  TRUE,                TRUE,             FALSE,   FALSE,  TRUE,                   FALSE,    },
+        {    DXGI_FORMAT_R10G10B10A2_UINT                     ,DXGI_FORMAT_R10G10B10A2_TYPELESS,         D3DFCS_R10G10B10A2,   {10,10,10,2},        32,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_FULL_TYPE,     R,G,B,A,         _UINT, _UINT, _UINT, _UINT,                          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  TRUE,                   FALSE,    },
         {DXGI_FORMAT_R11G11B10_FLOAT                          ,DXGI_FORMAT_R11G11B10_FLOAT,              D3DFCS_R11G11B10,     {11,11,10,0},        32,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_FULL_TYPE,     R,G,B,X,         _FLOAT, _FLOAT, _FLOAT, _TYPELESS,                   FALSE,                  FALSE,               TRUE,             FALSE,   FALSE,  FALSE,                  FALSE,    },
         {DXGI_FORMAT_R8G8B8A8_TYPELESS                        ,DXGI_FORMAT_R8G8B8A8_TYPELESS,            D3DFCS_R8G8B8A8,      {8,8,8,8},           32,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_PARTIAL_TYPE,  R,G,B,A,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  FALSE,    },
         {    DXGI_FORMAT_R8G8B8A8_UNORM                       ,DXGI_FORMAT_R8G8B8A8_TYPELESS,            D3DFCS_R8G8B8A8,      {8,8,8,8},           32,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_FULL_TYPE,     R,G,B,A,         _UNORM, _UNORM, _UNORM, _UNORM,                      TRUE,                   TRUE,                TRUE,             FALSE,   FALSE,  FALSE,                  FALSE,    },
@@ -678,13 +667,13 @@ constexpr D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::FORMAT_DETAIL D3D12_PROPERTY_LAYOU
         {    DXGI_FORMAT_BC5_SNORM                            ,DXGI_FORMAT_BC5_TYPELESS,                 D3DFCS_BC5,           {0,0,0,0},           128,            FALSE, 4,              4,               1,                D3DFL_CUSTOM,     D3DFTL_FULL_TYPE,     R,G,X,X,         _SNORM, _SNORM, _TYPELESS, _TYPELESS,                FALSE,                  FALSE,               TRUE,             FALSE,   FALSE,  FALSE,                  FALSE,    },
         {DXGI_FORMAT_B5G6R5_UNORM                             ,DXGI_FORMAT_B5G6R5_UNORM,                 D3DFCS_B5G6R5,        {5,6,5,0},           16,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_FULL_TYPE,     B,G,R,X,         _UNORM, _UNORM, _UNORM, _TYPELESS,                   FALSE,                  TRUE,                TRUE,             FALSE,   FALSE,  FALSE,                  FALSE,    },
         {DXGI_FORMAT_B5G5R5A1_UNORM                           ,DXGI_FORMAT_B5G5R5A1_UNORM,               D3DFCS_B5G5R5A1,      {5,5,5,1},           16,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_FULL_TYPE,     B,G,R,A,         _UNORM, _UNORM, _UNORM, _UNORM,                      FALSE,                  TRUE,                TRUE,             FALSE,   FALSE,  FALSE,                  FALSE,    },
-        {DXGI_FORMAT_B8G8R8A8_UNORM                           ,DXGI_FORMAT_B8G8R8A8_TYPELESS,            D3DFCS_B8G8R8A8_Win7, {8,8,8,8},           32,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_FULL_TYPE,     B,G,R,A,         _UNORM, _UNORM, _UNORM, _UNORM,                      FALSE,                  TRUE,                TRUE,             FALSE,   FALSE,  FALSE,                  FALSE,    },
-        {DXGI_FORMAT_B8G8R8X8_UNORM                           ,DXGI_FORMAT_B8G8R8X8_TYPELESS,            D3DFCS_B8G8R8X8_Win7, {8,8,8,8},           32,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_FULL_TYPE,     B,G,R,X,         _UNORM, _UNORM, _UNORM, _TYPELESS,                   FALSE,                  TRUE,                TRUE,             FALSE,   FALSE,  FALSE,                  FALSE,    },
-        {DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM               ,DXGI_FORMAT_R10G10B10A2_TYPELESS,         D3DFCS_R10G10B10A2_XR,{10,10,10,2},        32,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_FULL_TYPE,     R,G,B,A,         _FIXED_2_8, _FIXED_2_8, _FIXED_2_8, _UNORM,          FALSE,                  TRUE,                FALSE,            FALSE,   FALSE,  FALSE,                  FALSE,    },
-        {DXGI_FORMAT_B8G8R8A8_TYPELESS                        ,DXGI_FORMAT_B8G8R8A8_TYPELESS,            D3DFCS_B8G8R8A8_Win7, {8,8,8,8},           32,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_PARTIAL_TYPE,  B,G,R,A,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  TRUE,                FALSE,            FALSE,   FALSE,  FALSE,                  FALSE,    },
-        {    DXGI_FORMAT_B8G8R8A8_UNORM_SRGB                  ,DXGI_FORMAT_B8G8R8A8_TYPELESS,            D3DFCS_B8G8R8A8_Win7, {8,8,8,8},           32,             TRUE,  1,              1,               1,                D3DFL_STANDARD,   D3DFTL_FULL_TYPE,     B,G,R,A,         _UNORM_SRGB, _UNORM_SRGB, _UNORM_SRGB, _UNORM_SRGB,  FALSE,                  TRUE,                TRUE,             FALSE,   FALSE,  FALSE,                  FALSE,    },
-        {DXGI_FORMAT_B8G8R8X8_TYPELESS                        ,DXGI_FORMAT_B8G8R8X8_TYPELESS,            D3DFCS_B8G8R8X8_Win7, {8,8,8,8},           32,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_PARTIAL_TYPE,  B,G,R,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  TRUE,                FALSE,            FALSE,   FALSE,  FALSE,                  FALSE,    },
-        {    DXGI_FORMAT_B8G8R8X8_UNORM_SRGB                  ,DXGI_FORMAT_B8G8R8X8_TYPELESS,            D3DFCS_B8G8R8X8_Win7, {8,8,8,8},           32,             TRUE,  1,              1,               1,                D3DFL_STANDARD,   D3DFTL_FULL_TYPE,     B,G,R,X,         _UNORM_SRGB, _UNORM_SRGB, _UNORM_SRGB, _TYPELESS,    FALSE,                  TRUE,                TRUE,             FALSE,   FALSE,  FALSE,                  FALSE,    },
+        {DXGI_FORMAT_B8G8R8A8_UNORM                           ,DXGI_FORMAT_B8G8R8A8_TYPELESS,            D3DFCS_B8G8R8A8,      {8,8,8,8},           32,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_FULL_TYPE,     B,G,R,A,         _UNORM, _UNORM, _UNORM, _UNORM,                      FALSE,                  TRUE,                TRUE,             FALSE,   FALSE,  FALSE,                  FALSE,    },
+        {DXGI_FORMAT_B8G8R8X8_UNORM                           ,DXGI_FORMAT_B8G8R8X8_TYPELESS,            D3DFCS_B8G8R8X8,      {8,8,8,8},           32,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_FULL_TYPE,     B,G,R,X,         _UNORM, _UNORM, _UNORM, _TYPELESS,                   FALSE,                  TRUE,                TRUE,             FALSE,   FALSE,  FALSE,                  FALSE,    },
+        {DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM               ,DXGI_FORMAT_R10G10B10A2_TYPELESS,         D3DFCS_R10G10B10A2,   {10,10,10,2},        32,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_FULL_TYPE,     R,G,B,A,         _FIXED_2_8, _FIXED_2_8, _FIXED_2_8, _UNORM,          FALSE,                  TRUE,                FALSE,            FALSE,   FALSE,  FALSE,                  FALSE,    },
+        {DXGI_FORMAT_B8G8R8A8_TYPELESS                        ,DXGI_FORMAT_B8G8R8A8_TYPELESS,            D3DFCS_B8G8R8A8,      {8,8,8,8},           32,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_PARTIAL_TYPE,  B,G,R,A,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  TRUE,                FALSE,            FALSE,   FALSE,  FALSE,                  FALSE,    },
+        {    DXGI_FORMAT_B8G8R8A8_UNORM_SRGB                  ,DXGI_FORMAT_B8G8R8A8_TYPELESS,            D3DFCS_B8G8R8A8,      {8,8,8,8},           32,             TRUE,  1,              1,               1,                D3DFL_STANDARD,   D3DFTL_FULL_TYPE,     B,G,R,A,         _UNORM_SRGB, _UNORM_SRGB, _UNORM_SRGB, _UNORM_SRGB,  FALSE,                  TRUE,                TRUE,             FALSE,   FALSE,  FALSE,                  FALSE,    },
+        {DXGI_FORMAT_B8G8R8X8_TYPELESS                        ,DXGI_FORMAT_B8G8R8X8_TYPELESS,            D3DFCS_B8G8R8X8,      {8,8,8,8},           32,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_PARTIAL_TYPE,  B,G,R,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  TRUE,                FALSE,            FALSE,   FALSE,  FALSE,                  FALSE,    },
+        {    DXGI_FORMAT_B8G8R8X8_UNORM_SRGB                  ,DXGI_FORMAT_B8G8R8X8_TYPELESS,            D3DFCS_B8G8R8X8,      {8,8,8,8},           32,             TRUE,  1,              1,               1,                D3DFL_STANDARD,   D3DFTL_FULL_TYPE,     B,G,R,X,         _UNORM_SRGB, _UNORM_SRGB, _UNORM_SRGB, _TYPELESS,    FALSE,                  TRUE,                TRUE,             FALSE,   FALSE,  FALSE,                  FALSE,    },
         {DXGI_FORMAT_BC6H_TYPELESS                            ,DXGI_FORMAT_BC6H_TYPELESS,                D3DFCS_BC6H,          {0,0,0,0},           128,            FALSE, 4,              4,               1,                D3DFL_CUSTOM,     D3DFTL_PARTIAL_TYPE,  R,G,B,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  FALSE,    },
         {    DXGI_FORMAT_BC6H_UF16                            ,DXGI_FORMAT_BC6H_TYPELESS,                D3DFCS_BC6H,          {0,0,0,0},           128,            FALSE, 4,              4,               1,                D3DFL_CUSTOM,     D3DFTL_FULL_TYPE,     R,G,B,X,         _FLOAT, _FLOAT, _FLOAT, _TYPELESS,                   FALSE,                  FALSE,               TRUE,             FALSE,   FALSE,  FALSE,                  FALSE,    },
         {    DXGI_FORMAT_BC6H_SF16                            ,DXGI_FORMAT_BC6H_TYPELESS,                D3DFCS_BC6H,          {0,0,0,0},           128,            FALSE, 4,              4,               1,                D3DFL_CUSTOM,     D3DFTL_FULL_TYPE,     R,G,B,X,         _FLOAT, _FLOAT, _FLOAT, _TYPELESS,                   FALSE,                  FALSE,               TRUE,             FALSE,   FALSE,  FALSE,                  FALSE,    },
@@ -711,7 +700,88 @@ constexpr D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::FORMAT_DETAIL D3D12_PROPERTY_LAYOU
         { DXGI_FORMAT_IA44                                    ,DXGI_FORMAT_IA44,                         D3DFCS_IA44,          {0,0,0,0},           8,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_FULL_TYPE,     R,X,X,X,         _UNORM, _TYPELESS, _TYPELESS, _TYPELESS,             FALSE,                  TRUE,                FALSE,            FALSE,   TRUE,   FALSE,                  FALSE,    },
         { DXGI_FORMAT_P8                                      ,DXGI_FORMAT_P8,                           D3DFCS_P8,            {0,0,0,0},           8,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_FULL_TYPE,     R,X,X,X,         _UNORM, _TYPELESS, _TYPELESS, _TYPELESS,             FALSE,                  TRUE,                FALSE,            FALSE,   TRUE,   FALSE,                  FALSE,    },
         { DXGI_FORMAT_A8P8                                    ,DXGI_FORMAT_A8P8,                         D3DFCS_A8P8,          {0,0,0,0},           16,             FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_FULL_TYPE,     R,X,X,X,         _UNORM, _TYPELESS, _TYPELESS, _TYPELESS,             FALSE,                  TRUE,                FALSE,            FALSE,   TRUE,   FALSE,                  FALSE,    },
-        //DXGI_FORMAT                                          ParentFormat                              pDefaultFormatCastSet   BitsPerComponent[4], BitsPerUnit,    SRGB,  WidthAlignment, HeightAlignment, DepthAlignment,   Layout,             TypeLevel,              ComponentName[4],ComponentInterpretation[4],                          bDX9VertexOrIndexFormat bDX9TextureFormat,   bFloatNormFormat, bPlanar, bYUV    bDependantFormatCastSet bInternal
+        { DXGI_FORMAT_B4G4R4A4_UNORM                          ,DXGI_FORMAT_B4G4R4A4_UNORM,               D3DFCS_B4G4R4A4,      {4,4,4,4},           16,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_FULL_TYPE,     B,G,R,A,         _UNORM, _UNORM, _UNORM, _UNORM,                      FALSE,                  TRUE,                TRUE,             FALSE,   FALSE,  FALSE,                  FALSE,    },
+        { DXGI_FORMAT(116)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(117)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(118)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(119)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(120)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(121)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(122)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+
+        { DXGI_FORMAT(123)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+
+        { DXGI_FORMAT(124)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(125)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(126)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(127)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(128)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(129)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(DXGI_FORMAT_P208)                       ,DXGI_FORMAT_P208,                         D3DFCS_P208,          {0,0,0,0},           8,              FALSE, 2,              1,               1,                D3DFL_CUSTOM,     D3DFTL_FULL_TYPE,     R,X,X,X,         _UNORM, _TYPELESS, _TYPELESS, _TYPELESS,             FALSE,                  TRUE,                FALSE,            TRUE,    TRUE,   FALSE,                  FALSE,    },
+        { DXGI_FORMAT(DXGI_FORMAT_V208)                       ,DXGI_FORMAT_V208,                         D3DFCS_V208,          {0,0,0,0},           8,              FALSE, 1,              2,               1,                D3DFL_CUSTOM,     D3DFTL_FULL_TYPE,     R,X,X,X,         _UNORM, _TYPELESS, _TYPELESS, _TYPELESS,             FALSE,                  TRUE,                FALSE,            TRUE,    TRUE,   FALSE,                  FALSE,    },
+        { DXGI_FORMAT(DXGI_FORMAT_V408)                       ,DXGI_FORMAT_V408,                         D3DFCS_V408,          {0,0,0,0},           8,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_FULL_TYPE,     R,X,X,X,         _UNORM, _TYPELESS, _TYPELESS, _TYPELESS,             FALSE,                  TRUE,                FALSE,            TRUE,    TRUE,   FALSE,                  FALSE,    },
+
+        { DXGI_FORMAT(133)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(134)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(135)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(136)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(137)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(138)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(139)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(140)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(141)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(142)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(143)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(144)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(145)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(146)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(147)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(148)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(149)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(150)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(151)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(152)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(153)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(154)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(155)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(156)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(157)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(158)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(159)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(160)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(161)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(162)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(163)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(164)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(165)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(166)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(167)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(168)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(169)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(170)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(171)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(172)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(173)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(174)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(175)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(176)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(177)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(178)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(179)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(180)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(181)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(182)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(183)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(184)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(185)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(186)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(187)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+        { DXGI_FORMAT(188)                                    ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           0,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_NO_TYPE,       X,X,X,X,         _TYPELESS, _TYPELESS, _TYPELESS, _TYPELESS,          FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  TRUE,     },
+
+        { DXGI_FORMAT_SAMPLER_FEEDBACK_MIN_MIP_OPAQUE         ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           8,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_FULL_TYPE,     R,X,X,X,         _UNORM, _TYPELESS, _TYPELESS, _TYPELESS,             FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  FALSE,    },
+        { DXGI_FORMAT_SAMPLER_FEEDBACK_MIP_REGION_USED_OPAQUE ,DXGI_FORMAT_UNKNOWN,                      D3DFCS_UNKNOWN,       {0,0,0,0},           8,              FALSE, 1,              1,               1,                D3DFL_CUSTOM,     D3DFTL_FULL_TYPE,     R,X,X,X,         _UNORM, _TYPELESS, _TYPELESS, _TYPELESS,             FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  FALSE,    },
+        { DXGI_FORMAT_A4B4G4R4_UNORM                          ,DXGI_FORMAT_A4B4G4R4_UNORM,               D3DFCS_A4B4G4R4,      {4,4,4,4},           16,             FALSE, 1,              1,               1,                D3DFL_STANDARD,   D3DFTL_FULL_TYPE,     A,B,G,R,         _UNORM, _UNORM, _UNORM, _UNORM,                      FALSE,                  FALSE,               FALSE,            FALSE,   FALSE,  FALSE,                  FALSE,    },
+        //DXGI_FORMAT                                          ParentFormat                              pDefaultFormatCastSet BitsPerComponent[4], BitsPerUnit,    SRGB,  WidthAlignment, HeightAlignment, DepthAlignment,   Layout,           TypeLevel,            ComponentName[4],ComponentInterpretation[4],                          bDX9VertexOrIndexFormat bDX9TextureFormat,   bFloatNormFormat, bPlanar, bYUV    bDependantFormatCastSet bInternal
 
 };
 
@@ -831,7 +901,7 @@ LPCSTR D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::GetName(DXGI_FORMAT Format, bool bHid
 bool D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::IsSRGBFormat(DXGI_FORMAT Format)
 {
     const UINT Index = GetDetailTableIndex(Format);
-    if( -1 == Index )
+    if(UINT( -1 ) == Index )
     {
         return false;
     }
@@ -942,7 +1012,7 @@ HRESULT D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::CalculateResourceSize(
     UINT subWidth = width;
     UINT subHeight = height;
     UINT subDepth = depth;
-    for (UINT s = 0, iM = 0, iA = 0; s < subresources; ++s)
+    for (UINT s = 0, iM = 0; s < subresources; ++s)
     {
         UINT blockWidth;
         if (FAILED(DivideAndRoundUp(subWidth, formatDetail.WidthAlignment, /*_Out_*/ blockWidth)))
@@ -1007,7 +1077,7 @@ HRESULT D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::CalculateResourceSize(
 
             // This data will be returned straight from the API to satisfy Map. So, strides/ alignment must be API-correct.
             dst.pData = reinterpret_cast<void*>(totalByteSize);
-            assert(s != 0 || dst.pData == NULL);
+            assert(s != 0 || dst.pData == nullptr);
 
             dst.RowPitch = rowPitch; 
             dst.SlicePitch = depthPitch;
@@ -1024,7 +1094,6 @@ HRESULT D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::CalculateResourceSize(
         // Iterate over mip levels and array elements
         if (++iM >= mipLevels)
         {
-            ++iA;
             iM = 0;
 
             subWidth = width;
@@ -1188,8 +1257,11 @@ bool D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::CanBeCastEvenFullyTyped(DXGI_FORMAT For
     //SRGB can be cast away/back, and XR_BIAS can be cast to/from UNORM
     switch(fl)
     {
+    case D3D_FEATURE_LEVEL_1_0_GENERIC:
     case D3D_FEATURE_LEVEL_1_0_CORE:
         return false;
+    default:
+        break;
     }
     switch( Format )
     {
@@ -1201,8 +1273,9 @@ bool D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::CanBeCastEvenFullyTyped(DXGI_FORMAT For
     case DXGI_FORMAT_R10G10B10A2_UNORM:
     case DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM:
         return fl >= D3D_FEATURE_LEVEL_10_0;
+    default:
+        return false;
     }
-    return false;
 }
 
 //---------------------------------------------------------------------------------------------------------------------------------
@@ -1210,9 +1283,9 @@ bool D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::CanBeCastEvenFullyTyped(DXGI_FORMAT For
 const D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::FORMAT_DETAIL* D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::GetFormatDetail( DXGI_FORMAT  Format )
 {
     const UINT Index = GetDetailTableIndex(Format);
-    if( -1 == Index )
+    if(UINT( -1 ) == Index )
     {
-        return NULL;
+        return nullptr;
     }
   
   return &s_FormatDetail[ Index ];
@@ -1342,8 +1415,9 @@ bool D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::DepthOnlyFormat(DXGI_FORMAT Format)
     case DXGI_FORMAT_D32_FLOAT:
     case DXGI_FORMAT_D16_UNORM:
         return true;
+    default:
+        return false;
     }
-    return false;
 }
 
 //---------------------------------------------------------------------------------------------------------------------------------
@@ -1354,8 +1428,9 @@ bool D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::SupportsSamplerFeedback(DXGI_FORMAT For
     case DXGI_FORMAT_SAMPLER_FEEDBACK_MIN_MIP_OPAQUE:
     case DXGI_FORMAT_SAMPLER_FEEDBACK_MIP_REGION_USED_OPAQUE:
         return true;
+    default:
+        return false;
     }
-    return false;
 }
 
 //---------------------------------------------------------------------------------------------------------------------------------
@@ -1459,8 +1534,9 @@ bool D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::FamilySupportsStencil(DXGI_FORMAT Forma
     case DXGI_FORMAT_R32G8X24_TYPELESS:
     case DXGI_FORMAT_R24G8_TYPELESS:
         return true;
+    default:
+        return false;
     }
-    return false;
 }
 
 //---------------------------------------------------------------------------------------------------------------------------------
@@ -1468,7 +1544,7 @@ bool D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::FamilySupportsStencil(DXGI_FORMAT Forma
 UINT D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::GetDetailTableIndexThrow(DXGI_FORMAT  Format)
 {
     UINT Index = GetDetailTableIndex( Format );
-    if( -1 == Index )
+    if(UINT( -1 ) == Index )
     {
         throw E_FAIL;
     }
@@ -1480,7 +1556,7 @@ UINT D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::GetDetailTableIndexThrow(DXGI_FORMAT  F
 UINT D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::GetDetailTableIndexNoThrow(DXGI_FORMAT  Format)
 {
     UINT Index = GetDetailTableIndex( Format );
-    assert( -1 != Index ); // Needs to be validated externally.
+    assert(UINT( -1 ) != Index ); // Needs to be validated externally.
     return Index;
 }
 
@@ -1576,6 +1652,7 @@ void D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::GetTileShape(
 
     switch(Dimension)
     {
+    case D3D12_RESOURCE_DIMENSION_UNKNOWN:
     case D3D12_RESOURCE_DIMENSION_BUFFER:
     case D3D12_RESOURCE_DIMENSION_TEXTURE1D:
         {
@@ -1745,6 +1822,7 @@ void D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::Get4KTileShape(
 
     switch(Dimension)
     {
+    case D3D12_RESOURCE_DIMENSION_UNKNOWN:
     case D3D12_RESOURCE_DIMENSION_BUFFER:
     case D3D12_RESOURCE_DIMENSION_TEXTURE1D:
         {
@@ -1923,6 +2001,8 @@ UINT8 D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::GetPlaneSliceFromViewFormat(
             return 0;
         case DXGI_FORMAT_X24_TYPELESS_G8_UINT:
             return 1;
+        default:
+            ASSUME( false );
         }
         break;
     case DXGI_FORMAT_R32G8X24_TYPELESS:
@@ -1932,6 +2012,8 @@ UINT8 D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::GetPlaneSliceFromViewFormat(
             return 0;
         case DXGI_FORMAT_X32_TYPELESS_G8X24_UINT:
             return 1;
+        default:
+            ASSUME( false );
         }
         break;
     case DXGI_FORMAT_NV12:
@@ -1945,6 +2027,8 @@ UINT8 D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::GetPlaneSliceFromViewFormat(
         case DXGI_FORMAT_R8G8_UNORM:
         case DXGI_FORMAT_R8G8_UINT:
             return 1;
+        default:
+            ASSUME( false );
         }
         break;
     case DXGI_FORMAT_P016:
@@ -1958,10 +2042,13 @@ UINT8 D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::GetPlaneSliceFromViewFormat(
         case DXGI_FORMAT_R16G16_UINT:
         case DXGI_FORMAT_R32_UINT:
             return 1;
+        default:
+            ASSUME( false );
         }
         break;
+    default:
+        break;
     }
-
     return 0;
 }
 
@@ -2280,7 +2367,7 @@ bool D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::IsSupportedTextureDisplayableFormat
 //---------------------------------------------------------------------------------------------------------------------------------
 bool  D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::FloatAndNotFloatFormats(DXGI_FORMAT FormatA, DXGI_FORMAT FormatB)
 {
-    UINT NumComponents = std::min(GetNumComponentsInFormat(FormatA), GetNumComponentsInFormat(FormatB));
+    UINT NumComponents = (std::min)(GetNumComponentsInFormat(FormatA), GetNumComponentsInFormat(FormatB));
     for (UINT c = 0; c < NumComponents; c++)
     {
         D3D_FORMAT_COMPONENT_INTERPRETATION fciA = GetFormatComponentInterpretation(FormatA, c);
@@ -2296,7 +2383,7 @@ bool  D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::FloatAndNotFloatFormats(DXGI_FORMAT Fo
 //---------------------------------------------------------------------------------------------------------------------------------
 bool  D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::SNORMAndUNORMFormats(DXGI_FORMAT FormatA, DXGI_FORMAT FormatB)
 {
-    UINT NumComponents = std::min(GetNumComponentsInFormat(FormatA), GetNumComponentsInFormat(FormatB));
+    UINT NumComponents = (std::min)(GetNumComponentsInFormat(FormatA), GetNumComponentsInFormat(FormatB));
     for (UINT c = 0; c < NumComponents; c++)
     {
         D3D_FORMAT_COMPONENT_INTERPRETATION fciA = GetFormatComponentInterpretation(FormatA, c);
@@ -2311,11 +2398,23 @@ bool  D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::SNORMAndUNORMFormats(DXGI_FORMAT Forma
 }
 
 //---------------------------------------------------------------------------------------------------------------------------------
-// Formats allowed by runtime for decode histogram.  Scopes to tested formats.
+// Formats allowed by runtime for decode histogram.
  bool D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::DecodeHistogramAllowedForOutputFormatSupport(DXGI_FORMAT Format)
  {
-     return Format == DXGI_FORMAT_NV12 
-         || Format == DXGI_FORMAT_P010;
+     return (
+         /* YUV 4:2:0 */
+            Format == DXGI_FORMAT_NV12
+         || Format == DXGI_FORMAT_P010
+         || Format == DXGI_FORMAT_P016
+         /* YUV 4:2:2 */
+         || Format == DXGI_FORMAT_YUY2
+         || Format == DXGI_FORMAT_Y210
+         || Format == DXGI_FORMAT_Y216
+         /* YUV 4:4:4 */
+         || Format == DXGI_FORMAT_AYUV
+         || Format == DXGI_FORMAT_Y410
+         || Format == DXGI_FORMAT_Y416
+     );
  }
 
 //---------------------------------------------------------------------------------------------------------------------------------
@@ -2341,4 +2440,6 @@ bool  D3D12_PROPERTY_LAYOUT_FORMAT_TABLE::SNORMAndUNORMFormats(DXGI_FORMAT Forma
 #undef _UINT       
 #undef _UNORM_SRGB 
 #undef _FIXED_2_8  
+
+#endif // D3D12_SDK_VERSION >= 606
 

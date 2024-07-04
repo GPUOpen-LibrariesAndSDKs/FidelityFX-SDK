@@ -1,9 +1,9 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C)2023 Advanced Micro Devices, Inc.
-//
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
@@ -12,9 +12,9 @@
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -31,12 +31,10 @@
 #ifdef __hlsl_dx_compiler
 #pragma dxc diagnostic pop
 #endif //__hlsl_dx_compiler
-#endif // #if defined(FFX_GPU)
 
-#if defined(FFX_GPU)
 #ifndef FFX_PREFER_WAVE64
 #define FFX_PREFER_WAVE64
-#endif // #if defined(FFX_GPU)
+#endif // #ifndef FFX_PREFER_WAVE64
 
 #pragma warning(disable: 3205)  // conversion from larger type to smaller
 
@@ -86,27 +84,27 @@
 #if defined(FFX_GPU)
 #define FFX_DENOISER_SHADOWS_ROOTSIG_STRINGIFY(p) FFX_DENOISER_SHADOWS_ROOTSIG_STR(p)
 #define FFX_DENOISER_SHADOWS_ROOTSIG_STR(p) #p
-#define FFX_DENOISER_SHADOWS_PREPARE_SHADOW_MASK_ROOTSIG [RootSignature( "DescriptorTable(UAV(u0, numDescriptors = " FFX_DENOISER_SHADOWS_ROOTSIG_STRINGIFY(FFX_DENOISER_SHADOWS_RESOURCE_IDENTIFIER_COUNT) ")), " \
-                                    "DescriptorTable(SRV(t0, numDescriptors = " FFX_DENOISER_SHADOWS_ROOTSIG_STRINGIFY(FFX_DENOISER_SHADOWS_RESOURCE_IDENTIFIER_COUNT) ")), " \
-                                    "RootConstants(num32BitConstants=" FFX_DENOISER_SHADOWS_ROOTSIG_STRINGIFY(FFX_DENOISER_SHADOWS_CONSTANT_BUFFER_0_SIZE) ", b0)")]
+#define FFX_DENOISER_SHADOWS_PREPARE_SHADOW_MASK_ROOTSIG [RootSignature( "DescriptorTable(UAV(u0, numDescriptors = " FFX_DENOISER_SHADOWS_ROOTSIG_STRINGIFY(FFX_DENOISER_RESOURCE_IDENTIFIER_COUNT) ")), " \
+                                                                        "DescriptorTable(SRV(t0, numDescriptors = " FFX_DENOISER_SHADOWS_ROOTSIG_STRINGIFY(FFX_DENOISER_RESOURCE_IDENTIFIER_COUNT) ")), " \
+                                                                        "CBV(b0)")]
 
-#define FFX_DENOISER_SHADOWS_TILE_CLASSIFICATION_ROOTSIG [RootSignature( "DescriptorTable(UAV(u0, numDescriptors = " FFX_DENOISER_SHADOWS_ROOTSIG_STRINGIFY(FFX_DENOISER_SHADOWS_RESOURCE_IDENTIFIER_COUNT) ")), " \
-                                    "DescriptorTable(SRV(t0, numDescriptors = " FFX_DENOISER_SHADOWS_ROOTSIG_STRINGIFY(FFX_DENOISER_SHADOWS_RESOURCE_IDENTIFIER_COUNT) ")), " \
-                                    "RootConstants(num32BitConstants=" FFX_DENOISER_SHADOWS_ROOTSIG_STRINGIFY(FFX_DENOISER_SHADOWS_CONSTANT_BUFFER_1_SIZE) ", b0), " \
-                                    "StaticSampler(s0, filter = FILTER_MIN_MAG_MIP_LINEAR, " \
-                                                      "addressU = TEXTURE_ADDRESS_CLAMP, " \
-                                                      "addressV = TEXTURE_ADDRESS_CLAMP, " \
-                                                      "addressW = TEXTURE_ADDRESS_CLAMP, " \
-                                                      "MinLOD = 0, " \
-                                                      "MaxLOD = 3.402823466e+38f, " \
-                                                      "mipLODBias = 0, " \
-                                                      "comparisonFunc = COMPARISON_FUNC_LESS_EQUAL, " \
-                                                      "maxAnisotropy = 16, " \
-                                                      "borderColor = STATIC_BORDER_COLOR_OPAQUE_WHITE)")]
+#define FFX_DENOISER_SHADOWS_TILE_CLASSIFICATION_ROOTSIG [RootSignature( "DescriptorTable(UAV(u0, numDescriptors = " FFX_DENOISER_SHADOWS_ROOTSIG_STRINGIFY(FFX_DENOISER_RESOURCE_IDENTIFIER_COUNT) ")), " \
+                                                                          "DescriptorTable(SRV(t0, numDescriptors = " FFX_DENOISER_SHADOWS_ROOTSIG_STRINGIFY(FFX_DENOISER_RESOURCE_IDENTIFIER_COUNT) ")), " \
+                                                                          "CBV(b0), " \
+                                                                          "StaticSampler(s0, filter = FILTER_MIN_MAG_MIP_LINEAR, " \
+                                                                          "addressU = TEXTURE_ADDRESS_CLAMP, " \
+                                                                          "addressV = TEXTURE_ADDRESS_CLAMP, " \
+                                                                          "addressW = TEXTURE_ADDRESS_CLAMP, " \
+                                                                          "MinLOD = 0, " \
+                                                                          "MaxLOD = 3.402823466e+38f, " \
+                                                                          "mipLODBias = 0, " \
+                                                                          "comparisonFunc = COMPARISON_LESS_EQUAL, " \
+                                                                          "maxAnisotropy = 16, " \
+                                                                          "borderColor = STATIC_BORDER_COLOR_OPAQUE_WHITE)")]
 
-#define FFX_DENOISER_SHADOWS_FILTER_SOFT_SHADOWS_ROOTSIG [RootSignature( "DescriptorTable(UAV(u0, numDescriptors = " FFX_DENOISER_SHADOWS_ROOTSIG_STRINGIFY(FFX_DENOISER_SHADOWS_RESOURCE_IDENTIFIER_COUNT) ")), " \
-                                    "DescriptorTable(SRV(t0, numDescriptors = " FFX_DENOISER_SHADOWS_ROOTSIG_STRINGIFY(FFX_DENOISER_SHADOWS_RESOURCE_IDENTIFIER_COUNT) ")), " \
-                                    "RootConstants(num32BitConstants=" FFX_DENOISER_SHADOWS_ROOTSIG_STRINGIFY(FFX_DENOISER_SHADOWS_CONSTANT_BUFFER_2_SIZE) ", b0)")]
+#define FFX_DENOISER_SHADOWS_FILTER_SOFT_SHADOWS_ROOTSIG [RootSignature( "DescriptorTable(UAV(u0, numDescriptors = " FFX_DENOISER_SHADOWS_ROOTSIG_STRINGIFY(FFX_DENOISER_RESOURCE_IDENTIFIER_COUNT) ")), " \
+                                                                        "DescriptorTable(SRV(t0, numDescriptors = " FFX_DENOISER_SHADOWS_ROOTSIG_STRINGIFY(FFX_DENOISER_RESOURCE_IDENTIFIER_COUNT) ")), " \
+                                                                        "CBV(b0)")]
 
 #if defined(FFX_DENOISER_SHADOWS_EMBED_ROOTSIG)
 #define FFX_DENOISER_SHADOWS_EMBED_PREPARE_SHADOW_MASK_ROOTSIG_CONTENT FFX_DENOISER_SHADOWS_PREPARE_SHADOW_MASK_ROOTSIG
@@ -189,210 +187,179 @@ FfxBoolean WaveMaskToBool(FfxUInt32 mask, FfxUInt32x2 localID)
     return (1 << LaneIdToBitShift(localID.xy)) & mask;
 }
 
+#if defined(DENOISER_SHADOWS_BIND_CB0_DENOISER_SHADOWS) || defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS) || defined(DENOISER_SHADOWS_BIND_CB2_DENOISER_SHADOWS)
 FfxInt32x2 BufferDimensions()
 {
-#if defined(DENOISER_SHADOWS_BIND_CB0_DENOISER_SHADOWS) || defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS) || defined(DENOISER_SHADOWS_BIND_CB2_DENOISER_SHADOWS)
     return iBufferDimensions;
-#else
-    return 0.0f;
-#endif
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_CB0_DENOISER_SHADOWS) || defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS) || defined(DENOISER_SHADOWS_BIND_CB2_DENOISER_SHADOWS)
 
+#if defined(DENOISER_SHADOWS_BIND_SRV_INPUT_HIT_MASK_RESULTS)
 FfxBoolean HitsLight(FfxUInt32x2 did, FfxUInt32x2 gtid, FfxUInt32x2 gid)
 {
-#if defined(DENOISER_SHADOWS_BIND_SRV_INPUT_HIT_MASK_RESULTS)
     return !WaveMaskToBool(r_hit_mask_results[gid], gtid);
-#else
-    return FFX_FALSE;
-#endif
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_SRV_INPUT_HIT_MASK_RESULTS)
 
+#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS) || defined(DENOISER_SHADOWS_BIND_CB2_DENOISER_SHADOWS)
 FfxFloat32 NormalsUnpackMul()
 {
-#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS) || defined(DENOISER_SHADOWS_BIND_CB2_DENOISER_SHADOWS)
     return normalsUnpackMul_unpackAdd[0];
-#endif
-    return 0;
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS) || defined(DENOISER_SHADOWS_BIND_CB2_DENOISER_SHADOWS)
 
+#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS) || defined(DENOISER_SHADOWS_BIND_CB2_DENOISER_SHADOWS)
 FfxFloat32 NormalsUnpackAdd()
 {
-#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS) || defined(DENOISER_SHADOWS_BIND_CB2_DENOISER_SHADOWS)
     return normalsUnpackMul_unpackAdd[1];
-#endif
-    return 0;
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS) || defined(DENOISER_SHADOWS_BIND_CB2_DENOISER_SHADOWS)
 
-
+#if defined(DENOISER_SHADOWS_BIND_UAV_SHADOW_MASK)
 void StoreShadowMask(FfxUInt32 offset, FfxUInt32 value)
 {
-#if defined(DENOISER_SHADOWS_BIND_UAV_SHADOW_MASK)
     rw_shadow_mask[offset] = value;
-#endif
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_UAV_SHADOW_MASK)
 
+#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
 FfxFloat32Mat4 ViewProjectionInverse()
 {
-#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
     return fViewProjectionInverse;
-#endif
-    return 0;
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
 
+#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
 FfxFloat32Mat4 ReprojectionMatrix()
 {
-#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
     return fReprojectionMatrix;
-#endif
-    return 0;
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
 
+#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS) || defined(DENOISER_SHADOWS_BIND_CB2_DENOISER_SHADOWS)
 FfxFloat32Mat4 ProjectionInverse()
 {
-#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS) || defined(DENOISER_SHADOWS_BIND_CB2_DENOISER_SHADOWS)
     return fProjectionInverse;
-#endif
-    return 0;
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS) || defined(DENOISER_SHADOWS_BIND_CB2_DENOISER_SHADOWS)
 
+#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS) || defined(DENOISER_SHADOWS_BIND_CB2_DENOISER_SHADOWS)
 FfxFloat32x2 InvBufferDimensions()
 {
-#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS) || defined(DENOISER_SHADOWS_BIND_CB2_DENOISER_SHADOWS)
     return fInvBufferDimensions;
-#else
-    return 0.0f;
-#endif
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS) || defined(DENOISER_SHADOWS_BIND_CB2_DENOISER_SHADOWS)
 
+#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
 FfxFloat32x2 MotionVectorScale()
 {
-#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
     return fMotionVectorScale;
-#else
-    return FfxFloat32x2(0, 0);
-#endif
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
 
+#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
 FfxInt32 IsFirstFrame()
 {
-#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
     return iFirstFrame;
-#else
-    return 0;
-#endif
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
 
+#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
 FfxFloat32x3 Eye()
 {
-#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
     return fEye;
-#else
-    return 0.0f;
-#endif
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
 
 FfxFloat32 LoadDepth(FfxInt32x2 p)
 {
-#if defined(DENOISER_SHADOWS_BIND_SRV_DEPTH)
-    return r_depth.Load(FfxInt32x3(p, 0)).x;
-#else
-    return 0.f;
-#endif
+    #if defined(DENOISER_SHADOWS_BIND_SRV_DEPTH)
+        return r_depth.Load(FfxInt32x3(p, 0)).x;
+    #else
+        return 0.f;
+    #endif // #if defined(DENOISER_SHADOWS_BIND_SRV_DEPTH)
 }
 
+#if defined(DENOISER_SHADOWS_BIND_SRV_PREVIOUS_DEPTH)
 FfxFloat32 LoadPreviousDepth(FfxInt32x2 p)
 {
-#if defined(DENOISER_SHADOWS_BIND_SRV_PREVIOUS_DEPTH)
     return r_previous_depth.Load(FfxInt32x3(p, 0)).x;
-#else
-    return 0.f;
-#endif
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_SRV_PREVIOUS_DEPTH)
 
+#if defined(DENOISER_SHADOWS_BIND_SRV_NORMAL)
 FfxFloat32x3 LoadNormals(FfxInt32x2 p)
 {
-#if defined(DENOISER_SHADOWS_BIND_SRV_NORMAL)
     FfxFloat32x3 normal = r_normal.Load(FfxInt32x3(p, 0)).xyz;
     normal = normal * NormalsUnpackMul().xxx + NormalsUnpackAdd().xxx;
     return normalize(normal);
-#else
-    return 0.f;
-#endif
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_SRV_NORMAL)
 
+#if defined(DENOISER_SHADOWS_BIND_SRV_VELOCITY)
 FfxFloat32x2 LoadVelocity(FfxInt32x2 p)
 {
-#if defined(DENOISER_SHADOWS_BIND_SRV_VELOCITY)
     FfxFloat32x2 velocity = r_velocity.Load(FfxInt32x3(p, 0)).rg;
     return velocity * MotionVectorScale();
-#else
-    return FfxFloat32x2(0, 0);
-#endif
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_SRV_VELOCITY)
 
+#if defined(DENOISER_SHADOWS_BIND_SRV_HISTORY)
 FfxFloat32 LoadHistory(FfxFloat32x2 p)
 {
-#if defined(DENOISER_SHADOWS_BIND_SRV_HISTORY)
     return r_history.SampleLevel(s_trilinerClamp, p, 0).x;
-#endif
-    return 0;
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_SRV_HISTORY)
 
+#if defined(DENOISER_SHADOWS_BIND_SRV_PREVIOUS_MOMENTS)
 FfxFloat32x3 LoadPreviousMomentsBuffer(FfxInt32x2 p)
 {
-#if defined(DENOISER_SHADOWS_BIND_SRV_PREVIOUS_MOMENTS)
     return r_previous_moments.Load(FfxInt32x3(p, 0)).xyz;
-#else
-    return 0.f;
-#endif
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_SRV_PREVIOUS_MOMENTS)
 
+#if defined(DENOISER_SHADOWS_BIND_UAV_RAYTRACER_RESULT)
 FfxUInt32 LoadRaytracedShadowMask(FfxUInt32 p)
 {
-#if defined(DENOISER_SHADOWS_BIND_UAV_RAYTRACER_RESULT)
     return rw_raytracer_result[p];
-#else
-    return 0;
-#endif
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_UAV_RAYTRACER_RESULT)
 
+#if defined(DENOISER_SHADOWS_BIND_UAV_TILE_METADATA)
 void StoreMetadata(FfxUInt32 p, FfxUInt32 val)
 {
-#if defined(DENOISER_SHADOWS_BIND_UAV_TILE_METADATA)
     rw_tile_metadata[p] = val;
-#endif
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_UAV_TILE_METADATA)
 
+#if defined(DENOISER_SHADOWS_BIND_UAV_CURRENT_MOMENTS)
 void StoreMoments(FfxUInt32x2 p, FfxFloat32x3 val)
 {
-#if defined(DENOISER_SHADOWS_BIND_UAV_CURRENT_MOMENTS)
     rw_current_moments[p] = val;
-#endif
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_UAV_CURRENT_MOMENTS)
 
+#if defined(DENOISER_SHADOWS_BIND_UAV_REPROJECTION_RESULTS)
 void StoreReprojectionResults(FfxUInt32x2 p, FfxFloat32x2 val)
 {
-#if defined(DENOISER_SHADOWS_BIND_UAV_REPROJECTION_RESULTS)
     rw_reprojection_results[p] = val;
-#endif
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_UAV_REPROJECTION_RESULTS)
 
 #if defined(DENOISER_SHADOWS_BIND_CB2_DENOISER_SHADOWS)
 FfxFloat32 DepthSimilaritySigma()
 {
     return fDepthSimilaritySigma;
 }
-#endif
+#endif // #if defined(DENOISER_SHADOWS_BIND_CB2_DENOISER_SHADOWS)
 
 #if FFX_HALF
+    #if defined(DENOISER_SHADOWS_BIND_SRV_FILTER_INPUT)
     FfxFloat16x2 LoadFilterInput(FfxUInt32x2 p)
     {
-    #if defined(DENOISER_SHADOWS_BIND_SRV_FILTER_INPUT)
         return (FfxFloat16x2)r_filter_input.Load(FfxInt32x3(p, 0)).xy;
-    #else
-        return 0;
-    #endif
     }
+    #endif // #if defined(DENOISER_SHADOWS_BIND_SRV_FILTER_INPUT)
 #endif
 
 FfxBoolean IsShadowReciever(FfxUInt32x2 p)
@@ -401,27 +368,25 @@ FfxBoolean IsShadowReciever(FfxUInt32x2 p)
     return (depth > 0.0f) && (depth < 1.0f);
 }
 
+#if defined(DENOISER_SHADOWS_BIND_UAV_TILE_METADATA)
 FfxUInt32 LoadTileMetaData(FfxUInt32 p)
 {
-#if defined(DENOISER_SHADOWS_BIND_UAV_TILE_METADATA)
     return rw_tile_metadata[p];
-#else
-    return 0;
-#endif
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_UAV_TILE_METADATA)
 
 void StoreHistory(FfxUInt32x2 p, FfxFloat32x2 val)
 {
-#if defined(DENOISER_SHADOWS_BIND_UAV_HISTORY)
-    rw_history[p] = val;
-#endif
+    #if defined(DENOISER_SHADOWS_BIND_UAV_HISTORY)
+        rw_history[p] = val;
+    #endif // #if defined(DENOISER_SHADOWS_BIND_UAV_HISTORY)
 }
 
 void StoreFilterOutput(FfxUInt32x2 p, FfxFloat32 val)
 {
-#if defined(DENOISER_SHADOWS_BIND_UAV_FILTER_OUTPUT)
-    rw_filter_output[p].x = val;
-#endif
+    #if defined(DENOISER_SHADOWS_BIND_UAV_FILTER_OUTPUT)
+        rw_filter_output[p].x = val;
+    #endif // #if defined(DENOISER_SHADOWS_BIND_UAV_FILTER_OUTPUT)
 }
 
 #endif // #if defined(FFX_GPU)

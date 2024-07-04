@@ -1,17 +1,20 @@
-// AMD Cauldron code
+// This file is part of the FidelityFX SDK.
+//
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sub-license, and / or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -29,13 +32,13 @@
 
 namespace cauldron
 {
-    CopyResource* CopyResource::CreateCopyResource(const GPUResource* pDest, void* pInitData, uint64_t dataSize, ResourceState initialState)
+    CopyResource* CopyResource::CreateCopyResource(const GPUResource* pDest, const SourceData* pSrc, ResourceState initialState)
     {
-        return new CopyResourceInternal(pDest, pInitData, dataSize, initialState);
+        return new CopyResourceInternal(pDest, pSrc, initialState);
     }
 
-    CopyResourceInternal::CopyResourceInternal(const GPUResource* pDest, void* pInitData, uint64_t dataSize, ResourceState initialState) :
-        CopyResource(pInitData, dataSize)
+    CopyResourceInternal::CopyResourceInternal(const GPUResource* pDest, const SourceData* pSrc, ResourceState initialState):
+        CopyResource(pSrc)
     {
         // The resource description of the resource we'll copy to
         D3D12_RESOURCE_DESC dx12ResourceDesc = pDest->GetImpl()->DX12Desc();
@@ -78,12 +81,21 @@ namespace cauldron
         void*       pDestData  = nullptr;
         CauldronThrowOnFail(m_pResource->GetImpl()->DX12Resource()->Map(0, &emptyRange, &pDestData));
 
-        const uint8_t* src = static_cast<uint8_t*>(pInitData);
+        const uint8_t* src = static_cast<uint8_t*>(pSrc->buffer);
         uint8_t*       dst = static_cast<uint8_t*>(pDestData);
         for (uint32_t currentRowIndex = 0; currentRowIndex < dx12ResourceDesc.Height; ++currentRowIndex)
         {
-            memcpy(dst, src, rowSizeInBytes);
-            src += rowSizeInBytes;
+            if (pSrc->type == SourceData::Type::BUFFER)
+            {
+                memcpy(dst, src, rowSizeInBytes);
+                src += rowSizeInBytes;
+            }
+            else if (pSrc->type == SourceData::Type::VALUE)
+                memset(dst, pSrc->value, rowSizeInBytes);
+            else
+            {
+                CauldronCritical(L"Invalid type of source data");
+            }
             dst += dx12Footprint.Footprint.RowPitch;
         }
         m_pResource->GetImpl()->DX12Resource()->Unmap(0, nullptr);

@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -52,10 +52,15 @@ namespace cauldron
         uint32_t            ShadingRateTileHeight;  ///< The shading rate tile height.
     };
 
+    /// Callback to be used when detecting device removed error while presenting the frame
+    ///
+    /// @ingroup CauldronRender
+    typedef void (*DeviceRemovedCallback)(void* customData);
+
     /**
      * @class Device
      *
-     * The <c><i>Cauldron</i></c> api/platform-agnostic representation of the rendering device.
+     * The <c><i>FidelityFX Cauldron Framework</i></c> api/platform-agnostic representation of the rendering device.
      *
      * @ingroup CauldronRender
      */
@@ -116,6 +121,11 @@ namespace cauldron
         void EndFrame();
 
         /**
+         * @brief   Submits batch of command lists to the device for execution.
+         */
+        void SubmitCmdListBatch(std::vector<CommandList*>& cmdLists, CommandQueue queueType, bool isFirstSubmissionOfFrame);
+
+        /**
          * @brief   Gets the current device name.
          */
         const wchar_t* GetDeviceName() const { return m_DeviceName.c_str(); }
@@ -171,6 +181,16 @@ namespace cauldron
         virtual uint64_t PresentSwapChain(SwapChain* pSwapChain) = 0;
 
         /**
+         * @brief   Used to signal a command queue.
+         */
+        virtual uint64_t SignalQueue(CommandQueue queueType) = 0;
+
+        /**
+         * @brief   Used to query the last completed signal on the command queue.
+         */
+        virtual uint64_t QueryLastCompletedValue(CommandQueue queueType) = 0;
+
+        /**
          * @brief   Used to wait until a signal value has been processed.
          */
         virtual void WaitOnQueue(uint64_t waitValue, CommandQueue queueType) const = 0;
@@ -178,7 +198,7 @@ namespace cauldron
         /**
          * @brief   Execute the provided command lists, returns a signal ID that can be used to query completion.
          */
-        virtual uint64_t ExecuteCommandLists(std::vector<CommandList*>& cmdLists, CommandQueue queuType, bool isLastSubmissionOfFrame = false) = 0;
+        virtual uint64_t ExecuteCommandLists(std::vector<CommandList*>& cmdLists, CommandQueue queuType, bool isFirstSubmissionOfFrame = false, bool isLastSubmissionOfFrame = false) = 0;
 
         /**
          * @brief   Similar to execute command list, but will wait until completion.
@@ -206,6 +226,11 @@ namespace cauldron
         const VariableShadingRateInfo* GetVRSInfo() const { return &m_VariableShadingRateInfo; }
 
         /**
+         * @brief   Sets callback to call when device removed event occurs during presenting backbuffer.
+         */
+        void RegisterDeviceRemovedCallback(DeviceRemovedCallback callback, void* customData) { m_DeviceRemovedCallback = callback; m_DeviceRemovedCustomData = customData; }
+
+        /**
          * @brief   Gets the internal implementation for api/platform parameter accessors.
          */
         virtual const DeviceInternal* GetImpl() const = 0;
@@ -223,15 +248,6 @@ namespace cauldron
         NO_MOVE(Device)
 
     protected:
-
-        struct GPUExecutionPacket
-        {
-            std::vector<CommandList*> CmdLists = {};
-            uint64_t                  CompletionID = 0;
-
-            GPUExecutionPacket(std::vector<CommandList*>& cmdLists, uint64_t completionID) : CmdLists(std::move(cmdLists)), CompletionID(completionID) {}
-            GPUExecutionPacket() = delete;
-        };
         
         DeviceFeature    m_SupportedFeatures = DeviceFeature::None;
         // VK doesn't support these queries, set to min without RT and 32 waves for now
@@ -252,6 +268,9 @@ namespace cauldron
         std::wstring    m_GraphicsAPIPretty  = L"Not Set";
         std::wstring    m_GraphicsAPIVersion = L"Not Set";
 
+        // Callback for receiving device removed error while presenting the frame
+        DeviceRemovedCallback m_DeviceRemovedCallback = nullptr;
+        void*                 m_DeviceRemovedCustomData = nullptr;
     };
 
 } // namespace cauldron

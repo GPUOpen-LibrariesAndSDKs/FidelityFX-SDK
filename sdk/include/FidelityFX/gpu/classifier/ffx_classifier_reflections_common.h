@@ -1,13 +1,14 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
-//
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
+// furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
@@ -82,16 +83,6 @@ void UnpackRayCoords(FfxUInt32 packed, FFX_PARAMETER_OUT FfxUInt32x2 ray_coord, 
     copy_diagonal   = FfxBoolean((packed >> 31) & 1u);
 }
 
-// Transforms origin to uv space
-// Mat must be able to transform origin from its current space into clip space.
-FfxFloat32x3 ProjectPosition(FfxFloat32x3 origin, FfxFloat32Mat4 mat) {
-    FfxFloat32x4 projected = FFX_MATRIX_MULTIPLY(mat, FfxFloat32x4(origin, 1));
-    projected.xyz /= projected.w;
-    projected.xy = 0.5 * projected.xy + 0.5;
-    projected.y = (1 - projected.y);
-    return projected.xyz;
-}
-
 // Mat must be able to transform origin from texture space to a linear space.
 FfxFloat32x3 InvProjectPosition(FfxFloat32x3 coord, FfxFloat32Mat4 mat) {
     coord.y = (1 - coord.y);
@@ -99,12 +90,6 @@ FfxFloat32x3 InvProjectPosition(FfxFloat32x3 coord, FfxFloat32Mat4 mat) {
     FfxFloat32x4 projected = FFX_MATRIX_MULTIPLY(mat, FfxFloat32x4(coord, 1));
     projected.xyz /= projected.w;
     return projected.xyz;
-}
-
-// Origin and direction must be in the same space and mat must be able to transform from that space into clip space.
-FfxFloat32x3 ProjectDirection(FfxFloat32x3 origin, FfxFloat32x3 direction, FfxFloat32x3 screen_space_origin, FfxFloat32Mat4 mat) {
-    FfxFloat32x3 offsetted = ProjectPosition(origin + direction, mat);
-    return offsetted - screen_space_origin;
 }
 
 FfxBoolean IsGlossyReflection(FfxFloat32 roughness) {
@@ -122,6 +107,12 @@ FfxBoolean IsBackground(FfxFloat32 depth)
 #else
     return depth >= (1.0f - 1.e-6f);
 #endif
+}
+
+// Rounds value to the nearest multiple of 8
+FfxUInt32x2 FFX_DNSR_Reflections_RoundUp8(FfxUInt32x2 value) {
+    FfxUInt32x2 round_down = value & ~7;    // 0b111;
+    return FFX_SELECT((round_down == value), value, value + 8);
 }
 
 #endif

@@ -1,13 +1,14 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
-//
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
+// furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
@@ -245,46 +246,42 @@ FfxFloat32 FfxClassifierSampleDepth(FfxUInt32x2 uiPxPos)
 #endif // defined(FFX_CLASSIFIER_BIND_SRV_INPUT_DEPTH)
 }
 
+#if defined(FFX_CLASSIFIER_BIND_SRV_INPUT_NORMALS)
 FfxFloat32x3 FfxClassifierSampleNormal(FfxUInt32x2 uiPxPos)
 {
-#if defined(FFX_CLASSIFIER_BIND_SRV_INPUT_NORMALS)
     FfxFloat32x3 normal = texelFetch(r_input_normal, ivec2(uiPxPos), 0).rgb;
     normal = normal * NormalsUnpackMul().xxx + NormalsUnpackAdd().xxx;
     return normalize(normal);
-#else
-    return FfxFloat32x3(0.0, 0.0, 0.0);
-#endif // defined(FFX_CLASSIFIER_BIND_SRV_INPUT_NORMALS)
 }
+#endif // #if defined(FFX_CLASSIFIER_BIND_SRV_INPUT_NORMALS)
 
+#if defined(FFX_CLASSIFIER_BIND_SRV_INPUT_SHADOW_MAPS)
 FfxFloat32 FfxClassifierSampleShadowMap(FfxFloat32x2 sampleUV, FfxUInt32 cascadeIndex)
 {
-#if defined(FFX_CLASSIFIER_BIND_SRV_INPUT_SHADOW_MAPS)
     nonuniformEXT FfxUInt32 nonUniformCascadeIndex = cascadeIndex;
     return texelFetch(r_input_shadowMap[nonUniformCascadeIndex], ivec2(sampleUV), 0).r;
-#else
-    return 0.0;
-#endif // defined(FFX_CLASSIFIER_BIND_SRV_INPUT_SHADOW_MAPS)
 }
+#endif // #if defined(FFX_CLASSIFIER_BIND_SRV_INPUT_SHADOW_MAPS)
 
+#if defined(FFX_CLASSIFIER_BIND_UAV_OUTPUT_RAY_HIT)
 void FfxClassifierStoreLightMask(FfxUInt32x2 index, FfxUInt32 lightMask)
 {
-#if defined(FFX_CLASSIFIER_BIND_UAV_OUTPUT_RAY_HIT)
     imageStore(rwt2d_rayHitResults, ivec2(index), FfxUInt32x4(~lightMask, 0,0,0));
-#endif // defined(FFX_CLASSIFIER_BIND_UAV_OUTPUT_RAY_HIT)
 }
+#endif // #if defined(FFX_CLASSIFIER_BIND_UAV_OUTPUT_RAY_HIT)
 
 FfxUInt32 CountBits(const FfxUInt32 mask)
 {
     return bitCount(mask);
 }
 
+#if defined(FFX_CLASSIFIER_BIND_UAV_OUTPUT_WORK_TILES) || defined(FFX_CLASSIFIER_BIND_UAV_OUTPUT_WORK_TILES_COUNT)
 void FfxClassifierStoreTile(FfxUInt32x4 uiTile)
 {
-#if defined(FFX_CLASSIFIER_BIND_UAV_OUTPUT_WORK_TILES) || defined(FFX_CLASSIFIER_BIND_UAV_OUTPUT_WORK_TILES_COUNT)
     uint index = ~0;
     index = atomicAdd(rwb_tileCount.data[0], 1);
     rwsb_tiles.data[index] = uiTile;
-#endif // defined(FFX_CLASSIFIER_BIND_UAV_OUTPUT_WORK_TILES)
 }
+#endif // #if defined(FFX_CLASSIFIER_BIND_UAV_OUTPUT_WORK_TILES) || defined(FFX_CLASSIFIER_BIND_UAV_OUTPUT_WORK_TILES_COUNT)
 
 #endif // #if defined(FFX_GPU)

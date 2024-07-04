@@ -1,8 +1,8 @@
 # memoryallocator
 
 ## Current Version
-D3D12MemoryAllocator:	Mar. 25, 2022 commit 17f992a0adf85eb278de5cb0cfa596ad25e444ba from amd D3D12MemoryAllocator github public repo - master branch
-VKMemoryAllocator:		Mar. 25, 2022 commit 42be483bd5c6605e789e011aac684e0b95d05359 from amd VKMemoryAllocator github public repo - master branch
+D3D12MemoryAllocator:	Mar. 6, 2024 commit 0a9cbbbdb0da95be059f6c40a958188bfbd96b9e from amd D3D12MemoryAllocator github public repo - master branch
+VKMemoryAllocator:		Apr. 3, 2024 commit 5677097bafb8477097c6e3354ce68b7a44fd01a4 from amd VKMemoryAllocator github public repo - master branch
 
 ## How to update
 1. Download or clone latest D3D12MemoryAllocator and VKMemoryAllocator

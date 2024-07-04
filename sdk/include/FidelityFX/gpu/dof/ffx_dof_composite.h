@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C)2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #include "ffx_core.h"
@@ -220,7 +220,6 @@ FfxHalfOpt4 FfxDofFinalCombineColors(FfxUInt32x2 coord, FfxUInt32x2 relCoord, Ff
 	FfxHalfOpt c = FfxHalfOpt(2) * FfxHalfOpt(abs(FfxDofGetCoc(d))); // double it for full-res pixels
 	FfxHalfOpt c1 = ffxSaturate(c - FfxHalfOpt(0.5)); // lerp factor for full vs. fixed 1.5px blur
 	FfxHalfOpt c2 = ffxSaturate(c - FfxHalfOpt(1.5)); // lerp factor for prev vs. quarter res
-	if (fg.a > FfxHalfOpt(0.3)) c2 = FfxHalfOpt(1);
 	if (bg.a == FfxHalfOpt(0)) c2 = FfxHalfOpt(0);
 	FfxHalfOpt3 combinedColor = ffxLerp(full, fixBlurred, c1);
 	combinedColor = ffxLerp(combinedColor, bg.rgb, c2);
@@ -272,7 +271,7 @@ FfxHalfOpt4 FfxDofFilterNF(FfxUInt32 baseIdx)
 		FfxDofGetLDSNearLuma(baseIdx, 0, 0), FfxDofGetLDSNearLuma(baseIdx, 1, 0), FfxDofGetLDSNearLuma(baseIdx, 2, 0),
 		FfxDofGetLDSNearLuma(baseIdx, 0, 1), FfxDofGetLDSNearLuma(baseIdx, 1, 1), FfxDofGetLDSNearLuma(baseIdx, 2, 1),
 		FfxDofGetLDSNearLuma(baseIdx, 0, 2), FfxDofGetLDSNearLuma(baseIdx, 1, 2), FfxDofGetLDSNearLuma(baseIdx, 2, 2));
-	FfxHalfOpt avg_alpha = FfxHalfOpt(rcp(9.0)) * (
+	FfxHalfOpt avg_alpha = FfxHalfOpt(ffxReciprocal(9.0)) * (
 		FfxDofGetIntermediateNearAlpha(baseIdx, 0, 0) + FfxDofGetIntermediateNearAlpha(baseIdx, 1, 0) + FfxDofGetIntermediateNearAlpha(baseIdx, 2, 0) +
 		FfxDofGetIntermediateNearAlpha(baseIdx, 0, 1) + FfxDofGetIntermediateNearAlpha(baseIdx, 1, 1) + FfxDofGetIntermediateNearAlpha(baseIdx, 2, 1) +
 		FfxDofGetIntermediateNearAlpha(baseIdx, 0, 2) + FfxDofGetIntermediateNearAlpha(baseIdx, 1, 2) + FfxDofGetIntermediateNearAlpha(baseIdx, 2, 2));
@@ -440,7 +439,7 @@ void FfxDofCombineFarOnly(FfxUInt32x2 id, FfxUInt32x2 gtID, FfxUInt32x2 gid, Ffx
 		FfxDofSetIntermediateFarColor(iFetch, ffColor);
 	}
 
-	FFX_GROUP_MEMORY_BARRIER();
+	FFX_GROUP_MEMORY_BARRIER;
 
 	const FfxUInt32 baseIdx = gtID.x + gtID.y * FFX_DOF_COMBINE_ROW_PITCH;
 	// one extra round of filtering needs to be done around the edge, this index maps to that.
@@ -452,7 +451,7 @@ void FfxDofCombineFarOnly(FfxUInt32x2 id, FfxUInt32x2 gtID, FfxUInt32x2 gid, Ffx
 	ffColor = FfxDofFilterFF(baseIdx);
 	ffColor2 = gix < (2 * FFX_DOF_COMBINE_TILE_SIZE + 1) ? FfxDofFilterFF(baseIdx2) : FfxHalfOpt4(0, 0, 0, 0);
 
-	FFX_GROUP_MEMORY_BARRIER();
+	FFX_GROUP_MEMORY_BARRIER;
 
 	// write out colors for interpolation
 	FfxDofSetIntermediateFarColor(baseIdx, ffColor);
@@ -461,7 +460,7 @@ void FfxDofCombineFarOnly(FfxUInt32x2 id, FfxUInt32x2 gtID, FfxUInt32x2 gid, Ffx
 		FfxDofSetIntermediateFarColor(baseIdx2, ffColor2);
 	}
 
-	FFX_GROUP_MEMORY_BARRIER();
+	FFX_GROUP_MEMORY_BARRIER;
 
 	// upscaling
 	FfxHalfOpt4 ffTR = FfxHalfOpt4(0, 0, 0, 0), ffBL = FfxHalfOpt4(0, 0, 0, 0), ffBR = FfxHalfOpt4(0, 0, 0, 0);
@@ -523,7 +522,7 @@ void FfxDofCombineAll(FfxUInt32x2 id, FfxUInt32x2 gtID, FfxUInt32x2 gid, FfxUInt
 		FfxDofSetIntermediateNearColor(iFetch, nfColor);
 	}
 
-	FFX_GROUP_MEMORY_BARRIER();
+	FFX_GROUP_MEMORY_BARRIER;
 
 	const FfxUInt32 baseIdx = gtID.x + gtID.y * FFX_DOF_COMBINE_ROW_PITCH;
 	// one extra round of filtering needs to be done around the edge, this index maps to that.
@@ -539,7 +538,7 @@ void FfxDofCombineAll(FfxUInt32x2 id, FfxUInt32x2 gtID, FfxUInt32x2 gid, FfxUInt
 	nfColor = FfxDofFilterNF(baseIdx);
 	nfColor2 = gix < (2 * FFX_DOF_COMBINE_TILE_SIZE + 1) ? FfxDofFilterNF(baseIdx2) : FfxHalfOpt4(0, 0, 0, 0);
 
-	FFX_GROUP_MEMORY_BARRIER();
+	FFX_GROUP_MEMORY_BARRIER;
 
 	// write out colors for interpolation
 	FfxDofSetIntermediateNearColor(baseIdx, nfColor);
@@ -550,7 +549,7 @@ void FfxDofCombineAll(FfxUInt32x2 id, FfxUInt32x2 gtID, FfxUInt32x2 gid, FfxUInt
 		FfxDofSetIntermediateFarColor(baseIdx2, ffColor2);
 	}
 
-	FFX_GROUP_MEMORY_BARRIER();
+	FFX_GROUP_MEMORY_BARRIER;
 
 	// if any FG sample has zero weight, the interpolation is invalid.
 	// take the min and invalidate if zero (see CombineColors)

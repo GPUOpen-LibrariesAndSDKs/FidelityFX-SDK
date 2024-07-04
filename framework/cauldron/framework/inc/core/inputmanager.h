@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -201,10 +201,10 @@ namespace cauldron
     struct MouseState
     {
         static_assert(Mouse_ButtonCount <= 8, L"ButtonState is represented as an 8-bit mapping. Mouse_ButtonCount is now greater than 8, please grow bit map representation");
-        uint8_t  ButtonState = 0;    // To track button down
-        uint8_t  ButtonUpState = 0;  // To track button up releases
-        uint64_t AxisState[Mouse_AxisCount] = { 0 };
-        int64_t  AxisDelta[Mouse_AxisCount] = { 0 };
+        uint8_t  ButtonState = 0;                       ///< Bitwise mapping of button down state for all mouse buttons
+        uint8_t  ButtonUpState = 0;                     ///< Bitwise mapping of button up state for all mouse buttons
+        uint64_t AxisState[Mouse_AxisCount] = { 0 };    ///< Mouse axis value
+        int64_t  AxisDelta[Mouse_AxisCount] = { 0 };    ///< Mouse axis delta
     };
 
     /**
@@ -217,9 +217,9 @@ namespace cauldron
     struct GamePadState
     {
         static_assert(Pad_ButtonCount <= 16, L"ButtonState is represented as a 16-bit mapping. Pad_ButtonCount is now greater than 16, please grow bit map representation");
-        uint16_t    ButtonState = 0;
-        uint16_t    ButtonUpState = 0;
-        float       AxisState[Pad_AxisCount] = { 0.f };
+        uint16_t    ButtonState = 0;                        ///< Bitwise mapping of button down state for all gamepad buttons
+        uint16_t    ButtonUpState = 0;                      ///< Bitwise mapping of button up state for all gamepad buttons
+        float       AxisState[Pad_AxisCount] = { 0.f };     ///< Gamepad axis value
     };
 
     /**
@@ -231,51 +231,75 @@ namespace cauldron
      */
     struct InputState
     {
-        MouseState      Mouse;
-        GamePadState    GamePad;
+        MouseState      Mouse;                  ///< Represents the state of mouse input
+        GamePadState    GamePad;                ///< Represents the state of gamepad input
 
         static_assert(Key_Count <= 64, L"KeyboardState is represented as a 64-bit mapping. Key_Count is now greater than 64, please grow bit map representation");
-        uint64_t        KeyboardState = 0;
-        uint64_t        KeyboardUpState = 0;
+        uint64_t        KeyboardState = 0;      ///< Bitwise mapping of keyboard key down states for all monitored keys
+        uint64_t        KeyboardUpState = 0;    ///< Bitwise mapping of keyboard key up states for all monitored keys
 
+        /**
+         * @brief   Returns the key down state of the requested input mapping.
+         */
         bool GetKeyState(const KeyboardInputMappings inputID) const
         {
             return (KeyboardState & 1ull << static_cast<uint64_t>(inputID));
         }
 
+        /**
+         * @brief   Returns the key up state of the requested input mapping.
+         */
         bool GetKeyUpState(const KeyboardInputMappings inputID) const
         {
             return (KeyboardUpState & 1ull << static_cast<uint64_t>(inputID));
         }
 
+        /**
+         * @brief   Returns the button down state of the requested input mapping.
+         */
         bool GetMouseButtonState(const MouseButtonMappings inputID) const
         {
             uint32_t button = 1 << static_cast<uint32_t>(inputID);
             return (Mouse.ButtonState & button);
         }
 
+        /**
+         * @brief   Returns the button up state of the requested input mapping.
+         */
         bool GetMouseButtonUpState(const MouseButtonMappings inputID) const
         {
             uint32_t button = 1 << static_cast<uint32_t>(inputID);
             return (Mouse.ButtonUpState & button);
         }
 
+        /**
+         * @brief   Returns the axis value of the requested input mapping.
+         */
         int64_t GetMouseAxisDelta(const MouseAxisMappings inputID) const
         {
             return Mouse.AxisDelta[inputID];
         }
 
+        /**
+         * @brief   Returns axis value of the requested input mapping.
+         */
         float GetGamePadAxisState(const GamePadAxisMappings inputID) const
         {
             return GamePad.AxisState[inputID];
         }
 
+        /**
+         * @brief   Returns the button down state of the requested input mapping.
+         */
         bool GetGamePadButtonState(const GamePadButtonMappings inputID) const
         {
             uint32_t button = 1 << static_cast<uint32_t>(inputID);
             return (GamePad.ButtonState & button);
         }
 
+        /**
+         * @brief   Returns the button up state of the requested input mapping.
+         */
         bool GetGamePadButtonUpState(const GamePadButtonMappings inputID) const
         {
             uint32_t button = 1 << static_cast<uint32_t>(inputID);
@@ -348,6 +372,11 @@ namespace cauldron
          */
         static InputManager* CreateInputManager();
 
+        /**
+         * @brief   Tells the InputManager to ignore input for the current frame. Some platform updates require us to skip input polling for a frame.
+         */
+        void IgnoreInputForFrame() { m_IgnoreFrameInputs = true; }
+
     private:
         // No Copy, No Move
         NO_COPY(InputManager);
@@ -364,6 +393,7 @@ namespace cauldron
         static const uint8_t s_InputStateCacheSize = 3;         // Number of frames we will cache inputs for
         InputState  m_InputStateRep[s_InputStateCacheSize] = {};
         uint32_t    m_CurrentStateID = 0;
+        bool        m_IgnoreFrameInputs = false;
     };
 
 } // namespace cauldron

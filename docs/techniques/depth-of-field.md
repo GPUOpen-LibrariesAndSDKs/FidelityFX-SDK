@@ -112,7 +112,9 @@ Depth is typically only available at render resolution and not upscaled.
 
 <h2>The technique</h2>
 
-![Technique data flow diagram](media/depth-of-field/overview.svg)
+
+![Technique data flow diagram (invert)](media/depth-of-field/depth-of-field-overview.svg)
+
 
 <h3>Bilateral downsampling</h3>
 
@@ -185,7 +187,7 @@ The final output image is composed from the full-resolution input and the blurre
 
 To reduce noise and holes in the blurred images from low sample amounts and randomized sub-pixel kernel origins, some filtering is applied. The filtered images are bilinearly upscaled and composed in layers with the full-resolution input, which may be blurred on-the-fly to bridge the gap between full and half resolution.
 
-<h4>Post-Filtering</h4>
+<h4>Post-filtering</h4>
 
 A 3x3 median filter is applied to color values from both the near and far field images. The filter selects the median luminance from the neighborhood and adjusts the central pixel brightness accordingly.
 Some clamping is applied to avoid overbrightening.

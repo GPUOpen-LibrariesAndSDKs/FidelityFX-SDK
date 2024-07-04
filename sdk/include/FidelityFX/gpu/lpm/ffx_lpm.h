@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 /// @defgroup FfxGPULpm FidelityFX LPM
@@ -25,8 +25,8 @@
 ///
 /// @ingroup FfxGPUEffects
 
-#if defined(FFX_CPU)
-FFX_STATIC void LpmMatInv3x3(FfxFloat32x3 ox, FfxFloat32x3 oy, FfxFloat32x3 oz, FfxFloat32x3 ix, FfxFloat32x3 iy, FfxFloat32x3 iz)
+FFX_STATIC void LpmMatInv3x3(FFX_PARAMETER_OUT FfxFloat32x3 ox, FFX_PARAMETER_OUT FfxFloat32x3 oy, FFX_PARAMETER_OUT FfxFloat32x3 oz,
+    FfxFloat32x3 ix, FfxFloat32x3 iy, FfxFloat32x3 iz)
 {
     FfxFloat32 i = ffxReciprocal(ix[0] * (iy[1] * iz[2] - iz[1] * iy[2]) - ix[1] * (iy[0] * iz[2] - iy[2] * iz[0]) + ix[2] * (iy[0] * iz[1] - iy[1] * iz[0]));
     ox[0]        = (iy[1] * iz[2] - iz[1] * iy[2]) * i;
@@ -41,7 +41,8 @@ FFX_STATIC void LpmMatInv3x3(FfxFloat32x3 ox, FfxFloat32x3 oy, FfxFloat32x3 oz, 
 }
 
 // Transpose.
-FFX_STATIC void LpmMatTrn3x3(FfxFloat32x3 ox, FfxFloat32x3 oy, FfxFloat32x3 oz, FfxFloat32x3 ix, FfxFloat32x3 iy, FfxFloat32x3 iz)
+FFX_STATIC void LpmMatTrn3x3(FFX_PARAMETER_OUT FfxFloat32x3 ox, FFX_PARAMETER_OUT FfxFloat32x3 oy, FFX_PARAMETER_OUT FfxFloat32x3 oz,
+    FfxFloat32x3 ix, FfxFloat32x3 iy, FfxFloat32x3 iz)
 {
     ox[0] = ix[0];
     ox[1] = iy[0];
@@ -55,7 +56,8 @@ FFX_STATIC void LpmMatTrn3x3(FfxFloat32x3 ox, FfxFloat32x3 oy, FfxFloat32x3 oz, 
 }
 
 FFX_STATIC void LpmMatMul3x3(
-    FfxFloat32x3 ox, FfxFloat32x3 oy, FfxFloat32x3 oz, FfxFloat32x3 ax, FfxFloat32x3 ay, FfxFloat32x3 az, FfxFloat32x3 bx, FfxFloat32x3 by, FfxFloat32x3 bz)
+    FFX_PARAMETER_OUT FfxFloat32x3 ox, FFX_PARAMETER_OUT FfxFloat32x3 oy, FFX_PARAMETER_OUT FfxFloat32x3 oz,
+    FfxFloat32x3 ax, FfxFloat32x3 ay, FfxFloat32x3 az, FfxFloat32x3 bx, FfxFloat32x3 by, FfxFloat32x3 bz)
 {
     FfxFloat32x3 bx2;
     FfxFloat32x3 by2;
@@ -92,7 +94,7 @@ FFX_STATIC FfxFloat32x2 lpmCol2020G = {FfxFloat32(0.170), FfxFloat32(0.797)};
 FFX_STATIC FfxFloat32x2 lpmCol2020B = {FfxFloat32(0.131), FfxFloat32(0.046)};
 
 // Computes z from xy, returns xyz.
-FFX_STATIC void LpmColXyToZ(FfxFloat32x3 d, FfxFloat32x2 s)
+FFX_STATIC void LpmColXyToZ(FFX_PARAMETER_OUT FfxFloat32x3 d, FfxFloat32x2 s)
 {
     d[0] = s[0];
     d[1] = s[1];
@@ -100,7 +102,8 @@ FFX_STATIC void LpmColXyToZ(FfxFloat32x3 d, FfxFloat32x2 s)
 }
 
 // Returns conversion matrix, rgbw inputs are xy chroma coordinates.
-FFX_STATIC void LpmColRgbToXyz(FfxFloat32x3 ox, FfxFloat32x3 oy, FfxFloat32x3 oz, FfxFloat32x2 r, FfxFloat32x2 g, FfxFloat32x2 b, FfxFloat32x2 w)
+FFX_STATIC void LpmColRgbToXyz(FFX_PARAMETER_OUT FfxFloat32x3 ox, FFX_PARAMETER_OUT FfxFloat32x3 oy, FFX_PARAMETER_OUT FfxFloat32x3 oz,
+    FfxFloat32x2 r, FfxFloat32x2 g, FfxFloat32x2 b, FfxFloat32x2 w)
 {
     // Expand from xy to xyz.
     FfxFloat32x3 rz;
@@ -118,7 +121,7 @@ FFX_STATIC void LpmColRgbToXyz(FfxFloat32x3 ox, FfxFloat32x3 oy, FfxFloat32x3 oz
     // Convert white xyz to XYZ.
     FfxFloat32x3 w3;
     LpmColXyToZ(w3, w);
-    opAMulOneF3(w3, w3, ffxReciprocal(w[1]));
+    ffxOpAMulOneF3(w3, w3, ffxReciprocal(w[1]));
 
     // Compute xyz to XYZ scalars for primaries.
     FfxFloat32x3 rv;
@@ -132,9 +135,9 @@ FFX_STATIC void LpmColRgbToXyz(FfxFloat32x3 ox, FfxFloat32x3 oy, FfxFloat32x3 oz
     s[2] = ffxDot3(bv, w3);
 
     // Scale.
-    opAMulF3(ox, r3, s);
-    opAMulF3(oy, g3, s);
-    opAMulF3(oz, b3, s);
+    ffxOpAMulF3(ox, r3, s);
+    ffxOpAMulF3(oy, g3, s);
+    ffxOpAMulF3(oz, b3, s);
 }
 
 #if defined(LPM_NO_SETUP)
@@ -215,7 +218,7 @@ FFX_STATIC void FfxCalculateLpmConsts(
     contrast += FfxFloat32(1.0);
 
     // Saturation is based on contrast.
-    opAAddOneF3(saturation, saturation, contrast);
+    ffxOpAAddOneF3(saturation, saturation, contrast);
 
     // The 'softGap' must actually be above zero.
     softGap = ffxMax(softGap, FfxFloat32(1.0 / 1024.0));
@@ -246,7 +249,7 @@ FFX_STATIC void FfxCalculateLpmConsts(
 
     // Use the Y vector of the matrix for the associated luma coef.
     // For safety, make sure the vector sums to 1.0.
-    opAMulOneF3(lumaW, rgbToXyzYW, ffxReciprocal(rgbToXyzYW[0] + rgbToXyzYW[1] + rgbToXyzYW[2]));
+    ffxOpAMulOneF3(lumaW, rgbToXyzYW, ffxReciprocal(rgbToXyzYW[0] + rgbToXyzYW[1] + rgbToXyzYW[2]));
 
     // The 'lumaT' for crosstalk mapping is always based on the output color space, unless soft conversion is not used.
     FfxFloat32x3 lumaT;
@@ -256,13 +259,13 @@ FFX_STATIC void FfxCalculateLpmConsts(
     LpmColRgbToXyz(rgbToXyzXO, rgbToXyzYO, rgbToXyzZO, xyRedO, xyGreenO, xyBlueO, xyWhiteO);
 
     if (soft)
-        opACpyF3(lumaT, rgbToXyzYO);
+        ffxOpACpyF3(lumaT, rgbToXyzYO);
     else
-        opACpyF3(lumaT, rgbToXyzYW);
+        ffxOpACpyF3(lumaT, rgbToXyzYW);
 
-    opAMulOneF3(lumaT, lumaT, ffxReciprocal(lumaT[0] + lumaT[1] + lumaT[2]));
+    ffxOpAMulOneF3(lumaT, lumaT, ffxReciprocal(lumaT[0] + lumaT[1] + lumaT[2]));
     FfxFloat32x3 rcpLumaT;
-    opARcpF3(rcpLumaT, lumaT);
+    ffxOpARcpF3(rcpLumaT, lumaT);
 
     FfxFloat32x2 softGap2 = {0.0, 0.0};
     if (soft)
@@ -302,9 +305,9 @@ FFX_STATIC void FfxCalculateLpmConsts(
         FfxFloat32x3 xyzToRgbBC;
         LpmMatInv3x3(xyzToRgbRC, xyzToRgbGC, xyzToRgbBC, rgbToXyzXC, rgbToXyzYC, rgbToXyzZC);
         LpmMatMul3x3(con2R, con2G, con2B, xyzToRgbRC, xyzToRgbGC, xyzToRgbBC, rgbToXyzXO, rgbToXyzYO, rgbToXyzZO);
-        opAMulOneF3(con2R, con2R, scaleC);
-        opAMulOneF3(con2G, con2G, scaleC);
-        opAMulOneF3(con2B, con2B, scaleC);
+        ffxOpAMulOneF3(con2R, con2R, scaleC);
+        ffxOpAMulOneF3(con2G, con2G, scaleC);
+        ffxOpAMulOneF3(con2B, con2B, scaleC);
     }
 
     if (scaleOnly)
@@ -416,10 +419,10 @@ FFX_STATIC void FfxCalculateLpmConsts(
     map16z[1] = toneScaleBias[1];
     map16w[0] = lumaT[0];
     map16w[1] = lumaT[1];
-    map16[0]  = packHalf2x16(map16x);
-    map16[1]  = packHalf2x16(map16y);
-    map16[2]  = packHalf2x16(map16z);
-    map16[3]  = packHalf2x16(map16w);
+    map16[0]  = ffxPackHalf2x16(map16x);
+    map16[1]  = ffxPackHalf2x16(map16y);
+    map16[2]  = ffxPackHalf2x16(map16z);
+    map16[3]  = ffxPackHalf2x16(map16w);
     LpmSetupOut(16, map16);
 
     FfxUInt32x4  map17;
@@ -435,10 +438,10 @@ FFX_STATIC void FfxCalculateLpmConsts(
     map17z[1] = rcpLumaT[1];
     map17w[0] = rcpLumaT[2];
     map17w[1] = con2R[0];
-    map17[0]  = packHalf2x16(map17x);
-    map17[1]  = packHalf2x16(map17y);
-    map17[2]  = packHalf2x16(map17z);
-    map17[3]  = packHalf2x16(map17w);
+    map17[0]  = ffxPackHalf2x16(map17x);
+    map17[1]  = ffxPackHalf2x16(map17y);
+    map17[2]  = ffxPackHalf2x16(map17z);
+    map17[3]  = ffxPackHalf2x16(map17w);
     LpmSetupOut(17, map17);
 
     FfxUInt32x4  map18;
@@ -454,10 +457,10 @@ FFX_STATIC void FfxCalculateLpmConsts(
     map18z[1] = con2B[0];
     map18w[0] = con2B[1];
     map18w[1] = con2B[2];
-    map18[0]  = packHalf2x16(map18x);
-    map18[1]  = packHalf2x16(map18y);
-    map18[2]  = packHalf2x16(map18z);
-    map18[3]  = packHalf2x16(map18w);
+    map18[0]  = ffxPackHalf2x16(map18x);
+    map18[1]  = ffxPackHalf2x16(map18y);
+    map18[2]  = ffxPackHalf2x16(map18z);
+    map18[3]  = ffxPackHalf2x16(map18w);
     LpmSetupOut(18, map18);
 
     FfxUInt32x4  map19;
@@ -473,10 +476,10 @@ FFX_STATIC void FfxCalculateLpmConsts(
     map19z[1] = softGap2[1];
     map19w[0] = conR[0];
     map19w[1] = conR[1];
-    map19[0]  = packHalf2x16(map19x);
-    map19[1]  = packHalf2x16(map19y);
-    map19[2]  = packHalf2x16(map19z);
-    map19[3]  = packHalf2x16(map19w);
+    map19[0]  = ffxPackHalf2x16(map19x);
+    map19[1]  = ffxPackHalf2x16(map19y);
+    map19[2]  = ffxPackHalf2x16(map19z);
+    map19[3]  = ffxPackHalf2x16(map19w);
     LpmSetupOut(19, map19);
 
     FfxUInt32x4  map20;
@@ -492,10 +495,10 @@ FFX_STATIC void FfxCalculateLpmConsts(
     map20z[1] = conB[1];
     map20w[0] = conB[2];
     map20w[1] = 0.0;
-    map20[0]  = packHalf2x16(map20x);
-    map20[1]  = packHalf2x16(map20y);
-    map20[2]  = packHalf2x16(map20z);
-    map20[3]  = packHalf2x16(map20w);
+    map20[0]  = ffxPackHalf2x16(map20x);
+    map20[1]  = ffxPackHalf2x16(map20y);
+    map20[2]  = ffxPackHalf2x16(map20z);
+    map20[3]  = ffxPackHalf2x16(map20w);
     LpmSetupOut(20, map20);
 }
 
@@ -660,7 +663,6 @@ FFX_STATIC FfxFloat32 LpmFs2ScrgbScalar(FfxFloat32 minLuma, FfxFloat32 maxLuma)
 #define LPM_COLORS_709_2020                                                                                                                         \
     lpmCol2020R, lpmCol2020G, lpmCol2020B, lpmColD65, lpmCol709R, lpmCol709G, lpmCol709B, lpmColD65, lpmCol709R, lpmCol709G, lpmCol709B, lpmColD65, \
         FfxFloat32(1.0)
-#endif  // #if defined(FFX_CPU)
 
 #if defined(FFX_GPU)
 // Visualize difference between two values, by bits of precision.
@@ -730,7 +732,7 @@ void LpmMap(inout FfxFloat32 colorR,
 {
     // Secondary RGB conversion matrix.
     // Grab original RGB ratio (RCP, 3x MUL, MAX3).
-    FfxFloat32 rcpMax = rcp(ffxMax3(colorR, colorG, colorB));
+    FfxFloat32 rcpMax = ffxReciprocal(ffxMax3(colorR, colorG, colorB));
     FfxFloat32 ratioR = colorR * rcpMax;
     FfxFloat32 ratioG = colorG * rcpMax;
     FfxFloat32 ratioB = colorB * rcpMax;
@@ -750,7 +752,7 @@ void LpmMap(inout FfxFloat32 colorR,
         luma = colorG * FfxFloat32(lumaT.g) + (colorR * FfxFloat32(lumaT.r) + (colorB * FfxFloat32(lumaT.b)));
     luma                    = pow(luma, FfxFloat32(contrast));                                                       // (EXP2, LOG2, MUL).
     FfxFloat32 lumaShoulder = shoulder ? pow(luma, FfxFloat32(shoulderContrast)) : luma;                             // Optional (EXP2, LOG2, MUL).
-    luma                    = luma * rcp(lumaShoulder * FfxFloat32(toneScaleBias.x) + FfxFloat32(toneScaleBias.y));  // (MAD, MUL, RCP).
+    luma                    = luma * ffxReciprocal(lumaShoulder * FfxFloat32(toneScaleBias.x) + FfxFloat32(toneScaleBias.y));  // (MAD, MUL, RCP).
 
     // If running soft clipping (this should be a compile-time immediate so branch will not exist).
     if (soft)
@@ -768,7 +770,7 @@ void LpmMap(inout FfxFloat32 colorR,
             ratioB = colorB * FfxFloat32(conB.b) + (colorG * FfxFloat32(conB.g) + (colorR * FfxFloat32(conB.r)));
 
             // Convert ratio to max 1 again (RCP, 3x MUL, MAX3).
-            rcpMax = rcp(ffxMax3(ratioR, ratioG, ratioB));
+            rcpMax = ffxReciprocal(ffxMax3(ratioR, ratioG, ratioB));
             ratioR *= rcpMax;
             ratioG *= rcpMax;
             ratioB *= rcpMax;
@@ -794,7 +796,7 @@ void LpmMap(inout FfxFloat32 colorR,
     FfxFloat32 lumaRatio = ratioR * FfxFloat32(lumaT.r) + ratioG * FfxFloat32(lumaT.g) + ratioB * FfxFloat32(lumaT.b);
 
     // This is limited to not clip.
-    FfxFloat32 ratioScale = ffxSaturate(luma * rcp(lumaRatio));
+    FfxFloat32 ratioScale = ffxSaturate(luma * ffxReciprocal(lumaRatio));
 
     // Assume in gamut, compute output color (3x MAD).
     colorR = ffxSaturate(ratioR * ratioScale);
@@ -812,7 +814,7 @@ void LpmMap(inout FfxFloat32 colorR,
     FfxFloat32 lumaAdd = ffxSaturate((-colorB) * FfxFloat32(lumaT.b) + ((-colorR) * FfxFloat32(lumaT.r) + ((-colorG) * FfxFloat32(lumaT.g) + luma)));
 
     // Amount to increase keeping over-exposure ratios constant and possibly exceeding clipping point (4x MAD, 1 RCP).
-    FfxFloat32 t = lumaAdd * rcp(capG * FfxFloat32(lumaT.g) + (capR * FfxFloat32(lumaT.r) + (capB * FfxFloat32(lumaT.b))));
+    FfxFloat32 t = lumaAdd * ffxReciprocal(capG * FfxFloat32(lumaT.g) + (capR * FfxFloat32(lumaT.r) + (capB * FfxFloat32(lumaT.b))));
 
     // Add amounts to base color but clip (3x MAD).
     colorR = ffxSaturate(t * capR + colorR);

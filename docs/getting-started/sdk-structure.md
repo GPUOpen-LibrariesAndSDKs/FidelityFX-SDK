@@ -6,38 +6,36 @@ The AMD FidelityFX SDK is comprised of several main components, organised to mak
 
 The core components which would ultimately ship in your application are separated for convenient integration in your project's source code.
 
-<h2>FidelityFX SDK</h2>
+<h2>SDK</h2>
 
-<h3>SDK</h3>
-
-**Includes** 
+<h3>Includes</h3>
 
 The SDK contains everything needed to ship all of our FidelityFX effects in your application:
 
 - Host side includes and source for all of our effect components, which represent the pre-built easy to use library for easier effect integration.
 - A collection of HLSL and GLSL shaders and associated assets, which would ultimately ship in your application.
 
-**Components**
+<h3>Components</h3>
 
 A collection of pre-built runtime components to automate the usage of the FidelityFX SDK and make integration as simple as possible.
 
-**Tools**
+<h3>Tools</h3>
 
 The FidelityFX Shader Compiler tool which enables the pre-generation of all shader variants needed for each FidelityFX effect, plus the media downloader tool.
 
-<h3>Docs</h3>
+<h2>Docs</h2>
 
 A collection of detailed markdown and doxygen-generated documents.
 
-<h3>Samples</h3>
+<h2>Samples</h2>
 
 The FidelityFX SDK comes complete with numerous examples which demonstrate use of the effects implemented by the SDK. 
 
 The SDK features a collection of sample applications in the effects sub-folder which are dependent on the **SDK** effect components. Each sample application demonstrates how a technique (or techniques) should be integrated into your application. The samples present lots of options to allow you to evaluate and explore the technique before undertaking an integration.
 
-<h4>Dependencies</h4>
+<h3>Dependencies</h3>
 
-The SDK samples are dependent upon our backing graphics framework Cauldron, various common render modules, and a custom SDK backend implementation that wraps our graphics framework. 
+The SDK samples are dependent upon our backing FidelityFX Cauldron Framework, various common render modules, and a custom SDK backend implementation that wraps our graphics framework. 
 
 The **Samples** location is also where the custom Cauldron SDK backend (**ffx_cauldron**) can be found as well as our updated graphics framework, **Cauldron**, and a number of render modules for commonly used rendering features (**rendermodules**).
 

@@ -2,12 +2,11 @@
     "FidelityFX Blur": {
 
         "RenderModules": [
-            "SkyDomeRenderModule",
             "RasterShadowRenderModule",
             "GBufferRenderModule",
             "LightingRenderModule",
+            "SkyDomeRenderModule",
             "TranslucencyRenderModule",
-            "TAARenderModule",
             "BlurRenderModule",
             "ToneMappingRenderModule"
         ],

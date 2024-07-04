@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C)2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #ifndef FFX_DNSR_REFLECTIONS_RESOLVE_TEMPORAL
@@ -103,7 +103,7 @@ void FFX_DNSR_Reflections_InitializeGroupSharedMemory(FfxInt32x2 dispatch_thread
 
 void FFX_DNSR_Reflections_ResolveTemporal(FfxInt32x2 dispatch_thread_id, FfxInt32x2 group_thread_id, FfxUInt32x2 screen_size, FfxFloat32x2 inv_screen_size, FfxFloat32 history_clip_weight) {
     FFX_DNSR_Reflections_InitializeGroupSharedMemory(dispatch_thread_id, group_thread_id, FfxInt32x2(screen_size));
-    FFX_GROUP_MEMORY_BARRIER();
+    FFX_GROUP_MEMORY_BARRIER;
 
     group_thread_id += 4; // Center threads in FFX_GROUPSHARED memory
 
@@ -144,7 +144,11 @@ void FFX_DNSR_Reflections_ResolveTemporal(FfxInt32x2 dispatch_thread_id, FfxInt3
             new_signal.xyz                               = FFX_DNSR_Reflections_ClipAABB(radiance_min, radiance_max, new_signal.xyz);
         }
         // Blend with history
+#ifdef FFX_GLSL
+        new_signal                                       = (FfxFloat16(1.0) - weight) * new_signal + weight * clipped_old_signal;
+#else
         new_signal                                       = ffxLerp(new_signal, clipped_old_signal, weight);
+#endif
         new_variance                                     = ffxLerp(FFX_DNSR_Reflections_ComputeTemporalVariance(new_signal.xyz, clipped_old_signal.xyz), new_variance, weight);
         if (any(isinf(new_signal)) || any(isnan(new_signal)) || isinf(new_variance) || isnan(new_variance)) {
             new_signal = FfxFloat16x3(0.0f, 0.0f, 0.0f);
@@ -227,12 +231,12 @@ void FFX_DNSR_Reflections_InitializeGroupSharedMemory(FfxInt32x2 dispatch_thread
 
 void FFX_DNSR_Reflections_ResolveTemporal(FfxInt32x2 dispatch_thread_id, FfxInt32x2 group_thread_id, FfxUInt32x2 screen_size, FfxFloat32x2 inv_screen_size, FfxFloat32 history_clip_weight) {
     FFX_DNSR_Reflections_InitializeGroupSharedMemory(dispatch_thread_id, group_thread_id, FfxInt32x2(screen_size));
-    FFX_GROUP_MEMORY_BARRIER();
+    FFX_GROUP_MEMORY_BARRIER;
 
     group_thread_id += 4; // Center threads in FFX_GROUPSHARED memory
 
     FfxFloat32x3 radiance = FFX_DNSR_Reflections_LoadFromGroupSharedMemory(group_thread_id).radiance;
-    float radianceSum = radiance.x + radiance.y + radiance.z;
+    FfxFloat32 radianceSum = radiance.x + radiance.y + radiance.z;
     if (radianceSum < RADIANCE_THRESHOLD)
     {
         FFX_DNSR_Reflections_StoreTemporalAccumulation(dispatch_thread_id, FfxFloat32x3(0.0f, 0.0f, 0.0f), FfxFloat32(0.0f));
@@ -285,7 +289,7 @@ void ResolveTemporal(FfxUInt32 group_index, FfxUInt32 group_id, FfxUInt32x2 grou
     FfxUInt32  packed_coords = GetDenoiserTile(group_id);
     FfxInt32x2  dispatch_thread_id = FfxInt32x2(packed_coords & 0xffffu, (packed_coords >> 16) & 0xffffu) + FfxInt32x2(group_thread_id);
     FfxInt32x2  dispatch_group_id = dispatch_thread_id / 8;
-    FfxInt32x2 remapped_group_thread_id = FfxInt32x2(FFX_DNSR_Reflections_RemapLane8x8(group_index));
+    FfxInt32x2 remapped_group_thread_id = FfxInt32x2(ffxRemapForWaveReduction(group_index));
     FfxInt32x2 remapped_dispatch_thread_id = dispatch_group_id * 8 + remapped_group_thread_id;
 
     FFX_DNSR_Reflections_ResolveTemporal(remapped_dispatch_thread_id, remapped_group_thread_id, RenderSize(), InverseRenderSize(), TemporalStabilityFactor());

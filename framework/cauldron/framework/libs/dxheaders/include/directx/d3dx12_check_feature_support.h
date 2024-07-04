@@ -1,4 +1,4 @@
-//*********************************************************
+﻿//*********************************************************
 //
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License (MIT).
@@ -124,9 +124,11 @@ public: // Function declaration
     D3D12_RENDER_PASS_TIER RenderPassesTier() const noexcept;
     D3D12_RAYTRACING_TIER RaytracingTier() const noexcept;
 
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 4)
     // DISPLAYABLE
     BOOL DisplayableTexture() const noexcept;
     // SharedResourceCompatibilityTier handled in D3D12Options4
+#endif
 
     // D3D12_OPTIONS6
     BOOL AdditionalShadingRatesSupported() const noexcept;
@@ -148,6 +150,7 @@ public: // Function declaration
     // PROTECTED_RESOURCE_SESSION_TYPES
     std::vector<GUID> ProtectedResourceSessionTypes(UINT NodeIndex = 0) const;
 
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 3)
     // D3D12_OPTIONS8
     BOOL UnalignedBlockTexturesSupported() const noexcept;
 
@@ -158,19 +161,25 @@ public: // Function declaration
     BOOL AtomicInt64OnGroupSharedSupported() const noexcept;
     BOOL DerivativesInMeshAndAmplificationShadersSupported() const noexcept;
     D3D12_WAVE_MMA_TIER WaveMMATier() const noexcept;
+#endif
 
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 4)
     // D3D12_OPTIONS10
     BOOL VariableRateShadingSumCombinerSupported() const noexcept;
     BOOL MeshShaderPerPrimitiveShadingRateSupported() const noexcept;
 
     // D3D12_OPTIONS11
     BOOL AtomicInt64OnDescriptorHeapResourceSupported() const noexcept;
+#endif
 
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 600)
     // D3D12_OPTIONS12
     D3D12_TRI_STATE MSPrimitivesPipelineStatisticIncludesCulledPrimitives() const noexcept;
     BOOL EnhancedBarriersSupported() const noexcept;
     BOOL RelaxedFormatCastingSupported() const noexcept;
+#endif
 
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 602)
     // D3D12_OPTIONS13
     BOOL UnrestrictedBufferTextureCopyPitchSupported() const noexcept;
     BOOL UnrestrictedVertexElementAlignmentSupported() const noexcept;
@@ -178,7 +187,9 @@ public: // Function declaration
     BOOL InvertedViewportDepthFlipsZSupported() const noexcept;
     BOOL TextureCopyBetweenDimensionsSupported() const noexcept;
     BOOL AlphaBlendFactorSupported() const noexcept;
+#endif
 
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 606)
     // D3D12_OPTIONS14
     BOOL AdvancedTextureOpsSupported() const noexcept;
     BOOL WriteableMSAATexturesSupported() const noexcept;
@@ -187,6 +198,43 @@ public: // Function declaration
     // D3D12_OPTIONS15
     BOOL TriangleFanSupported() const noexcept;
     BOOL DynamicIndexBufferStripCutSupported() const noexcept;
+#endif
+
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 608)
+    // D3D12_OPTIONS16
+    BOOL DynamicDepthBiasSupported() const noexcept;
+#endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+    BOOL GPUUploadHeapSupported() const noexcept;
+
+    // D3D12_OPTIONS17
+    BOOL NonNormalizedCoordinateSamplersSupported() const noexcept;
+    BOOL ManualWriteTrackingResourceSupported() const noexcept;
+
+    // D3D12_OPTIONS18
+    BOOL RenderPassesValid() const noexcept;
+#endif
+
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 610)
+    BOOL MismatchingOutputDimensionsSupported() const noexcept;
+    UINT SupportedSampleCountsWithNoOutputs() const noexcept;
+    BOOL PointSamplingAddressesNeverRoundUp() const noexcept;
+    BOOL RasterizerDesc2Supported() const noexcept;
+    BOOL NarrowQuadrilateralLinesSupported() const noexcept;
+    BOOL AnisoFilterWithPointMipSupported() const noexcept;
+    UINT MaxSamplerDescriptorHeapSize() const noexcept;
+    UINT MaxSamplerDescriptorHeapSizeWithStaticSamplers() const noexcept;
+    UINT MaxViewDescriptorHeapSize() const noexcept;
+#endif
+
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 611)
+    BOOL ComputeOnlyWriteWatchSupported() const noexcept;
+#endif
+
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 612)
+    D3D12_EXECUTE_INDIRECT_TIER ExecuteIndirectTier() const noexcept;
+    D3D12_WORK_GRAPHS_TIER WorkGraphsTier() const noexcept;
+#endif
 
 private: // Private structs and helpers declaration
     struct ProtectedResourceSessionTypesLocal : D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_TYPES
@@ -234,19 +282,49 @@ private: // Member data
     std::vector<D3D12_FEATURE_DATA_SERIALIZATION> m_dSerialization; // Cat2 NodeIndex
     D3D12_FEATURE_DATA_CROSS_NODE m_dCrossNode;
     D3D12_FEATURE_DATA_D3D12_OPTIONS5 m_dOptions5;
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 4)
     D3D12_FEATURE_DATA_DISPLAYABLE m_dDisplayable;
+#endif
     D3D12_FEATURE_DATA_D3D12_OPTIONS6 m_dOptions6;
     D3D12_FEATURE_DATA_D3D12_OPTIONS7 m_dOptions7;
     std::vector<D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_TYPE_COUNT> m_dProtectedResourceSessionTypeCount; // Cat2 NodeIndex
     std::vector<ProtectedResourceSessionTypesLocal> m_dProtectedResourceSessionTypes; // Cat3
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 3)
     D3D12_FEATURE_DATA_D3D12_OPTIONS8 m_dOptions8;
     D3D12_FEATURE_DATA_D3D12_OPTIONS9 m_dOptions9;
+#endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 4)
     D3D12_FEATURE_DATA_D3D12_OPTIONS10 m_dOptions10;
     D3D12_FEATURE_DATA_D3D12_OPTIONS11 m_dOptions11;
+#endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 600)
     D3D12_FEATURE_DATA_D3D12_OPTIONS12 m_dOptions12;
+#endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 602)
     D3D12_FEATURE_DATA_D3D12_OPTIONS13 m_dOptions13;
+#endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 606)
     D3D12_FEATURE_DATA_D3D12_OPTIONS14 m_dOptions14;
     D3D12_FEATURE_DATA_D3D12_OPTIONS15 m_dOptions15;
+#endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 608)
+    D3D12_FEATURE_DATA_D3D12_OPTIONS16 m_dOptions16;
+#endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+    D3D12_FEATURE_DATA_D3D12_OPTIONS17 m_dOptions17;
+#endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+    D3D12_FEATURE_DATA_D3D12_OPTIONS18 m_dOptions18;
+#endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 610)
+    D3D12_FEATURE_DATA_D3D12_OPTIONS19 m_dOptions19;
+#endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 611)
+    D3D12_FEATURE_DATA_D3D12_OPTIONS20 m_dOptions20;
+#endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 612)
+    D3D12_FEATURE_DATA_D3D12_OPTIONS21 m_dOptions21;
+#endif
 };
 
 // Implementations for CD3DX12FeatureSupport functions
@@ -300,17 +378,47 @@ inline CD3DX12FeatureSupport::CD3DX12FeatureSupport() noexcept
 , m_dOptions4{}
 , m_dCrossNode{}
 , m_dOptions5{}
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 4)
 , m_dDisplayable{}
+#endif
 , m_dOptions6{}
 , m_dOptions7{}
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 3)
 , m_dOptions8{}
 , m_dOptions9{}
+#endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 4)
 , m_dOptions10{}
 , m_dOptions11{}
+#endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 600)
 , m_dOptions12{}
+#endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 602)
 , m_dOptions13{}
+#endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 606)
 , m_dOptions14{}
 , m_dOptions15{}
+#endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 608)
+, m_dOptions16{}
+#endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+, m_dOptions17{}
+#endif
+#if defined (D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+, m_dOptions18{}
+#endif
+#if defined (D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 610)
+, m_dOptions19{}
+#endif
+#if defined (D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 611)
+, m_dOptions20{}
+#endif
+#if defined (D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 612)
+, m_dOptions21{}
+#endif
 {}
 
 inline HRESULT CD3DX12FeatureSupport::Init(ID3D12Device* pDevice)
@@ -326,160 +434,165 @@ inline HRESULT CD3DX12FeatureSupport::Init(ID3D12Device* pDevice)
     // Initialize static feature support data structures
     if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &m_dOptions, sizeof(m_dOptions))))
     {
-        m_dOptions.DoublePrecisionFloatShaderOps = false;
-        m_dOptions.OutputMergerLogicOp = false;
-        m_dOptions.MinPrecisionSupport = D3D12_SHADER_MIN_PRECISION_SUPPORT_NONE;
-        m_dOptions.TiledResourcesTier = D3D12_TILED_RESOURCES_TIER_NOT_SUPPORTED;
-        m_dOptions.ResourceBindingTier = static_cast<D3D12_RESOURCE_BINDING_TIER>(0);
-        m_dOptions.PSSpecifiedStencilRefSupported = false;
-        m_dOptions.TypedUAVLoadAdditionalFormats = false;
-        m_dOptions.ROVsSupported = false;
-        m_dOptions.ConservativeRasterizationTier = D3D12_CONSERVATIVE_RASTERIZATION_TIER_NOT_SUPPORTED;
-        m_dOptions.MaxGPUVirtualAddressBitsPerResource = 0;
-        m_dOptions.StandardSwizzle64KBSupported = false;
-        m_dOptions.CrossNodeSharingTier = D3D12_CROSS_NODE_SHARING_TIER_NOT_SUPPORTED;
-        m_dOptions.CrossAdapterRowMajorTextureSupported = false;
-        m_dOptions.VPAndRTArrayIndexFromAnyShaderFeedingRasterizerSupportedWithoutGSEmulation = false;
-        m_dOptions.ResourceHeapTier = static_cast<D3D12_RESOURCE_HEAP_TIER>(0);
+        m_dOptions = {};
     }
 
     if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_GPU_VIRTUAL_ADDRESS_SUPPORT, &m_dGPUVASupport, sizeof(m_dGPUVASupport))))
     {
-        m_dGPUVASupport.MaxGPUVirtualAddressBitsPerProcess = 0;
-        m_dGPUVASupport.MaxGPUVirtualAddressBitsPerResource = 0;
+        m_dGPUVASupport = {};
     }
 
     if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS1, &m_dOptions1, sizeof(m_dOptions1))))
     {
-        m_dOptions1.WaveOps = false;
-        m_dOptions1.WaveLaneCountMax = 0;
-        m_dOptions1.WaveLaneCountMin = 0;
-        m_dOptions1.TotalLaneCount = 0;
-        m_dOptions1.ExpandedComputeResourceStates = 0;
-        m_dOptions1.Int64ShaderOps = 0;
+        m_dOptions1 = {};
     }
 
     if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS2, &m_dOptions2, sizeof(m_dOptions2))))
     {
-        m_dOptions2.DepthBoundsTestSupported = false;
-        m_dOptions2.ProgrammableSamplePositionsTier = D3D12_PROGRAMMABLE_SAMPLE_POSITIONS_TIER_NOT_SUPPORTED;
+        m_dOptions2 = {};
     }
 
     if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_SHADER_CACHE, &m_dShaderCache, sizeof(m_dShaderCache))))
     {
-        m_dShaderCache.SupportFlags = D3D12_SHADER_CACHE_SUPPORT_NONE;
+        m_dShaderCache = {};
     }
 
     if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS3, &m_dOptions3, sizeof(m_dOptions3))))
     {
-        m_dOptions3.CopyQueueTimestampQueriesSupported = false;
-        m_dOptions3.CastingFullyTypedFormatSupported = false;
-        m_dOptions3.WriteBufferImmediateSupportFlags = D3D12_COMMAND_LIST_SUPPORT_FLAG_NONE;
-        m_dOptions3.ViewInstancingTier = D3D12_VIEW_INSTANCING_TIER_NOT_SUPPORTED;
-        m_dOptions3.BarycentricsSupported = false;
+        m_dOptions3 = {};
     }
 
     if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_EXISTING_HEAPS, &m_dExistingHeaps, sizeof(m_dExistingHeaps))))
     {
-        m_dExistingHeaps.Supported = false;
+        m_dExistingHeaps = {};
     }
 
     if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS4, &m_dOptions4, sizeof(m_dOptions4))))
     {
-        m_dOptions4.MSAA64KBAlignedTextureSupported = false;
-        m_dOptions4.Native16BitShaderOpsSupported = false;
-        m_dOptions4.SharedResourceCompatibilityTier = D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER_0;
+        m_dOptions4 = {};
     }
 
     if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_CROSS_NODE, &m_dCrossNode, sizeof(m_dCrossNode))))
     {
-        m_dCrossNode.SharingTier = D3D12_CROSS_NODE_SHARING_TIER_NOT_SUPPORTED;
-        m_dCrossNode.AtomicShaderInstructions = false;
+        m_dCrossNode = {};
     }
 
     if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &m_dOptions5, sizeof(m_dOptions5))))
     {
-        m_dOptions5.SRVOnlyTiledResourceTier3 = false;
-        m_dOptions5.RenderPassesTier = D3D12_RENDER_PASS_TIER_0;
-        m_dOptions5.RaytracingTier = D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
+        m_dOptions5 = {};
     }
 
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 4)
     if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_DISPLAYABLE, &m_dDisplayable, sizeof(m_dDisplayable))))
     {
-        m_dDisplayable.DisplayableTexture = false;
-        m_dDisplayable.SharedResourceCompatibilityTier = D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER_0;
+        m_dDisplayable = {};
     }
+#endif
 
     if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS6, &m_dOptions6, sizeof(m_dOptions6))))
     {
-        m_dOptions6.AdditionalShadingRatesSupported = false;
-        m_dOptions6.PerPrimitiveShadingRateSupportedWithViewportIndexing = false;
-        m_dOptions6.VariableShadingRateTier = D3D12_VARIABLE_SHADING_RATE_TIER_NOT_SUPPORTED;
-        m_dOptions6.ShadingRateImageTileSize = 0;
-        m_dOptions6.BackgroundProcessingSupported = false;
+        m_dOptions6 = {};
     }
 
     if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &m_dOptions7, sizeof(m_dOptions7))))
     {
-        m_dOptions7.MeshShaderTier = D3D12_MESH_SHADER_TIER_NOT_SUPPORTED;
-        m_dOptions7.SamplerFeedbackTier = D3D12_SAMPLER_FEEDBACK_TIER_NOT_SUPPORTED;
+        m_dOptions7 = {};
     }
 
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 3)
     if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS8, &m_dOptions8, sizeof(m_dOptions8))))
     {
-        m_dOptions8.UnalignedBlockTexturesSupported = false;
+        m_dOptions8 = {};
     }
 
     if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS9, &m_dOptions9, sizeof(m_dOptions9))))
     {
-        m_dOptions9.MeshShaderPipelineStatsSupported = false;
-        m_dOptions9.MeshShaderSupportsFullRangeRenderTargetArrayIndex = false;
-        m_dOptions9.AtomicInt64OnGroupSharedSupported = false;
-        m_dOptions9.AtomicInt64OnTypedResourceSupported = false;
-        m_dOptions9.DerivativesInMeshAndAmplificationShadersSupported = false;
-        m_dOptions9.WaveMMATier = D3D12_WAVE_MMA_TIER_NOT_SUPPORTED;
+        m_dOptions9 = {};
     }
+#endif
 
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 4)
     if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS10, &m_dOptions10, sizeof(m_dOptions10))))
     {
-        m_dOptions10.MeshShaderPerPrimitiveShadingRateSupported = false;
-        m_dOptions10.VariableRateShadingSumCombinerSupported = false;
+        m_dOptions10 = {};
     }
 
     if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS11, &m_dOptions11, sizeof(m_dOptions11))))
     {
-        m_dOptions11.AtomicInt64OnDescriptorHeapResourceSupported = false;
+        m_dOptions11 = {};
     }
+#endif
 
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 600)
     if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS12, &m_dOptions12, sizeof(m_dOptions12))))
     {
+        m_dOptions12 = {};
         m_dOptions12.MSPrimitivesPipelineStatisticIncludesCulledPrimitives = D3D12_TRI_STATE::D3D12_TRI_STATE_UNKNOWN;
-        m_dOptions12.EnhancedBarriersSupported = false;
-        m_dOptions12.RelaxedFormatCastingSupported = false;
     }
+#endif
 
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 602)
     if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS13, &m_dOptions13, sizeof(m_dOptions13))))
     {
-        m_dOptions13.UnrestrictedBufferTextureCopyPitchSupported = false;
-        m_dOptions13.UnrestrictedVertexElementAlignmentSupported = false;
-        m_dOptions13.InvertedViewportHeightFlipsYSupported = false;
-        m_dOptions13.InvertedViewportDepthFlipsZSupported = false;
-        m_dOptions13.TextureCopyBetweenDimensionsSupported = false;
-        m_dOptions13.AlphaBlendFactorSupported = false;
+        m_dOptions13 = {};
     }
+#endif
 
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 606)
     if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS14, &m_dOptions14, sizeof(m_dOptions14))))
     {
-        m_dOptions14.AdvancedTextureOpsSupported = false;
-        m_dOptions14.WriteableMSAATexturesSupported = false;
-        m_dOptions14.IndependentFrontAndBackStencilRefMaskSupported = false;
+        m_dOptions14 = {};
     }
 
     if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS15, &m_dOptions15, sizeof(m_dOptions15))))
     {
-        m_dOptions15.TriangleFanSupported = false;
-        m_dOptions15.DynamicIndexBufferStripCutSupported = false;
+        m_dOptions15 = {};
     }
+#endif
+
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 608)
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS16, &m_dOptions16, sizeof(m_dOptions16))))
+    {
+        m_dOptions16 = {};
+    }
+#endif
+
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS17, &m_dOptions17, sizeof(m_dOptions17))))
+    {
+        m_dOptions17 = {};
+    }
+
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS18, &m_dOptions18, sizeof(m_dOptions18))))
+    {
+        m_dOptions18.RenderPassesValid = false;
+    }
+#endif
+
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 610)
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS19, &m_dOptions19, sizeof(m_dOptions19))))
+    {
+        m_dOptions19 = {};
+        m_dOptions19.SupportedSampleCountsWithNoOutputs = 1;
+        m_dOptions19.MaxSamplerDescriptorHeapSize = D3D12_MAX_SHADER_VISIBLE_SAMPLER_HEAP_SIZE;
+        m_dOptions19.MaxSamplerDescriptorHeapSizeWithStaticSamplers = D3D12_MAX_SHADER_VISIBLE_SAMPLER_HEAP_SIZE;
+        m_dOptions19.MaxViewDescriptorHeapSize = D3D12_MAX_SHADER_VISIBLE_DESCRIPTOR_HEAP_SIZE_TIER_1;
+    }
+#endif
+
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 611)
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS20, &m_dOptions20, sizeof(m_dOptions20))))
+    {
+        m_dOptions20 = {};
+    }
+#endif
+
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 612)
+    if (FAILED(m_pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS21, &m_dOptions21, sizeof(m_dOptions21))))
+    {
+        m_dOptions21 = {};
+    }
+#endif
 
     // Initialize per-node feature support data structures
     const UINT uNodeCount = m_pDevice->GetNodeCount();
@@ -741,9 +854,11 @@ FEATURE_SUPPORT_GET(BOOL, m_dOptions5, SRVOnlyTiledResourceTier3);
 FEATURE_SUPPORT_GET(D3D12_RENDER_PASS_TIER, m_dOptions5, RenderPassesTier);
 FEATURE_SUPPORT_GET(D3D12_RAYTRACING_TIER, m_dOptions5, RaytracingTier);
 
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 4)
 // 28: Displayable
 FEATURE_SUPPORT_GET(BOOL, m_dDisplayable, DisplayableTexture);
 // SharedResourceCompatibilityTier handled in D3D12Options4
+#endif
 
 // 30: D3D12 Options6
 FEATURE_SUPPORT_GET(BOOL, m_dOptions6, AdditionalShadingRatesSupported);
@@ -769,6 +884,7 @@ FEATURE_SUPPORT_GET_NODE_INDEXED_NAME(UINT, m_dProtectedResourceSessionTypeCount
 // 34: Protected Resource Session Types
 FEATURE_SUPPORT_GET_NODE_INDEXED_NAME(std::vector<GUID>, m_dProtectedResourceSessionTypes, TypeVec, ProtectedResourceSessionTypes);
 
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 3)
 // 36: Options8
 FEATURE_SUPPORT_GET(BOOL, m_dOptions8, UnalignedBlockTexturesSupported);
 
@@ -779,19 +895,25 @@ FEATURE_SUPPORT_GET(BOOL, m_dOptions9, AtomicInt64OnTypedResourceSupported);
 FEATURE_SUPPORT_GET(BOOL, m_dOptions9, AtomicInt64OnGroupSharedSupported);
 FEATURE_SUPPORT_GET(BOOL, m_dOptions9, DerivativesInMeshAndAmplificationShadersSupported);
 FEATURE_SUPPORT_GET(D3D12_WAVE_MMA_TIER, m_dOptions9, WaveMMATier);
+#endif
 
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 4)
 // 39: Options10
 FEATURE_SUPPORT_GET(BOOL, m_dOptions10, VariableRateShadingSumCombinerSupported);
 FEATURE_SUPPORT_GET(BOOL, m_dOptions10, MeshShaderPerPrimitiveShadingRateSupported);
 
 // 40: Options11
 FEATURE_SUPPORT_GET(BOOL, m_dOptions11, AtomicInt64OnDescriptorHeapResourceSupported);
+#endif
 
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 600)
 // 41: Options12
 FEATURE_SUPPORT_GET(D3D12_TRI_STATE, m_dOptions12, MSPrimitivesPipelineStatisticIncludesCulledPrimitives);
 FEATURE_SUPPORT_GET(BOOL, m_dOptions12, EnhancedBarriersSupported);
 FEATURE_SUPPORT_GET(BOOL, m_dOptions12, RelaxedFormatCastingSupported);
+#endif
 
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 602)
 // 42: Options13
 FEATURE_SUPPORT_GET(BOOL, m_dOptions13, UnrestrictedBufferTextureCopyPitchSupported);
 FEATURE_SUPPORT_GET(BOOL, m_dOptions13, UnrestrictedVertexElementAlignmentSupported);
@@ -799,7 +921,9 @@ FEATURE_SUPPORT_GET(BOOL, m_dOptions13, InvertedViewportHeightFlipsYSupported);
 FEATURE_SUPPORT_GET(BOOL, m_dOptions13, InvertedViewportDepthFlipsZSupported);
 FEATURE_SUPPORT_GET(BOOL, m_dOptions13, TextureCopyBetweenDimensionsSupported);
 FEATURE_SUPPORT_GET(BOOL, m_dOptions13, AlphaBlendFactorSupported);
+#endif
 
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 606)
 // 43: Options14
 FEATURE_SUPPORT_GET(BOOL, m_dOptions14, AdvancedTextureOpsSupported);
 FEATURE_SUPPORT_GET(BOOL, m_dOptions14, WriteableMSAATexturesSupported);
@@ -808,6 +932,45 @@ FEATURE_SUPPORT_GET(BOOL, m_dOptions14, IndependentFrontAndBackStencilRefMaskSup
 // 44: Options15
 FEATURE_SUPPORT_GET(BOOL, m_dOptions15, TriangleFanSupported);
 FEATURE_SUPPORT_GET(BOOL, m_dOptions15, DynamicIndexBufferStripCutSupported);
+#endif
+
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 608)
+// 45: Options16
+FEATURE_SUPPORT_GET(BOOL, m_dOptions16, DynamicDepthBiasSupported);
+#endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+FEATURE_SUPPORT_GET(BOOL, m_dOptions16, GPUUploadHeapSupported);
+
+// 46: Options17
+FEATURE_SUPPORT_GET(BOOL, m_dOptions17, NonNormalizedCoordinateSamplersSupported);
+FEATURE_SUPPORT_GET(BOOL, m_dOptions17, ManualWriteTrackingResourceSupported);
+
+// 47: Option18
+FEATURE_SUPPORT_GET(BOOL, m_dOptions18, RenderPassesValid);
+#endif
+
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 610)
+FEATURE_SUPPORT_GET(BOOL, m_dOptions19, MismatchingOutputDimensionsSupported);
+FEATURE_SUPPORT_GET(UINT, m_dOptions19, SupportedSampleCountsWithNoOutputs);
+FEATURE_SUPPORT_GET(BOOL, m_dOptions19, PointSamplingAddressesNeverRoundUp);
+FEATURE_SUPPORT_GET(BOOL, m_dOptions19, RasterizerDesc2Supported);
+FEATURE_SUPPORT_GET(BOOL, m_dOptions19, NarrowQuadrilateralLinesSupported);
+FEATURE_SUPPORT_GET(BOOL, m_dOptions19, AnisoFilterWithPointMipSupported);
+FEATURE_SUPPORT_GET(UINT, m_dOptions19, MaxSamplerDescriptorHeapSize);
+FEATURE_SUPPORT_GET(UINT, m_dOptions19, MaxSamplerDescriptorHeapSizeWithStaticSamplers);
+FEATURE_SUPPORT_GET(UINT, m_dOptions19, MaxViewDescriptorHeapSize);
+#endif
+
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 611)
+// 49: Options20
+FEATURE_SUPPORT_GET(BOOL, m_dOptions20, ComputeOnlyWriteWatchSupported);
+#endif
+
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 612)
+// 50: Options21
+FEATURE_SUPPORT_GET(D3D12_EXECUTE_INDIRECT_TIER, m_dOptions21, ExecuteIndirectTier);
+FEATURE_SUPPORT_GET(D3D12_WORK_GRAPHS_TIER, m_dOptions21, WorkGraphsTier);
+#endif
 
 // Helper function to decide the highest shader model supported by the system
 // Stores the result in m_dShaderModel
@@ -819,8 +982,15 @@ inline HRESULT CD3DX12FeatureSupport::QueryHighestShaderModel()
 
     const D3D_SHADER_MODEL allModelVersions[] =
     {
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 612)
+        D3D_SHADER_MODEL_6_9,
+#endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 606)
         D3D_SHADER_MODEL_6_8,
+#endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 3)
         D3D_SHADER_MODEL_6_7,
+#endif
         D3D_SHADER_MODEL_6_6,
         D3D_SHADER_MODEL_6_5,
         D3D_SHADER_MODEL_6_4,
@@ -861,6 +1031,9 @@ inline HRESULT CD3DX12FeatureSupport::QueryHighestRootSignatureVersion()
 
     const D3D_ROOT_SIGNATURE_VERSION allRootSignatureVersions[] =
     {
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 609)
+        D3D_ROOT_SIGNATURE_VERSION_1_2,
+#endif
         D3D_ROOT_SIGNATURE_VERSION_1_1,
         D3D_ROOT_SIGNATURE_VERSION_1_0,
         D3D_ROOT_SIGNATURE_VERSION_1,
@@ -896,7 +1069,9 @@ inline HRESULT CD3DX12FeatureSupport::QueryHighestFeatureLevel()
     // Needs to be updated for future feature levels
     const D3D_FEATURE_LEVEL allLevels[] =
     {
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 3)
         D3D_FEATURE_LEVEL_12_2,
+#endif
         D3D_FEATURE_LEVEL_12_1,
         D3D_FEATURE_LEVEL_12_0,
         D3D_FEATURE_LEVEL_11_1,
@@ -906,7 +1081,12 @@ inline HRESULT CD3DX12FeatureSupport::QueryHighestFeatureLevel()
         D3D_FEATURE_LEVEL_9_3,
         D3D_FEATURE_LEVEL_9_2,
         D3D_FEATURE_LEVEL_9_1,
-        D3D_FEATURE_LEVEL_1_0_CORE
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 5)
+        D3D_FEATURE_LEVEL_1_0_CORE,
+#endif
+#if defined(D3D12_SDK_VERSION) && (D3D12_SDK_VERSION >= 611)
+        D3D_FEATURE_LEVEL_1_0_GENERIC
+#endif
     };
 
     D3D12_FEATURE_DATA_FEATURE_LEVELS dFeatureLevel;

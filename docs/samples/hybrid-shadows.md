@@ -12,7 +12,9 @@ Slides which review the main steps of FidelityFX Hybrid Shadows sample can be fo
 
 <h2>Requirements</h2>
 
-`Windows` `DirectX(R)12` `Vulkan(R)`
+ - Windows
+ - DirectX(R)12
+ - Vulkan(R)
 
 <h2>UI elements</h2>
 
@@ -93,11 +95,11 @@ denoiserDispatchDescription.commandList = ffxGetCommandList(pCmdList);
 FFX_ASSERT(FFX_OK == ffxDenoiserContextDispatchShadows(&m_DenoiserContext, &denoiserDispatchDescription));
 ```
 
-<h2>Sample Controls and Configurations</h2>
+<h2>Sample controls and configurations</h2>
 
-For sample controls, configuration and Cauldron UI element details, please see [Running the samples](../getting-started/running-samples.md)
+For sample controls, configuration, and FidelityFX Cauldron Framework UI element details, see [Running the samples](../getting-started/running-samples.md).
 
-<h2>See Also</h2>
+<h2>See also</h2>
 
 - [FidelityFX Classifier](../techniques/classifier.md)
 - [FidelityFX Denoiser](../techniques/denoiser.md)

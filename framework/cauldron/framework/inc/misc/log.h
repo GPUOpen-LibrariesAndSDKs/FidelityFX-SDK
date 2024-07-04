@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -59,17 +59,49 @@ namespace cauldron
     class MessageBuffer
     {
     public:
+
+        /**
+         * @brief   MessageBuffer initialization.
+         */
         MessageBuffer();
+
+        /**
+         * @brief   MessageBuffer initialization. Creates with a specified length, level, and time-stamp
+         */
         MessageBuffer(size_t length, LogLevel level, time_t t);
+
+        /**
+         * @brief   MessageBuffer copy constructor.
+         */
         MessageBuffer(MessageBuffer& other);
+
         MessageBuffer(MessageBuffer&& other) = delete;
+
+        /**
+         * @brief   MessageBuffer destruction.
+         */
         ~MessageBuffer();
 
         MessageBuffer& operator=(MessageBuffer& other) = delete;
+
+        /**
+         * @brief   MessageBuffer move operator.
+         */
         MessageBuffer& operator=(MessageBuffer&& other) noexcept;
 
+        /**
+         * @brief   Returns the <c><i>LogLevel</i></c> of the message buffer.
+         */
         LogLevel Level() const { return m_level; }
+
+        /**
+         * @brief   Returns the time stamp of the message buffer.
+         */
         time_t Time() const { return m_time; }
+
+        /**
+         * @brief   Returns the message data of the message buffer.
+         */
         wchar_t* Data();
         const wchar_t* Data() const;
 
@@ -104,8 +136,8 @@ namespace cauldron
      */
     struct LogMessageEntry
     {
-        LogLevel        LogPriority;
-        std::wstring    LogMessage;
+        LogLevel        LogPriority;        ///< The priority of the message being logged
+        std::wstring    LogMessage;         ///< The message to log
 
         LogMessageEntry(LogLevel level, time_t time, wchar_t* msg) :
             LogPriority(level) 
@@ -148,7 +180,7 @@ namespace cauldron
     /**
      * @class Log
      *
-     * Cauldron's logger. Offers a static interface for message logging.
+     * This is the logger for FidelityFX Cauldron Framework. It provides a static interface for message logging.
      *
      * @ingroup CauldronMisc
      */

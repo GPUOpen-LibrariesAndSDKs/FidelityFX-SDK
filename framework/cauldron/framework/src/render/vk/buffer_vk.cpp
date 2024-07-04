@@ -1,17 +1,20 @@
-// AMD Cauldron code
+// This file is part of the FidelityFX SDK.
 //
-// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sub-license, and / or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -27,6 +30,8 @@
 #include "render/vk/device_vk.h"
 #include "render/vk/gpuresource_vk.h"
 #include "render/vk/uploadheap_vk.h"
+
+#include "helpers.h"
 
 namespace cauldron
 {
@@ -46,67 +51,30 @@ namespace cauldron
         GetImpl()->Region.size = pSrcResource->GetBufferCreateInfo().size; // assume we want to copy the whole buffer
     }
 
-    Buffer* Buffer::CreateBufferResource(const BufferDesc* pDesc, ResourceState initialState, ResizeFunction fn/*= nullptr*/)
+    Buffer* Buffer::CreateBufferResource(const BufferDesc* pDesc, ResourceState initialState, ResizeFunction fn/*= nullptr*/, void* customOwner/*= nullptr*/)
     {
-        return new BufferInternal(pDesc, initialState, fn);
+        return new BufferInternal(pDesc, initialState, fn, customOwner);
     }
 
-    BufferInternal::BufferInternal(const BufferDesc* pDesc, ResourceState initialState, ResizeFunction fn) :
+    BufferInternal::BufferInternal(const BufferDesc* pDesc, ResourceState initialState, ResizeFunction fn, void* customOwner) :
         Buffer(pDesc, fn)
     {
-        VkBufferCreateInfo bufferInfo = {};
-        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.pNext = nullptr;
-        bufferInfo.flags = 0;
-        bufferInfo.size = static_cast<VkDeviceSize>(m_BufferDesc.Size);
-        bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-        switch (pDesc->Type)
-        {
-        case BufferType::Vertex:
-            bufferInfo.usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-                                VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
-            break;
-        case BufferType::Index:
-            bufferInfo.usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-                                VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
-            break;
-        case BufferType::Data:
-            bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
-                                VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
-            break;
-        case BufferType::AccelerationStructure:
-            bufferInfo.usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
-            break;
-        case BufferType::Constant:
-            // Will support when needed
-            //    bufferInfo.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-            //    break;
-        default:
-            CauldronError(L"Unsupported buffer type.");
-            break;
-        }
-
-        // Check if this buffer was flagged for indirect argument usage
-        if (static_cast<bool>(pDesc->Flags & ResourceFlags::AllowIndirect))
-        {
-            bufferInfo.usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
-        }
-        if (static_cast<bool>(pDesc->Flags & ResourceFlags::AllowConstantBuffer))
-        {
-            bufferInfo.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-        }
-
-        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        bufferInfo.queueFamilyIndexCount = 0;
-        bufferInfo.pQueueFamilyIndices = nullptr;
-
+        VkBufferCreateInfo bufferInfo = ConvertBufferDesc(*pDesc);
+        
         GPUResourceInitParams initParams = {};
         initParams.bufferInfo = bufferInfo;
-        initParams.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY;
         initParams.alignment = pDesc->Alignment;
-        initParams.type = GPUResourceType::Buffer;
 
-        m_pResource = GPUResource::CreateGPUResource(m_BufferDesc.Name.c_str(), this, initialState, &initParams, m_ResizeFn != nullptr);
+        if (static_cast<bool>(pDesc->Flags & ResourceFlags::BreadcrumbsBuffer))
+            initParams.type = GPUResourceType::BufferBreadcrumbs;
+        else
+        {
+            initParams.type = GPUResourceType::Buffer;
+            initParams.memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY;
+            customOwner = this;
+        }
+
+        m_pResource = GPUResource::CreateGPUResource(m_BufferDesc.Name.c_str(), customOwner, initialState, &initParams, m_ResizeFn != nullptr);
         CauldronAssert(ASSERT_ERROR, m_pResource != nullptr, L"Could not create GPU resource for buffer %ls", m_BufferDesc.Name);
     }
 
@@ -145,7 +113,7 @@ namespace cauldron
         CopyBufferRegion(pImmediateCopyCmdList, &desc);
 
         QueueFamilies families = pDevice->GetQueueFamilies();
-        bool needsQueueOwnershipTransfer = (families.GraphicsQueueFamilyIndex != families.CopyQueueFamilyIndex);
+        bool          needsQueueOwnershipTransfer = (families.familyIndices[RequestedQueue::Graphics] != families.familyIndices[RequestedQueue::Copy]);
         VkBufferMemoryBarrier bufferMemoryBarrier = {};
         if (needsQueueOwnershipTransfer)
         {
@@ -154,14 +122,16 @@ namespace cauldron
             bufferMemoryBarrier.pNext = nullptr;
             bufferMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
             bufferMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            bufferMemoryBarrier.srcQueueFamilyIndex = families.CopyQueueFamilyIndex;
-            bufferMemoryBarrier.dstQueueFamilyIndex = families.GraphicsQueueFamilyIndex;
+            bufferMemoryBarrier.srcQueueFamilyIndex = families.familyIndices[RequestedQueue::Copy];
+            bufferMemoryBarrier.dstQueueFamilyIndex = families.familyIndices[RequestedQueue::Graphics];
             bufferMemoryBarrier.buffer = m_pResource->GetImpl()->GetBuffer();
             bufferMemoryBarrier.offset = 0;
             bufferMemoryBarrier.size = static_cast<VkDeviceSize>(size);
 
             vkCmdPipelineBarrier(pImmediateCopyCmdList->GetImpl()->VKCmdBuffer(),
-                VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0,
+                                 VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                 VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                 0,
                 0, nullptr,
                 1, &bufferMemoryBarrier,
                 0, nullptr);
@@ -181,7 +151,9 @@ namespace cauldron
             CommandListInternal* pImmediateGraphicsCmdList = (CommandListInternal*)pDevice->CreateCommandList(L"ImmediateGraphicsCommandList", CommandQueue::Graphics);
 
             vkCmdPipelineBarrier(pImmediateGraphicsCmdList->VKCmdBuffer(),
-                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+                                 VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                 VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                 0,
                 0, nullptr,
                 1, &bufferMemoryBarrier,
                 0, nullptr);
@@ -240,7 +212,7 @@ namespace cauldron
         CopyBufferRegion(pUploadContext->GetImpl()->GetCopyCmdList(), &desc);
 
         QueueFamilies         families                    = pDevice->GetQueueFamilies();
-        bool                  needsQueueOwnershipTransfer = (families.GraphicsQueueFamilyIndex != families.CopyQueueFamilyIndex);
+        bool                  needsQueueOwnershipTransfer = (families.familyIndices[RequestedQueue::Graphics] != families.familyIndices[RequestedQueue::Copy]);
         VkBufferMemoryBarrier bufferMemoryBarrier         = {};
         if (needsQueueOwnershipTransfer)
         {
@@ -249,15 +221,15 @@ namespace cauldron
             bufferMemoryBarrier.pNext               = nullptr;
             bufferMemoryBarrier.srcAccessMask       = VK_ACCESS_TRANSFER_WRITE_BIT;
             bufferMemoryBarrier.dstAccessMask       = VK_ACCESS_TRANSFER_WRITE_BIT;
-            bufferMemoryBarrier.srcQueueFamilyIndex = families.CopyQueueFamilyIndex;
-            bufferMemoryBarrier.dstQueueFamilyIndex = families.GraphicsQueueFamilyIndex;
+            bufferMemoryBarrier.srcQueueFamilyIndex = families.familyIndices[RequestedQueue::Copy];
+            bufferMemoryBarrier.dstQueueFamilyIndex = families.familyIndices[RequestedQueue::Graphics];
             bufferMemoryBarrier.buffer              = m_pResource->GetImpl()->GetBuffer();
             bufferMemoryBarrier.offset              = 0;
             bufferMemoryBarrier.size                = static_cast<VkDeviceSize>(size);
 
             vkCmdPipelineBarrier(pUploadContext->GetImpl()->GetCopyCmdList()->GetImpl()->VKCmdBuffer(),
                                  VK_PIPELINE_STAGE_TRANSFER_BIT,
-                                 VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                                 VK_PIPELINE_STAGE_TRANSFER_BIT,
                                  0,
                                  0,
                                  nullptr,
@@ -271,7 +243,7 @@ namespace cauldron
         {
             pUploadContext->GetImpl()->HasGraphicsCmdList() = true;
             vkCmdPipelineBarrier(pUploadContext->GetImpl()->GetGraphicsCmdList()->GetImpl()->VKCmdBuffer(),
-                                 VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                                 VK_PIPELINE_STAGE_TRANSFER_BIT,
                                  VK_PIPELINE_STAGE_TRANSFER_BIT,
                                  0,
                                  0,

@@ -2,7 +2,8 @@
     "FidelityFX Parallel Sort": {
 
         "RenderModules": [
-            "ParallelSortRenderModule"
+            "ParallelSortRenderModule",
+            "ToneMappingRenderModule"
         ]
     }
 }

@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -44,11 +44,12 @@ namespace cauldron
     class IndirectWorkload;
     struct TransferInfo;
     class UploadContextInternal;
-    
+    class Device;
+
     /**
      * @class CommandList
      *
-     * The <c><i>Cauldron</i></c> api/platform-agnostic representation of a command list.
+     * The <c><i>FidelityFX Cauldron Framework</i></c> api/platform-agnostic representation of a command list.
      *
      * @ingroup CauldronRender
      */
@@ -66,6 +67,17 @@ namespace cauldron
          *          internal resource type.
          */
         static CommandList* CreateCommandList(const wchar_t* Name, CommandQueue queueType, void* pInitParams);
+
+        /**
+         * @brief   Creates a framework command list from a FidelityFX SDK command list. This resource must be
+         *          manually destroyed after use by the caller.
+         */
+        static CommandList* GetWrappedCmdListFromSDK(const wchar_t* name, CommandQueue queueType, void* pSDKCmdList);
+
+        /**
+         * @brief   Releases sdk-backed command list.
+         */
+        static void ReleaseWrappedCmdList(CommandList* pCmdList);
 
         /**
          * @brief   Query whether we are currently between Begin/End Raster.
@@ -91,14 +103,19 @@ namespace cauldron
     private:
         // No copy, No move
         NO_COPY(CommandList)
-            NO_MOVE(CommandList)
+        NO_MOVE(CommandList)
 
-            friend void BeginRaster(CommandList* pCmdList, uint32_t numRasterViews, const RasterView** pRasterViews,
-                const RasterView* pDepthView, const VariableShadingRateInfo* pVrsInfo);
-            void BeginVRSRendering(const VariableShadingRateInfo* pVrsInfo);
+        friend void BeginRaster(CommandList* pCmdList, uint32_t numRasterViews, const RasterView** pRasterViews,
+                                const RasterView* pDepthView, const VariableShadingRateInfo* pVrsInfo);
+        friend void BeginRaster(CommandList*                   pCmdList,
+                                uint32_t                       numColorViews,
+                                const ResourceViewInfo*        pColorViews,
+                                const ResourceViewInfo*        pDepthView,
+                                const VariableShadingRateInfo* pVrsInfo);
+        void BeginVRSRendering(const VariableShadingRateInfo* pVrsInfo);
 
-            friend void EndRaster(CommandList* pCmdList, const VariableShadingRateInfo* pVrsInfo);
-            void EndVRSRendering(const VariableShadingRateInfo* pVrsInfo);
+        friend void EndRaster(CommandList* pCmdList, const VariableShadingRateInfo* pVrsInfo);
+        void EndVRSRendering(const VariableShadingRateInfo* pVrsInfo);
     
     protected:
         CommandList(CommandQueue queueType);
@@ -111,7 +128,7 @@ namespace cauldron
    /**
    * @class UploadContext
    *
-   * The <c><i>Cauldron</i></c> api/platform-agnostic representation of an upload context. 
+   * The <c><i>FidelityFX Cauldron Framework</i></c> api/platform-agnostic representation of an upload context. 
    * Used to transfer asset data from CPU memory to GPU memory via the copy queue.
    *
    * @ingroup CauldronRender
@@ -129,7 +146,7 @@ namespace cauldron
         /**
          * @brief   Destruction.
          */
-        ~UploadContext();
+        virtual ~UploadContext();
 
         /**
          * @brief   Executes batched GPU resource copies.
@@ -188,17 +205,22 @@ namespace cauldron
     /// Clears a render target with the specified value.
     ///
     /// @ingroup CauldronRender
-    void ClearRenderTarget(CommandList* pCmdList, const ResourceViewInfo* pRendertargetView, float clearColor[4]);
+    void ClearRenderTarget(CommandList* pCmdList, const ResourceViewInfo* pRendertargetView, const float clearColor[4]);
 
     /// Clears a depth(/stencil) target with the specified value.
     ///
     /// @ingroup CauldronRender
     void ClearDepthStencil(CommandList* pCmdList, const ResourceViewInfo* pDepthStencilView, uint8_t stencilValue);
 
-    /// Clears a buffer with the specified value.
+    /// Clears a resource with the specified value.
     ///
     /// @ingroup CauldronRender
     void ClearUAVFloat(CommandList* pCmdList, const GPUResource* pResource, const ResourceViewInfo* pGPUView, const ResourceViewInfo* pCPUView, float clearColor[4]);
+
+    /// Clears a resource with the specified value.
+    ///
+    /// @ingroup CauldronRender
+    void ClearUAVUInt(CommandList* pCmdList, const GPUResource* pResource, const ResourceViewInfo* pGPUView, const ResourceViewInfo* pCPUView, uint32_t clearColor[4]);
 
     /// Begins rasterization workload submission to the CommandList
     ///
@@ -208,6 +230,20 @@ namespace cauldron
                      const RasterView**             pRasterViews,
                      const RasterView*              pDepthView = nullptr,
                      const VariableShadingRateInfo* pVrsInfo   = nullptr);
+    
+    /// Begins rasterization workload submission to the CommandList
+    ///
+    /// @ingroup CauldronRender
+    void BeginRaster(CommandList*                   pCmdList,
+                     uint32_t                       numColorViews,
+                     const ResourceViewInfo*        pColorViews,
+                     const ResourceViewInfo*        pDepthView = nullptr,
+                     const VariableShadingRateInfo* pVrsInfo   = nullptr);
+
+    /// Binds the rendertarget/depth views to the GPU for rendering
+    ///
+    /// @ingroup CauldronRender
+    void SetRenderTargets(CommandList* pCmdList, uint32_t numRasterViews, const ResourceViewInfo* pRasterViews, const ResourceViewInfo* pDepthView = nullptr);
 
     /// Ends rasterization workload submissions to the CommandList
     ///
@@ -227,7 +263,7 @@ namespace cauldron
     /// Convenience function to set both viewport and scissor rect through a single call
     ///
     /// @ingroup CauldronRender
-    void SetViewportScissorRect(CommandList* pCmdList, uint32_t left, uint32_t top, uint32_t wight, uint32_t height, float nearDist, float farDist);
+    void SetViewportScissorRect(CommandList* pCmdList, uint32_t left, uint32_t top, uint32_t width, uint32_t height, float nearDist, float farDist);
 
     /// Set the pipeline object to use for Draw/Dispatch
     ///
@@ -273,6 +309,11 @@ namespace cauldron
     ///
     /// @ingroup CauldronRender
     void WriteBufferImmediate(CommandList* pCmdList, const GPUResource* pResource, uint32_t numParams, const uint32_t* offsets, const uint32_t* values);
+
+    /// Writes AMD FidelityFX Breadcrumbs Library marker to specified GPU locations
+    ///
+    /// @ingroup CauldronRender
+    void WriteBreadcrumbsMarker(Device* pDevice, CommandList* pCmdList, Buffer* pBuffer, uint64_t gpuAddress, uint32_t value, bool isBegin);
 
     /// Sets the shading rate to use for rasterization workloads
     ///

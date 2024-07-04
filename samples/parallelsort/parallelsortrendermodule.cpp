@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -23,7 +23,7 @@
 #include "parallelsortrendermodule.h"
 #include "shaders/parallelsort_common.h"
 
-#include "validation_remap.h"
+#include "core/backend_interface.h"
 #include "core/contentmanager.h"
 #include "core/framework.h"
 #include "core/loaders/textureloader.h"
@@ -38,6 +38,7 @@
 #include "render/renderdefines.h"
 #include "render/rootsignature.h"
 #include "render/uploadheap.h"
+#include "render/swapchain.h"
 
 #include <random>
 
@@ -48,53 +49,32 @@ const uint32_t ParallelSortRenderModule::s_NumKeys[ResSize_Count] = { 1920 * 108
 
 void ParallelSortRenderModule::Init(const json& initData)
 {
-    // Setup FidelityFX interface.
-    {
-        const size_t scratchBufferSize = ffxGetScratchMemorySize(FFX_PARALLELSORT_CONTEXT_COUNT);
-        void* scratchBuffer = malloc(scratchBufferSize);
-        FfxErrorCode errorCode = ffxGetInterface(&m_InitializationParameters.backendInterface, GetDevice(), scratchBuffer, scratchBufferSize, FFX_PARALLELSORT_CONTEXT_COUNT);
-        FFX_ASSERT(errorCode == FFX_OK);
-    }
+    InitFfxContext();
 
-    // Create the Parallel Sort context
-    {
-        m_InitializationParameters.flags = 0;
-        m_InitializationParameters.flags |= m_ParallelSortIndirectExecution ? FFX_PARALLELSORT_INDIRECT_SORT : 0;
-        m_InitializationParameters.flags |= m_ParallelSortPayload ? FFX_PARALLELSORT_PAYLOAD_SORT : 0;
-
-        // Highest resolution is the max number of keys we'll ever sort
-        m_InitializationParameters.maxEntries = s_NumKeys[ResSize_Count - 1];
-
-        FfxErrorCode errorCode = ffxParallelSortContextCreate(&m_ParallelSortContext, &m_InitializationParameters);
-        FFX_ASSERT(errorCode == FFX_OK);
-    }
+    GetFramework()->ConfigureRuntimeShaderRecompiler(
+        [this](void) { DestroyFfxContext(); }, [this](void) { InitFfxContext(); });
 
     // Register UI for Parallel Sort
-    UISection uiSection;
-    uiSection.SectionName = "Parallel Sort";
-    uiSection.SectionType = UISectionType::Sample;
+    UISection* uiSection = GetUIManager()->RegisterUIElements("Parallel Sort", UISectionType::Sample);
 
     // Add resolution sizes combo
-    std::vector<std::string> resolutionSizes = { "1920x1080", "2560x1440", "3840x2160" };
-    uiSection.AddCombo("Buffer resolutions", (int32_t*)&m_ParallelSortResolutions, &resolutionSizes);
+    std::vector<const char*> resolutionSizes = { "1920x1080", "2560x1440", "3840x2160" };
+    uiSection->RegisterUIElement<UICombo>("Buffer resolutions", (int32_t&)m_ParallelSortResolutions, std::move(resolutionSizes));
 
     // Add output visualization selector
-    uiSection.AddCheckBox("Render Sorted Keys", &m_ParallelSortRenderSortedKeys);
+    uiSection->RegisterUIElement<UICheckBox>("Render Sorted Keys", m_ParallelSortRenderSortedKeys);
 
     // Use the same callback for all option changes, which will always destroy/create the context
-    std::function<void(void*)> optionChangeCallback = [this](void* pParams) {
+    std::function<void(bool,bool)> optionChangeCallback = [this](bool cur, bool old) {
         // Refresh
         ResetParallelSortContext();
     };
 
     // Add sort payload checkbox
-    uiSection.AddCheckBox("Sort Payload", &m_ParallelSortPayload, optionChangeCallback);
+    uiSection->RegisterUIElement<UICheckBox>("Sort Payload", m_ParallelSortPayload, optionChangeCallback);
 
     // Add indirect execution checkbox
-    uiSection.AddCheckBox("Use Indirect Execution", &m_ParallelSortIndirectExecution, optionChangeCallback);
-
-    // Register the Parallel Sort section
-    GetUIManager()->RegisterUIElements(uiSection);
+    uiSection->RegisterUIElement<UICheckBox>("Use Indirect Execution", m_ParallelSortIndirectExecution, optionChangeCallback);
 
     //////////////////////////////////////////////////////////////////////////
     // Generate unsorted key data
@@ -117,7 +97,8 @@ void ParallelSortRenderModule::Init(const json& initData)
         m_pUnsortedBuffers[i] = GetDynamicResourcePool()->CreateBuffer(&bufferDesc, static_cast<ResourceState>(ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource));        
         
         // Copy resource
-        m_pCopyResources[i] = CopyResource::CreateCopyResource(m_pUnsortedBuffers[i]->GetResource(), keyData[i].data(), keyData[i].size() * sizeof(uint32_t), ResourceState::CopySource);
+        const CopyResource::SourceData sourceData{CopyResource::SourceData::Type::BUFFER, keyData[i].size() * sizeof(uint32_t), keyData[i].data()};
+        m_pCopyResources[i] = CopyResource::CreateCopyResource(m_pUnsortedBuffers[i]->GetResource(), &sourceData, ResourceState::CopySource);
     }
 
     // We will use a single max-sized buffer to do key/payload sorts in
@@ -145,8 +126,8 @@ void ParallelSortRenderModule::Init(const json& initData)
     // Setup the pipeline object
     PipelineDesc psoDesc;
     psoDesc.SetRootSignature(m_pRootSignature);
-    psoDesc.AddShaderDesc(ShaderBuildDesc::Vertex(L"parallelsort_verify.hlsl", L"FullscreenVS", ShaderModel::SM6_6));
-    psoDesc.AddShaderDesc(ShaderBuildDesc::Pixel(L"parallelsort_verify.hlsl", L"RenderSortValidationPS", ShaderModel::SM6_6));
+    psoDesc.AddShaderDesc(ShaderBuildDesc::Vertex(L"parallelsort_verify.hlsl", L"FullscreenVS", ShaderModel::SM6_0));
+    psoDesc.AddShaderDesc(ShaderBuildDesc::Pixel(L"parallelsort_verify.hlsl", L"RenderSortValidationPS", ShaderModel::SM6_0));
 
     // Setup blend and depth states
     std::vector<BlendDesc> blends;
@@ -179,16 +160,40 @@ void ParallelSortRenderModule::Init(const json& initData)
     while (!ModuleReady()) {}
 }
 
+void ParallelSortRenderModule::InitFfxContext()
+{
+    // Setup FidelityFX interface.
+    {
+        const size_t scratchBufferSize = SDKWrapper::ffxGetScratchMemorySize(FFX_PARALLELSORT_CONTEXT_COUNT);
+        void*        scratchBuffer     = calloc(scratchBufferSize, 1u);
+        FfxErrorCode errorCode =
+            SDKWrapper::ffxGetInterface(&m_InitializationParameters.backendInterface, GetDevice(), scratchBuffer, scratchBufferSize, FFX_PARALLELSORT_CONTEXT_COUNT);
+        CAULDRON_ASSERT(errorCode == FFX_OK);
+        CauldronAssert(ASSERT_CRITICAL, m_InitializationParameters.backendInterface.fpGetSDKVersion(&m_InitializationParameters.backendInterface) == FFX_SDK_MAKE_VERSION(1, 1, 0),
+            L"FidelityFX ParallelSort 2.1 sample requires linking with a 1.1 version SDK backend");
+        CauldronAssert(ASSERT_CRITICAL, ffxParallelSortGetEffectVersion() == FFX_SDK_MAKE_VERSION(1, 3, 0),
+                           L"FidelityFX ParallelSort 2.1 sample requires linking with a 1.3 version FidelityFX ParallelSort library");
+                           
+        m_InitializationParameters.backendInterface.fpRegisterConstantBufferAllocator(&m_InitializationParameters.backendInterface, SDKWrapper::ffxAllocateConstantBuffer);
+    }
+
+    // Create the Parallel Sort context
+    {
+        m_InitializationParameters.flags = 0;
+        m_InitializationParameters.flags |= m_ParallelSortIndirectExecution ? FFX_PARALLELSORT_INDIRECT_SORT : 0;
+        m_InitializationParameters.flags |= m_ParallelSortPayload ? FFX_PARALLELSORT_PAYLOAD_SORT : 0;
+
+        // Highest resolution is the max number of keys we'll ever sort
+        m_InitializationParameters.maxEntries = s_NumKeys[ResSize_Count - 1];
+
+        FfxErrorCode errorCode = ffxParallelSortContextCreate(&m_ParallelSortContext, &m_InitializationParameters);
+        CAULDRON_ASSERT(errorCode == FFX_OK);
+    }
+}
+
 ParallelSortRenderModule::~ParallelSortRenderModule()
 {
-    // Destroy the Parallel Sort context
-    {
-        FfxErrorCode errorCode = ffxParallelSortContextDestroy(&m_ParallelSortContext);
-        FFX_ASSERT(errorCode == FFX_OK);
-
-        // Destroy backing memory for the backend 
-        free(m_InitializationParameters.backendInterface.scratchBuffer);
-    }
+    DestroyFfxContext();
 
     // Delete copy resources
     for (int32_t i = 0; i < ResSize_Count; ++i) {
@@ -199,6 +204,23 @@ ParallelSortRenderModule::~ParallelSortRenderModule()
     delete m_pPipelineObj;
     delete m_pRootSignature;
     delete m_pParameters;
+}
+
+void ParallelSortRenderModule::DestroyFfxContext()
+{
+    // Flush anything out of the pipes before destroying the context
+    GetDevice()->FlushAllCommandQueues();
+
+    // Destroy the Parallel Sort context
+    FfxErrorCode errorCode = ffxParallelSortContextDestroy(&m_ParallelSortContext);
+    CAULDRON_ASSERT(errorCode == FFX_OK);
+
+    // Destroy backing memory for the backend
+    if (m_InitializationParameters.backendInterface.scratchBuffer != nullptr)
+    {
+        free(m_InitializationParameters.backendInterface.scratchBuffer);
+        m_InitializationParameters.backendInterface.scratchBuffer = nullptr;
+    }
 }
 
 void ParallelSortRenderModule::Execute(double deltaTime, CommandList* pCmdList)
@@ -248,13 +270,13 @@ void ParallelSortRenderModule::Execute(double deltaTime, CommandList* pCmdList)
     
     // Dispatch parallel sort to do the sorting
     FfxParallelSortDispatchDescription dispatchDesc = {};
-    dispatchDesc.commandList    = ffxGetCommandList(pCmdList);
-    dispatchDesc.keyBuffer      = ffxGetResource(m_pKeysToSort->GetResource(), L"ParallelSort_KeyBuffer", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    dispatchDesc.payloadBuffer  = ffxGetResource(m_pPayloadToSort->GetResource(), L"ParallelSort_PayloadBuffer", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchDesc.commandList    = SDKWrapper::ffxGetCommandList(pCmdList);
+    dispatchDesc.keyBuffer      = SDKWrapper::ffxGetResource(m_pKeysToSort->GetResource(), L"ParallelSort_KeyBuffer", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchDesc.payloadBuffer  = SDKWrapper::ffxGetResource(m_pPayloadToSort->GetResource(), L"ParallelSort_PayloadBuffer", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
     dispatchDesc.numKeysToSort  = s_NumKeys[m_ParallelSortResolutions];
     
     FfxErrorCode errorCode = ffxParallelSortContextDispatch(&m_ParallelSortContext, &dispatchDesc);
-    FFX_ASSERT(errorCode == FFX_OK);
+    CAULDRON_ASSERT(errorCode == FFX_OK);
     
     // FidelityFX contexts modify the set resource view heaps, so set the cauldron one back
     SetAllResourceViewHeaps(pCmdList);
@@ -329,7 +351,7 @@ void ParallelSortRenderModule::ResetParallelSortContext()
     GetDevice()->FlushAllCommandQueues();
 
     FfxErrorCode errorCode = ffxParallelSortContextDestroy(&m_ParallelSortContext);
-    FFX_ASSERT(errorCode == FFX_OK);
+    CAULDRON_ASSERT(errorCode == FFX_OK);
     
     // Setup all the parameters for this parallel sort run
     m_InitializationParameters.flags = 0;
@@ -337,7 +359,7 @@ void ParallelSortRenderModule::ResetParallelSortContext()
     m_InitializationParameters.flags |= m_ParallelSortPayload ? FFX_PARALLELSORT_PAYLOAD_SORT : 0;
     
     errorCode = ffxParallelSortContextCreate(&m_ParallelSortContext, &m_InitializationParameters);
-    FFX_ASSERT(errorCode == FFX_OK);
+    CAULDRON_ASSERT(errorCode == FFX_OK);
 }
 
 void ParallelSortRenderModule::OnResize(const ResolutionInfo& resInfo)

@@ -1,13 +1,14 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
-//
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
+// furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
@@ -64,7 +65,7 @@
 FFX_CLASSIFIER_NUM_THREADS
 void main()
 {
-    FfxUInt32x2 group_thread_id = FFX_DNSR_Reflections_RemapLane8x8(gl_LocalInvocationIndex);
+    FfxUInt32x2 group_thread_id = ffxRemapForWaveReduction(gl_LocalInvocationIndex);
     FfxUInt32x2 dispatch_thread_id = gl_WorkGroupID.xy * 8 + group_thread_id;
 
     FfxInt32x2 screen_size = FfxInt32x2(ReflectionWidth(), ReflectionHeight());

@@ -1,25 +1,30 @@
-// AMD Cauldron code
+// This file is part of the FidelityFX SDK.
 //
-// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sub-license, and / or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 #pragma once
 
 #include "core/component.h"
 #include "misc/math.h"
+#include <functional>
 
 namespace cauldron
 {
@@ -35,7 +40,7 @@ namespace cauldron
     class CameraComponentMgr : public ComponentMgr
     {
     public:
-        static const wchar_t* s_ComponentName;
+        static const wchar_t* s_ComponentName;      ///< Component name
 
     public:
         /**
@@ -82,10 +87,17 @@ namespace cauldron
         static CameraComponentMgr* s_pComponentManager;
     };
 
+    /**
+     * @enum CameraType
+     *
+     * Describes the type of camera.
+     *
+     * @ingroup CauldronComponent
+     */
     enum class CameraType
     {
-        Perspective,
-        Orthographic
+        Perspective,        ///< A perspective projection camera
+        Orthographic        ///< An orthographic projection camera
     };
 
     /**
@@ -104,16 +116,18 @@ namespace cauldron
         union
         {
             struct {
-                float Yfov;
-                float AspectRatio;
+                float Yfov;                                 ///< Vertical field-of-view
+                float AspectRatio;                          ///< Aspect ratio
             } Perspective;
             struct {
-                float Xmag;
-                float Ymag;
+                float Xmag;                                 ///< Magnitude in X axis
+                float Ymag;                                 ///< Magnitude in Y axis
             } Orthographic;
         };
-        std::wstring  Name       = L"";
+        std::wstring  Name       = L"";                     ///< Component name
     };
+
+    typedef std::function<void(Vec2& values)> CameraJitterCallback;
 
     /**
      * @class CameraComponent
@@ -238,13 +252,14 @@ namespace cauldron
         const float GetFovY() const { return m_pData->Perspective.Yfov; }
 
         /**
-         * @brief   Sets the camera's jitter values for the frame, and marks the camera dirty.
+         * @brief   Sets the camera's jitter update callback to use.
          */
-        void SetJitterValues(const Vec2& values)
-        {
-            m_jitterValues = values;
-            SetDirty();
-        }
+        static void SetJitterCallbackFunc(CameraJitterCallback callbackFunc) { s_pSetJitterCallback = callbackFunc; }
+
+        /**
+         * @brief   Let's the caller know if this camera was reset this frame
+         */
+        bool WasCameraReset() const { return m_CameraReset; }
 
     private:
         CameraComponent() = delete;
@@ -261,7 +276,12 @@ namespace cauldron
 
         void SetProjectionJitteredMatrix();
 
+        void OnFocusGained() override;
+
     protected:
+        // After regaining focus, skip next update because the mouse delta will be too large.
+        bool m_SkipUpdate = false;
+
         // Keep a pointer on our initialization data for matrix reconstruction
         CameraComponentData*    m_pData;
 
@@ -284,14 +304,15 @@ namespace cauldron
         Mat4   m_PrevViewMatrix = Mat4::identity();
         Mat4   m_PrevViewProjectionMatrix = Mat4::identity();
 
-        float           m_Speed = 1.f;          // Camera speed modifier to move faster/slower when moving around
         bool            m_Dirty = true;         // Whether or not we need to recalculate everything
         bool            m_ArcBallMode = true;   // Use arc-ball rotation or WASD free cam
+        bool            m_CameraReset = false;  // Used to track if the camera was reset throughout the frame
 
         // Jitter
         Vec2 m_jitterValues     = Vec2(0, 0);
         Mat4 m_ProjJittered     = Mat4::identity();
         Mat4 m_PrevProjJittered = Mat4::identity();
+        static CameraJitterCallback s_pSetJitterCallback;
     };
 
 } // namespace cauldron

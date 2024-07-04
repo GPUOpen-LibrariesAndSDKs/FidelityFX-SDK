@@ -9,16 +9,16 @@
 - `HLSL` `CS_6_0`
 - `GLSL` `version 450`
 
-<h2>Table of Contents</h2>
+<h2>Table of contents</h2>
 
 - [Integration Guidelines](#integration-guidelines)
 - [Under the Hood: Gaussian Blur](#under-the-hood-gaussian-blur)
 - [Further Reading](#further-reading)
 
 
-<h2>Integration Guidelines</h2>
+<h2>Integration guidelines</h2>
 
-<h3>C++ SDK Integration</h3>
+<h3>C++ SDK integration</h3>
 
 The easiest way to integrate the FidelityFX Blur effect is by using the FFX SDK C++ API.
 
@@ -61,7 +61,7 @@ ffxBlurContextDispatch(&blurContext, &desc);
 ffxBlurContextDestroy(&blurContext);
 ```
 
-<h3>Customization via Callbacks & Main Functions</h3>
+<h3>Customization via callbacks and main functions</h3>
 
 Blur provides default implementations for blur kernel weights and I/O functions in [`ffx_blur_callbacks_hlsl.h`](../../sdk/include/FidelityFX/gpu/blur/ffx_blur_callbacks_hlsl.h) and [`ffx_blur_callbacks_glsl.h`](../../sdk/include/FidelityFX/gpu/blur/ffx_blur_callbacks_glsl.h). SDK users can override them to integrate with their own application.
 
@@ -132,7 +132,7 @@ void main()
 }
 ```
 
-<h2>Under the Hood: Gaussian Blur</h2>
+<h2>Under the hood: Gaussian blur</h2>
 
 ![Blur pass](./media/blur/blur-pass.jpg)
 
@@ -166,7 +166,7 @@ where:
  - `Tw : Blur Tile Size X`
  - `Th : Blur Tile Size Y`
 
-<h3>Work Distribution</h3>
+<h3>Work distribution</h3>
 
 Blur works with 8x8 thread groups, covering a 'tile' in the image. 
 
@@ -176,14 +176,14 @@ The work distribution is influenced by the following `#define`s
 
 
 
-<h3>Shared Memory</h3>
+<h3>Shared memory</h3>
 
 | | |
 | :--- | :--- |
 | Blur uses a region of shared memory as a ring-buffer of tiles to store the intermediate results. <br/> The thread group, corresponding to a single tile, is sampling the source image and running a horizontal blur before storing the results in the shared memory. <br/> The thread group later on reads from the shared memory and runs a vertical blur on the intermediate results before storing the fully blurred image in the destination texture. | ![Work distribution visualized](./media/blur/blur-cache.png) |
 
 
-<h2>Further Reading</h2>
+<h2>Further reading</h2>
 
 - GDC 2019: A Blend of GCN Optimization & Color Processing, *Part I: Store Caching in Separable Filters* [PDF View Link](https://gpuopen.com/gdc-presentations/2019/gdc-2019-s5-blend-of-gcn-optimization-and-color-processing.pdf)
 - GDC 2018: Engine Optimization Hot Lap [PPTX Download Link](https://gpuopen.com/wp-content/uploads/2018/05/gdc_2018_sponsored_engine_optimization_hot_lap.pptx)

@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -22,28 +22,34 @@
 
 #pragma once
 
+/// @defgroup SDKSample Samples
+/// This module contains reference documentation for the FidelityFX SDK samples. This includes detailed information on the collection of samples within the FidelityFX SDK as well as documentation for the FidelityFX Cauldron Framework used as a backbone for these samples.
+///
+
+/// @defgroup SDKEffects Effect samples
+/// The FidelityFX SDK contains a number of samples which demonstrate how to use Effects in the SDK. The sub-modules here include reference documentation for each sample.
+///
+/// @ingroup SDKSample
+
 /// @defgroup Cauldron Cauldron
-/// Cauldron Reference Documentation
+/// FidelityFX Cauldron Framework is a library for rapid prototyping using either the Vulkan® or DirectX® 12 APIs. The effects in the FidelityFX SDK are built around the FidelityFX Cauldron Framework.
+///
+/// This module contains reference documentation for the Cauldron framework.
 ///
 /// @ingroup SDKSample
 
 /// @defgroup CauldronCore Core
-/// Cauldron Core Reference Documentation
+/// FidelityFX Cauldron Framework Core reference documentation
 ///
 /// @ingroup Cauldron
 
 /// @defgroup CauldronMisc Miscellaneous
-/// Cauldron Misc Reference Documentation
+/// FidelityFX Cauldron Framework Misc reference documentation
 ///
 /// @ingroup Cauldron
 
 /// @defgroup CauldronRender Render
-/// Cauldron Render Reference Documentation
-///
-/// @ingroup Cauldron
-
-/// @defgroup CauldronShaders Shaders
-/// Cauldron Shaders Reference Documentation
+/// FidelityFX Cauldron Framework Render reference documentation
 ///
 /// @ingroup Cauldron
 
@@ -90,8 +96,8 @@ namespace cauldron
      */
     struct RenderModuleInfo
     {
-        std::string     Name = "";
-        json            InitOptions;
+        std::string     Name = "";      ///< Rendermodule name
+        json            InitOptions;    ///< Initialization options from json to configure the module at init time
     };
 
     /**
@@ -118,6 +124,7 @@ namespace cauldron
         bool RT_1_0 : 1;
         bool RT_1_1 : 1;
         bool FP16 : 1;
+        bool ShaderStorageBufferArrayNonUniformIndexing : 1;
 
         // Presentation
         bool Vsync : 1;
@@ -185,22 +192,33 @@ namespace cauldron
         // List of scenes loaded at startup and content creation callbacks from elsewhere in the framework
         std::vector<Task> ContentCreationTasks = {};
 
-        struct InitContent
+        /**
+         * @struct StartupContentDef
+         *
+         * Represents the content to auto-load as part of the sample startup process.
+         * Also contains initialization values for various frame work components such
+         * as image-based lighting factors and exposure settings.
+         *
+         * @ingroup CauldronCore
+         */
+        struct StartupContentDef
         {
-            std::vector<std::wstring>           Scenes = {};
-            std::wstring                        Camera = L"";
-            float                               SceneExposure = 1.f;
-            std::vector<ParticleSpawnerDesc>    ParticleSpawners = {};
+            std::vector<std::wstring>           Scenes = {};                                                    ///< The gltf scenes to load on startup
+            std::wstring                        Camera = L"";                                                   ///< The camera to set as active at startup
+            float                               SceneExposure = 1.f;                                            ///< Scene exposure setting at startup for content
+            std::vector<ParticleSpawnerDesc>    ParticleSpawners = {};                                          ///< Particle systems to create for the sample
             
-            std::wstring                        DiffuseIBL = L"..\\media\\IBL\\mud_road_puresky_Diffuse.dds";
-            std::wstring                        SpecularIBL = L"..\\media\\IBL\\mud_road_puresky_Specular.dds";
-            std::wstring                        SkyMap = L"..\\media\\IBL\\mud_road_puresky_Specular.dds";
+            std::wstring                        DiffuseIBL = L"..\\media\\IBL\\mud_road_puresky_Diffuse.dds";   ///< Diffuse reflection map to use for sample
+            std::wstring                        SpecularIBL = L"..\\media\\IBL\\mud_road_puresky_Specular.dds"; ///< Specular reflection map to use for sample
+            std::wstring                        SkyMap = L"..\\media\\IBL\\mud_road_puresky_Specular.dds";      ///< Environment map used for rendering
+            float                               IBLFactor   = 0.55f;                                            ///< IBL factor to apply for sample
 
         } StartupContent;
 
         // Perf Output
         uint32_t                      BenchmarkFrameDuration = -1;
         std::wstring                  BenchmarkPath = L"";
+        float                         BenchmarkDeviationFilterFactor = 1.0f;
 
         std::vector<std::pair<std::wstring, std::wstring>> BenchmarkPermutationOptions = {};
 
@@ -243,9 +261,9 @@ namespace cauldron
      */
     struct FrameworkInitParams
     {
-        wchar_t* Name;
-        wchar_t* CmdLine;
-        void*    AdditionalParams;
+        wchar_t* Name;                  ///< Application name to use
+        wchar_t* CmdLine;               ///< Command line parameters from application instance
+        void*    AdditionalParams;      ///< Additional parameters from application instance
     };
 
     /**
@@ -262,9 +280,9 @@ namespace cauldron
         FrameworkImpl(Framework* pFramework) : m_pFramework(pFramework) {}
         virtual ~FrameworkImpl() = default;
 
-        virtual int32_t Init() = 0;
+        virtual void Init() = 0;
         virtual int32_t Run() = 0;
-        virtual int     PreRun() = 0;
+        virtual void    PreRun() = 0;
         virtual void    PostRun() = 0;
         virtual void    Shutdown() = 0;
 
@@ -315,14 +333,14 @@ namespace cauldron
         /**
          * @brief   Framework initialization. Override to modify/override framework initialization.
          */
-        virtual int32_t Init();
+        virtual void Init();
 
         /**
          * @brief   Framework pre-runtime callback. Called before entering main loop 
          *          after framework/sample has been initialized. Override to modify/override 
          *          framework pre-run.
          */
-        virtual int32_t PreRun();
+        virtual void PreRun();
 
         /**
          * @brief   Framework post-runtime callback. Called after exiting main loop
@@ -350,7 +368,7 @@ namespace cauldron
         /**
          * @brief   Internal implementation accessor.
          */
-        const FrameworkInternal* GetInternal() const { return m_pImpl; }
+        const FrameworkInternal* GetImpl() const { return m_pImpl; }
 
         /**
          * @brief   ParseSampleConfig(). Override in sample to modify application configuration.
@@ -371,7 +389,7 @@ namespace cauldron
         /**
          * @brief   DoSampleInit(). Override in sample to modify application initialization.
          */
-        virtual int32_t  DoSampleInit() { return 0; }
+        virtual void DoSampleInit() {}
 
         /**
          * @brief   DoSampleUpdates(). Override in sample to perform additional sample updates.
@@ -525,6 +543,12 @@ namespace cauldron
          */
         const ResolutionInfo& GetResolutionInfo() const { return m_ResolutionInfo; }
 
+        void UpdateRenderResolution(uint32_t renderWidth, uint32_t renderHeight)
+        {
+            m_ResolutionInfo.RenderWidth = renderWidth;
+            m_ResolutionInfo.RenderHeight = renderHeight;
+        }
+
         /**
          * @brief   Enables or disabled upscaling in the application.
          */
@@ -534,6 +558,16 @@ namespace cauldron
          * @brief   Processes application resize. Will initiate resource recreation and binding processes.
          */
         void ResizeEvent();
+
+        /**
+         * @brief   Processes application focus lost event.
+         */
+        void FocusLostEvent();
+
+        /**
+         * @brief   Processes application focus gained event.
+         */
+        void FocusGainedEvent();
 
         /**
          * @brief   Used to set the current internal upsample state.
@@ -549,6 +583,10 @@ namespace cauldron
          * @brief   Query if upsampling has been enabled.
          */
         bool UpscalerEnabled() const { return m_UpscalerEnabled; }
+
+        void EnableFrameInterpolation(bool enabled);
+        
+        bool FrameInterpolationEnabled() const { return m_FrameInterpolationEnabled; }
 
         /**
          * @brief   Overrides the default tonemapper.
@@ -631,6 +669,18 @@ namespace cauldron
          */
         void AddContentCreationTask(Task& task) { m_Config.ContentCreationTasks.push_back(task); }
 
+        /**
+         * @brief   Configures the specified callbacks for runtime shader recompile/reload.
+         *          These functions are called pre and post FFX shader reload.
+         *          The preReloadCallback should destroy the FFX interface and any currently active
+         *          FFX Components' contexts.
+         *          The postReloadCallback should re-initialize the FFX interface and re-create
+         *          all previously active Components' contexts.
+         */
+        void ConfigureRuntimeShaderRecompiler(
+                                      std::function<void(void)> preReloadCallback,
+                                      std::function<void(void)> postReloadCallback);
+
     private:
         friend class FrameworkInternal;
         Framework() = delete;
@@ -642,7 +692,7 @@ namespace cauldron
         int CreateRenderResources();
         void RegisterComponentsAndModules();
         RenderModule* GetRenderModule(uint32_t order);
-        bool AreDependeciesPresent(const std::set<std::string>&, const std::set<std::string>&);
+        bool AreDependenciesPresent(const std::set<std::string>&, const std::set<std::string>&) const;
 
     private:
         FrameworkInternal*                      m_pImpl = nullptr;
@@ -676,11 +726,12 @@ namespace cauldron
         std::wstring            m_ConfigFileName;
         std::wstring            m_CmdLine;
         std::wstring            m_CPUName = L"Not Set";
-        ResolutionInfo          m_ResolutionInfo = { 1920, 1080, 1920, 1080 };
-        ResolutionInfo          m_BenchmarkResolutionInfo = { 1920, 1080, 1920, 1080 };
+        ResolutionInfo          m_ResolutionInfo            = {1920, 1080, 1920, 1080, 1920, 1080};
+        ResolutionInfo          m_BenchmarkResolutionInfo   = {1920, 1080, 1920, 1080, 1920, 1080};
         UpscalerState           m_UpscalingState = UpscalerState::None;
         ResolutionUpdateFunc    m_ResolutionUpdaterFn = nullptr;
         bool                    m_UpscalerEnabled = false;
+        bool                    m_FrameInterpolationEnabled = false;
         std::atomic_bool        m_Running = false;
         FrameCaptureState       m_RenderDocCaptureState = FrameCaptureState::None;
         FrameCaptureState       m_PixCaptureState       = FrameCaptureState::None;
@@ -701,12 +752,17 @@ namespace cauldron
         uint64_t                m_FrameID   = -1;               // Start at -1 so that the first frame is 0 (as we increment on begin frame)
         CommandList*            m_pCmdListForFrame = nullptr;  // Valid between Begin/EndFrame only
 
+        CommandList*                                       m_pDeviceCmdListForFrame = nullptr;    // Valid between Begin/EndFrame only
+        std::vector<CommandList*>                          m_vecCmdListsForFrame;                 // Valid between Begin/EndFrame only
+
         // Profiling/Perf data
         Profiler*               m_pProfiler = nullptr;
         struct PerfStats
         {
             std::wstring             Label;
-            std::chrono::nanoseconds min, max, total;
+            std::chrono::nanoseconds              min, max, total;
+            size_t                                refinedSize;
+            std::vector<std::chrono::nanoseconds> timings;
         };
         std::vector<PerfStats>                             m_CpuPerfStats{}, m_GpuPerfStats{};
         int64_t                                            m_PerfFrameCount{INT64_MIN};

@@ -1,27 +1,27 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 /// @defgroup FfxGPULens FidelityFX Lens
-/// /// FidelityFX Lens GPU documentation
+/// FidelityFX Lens GPU documentation
 ///
 /// @ingroup FfxGPUEffects
 
@@ -106,13 +106,13 @@ FfxFloat16x3 FfxLensSampleWithChromaticAberration(FfxInt32x2 coord, FfxInt32x2 c
     FfxFloat16x2 coordfp16 = FfxFloat16x2(coord);
     FfxFloat16x2 centerCoordfp16 = FfxFloat16x2(centerCoord);
     FfxFloat16x2 redShift        = (coordfp16 - centerCoordfp16) * redMag + centerCoordfp16 + FfxFloat16x2(0.5, 0.5);
-    redShift *= FfxFloat16x2(rcp(FfxFloat16(2.0) * centerCoordfp16));
+    redShift *= FfxFloat16x2(ffxReciprocal(FfxFloat16(2.0) * centerCoordfp16));
     FfxFloat16x2 greenShift = (coordfp16 - centerCoordfp16) * greenMag + centerCoordfp16 + FfxFloat16x2(0.5, 0.5);
-    greenShift *= FfxFloat16x2(rcp(FfxFloat16(2.0) * centerCoordfp16));
+    greenShift *= FfxFloat16x2(ffxReciprocal(FfxFloat16(2.0) * centerCoordfp16));
 
     FfxFloat16 red   = FfxLensSampleR(redShift);
     FfxFloat16 green = FfxLensSampleG(greenShift);
-    FfxFloat16 blue  = FfxLensSampleB(coordfp16 * rcp(FfxFloat16(2.0) * centerCoordfp16));
+    FfxFloat16 blue  = FfxLensSampleB(coordfp16 * ffxReciprocal(FfxFloat16(2.0) * centerCoordfp16));
 
     return FfxFloat16x3(red, green, blue);
 }
@@ -204,13 +204,13 @@ FfxFloat32x2 FfxLensGetRGMag(FfxFloat32 chromAbIntensity)
 FfxFloat32x3 FfxLensSampleWithChromaticAberration(FfxInt32x2 coord, FfxInt32x2 centerCoord, FfxFloat32 redMag, FfxFloat32 greenMag)
 {
     FfxFloat32x2 redShift = (coord - centerCoord) * redMag + centerCoord + 0.5;
-    redShift *= rcp(2 * centerCoord);
+    redShift *= ffxReciprocal(2 * centerCoord);
     FfxFloat32x2 greenShift = (coord - centerCoord) * greenMag + centerCoord + 0.5;
-    greenShift *= rcp(2 * centerCoord);
+    greenShift *= ffxReciprocal(2 * centerCoord);
 
     FfxFloat32 red   = FfxLensSampleR(redShift);
     FfxFloat32 green = FfxLensSampleG(greenShift);
-    FfxFloat32 blue  = FfxLensSampleB(coord * rcp(2 * centerCoord));
+    FfxFloat32 blue  = FfxLensSampleB(coord * ffxReciprocal(2 * centerCoord));
 
     return FfxFloat32x3(red, green, blue);
 }

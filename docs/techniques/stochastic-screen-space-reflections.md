@@ -36,8 +36,7 @@ AMD FidelityFX Stochastic Screen Space Reflections (SSSR) is a highly optimized 
 
 At its core, the algorithm uses a cutting-edge, hierarchical depth buffer traversal kernel that ray marches through a depth surface - originally rendered from the point of view of the main camera - and processes the results into a signal which can be composited as a reflection. SSSR accounts for the roughness of the surface, which contains the reflections. By analysing the roughness, SSSR can adjust the traversal rate from full-rate for mirror reflections, all the way down to quarter-rate for more glossy reflections.
 
-![alt text](media/stochastic-screen-space-reflections/algorithm-overview.png "A diagram showing the main passes of the SSSR algorithm")
-
+![invert](media/stochastic-screen-space-reflections/algorithm-overview.png "A diagram showing the main passes of the SSSR algorithm")
 
 <h2>Supported platforms</h2>
 
@@ -74,9 +73,17 @@ Note that the GLSL compiler must also support `GL_GOOGLE_include_directive` for 
 
 To use SSSR you should follow the steps below:
 
-1. Double click [`BuildAllNativeEffectsSolution.bat`](../../BuildAllNativeEffectsSolution.bat) in the [`samples`](../../samples) directory.
+1. Generate Visual Studio solution:
 
-2. Go to the `build` directory, open the `FidelityFXparty Native SDK.sln` solution and build the solution matching your API.
+    ```bash
+    > <installation path>\BuildSamplesSolution.bat
+    ```
+	
+	The batch file will inquire if the solution should build the SDK as a DLL (builds as a statically linked library if no ('n') is provided) and which samples should be included. Please use '1' to build a solution with all samples included or '15' to only include the SSSR sample.
+  
+    This will generate a `build\` directory where you will find the solution for the SDK samples (`FidelityFX SDK Samples.sln`).
+
+2. Go to the `build` directory, open the `FidelityFX SDK Samples.sln` solution and build the solution matching your API.
 
 3. Copy the API libraries `ffx_sssr_x64.lib` and `ffx_denoiser_x64.lib` from `bin/ffx_sdk` into the folder containing a folder in your project which contains third-party libraries.
 
@@ -98,7 +105,7 @@ To use SSSR you should follow the steps below:
 
 <h2>Integration guidelines</h2>
 
-<h3>Input Resources</h3>
+<h3>Input resources</h3>
 
 The following table enumerates all external inputs required by either SSSR or the FidelityFX Denoiser.
 
@@ -191,7 +198,7 @@ The SSSR algorithm is implemented in a series of stages, which are as follows:
 
 The hierarchical depth generation pass makes use of the [FidelityFX Single Pass Downsampler](../techniques/single-pass-downsampler.md) (SPD) to generate a pyramid of mip maps from the scene depth provided by the application. This hierarchical depth buffer is used by SSSR to accelerate the raymarching when the algorithm detects that a coarser mip can be used. 
 
-<h5>Resource Inputs</h5>
+<h5>Resource inputs</h5>
 
 The following table contains all resources consumed by the [Hierarchical depth generation](#hierarchical-depth-generation) stage.
 
@@ -212,7 +219,7 @@ The following table contains all resources produced or modified by the [Hierarch
 
 The tile classification pass scans the scene to detect which pixels require shooting rays and applying denoising. For the pixels that are too rough and don't require raymarching it will evaluate lighting using the fallback environment map provided. Finally, this pass also extracts the roughness from the material parameters texture to use in the next passes.
 
-<h5>Resource Inputs</h5>
+<h5>Resource inputs</h5>
 
 The following table contains all resources consumed by the [Tile Classification](#tile-classification) stage.
 
@@ -251,7 +258,7 @@ The ray counter buffer stores the number of rays to be shot by the [Intersection
 
 The blue noise texture generation stage generates a 128x128 blue noise texture every frame based on the frame index and some precomputed textures. 
 
-<h5>Resource Inputs</h5>
+<h5>Resource inputs</h5>
 
 The following table contains all resources consumed by the [Blue noise texture generation](#blue-noise-texture-generation) stage.
 
@@ -273,7 +280,7 @@ The following table contains all resources produced or modified by the [Blue noi
 
 The indirect argument generation pass makes use of the ray counter buffer filled by the [Tile Classification](#tile-classification) stage to generate indirect dispatch arguments for the [Intersection Pass](intersection-pass) and the Denoising pass.
 
-<h5>Resource Inputs</h5>
+<h5>Resource inputs</h5>
 
 The following table contains all resources consumed by the [Indirect arguments generation](#indirect-arguments-generation) stage.
 
@@ -293,7 +300,7 @@ The following table contains all resources produced or modified by the [Indirect
 
 The intersection pass does the actual depth buffer ray marching and radiance evaluation. This is the last pass of the algorithm pre-denoising and it outputs the reflections buffer to be composited on top of the direct lighting by the app.
 
-<h5>Resource Inputs</h5>
+<h5>Resource inputs</h5>
 
 The following table contains all resources consumed by the [Intersection](#intersection) stage.
 
@@ -343,12 +350,15 @@ To build the SSSR sample, please follow the following instructions:
   - [Git 2.32.0](https://git-scm.com/downloads)
   - [Vulkan SDK](https://www.lunarg.com/vulkan-sdk/)
 
-2) Generate the solutions:
+2) Generate Visual Studio solution:
 
-```
-> cd samples
-> BuildAllNativeEffectsSolution.bat
-```
+    ```bash
+    > <installation path>\BuildSamplesSolution.bat
+    ```
+	
+	The batch file will inquire if the solution should build the SDK as a DLL (builds as a statically linked library if no ('n') is provided) and which samples should be included. Please use '1' to build a solution with all samples included or provide the list of samples to be included (using the corresponding number of the samples with spaces in between).
+  
+    This will generate a `build\` directory where you will find the solution for the SDK samples (`FidelityFX SDK Samples.sln`).
 
 3) Open the solution from the `build` directory, compile and run.
 

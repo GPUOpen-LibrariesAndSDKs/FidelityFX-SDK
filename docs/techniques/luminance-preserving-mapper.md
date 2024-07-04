@@ -6,11 +6,11 @@
 
 The FidelityFX Luminance Preserving Mapper (LPM) is a tone mapping and gamut mapping solution for high dynamic range (HDR) and wide gamut content. FidelityFX LPM tone maps the luminance (luma) of the red-green-blue (RGB) pixel instead of the color itself, but ensures sure that the `tonemap(luma(RGB))` would be very similar to the `luma(tonemap(RGB))`, that is to say it preserves the luminance information of the pixel.
 
-<h3>FidelityFX LPM Off</h3>
+<h3>FidelityFX LPM off</h3>
 
 ![NoLPM](media/lpm/NoLPM.jpg)
 
-<h2>FidelityFX LPM On</h2>
+<h2>FidelityFX LPM on</h2>
 
 ![LPM](media/lpm/LPM.jpg)
 

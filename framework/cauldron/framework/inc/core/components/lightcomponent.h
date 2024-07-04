@@ -1,21 +1,25 @@
-// AMD Cauldron code
+// This file is part of the FidelityFX SDK.
 //
-// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sub-license, and / or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 #pragma once
 
 #include "core/component.h"
@@ -39,7 +43,7 @@ namespace cauldron
     class LightComponentMgr : public ComponentMgr
     {
     public:
-        static const wchar_t* s_ComponentName;
+        static const wchar_t* s_ComponentName;          ///< Component name
 
     public:
 
@@ -102,7 +106,7 @@ namespace cauldron
     };
 
     /**
-     * @struct AnimationComponentData
+     * @struct LightComponentData
      *
      * Initialization data structure for the <c><i>LightComponent</i></c>.
      *
@@ -116,7 +120,7 @@ namespace cauldron
         float                SpotOuterConeAngle      = 1.0f;                    ///< Outer cone angle for spotlight representation
         float                Intensity               = 1.0f;                    ///< Light intensity
         float                Range                   = -1.f;                    ///< Light range (-1 indicates infinite point source limited by intensity)
-        float                DepthBias               = 70.f / 100000.f;         ///< Depth bias to apply to light shadow maps
+        float                DepthBias               = 0.005f;                     ///< Depth bias to apply to light shadow maps
         int32_t              ShadowResolution        = 1024;                    ///< Light shadow map resolution
         std::vector<int>     ShadowMapIndex          = {-1};                    ///< Light shadow map index from the shadow pool
         std::vector<int32_t> ShadowMapCellIndex      = {-1};                    ///< Light shadow map cell index from the shadow pool

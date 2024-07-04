@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C)2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #include "ffx_cacao_resources.h"
@@ -31,12 +31,10 @@
 #ifdef __hlsl_dx_compiler
 #pragma dxc diagnostic pop
 #endif //__hlsl_dx_compiler
-#endif // #if defined(FFX_GPU)
 
-#if defined(FFX_GPU)
 #ifndef FFX_PREFER_WAVE64
 #define FFX_PREFER_WAVE64
-#endif // #if defined(FFX_GPU)
+#endif // #ifndef FFX_PREFER_WAVE64
 
 #if defined(FFX_GPU)
 #pragma warning(disable: 3205)  // conversion from larger type to smaller
@@ -435,17 +433,41 @@ float4x4                    NormalsWorldToViewspaceMatrix(){
 #define FFX_CACAO_ROOTSIG_STRINGIFY(p) FFX_CACAO_ROOTSIG_STR(p)
 #define FFX_CACAO_ROOTSIG_STR(p) #p
 #define FFX_CACAO_ROOTSIG [RootSignature( "DescriptorTable(UAV(u0, numDescriptors = " FFX_CACAO_ROOTSIG_STRINGIFY(FFX_CACAO_RESOURCE_IDENTIFIER_COUNT) ")), " \
-                                    "DescriptorTable(SRV(t0, numDescriptors = " FFX_CACAO_ROOTSIG_STRINGIFY(FFX_CACAO_RESOURCE_IDENTIFIER_COUNT) ")), " \
-                                    "RootConstants(num32BitConstants=" FFX_CACAO_ROOTSIG_STRINGIFY(FFX_CACAO_CONSTANT_BUFFER_1_SIZE) ", b0) ")] \
+                                            "DescriptorTable(SRV(t0, numDescriptors = " FFX_CACAO_ROOTSIG_STRINGIFY(FFX_CACAO_RESOURCE_IDENTIFIER_COUNT) ")), " \
+                                            "CBV(b0), " \
+                                            "StaticSampler(s0, filter = FILTER_MIN_MAG_MIP_POINT, " \
+                                                              "addressU = TEXTURE_ADDRESS_CLAMP, " \
+                                                              "addressV = TEXTURE_ADDRESS_CLAMP, " \
+                                                              "addressW = TEXTURE_ADDRESS_CLAMP, " \
+                                                              "comparisonFunc = COMPARISON_NEVER, " \
+                                                              "borderColor = STATIC_BORDER_COLOR_TRANSPARENT_BLACK), " \
+                                            "StaticSampler(s1, filter = FILTER_MIN_MAG_MIP_POINT, " \
+                                                              "addressU = TEXTURE_ADDRESS_MIRROR, " \
+                                                              "addressV = TEXTURE_ADDRESS_MIRROR, " \
+                                                              "addressW = TEXTURE_ADDRESS_MIRROR, " \
+                                                              "comparisonFunc = COMPARISON_NEVER, " \
+                                                              "borderColor = STATIC_BORDER_COLOR_TRANSPARENT_BLACK), " \
+                                            "StaticSampler(s2, filter = FILTER_MIN_MAG_MIP_LINEAR, " \
+                                                              "addressU = TEXTURE_ADDRESS_CLAMP, " \
+                                                              "addressV = TEXTURE_ADDRESS_CLAMP, " \
+                                                              "addressW = TEXTURE_ADDRESS_CLAMP, " \
+                                                              "comparisonFunc = COMPARISON_NEVER, " \
+                                                              "borderColor = STATIC_BORDER_COLOR_TRANSPARENT_BLACK), " \
+                                            "StaticSampler(s3, filter = FILTER_MIN_MAG_MIP_POINT, " \
+                                                              "addressU = TEXTURE_ADDRESS_CLAMP, " \
+                                                              "addressV = TEXTURE_ADDRESS_CLAMP, " \
+                                                              "addressW = TEXTURE_ADDRESS_CLAMP, " \
+                                                              "comparisonFunc = COMPARISON_NEVER, " \
+                                                              "borderColor = STATIC_BORDER_COLOR_TRANSPARENT_BLACK)" )]
 
 #define FFX_CACAO_CB2_ROOTSIG [RootSignature( "DescriptorTable(UAV(u0, numDescriptors = " FFX_CACAO_ROOTSIG_STRINGIFY(FFX_CACAO_RESOURCE_IDENTIFIER_COUNT) ")), " \
-                                    "DescriptorTable(SRV(t0, numDescriptors = " FFX_CACAO_ROOTSIG_STRINGIFY(FFX_CACAO_RESOURCE_IDENTIFIER_COUNT) ")), " \
-                                    "RootConstants(num32BitConstants=" FFX_CACAO_ROOTSIG_STRINGIFY(FFX_CACAO_CONSTANT_BUFFER_1_SIZE) ", b0), " \
+                                                "DescriptorTable(SRV(t0, numDescriptors = " FFX_CACAO_ROOTSIG_STRINGIFY(FFX_CACAO_RESOURCE_IDENTIFIER_COUNT) ")), " \
+                                                "CBV(b0)" )]
 
 #define FFX_CACAO_CB_GENERATE_REACTIVE_ROOTSIG [RootSignature( "DescriptorTable(UAV(u0, numDescriptors = " FFX_CACAO_ROOTSIG_STRINGIFY(FFX_CACAO_RESOURCE_IDENTIFIER_COUNT) ")), " \
-                                    "DescriptorTable(SRV(t0, numDescriptors = " FFX_CACAO_ROOTSIG_STRINGIFY(FFX_CACAO_RESOURCE_IDENTIFIER_COUNT) ")), " \
-                                    "RootConstants(num32BitConstants=" FFX_CACAO_ROOTSIG_STRINGIFY(FFX_CACAO_CONSTANT_BUFFER_1_SIZE) ", b0), " \
-                                    "RootConstants(num32BitConstants=" FFX_CACAO_ROOTSIG_STRINGIFY(FFX_CACAO_CONSTANT_BUFFER_GENERATE_REACTIVE_SIZE) ", b1), ")] \
+                                                                "DescriptorTable(SRV(t0, numDescriptors = " FFX_CACAO_ROOTSIG_STRINGIFY(FFX_CACAO_RESOURCE_IDENTIFIER_COUNT) ")), " \
+                                                                "CBV(b0), " \
+                                                                "CBV(b1)")]
 
 #if defined(FFX_CACAO_EMBED_ROOTSIG)
 #define FFX_CACAO_EMBED_ROOTSIG_CONTENT FFX_CACAO_ROOTSIG
@@ -523,361 +545,308 @@ SamplerState              g_RealPointClampSampler    : register(s4);
 // =============================================================================
 // Clear Load Counter
 
+#if defined CACAO_BIND_UAV_LOAD_COUNTER
 void FFX_CACAO_ClearLoadCounter_SetLoadCounter(FfxUInt32 val)
 {
-#if defined CACAO_BIND_UAV_LOAD_COUNTER
     g_RwLoadCounter[0] = val;
-#endif
 }
+#endif
 
 // =============================================================================
 // Edge Sensitive Blur
-
+#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 FfxFloat32x2 FFX_CACAO_EdgeSensitiveBlur_SampleInputOffset(FfxFloat32x2 uv, FfxInt32x2 offset, FfxUInt32 layerId)
 {
-#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
     return g_SsaoBufferPing.SampleLevel(g_PointMirrorSampler, FfxFloat32x3(uv, FfxFloat32(layerId)), 0.0f, offset);
-#else
-    return FfxFloat32x2(0, 0);
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 
+#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 FfxFloat32x2 FFX_CACAO_EdgeSensitiveBlur_SampleInput(FfxFloat32x2 uv, FfxUInt32 layerId)
 {
-#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
     return g_SsaoBufferPing.SampleLevel(g_PointMirrorSampler, FfxFloat32x3(uv, FfxFloat32(layerId)), 0.0f);
-#else
-    return FfxFloat32x2(0, 0);
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 
+#if defined CACAO_BIND_UAV_SSAO_BUFFER_PONG
 void FFX_CACAO_EdgeSensitiveBlur_StoreOutput(FfxUInt32x2 coord, FfxFloat32x2 value, FfxUInt32 layerId)
 {
-#if defined CACAO_BIND_UAV_SSAO_BUFFER_PONG
     g_RwSsaoBufferPong[FfxInt32x3(coord, layerId)] = value;
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_SSAO_BUFFER_PONG
 
 // =============================================================================
 // SSAO Generation
 
+#if defined CACAO_BIND_SRV_DEINTERLEAVED_DEPTHS
 FfxFloat32 FFX_CACAO_SSAOGeneration_SampleViewspaceDepthMip(FfxFloat32x2 uv, FfxFloat32 mip, FfxUInt32 layerId)
 {
-#if defined CACAO_BIND_SRV_DEINTERLEAVED_DEPTHS
     return g_DeinterleavedDepth.SampleLevel(g_ViewspaceDepthTapSampler, FfxFloat32x3(uv, FfxFloat32(layerId)), mip);
-#else
-    return 0;
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_DEINTERLEAVED_DEPTHS
 
+#if defined CACAO_BIND_SRV_DEINTERLEAVED_DEPTHS
 FfxFloat32x4 FFX_CACAO_SSAOGeneration_GatherViewspaceDepthOffset(FfxFloat32x2 uv, FfxInt32x2 offset, FfxUInt32 layerId)
 {
-#if defined CACAO_BIND_SRV_DEINTERLEAVED_DEPTHS
     return g_DeinterleavedDepth.GatherRed(g_PointMirrorSampler, FfxFloat32x3(uv, FfxFloat32(layerId)), offset);
-#else
-    return FfxFloat32x4(0, 0, 0, 0);
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_DEINTERLEAVED_DEPTHS
 
+#if defined CACAO_BIND_SRV_LOAD_COUNTER
 FfxUInt32 FFX_CACAO_SSAOGeneration_GetLoadCounter()
 {
-#if defined CACAO_BIND_SRV_LOAD_COUNTER
     return g_LoadCounter[0];
-#else
-    return 0;
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_LOAD_COUNTER
 
+#if defined CACAO_BIND_SRV_IMPORTANCE_MAP
 FfxFloat32 FFX_CACAO_SSAOGeneration_SampleImportance(FfxFloat32x2 uv)
 {
-#if defined CACAO_BIND_SRV_IMPORTANCE_MAP
     return g_ImportanceMap.SampleLevel(g_LinearClampSampler, uv, 0.0f);
-#else
-    return 0;
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_IMPORTANCE_MAP
 
+#if defined CACAO_BIND_SRV_SSAO_BUFFER_PONG
 FfxFloat32x2 FFX_CACAO_SSAOGeneration_LoadBasePassSSAOPass(FfxUInt32x2 coord, FfxUInt32 pass)
 {
-#if defined CACAO_BIND_SRV_SSAO_BUFFER_PONG
     return g_SsaoBufferPong.Load(FfxInt32x4(coord, pass, 0)).xy;
-#else
-    return FfxFloat32x2(0, 0);
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_SSAO_BUFFER_PONG
 
+#if defined CACAO_BIND_SRV_DEINTERLEAVED_NORMALS
 FfxFloat32x3 FFX_CACAO_SSAOGeneration_GetNormalPass(FfxUInt32x2 coord, FfxUInt32 pass)
 {
-#if defined CACAO_BIND_SRV_DEINTERLEAVED_NORMALS
     return g_DeinterleavedNormals[FfxInt32x3(coord, pass)].xyz;
-#else
-    return FfxFloat32x3(0, 0, 0);
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_DEINTERLEAVED_NORMALS
 
+#if defined CACAO_BIND_UAV_SSAO_BUFFER_PING
 void FFX_CACAO_SSAOGeneration_StoreOutput(FfxUInt32x2 coord, FfxFloat32x2 val, FfxUInt32 layerId)
 {
-#if defined CACAO_BIND_UAV_SSAO_BUFFER_PING
     g_RwSsaoBufferPing[FfxInt32x3(coord, layerId)] = val;
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_SSAO_BUFFER_PING
 
 // ============================================================================
 // Apply
 
 // This resource can be ssao ping or pong, handled by schedule Dispatch
-
+#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 FfxFloat32 FFX_CACAO_Apply_SampleSSAOUVPass(FfxFloat32x2 uv, FfxUInt32 pass)
 {
-#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
     return g_SsaoBufferPing.SampleLevel(g_LinearClampSampler, FfxFloat32x3(uv, pass), 0.0f).x;
-#else
-    return 0;
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 
+#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 FfxFloat32x2 FFX_CACAO_Apply_LoadSSAOPass(FfxUInt32x2 coord, FfxUInt32 pass)
 {
-#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
     return g_SsaoBufferPing.Load(FfxInt32x4(coord, pass, 0));
-#else
-    return FfxFloat32x2(0, 0);
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 
+#if defined CACAO_BIND_UAV_OUTPUT
 void FFX_CACAO_Apply_StoreOutput(FfxUInt32x2 coord, FfxFloat32 val)
 {
-#if defined CACAO_BIND_UAV_OUTPUT
     g_RwOutput[coord].r = val;
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_OUTPUT
 
 // =============================================================================
 // Prepare
-
+#if defined CACAO_BIND_SRV_DEPTH_IN
 FfxFloat32x4 FFX_CACAO_Prepare_SampleDepthOffsets(FfxFloat32x2 uv)
 {
-#if defined CACAO_BIND_SRV_DEPTH_IN
     FfxFloat32x4 samples;
     samples.x = g_DepthIn.SampleLevel(g_PointClampSampler, uv, 0.0f, FfxInt32x2(0, 2));
     samples.y = g_DepthIn.SampleLevel(g_PointClampSampler, uv, 0.0f, FfxInt32x2(2, 2));
     samples.z = g_DepthIn.SampleLevel(g_PointClampSampler, uv, 0.0f, FfxInt32x2(2, 0));
     samples.w = g_DepthIn.SampleLevel(g_PointClampSampler, uv, 0.0f, FfxInt32x2(0, 0));
     return samples;
-#else
-    return FfxFloat32x4(0, 0, 0, 0);
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_DEPTH_IN
 
+#if defined CACAO_BIND_SRV_DEPTH_IN
 FfxFloat32x4 FFX_CACAO_Prepare_GatherDepth(FfxFloat32x2 uv)
 {
-#if defined CACAO_BIND_SRV_DEPTH_IN
     return g_DepthIn.GatherRed(g_PointClampSampler, uv);
-#else
-    return FfxFloat32x4(0, 0, 0, 0);
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_DEPTH_IN
 
+#if defined CACAO_BIND_SRV_DEPTH_IN
 FfxFloat32 FFX_CACAO_Prepare_LoadDepth(FfxUInt32x2 coord)
 {
-#if defined CACAO_BIND_SRV_DEPTH_IN
     return g_DepthIn.Load(FfxInt32x3(coord, 0));
-#else
-    return 0;
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_DEPTH_IN
 
+#if defined CACAO_BIND_SRV_DEPTH_IN
 FfxFloat32 FFX_CACAO_Prepare_LoadDepthOffset(FfxUInt32x2 coord, FfxInt32x2 offset)
 {
-#if defined CACAO_BIND_SRV_DEPTH_IN
     return g_DepthIn.Load(FfxInt32x3(coord, 0), offset);
-#else
-    return 0;
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_DEPTH_IN
 
+#if defined CACAO_BIND_SRV_DEPTH_IN
 FfxFloat32x4 FFX_CACAO_Prepare_GatherDepthOffset(FfxFloat32x2 uv, FfxInt32x2 offset)
 {
-#if defined CACAO_BIND_SRV_DEPTH_IN
     return g_DepthIn.GatherRed(g_PointClampSampler, uv, offset);
-#else
-    return FfxFloat32x4(0, 0, 0, 0);
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_DEPTH_IN
 
+#if defined CACAO_BIND_SRV_NORMAL_IN
 FfxFloat32x3 FFX_CACAO_Prepare_LoadNormal(FfxUInt32x2 coord)
 {
-#if defined CACAO_BIND_SRV_NORMAL_IN
     FfxFloat32x3 normal = g_NormalIn.Load(FfxInt32x3(coord, 0)).xyz;
     normal = normal * NormalsUnpackMul().xxx + NormalsUnpackAdd().xxx;
     normal = mul(normal, (float3x3)NormalsWorldToViewspaceMatrix()).xyz;
     // normal = normalize(normal);
     return normal;
-#else
-    return FfxFloat32x3(0, 0, 0);
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_NORMAL_IN
 
+#if defined CACAO_BIND_UAV_DEPTH_DOWNSAMPLED_MIPS
 void FFX_CACAO_Prepare_StoreDepthMip0(FfxUInt32x2 coord, FfxUInt32 index, FfxFloat32 val)
 {
-#if defined CACAO_BIND_UAV_DEPTH_DOWNSAMPLED_MIPS
     g_RwDepthMips[0][FfxInt32x3(coord, index)] = val;
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_DEPTH_DOWNSAMPLED_MIPS
 
+#if defined CACAO_BIND_UAV_DEPTH_DOWNSAMPLED_MIPS
 void FFX_CACAO_Prepare_StoreDepthMip1(FfxUInt32x2 coord, FfxUInt32 index, FfxFloat32 val)
 {
-#if defined CACAO_BIND_UAV_DEPTH_DOWNSAMPLED_MIPS
     g_RwDepthMips[1][FfxInt32x3(coord, index)] = val;
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_DEPTH_DOWNSAMPLED_MIPS
 
+#if defined CACAO_BIND_UAV_DEPTH_DOWNSAMPLED_MIPS
 void FFX_CACAO_Prepare_StoreDepthMip2(FfxUInt32x2 coord, FfxUInt32 index, FfxFloat32 val)
 {
-#if defined CACAO_BIND_UAV_DEPTH_DOWNSAMPLED_MIPS
     g_RwDepthMips[2][FfxInt32x3(coord, index)] = val;
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_DEPTH_DOWNSAMPLED_MIPS
 
+#if defined CACAO_BIND_UAV_DEPTH_DOWNSAMPLED_MIPS
 void FFX_CACAO_Prepare_StoreDepthMip3(FfxUInt32x2 coord, FfxUInt32 index, FfxFloat32 val)
 {
-#if defined CACAO_BIND_UAV_DEPTH_DOWNSAMPLED_MIPS
     g_RwDepthMips[3][FfxInt32x3(coord, index)] = val;
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_DEPTH_DOWNSAMPLED_MIPS
 
+#if defined CACAO_BIND_UAV_DEINTERLEAVED_DEPTHS
 void FFX_CACAO_Prepare_StoreDepth(FfxUInt32x2 coord, FfxUInt32 index, FfxFloat32 val)
 {
-#if defined CACAO_BIND_UAV_DEINTERLEAVED_DEPTHS
     g_RwDeinterleavedDepth[FfxInt32x3(coord, index)] = val;
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_DEINTERLEAVED_DEPTHS
 
+#if defined CACAO_BIND_UAV_DEINTERLEAVED_DEPTHS
 void FFX_CACAO_Prepare_StoreNormal(FfxUInt32x2 coord, FfxUInt32 index, FfxFloat32x3 normal)
 {
-#if defined CACAO_BIND_UAV_DEINTERLEAVED_DEPTHS
     g_RwDeinterleavedNormals[FfxInt32x3(coord, index)] = FfxFloat32x4(normal, 1.0f);
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_DEINTERLEAVED_DEPTHS
 
 // =============================================================================
 // Importance Map
-
+#if defined CACAO_BIND_SRV_SSAO_BUFFER_PONG
 FfxFloat32x4 FFX_CACAO_Importance_GatherSSAO(FfxFloat32x2 uv, FfxUInt32 index)
 {
-#if defined CACAO_BIND_SRV_SSAO_BUFFER_PONG
     return g_SsaoBufferPong.GatherRed(g_PointClampSampler, FfxFloat32x3(uv, index));
-#else
-    return FfxFloat32x4(0, 0, 0, 0);
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_SSAO_BUFFER_PONG
 
+#if defined CACAO_BIND_UAV_IMPORTANCE_MAP
 void FFX_CACAO_Importance_StoreImportance(FfxUInt32x2 coord, FfxFloat32 val)
 {
-#if defined CACAO_BIND_UAV_IMPORTANCE_MAP
     g_RwImportanceMap[coord] = val;
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_IMPORTANCE_MAP
 
+#if defined CACAO_BIND_SRV_IMPORTANCE_MAP
 FfxFloat32 FFX_CACAO_Importance_SampleImportanceA(FfxFloat32x2 uv)
 {
-#if defined CACAO_BIND_SRV_IMPORTANCE_MAP
     return g_ImportanceMap.SampleLevel(g_LinearClampSampler, uv, 0.0f);
-#else
-    return 0;
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_IMPORTANCE_MAP
 
+#if defined CACAO_BIND_UAV_IMPORTANCE_MAP_PONG
 void FFX_CACAO_Importance_StoreImportanceA(FfxUInt32x2 coord, FfxFloat32 val)
 {
-#if defined CACAO_BIND_UAV_IMPORTANCE_MAP_PONG
     g_RwImportanceMapPong[coord] = val;
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_IMPORTANCE_MAP_PONG
 
+#if defined CACAO_BIND_SRV_IMPORTANCE_MAP_PONG
 FfxFloat32 FFX_CACAO_Importance_SampleImportanceB(FfxFloat32x2 uv)
 {
-#if defined CACAO_BIND_SRV_IMPORTANCE_MAP_PONG
     return g_ImportanceMapPong.SampleLevel(g_LinearClampSampler, uv, 0.0f);
-#else
-    return 0;
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_IMPORTANCE_MAP_PONG
 
+#if defined CACAO_BIND_UAV_IMPORTANCE_MAP
 void FFX_CACAO_Importance_StoreImportanceB(FfxUInt32x2 coord, FfxFloat32 val)
 {
-#if defined CACAO_BIND_UAV_IMPORTANCE_MAP
     g_RwImportanceMap[coord] = val;
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_IMPORTANCE_MAP
 
+#if defined CACAO_BIND_UAV_LOAD_COUNTER
 void FFX_CACAO_Importance_LoadCounterInterlockedAdd(FfxUInt32 val)
 {
-#if defined CACAO_BIND_UAV_LOAD_COUNTER
     InterlockedAdd(g_RwLoadCounter[0], val);
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_LOAD_COUNTER
 
 // =============================================================================
 // Bilateral Upscale
 
 // These resources ping/pong which is handled by schedule dispatch
-
+#if defined CACAO_BIND_UAV_OUTPUT
 void FFX_CACAO_BilateralUpscale_StoreOutput(FfxUInt32x2 coord, FfxInt32x2 offset, FfxFloat32 val)
 {
-#if defined CACAO_BIND_UAV_OUTPUT
     g_RwOutput[coord + offset].r = val;
-#endif
 }
+#endif // #if defined CACAO_BIND_UAV_OUTPUT
 
+#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 FfxFloat32 FFX_CACAO_BilateralUpscale_SampleSSAOLinear(FfxFloat32x2 uv, FfxUInt32 index)
 {
-#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
     return g_SsaoBufferPing.SampleLevel(g_LinearClampSampler, FfxFloat32x3(uv, index), 0).x;
-#else
-    return 0;
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 
+#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 FfxFloat32 FFX_CACAO_BilateralUpscale_SampleSSAOPoint(FfxFloat32x2 uv, FfxUInt32 index)
 {
-#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
     return g_SsaoBufferPing.SampleLevel(g_PointClampSampler, FfxFloat32x3(uv, index), 0).x;
-#else
-    return 0;
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 
+#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 FfxFloat32x2 FFX_CACAO_BilateralUpscale_LoadSSAO(FfxUInt32x2 coord, FfxUInt32 index)
 {
-#if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
     return g_SsaoBufferPing.Load(FfxInt32x4(coord, index, 0));
-#else
-    return 0;
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_SSAO_BUFFER_PING
 
+#if defined CACAO_BIND_SRV_DEPTH_IN
 FfxFloat32x4 FFX_CACAO_BilateralUpscale_LoadDepths(FfxUInt32x2 coord)
 {
     FfxFloat32x4 depths;
-#if defined CACAO_BIND_SRV_DEPTH_IN
     depths.x = g_DepthIn.Load(FfxInt32x3(coord, 0), FfxInt32x2(0, 0));
     depths.y = g_DepthIn.Load(FfxInt32x3(coord, 0), FfxInt32x2(1, 0));
     depths.z = g_DepthIn.Load(FfxInt32x3(coord, 0), FfxInt32x2(0, 1));
     depths.w = g_DepthIn.Load(FfxInt32x3(coord, 0), FfxInt32x2(1, 1));
     return depths;
-#else
-    return FfxFloat32x4(0, 0, 0, 0);
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_DEPTH_IN
 
+#if defined CACAO_BIND_SRV_DEINTERLEAVED_DEPTHS
 FfxFloat32 FFX_CACAO_BilateralUpscale_LoadDownscaledDepth(FfxUInt32x2 coord, FfxUInt32 index)
 {
-#if defined CACAO_BIND_SRV_DEINTERLEAVED_DEPTHS
     return g_DeinterleavedDepth.Load(FfxInt32x4(coord, index, 0));
-#else
-    return 0;
-#endif
 }
+#endif // #if defined CACAO_BIND_SRV_DEINTERLEAVED_DEPTHS
 
 #endif // #if defined(FFX_GPU)

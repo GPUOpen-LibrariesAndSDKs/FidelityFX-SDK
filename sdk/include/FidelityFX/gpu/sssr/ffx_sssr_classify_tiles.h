@@ -1,27 +1,26 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #include "ffx_sssr_common.h"
-#include "../reflection-dnsr/ffx_denoiser_reflections_common.h"
 
 FfxBoolean IsBaseRay(FfxUInt32x2 dispatch_thread_id, FfxUInt32 samples_per_quad) {
     switch (samples_per_quad) {
@@ -40,7 +39,7 @@ void ClassifyTiles(FfxUInt32x2 dispatch_thread_id, FfxUInt32x2 group_thread_id, 
 {
     g_TileCount = 0;
 
-    FfxBoolean is_first_lane_of_wave = AWaveIsFirstLane();
+    FfxBoolean is_first_lane_of_wave = ffxWaveIsFirstLane();
 
     // First we figure out on a per thread basis if we need to shoot a reflection ray.
     // Disable offscreen pixels
@@ -48,11 +47,11 @@ void ClassifyTiles(FfxUInt32x2 dispatch_thread_id, FfxUInt32x2 group_thread_id, 
 
     // Dont shoot a ray on very rough surfaces.
     FfxBoolean is_reflective_surface = IsReflectiveSurface(dispatch_thread_id, roughness);
-    FfxBoolean is_glossy_reflection = FFX_DNSR_Reflections_IsGlossyReflection(roughness);
+    FfxBoolean is_glossy_reflection = IsGlossyReflection(roughness);
     needs_ray = needs_ray && is_glossy_reflection && is_reflective_surface;
 
     // Also we dont need to run the denoiser on mirror reflections.
-    FfxBoolean needs_denoiser = needs_ray && !FFX_DNSR_Reflections_IsMirrorReflection(roughness);
+    FfxBoolean needs_denoiser = needs_ray && !IsMirrorReflection(roughness);
 
     // Decide which ray to keep
     FfxBoolean is_base_ray = IsBaseRay(dispatch_thread_id, SamplesPerQuad());
@@ -63,7 +62,7 @@ void ClassifyTiles(FfxUInt32x2 dispatch_thread_id, FfxUInt32x2 group_thread_id, 
         needs_ray = needs_ray || has_temporal_variance;
     }
 
-    FFX_GROUP_MEMORY_BARRIER(); // Wait until g_TileCount is cleared - allow some computations before and after
+    FFX_GROUP_MEMORY_BARRIER; // Wait until g_TileCount is cleared - allow some computations before and after
 
     // Now we know for each thread if it needs to shoot a ray and wether or not a denoiser pass has to run on this pixel.
 
@@ -74,18 +73,18 @@ void ClassifyTiles(FfxUInt32x2 dispatch_thread_id, FfxUInt32x2 group_thread_id, 
 
     // Next we have to figure out for which pixels that ray is creating the values for. Thus, if we have to copy its value horizontal, vertical or across.
     FfxBoolean require_copy = !needs_ray && needs_denoiser; // Our pixel only requires a copy if we want to run a denoiser on it but don't want to shoot a ray for it.
-    FfxBoolean copy_horizontal  = AWaveReadAtLaneIndexB1(require_copy, AWaveLaneIndex() ^ 1) && (SamplesPerQuad() != 4) && is_base_ray; // QuadReadAcrossX
-    FfxBoolean copy_vertical    = AWaveReadAtLaneIndexB1(require_copy, AWaveLaneIndex() ^ 2) && (SamplesPerQuad() == 1) && is_base_ray; // QuadReadAcrossY
-    FfxBoolean copy_diagonal    = AWaveReadAtLaneIndexB1(require_copy, AWaveLaneIndex() ^ 3) && (SamplesPerQuad() == 1) && is_base_ray; // QuadReadAcrossDiagonal
+    FfxBoolean copy_horizontal  = ffxWaveReadAtLaneIndexB1(require_copy, ffxWaveLaneIndex() ^ 1) && (SamplesPerQuad() != 4) && is_base_ray; // QuadReadAcrossX
+    FfxBoolean copy_vertical    = ffxWaveReadAtLaneIndexB1(require_copy, ffxWaveLaneIndex() ^ 2) && (SamplesPerQuad() == 1) && is_base_ray; // QuadReadAcrossY
+    FfxBoolean copy_diagonal    = ffxWaveReadAtLaneIndexB1(require_copy, ffxWaveLaneIndex() ^ 3) && (SamplesPerQuad() == 1) && is_base_ray; // QuadReadAcrossDiagonal
 
     // Thus, we need to compact the rays and append them all at once to the ray list.
-    FfxUInt32 local_ray_index_in_wave = AWavePrefixCountBits(needs_ray);
-    FfxUInt32 wave_ray_count = AWaveActiveCountBits(needs_ray);
+    FfxUInt32 local_ray_index_in_wave = ffxWavePrefixCountBits(needs_ray);
+    FfxUInt32 wave_ray_count = ffxWaveActiveCountBits(needs_ray);
     FfxUInt32 base_ray_index;
     if (is_first_lane_of_wave) {
         IncrementRayCounter(wave_ray_count, base_ray_index);
     }
-    base_ray_index = AWaveReadLaneFirstU1(base_ray_index);
+    base_ray_index = ffxWaveReadLaneFirstU1(base_ray_index);
     if (needs_ray) {
         FfxInt32 ray_index = FfxInt32(base_ray_index + local_ray_index_in_wave);
         StoreRay(ray_index, dispatch_thread_id, copy_horizontal, copy_vertical, copy_diagonal);
@@ -99,7 +98,7 @@ void ClassifyTiles(FfxUInt32x2 dispatch_thread_id, FfxUInt32x2 group_thread_id, 
         FfxFloat32x3 world_space_normal = FFX_SSSR_LoadWorldSpaceNormal(FfxInt32x2(dispatch_thread_id));
         FfxFloat32  z = FFX_SSSR_LoadDepth(FfxInt32x2(dispatch_thread_id), 0);
         FfxFloat32x3 screen_uv_space_ray_origin = FfxFloat32x3(uv, z);
-        FfxFloat32x3 view_space_ray = FFX_DNSR_Reflections_ScreenSpaceToViewSpace(screen_uv_space_ray_origin);
+        FfxFloat32x3 view_space_ray = ScreenSpaceToViewSpace(screen_uv_space_ray_origin);
         FfxFloat32x3 view_space_ray_direction = normalize(view_space_ray);
         FfxFloat32x3 view_space_surface_normal = FFX_MATRIX_MULTIPLY(ViewMatrix(), FfxFloat32x4(world_space_normal, 0)).xyz;
         FfxFloat32x3 view_space_reflected_direction = reflect(view_space_ray_direction, view_space_surface_normal);
@@ -110,7 +109,7 @@ void ClassifyTiles(FfxUInt32x2 dispatch_thread_id, FfxUInt32x2 group_thread_id, 
 
     FFX_SSSR_StoreRadiance(dispatch_thread_id, intersection_output);
 
-    FFX_GROUP_MEMORY_BARRIER(); // Wait until g_TileCount
+    FFX_GROUP_MEMORY_BARRIER; // Wait until g_TileCount
 
     if ((group_thread_id.x == 0) && (group_thread_id.y == 0) && g_TileCount > 0)
     {

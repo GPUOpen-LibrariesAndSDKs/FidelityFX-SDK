@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C)2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #include "ffx_blur_resources.h"
@@ -34,12 +34,10 @@
 #ifdef __hlsl_dx_compiler
 #pragma dxc diagnostic pop
 #endif //__hlsl_dx_compiler
-#endif // #if defined(FFX_GPU)
 
-#if defined(FFX_GPU)
 #ifndef FFX_PREFER_WAVE64
 #define FFX_PREFER_WAVE64
-#endif // #if defined(FFX_GPU)
+#endif // #ifndef FFX_PREFER_WAVE64
 
 #if defined(FFX_GPU)
 #pragma warning(disable: 3205)  // conversion from larger type to smaller
@@ -65,8 +63,8 @@
 #define FFX_BLUR_ROOTSIG_STRINGIFY(p) FFX_BLUR_ROOTSIG_STR(p)
 #define FFX_BLUR_ROOTSIG_STR(p) #p
 #define FFX_BLUR_ROOTSIG [RootSignature("DescriptorTable(UAV(u0, numDescriptors = " FFX_BLUR_ROOTSIG_STRINGIFY(FFX_BLUR_RESOURCE_IDENTIFIER_COUNT) ")), " \
-                                    "DescriptorTable(SRV(t0, numDescriptors = " FFX_BLUR_ROOTSIG_STRINGIFY(FFX_BLUR_RESOURCE_IDENTIFIER_COUNT) ")), " \
-                                    "RootConstants(num32BitConstants=" FFX_BLUR_ROOTSIG_STRINGIFY(FFX_BLUR_CONSTANT_BUFFER_1_SIZE) ", b0)" )]
+                                        "DescriptorTable(SRV(t0, numDescriptors = " FFX_BLUR_ROOTSIG_STRINGIFY(FFX_BLUR_RESOURCE_IDENTIFIER_COUNT) ")), " \
+                                        "CBV(b0)" )]
 
 #if defined(FFX_BLUR_EMBED_ROOTSIG)
 #define FFX_BLUR_EMBED_ROOTSIG_CONTENT FFX_BLUR_ROOTSIG
@@ -221,39 +219,35 @@ inline FFX_BLUR_KERNEL_TYPE FfxBlurLoadKernelWeight(FfxInt32 iKernelIndex)
 
 #if FFX_HALF
 
+    #if defined (FFX_BLUR_BIND_UAV_OUTPUT)
     void FfxBlurStoreOutput(FfxInt32x2 outPxCoord, FfxFloat16x3 color)
     {
-    #if defined FFX_BLUR_BIND_UAV_OUTPUT 
         rw_output[outPxCoord] = FfxFloat16x4(color, 1);
-    #endif
     }
+    #endif // #if defined (FFX_BLUR_BIND_UAV_OUTPUT)
 
+    #if defined (FFX_BLUR_BIND_SRV_INPUT_SRC)
     FfxFloat16x3 FfxBlurLoadInput(FfxInt16x2 inPxCoord)
     {
-    #if defined FFX_BLUR_BIND_SRV_INPUT_SRC 
         return r_input_src[inPxCoord].rgb;
-    #else
-        return FfxFloat16x3(0, 0, 0);
-    #endif
     }
+    #endif // #if defined (FFX_BLUR_BIND_SRV_INPUT_SRC)
 
 #else // FFX_HALF
 
+    #if defined (FFX_BLUR_BIND_UAV_OUTPUT)
     void FfxBlurStoreOutput(FfxInt32x2 outPxCoord, FfxFloat32x3 color)
     {
-    #if defined FFX_BLUR_BIND_UAV_OUTPUT 
         rw_output[outPxCoord] = FfxFloat32x4(color, 1);
-    #endif
     }
+    #endif // #if defined (FFX_BLUR_BIND_UAV_OUTPUT)
 
+    #if defined (FFX_BLUR_BIND_SRV_INPUT_SRC)
     FfxFloat32x3 FfxBlurLoadInput(FfxInt32x2 inPxCoord)
     {
-    #if defined FFX_BLUR_BIND_SRV_INPUT_SRC 
         return r_input_src[inPxCoord].rgb;
-    #else
-        return FfxFloat32x3(0, 0, 0);
-    #endif
     }
+    #endif // #if defined (FFX_BLUR_BIND_SRV_INPUT_SRC)
 
 #endif // !FFX_HALF
 

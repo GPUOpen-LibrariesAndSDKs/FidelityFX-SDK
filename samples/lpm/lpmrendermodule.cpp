@@ -1,28 +1,28 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #include "lpmrendermodule.h"
-#include "validation_remap.h"
 
+#include "core/backend_interface.h"
 #include "core/contentmanager.h"
 #include "core/framework.h"
 #include "core/loaders/textureloader.h"
@@ -49,7 +49,7 @@ void LPMRenderModule::Init(const json& initData)
     CauldronAssert(ASSERT_CRITICAL, m_pInputColor != nullptr, L"Couldn't find the input texture for the tone mapper");
 
     // Get the proper post tone map color target (these are the same now)
-    m_pOutputColor = m_pInputColor;
+    m_pOutputColor = GetFramework()->GetRenderTexture(L"SwapChainProxy");
 
     //////////////////////////////////////////////////////////////////////////
     // Build UI
@@ -70,36 +70,33 @@ void LPMRenderModule::Init(const json& initData)
     m_DisplayMode      = GetSwapChain()->GetSwapChainDisplayMode();
 
     // Build UI options
-    UISection uiSection;
-    uiSection.SectionName = "LPM Tonemapper";
-    uiSection.SectionType = UISectionType::Sample;
+    UISection* uiSection = GetUIManager()->RegisterUIElements("LPM Tonemapper", UISectionType::Sample);
 
     // Setup LPM preset options
-    uiSection.AddFloatSlider("Soft Gap", &m_SoftGap, 0.0f, 0.5f);
-    uiSection.AddFloatSlider("HDR Max", &m_HdrMax, 6.0f, 2048.0f);
-    std::function<void(void*)> exposureCallback = [this](void* pParams) { GetScene()->SetSceneExposure(this->m_LpmExposure); };
-    uiSection.AddFloatSlider("LPM Exposure", &m_LpmExposure, 1.0f, 16.0f, exposureCallback);
-    uiSection.AddFloatSlider("Contrast", &m_Contrast, 0.0f, 1.0f);
-    uiSection.AddFloatSlider("Shoulder Contrast", &m_ShoulderContrast, 1.0f, 1.5f);
-    uiSection.AddFloatSlider("Saturation Red", &m_Saturation[0], -1.0f, 1.0f);
-    uiSection.AddFloatSlider("Saturation Green", &m_Saturation[1], -1.0f, 1.0f);
-    uiSection.AddFloatSlider("Saturation Blue", &m_Saturation[2], -1.0f, 1.0f);
-    uiSection.AddFloatSlider("Crosstalk Red", &m_Crosstalk[0], 0.0f, 1.0f);
-    uiSection.AddFloatSlider("Crosstalk Green", &m_Crosstalk[1], 0.0f, 1.0f);
-    uiSection.AddFloatSlider("Crosstalk Blue", &m_Crosstalk[2], 0.0f, 1.0f);
+    uiSection->RegisterUIElement<UISlider<float>>("Soft Gap", m_SoftGap, 0.0f, 0.5f);
+    uiSection->RegisterUIElement<UISlider<float>>("HDR Max", m_HdrMax, 6.0f, 2048.0f);
+    uiSection->RegisterUIElement<UISlider<float>>("LPM Exposure", m_LpmExposure, 1.0f, 16.0f,
+        [](float cur, float old) {
+            GetScene()->SetSceneExposure(cur);
+        });
+    uiSection->RegisterUIElement<UISlider<float>>("Contrast", m_Contrast, 0.0f, 1.0f);
+    uiSection->RegisterUIElement<UISlider<float>>("Shoulder Contrast", m_ShoulderContrast, 1.0f, 1.5f);
+    uiSection->RegisterUIElement<UISlider<float>>("Saturation Red", m_Saturation[0], -1.0f, 1.0f);
+    uiSection->RegisterUIElement<UISlider<float>>("Saturation Green", m_Saturation[1], -1.0f, 1.0f);
+    uiSection->RegisterUIElement<UISlider<float>>("Saturation Blue", m_Saturation[2], -1.0f, 1.0f);
+    uiSection->RegisterUIElement<UISlider<float>>("Crosstalk Red", m_Crosstalk[0], 0.0f, 1.0f);
+    uiSection->RegisterUIElement<UISlider<float>>("Crosstalk Green", m_Crosstalk[1], 0.0f, 1.0f);
+    uiSection->RegisterUIElement<UISlider<float>>("Crosstalk Blue", m_Crosstalk[2], 0.0f, 1.0f);
 
-    // Setup FidelityFX interface.
-    const size_t scratchBufferSize = ffxGetScratchMemorySize(FFX_LPM_CONTEXT_COUNT);
-    void* scratchBuffer = malloc(scratchBufferSize);
-    FfxErrorCode errorCode = ffxGetInterface(&m_InitializationParameters.backendInterface, GetDevice(), scratchBuffer, scratchBufferSize, FFX_LPM_CONTEXT_COUNT);
-    CauldronAssert(ASSERT_CRITICAL, errorCode == FFX_OK, L"Couldn't initialize the FidelityFX SDK backend interface.");
+    InitFfxContext();
 
-    // Create the LPM context
-    ffxLpmContextCreate(&m_LPMContext, &m_InitializationParameters);
-
-    // Register ui elements for display
-    GetUIManager()->RegisterUIElements(uiSection);
-
+    GetFramework()->ConfigureRuntimeShaderRecompiler(
+        [this](void) {
+            DestroyFfxContext();
+        },
+        [this](void) {
+            InitFfxContext();
+        });
     //////////////////////////////////////////////////////////////////////////
     // Finish up init
 
@@ -120,18 +117,48 @@ void LPMRenderModule::Init(const json& initData)
     GetContentManager()->LoadTexture(TextureLoadInfo(texturePath, false, 1.f, ResourceFlags::None), completionCallback);
 }
 
+void LPMRenderModule::InitFfxContext()
+{
+    // Setup FidelityFX interface.
+    const size_t scratchBufferSize = SDKWrapper::ffxGetScratchMemorySize(FFX_LPM_CONTEXT_COUNT);
+    void* scratchBuffer = calloc(scratchBufferSize, 1u);
+    FfxErrorCode errorCode = SDKWrapper::ffxGetInterface(&m_InitializationParameters.backendInterface, GetDevice(), scratchBuffer, scratchBufferSize, FFX_LPM_CONTEXT_COUNT);
+    CauldronAssert(ASSERT_CRITICAL, errorCode == FFX_OK, L"Couldn't initialize the FidelityFX SDK backend interface.");
+    CauldronAssert(ASSERT_CRITICAL, m_InitializationParameters.backendInterface.fpGetSDKVersion(&m_InitializationParameters.backendInterface) == FFX_SDK_MAKE_VERSION(1, 1, 0),
+        L"FidelityFX LPM 2.1 sample requires linking with a 1.1 version SDK backend");
+    CauldronAssert(ASSERT_CRITICAL, ffxLpmGetEffectVersion() == FFX_SDK_MAKE_VERSION(1, 4, 0),
+                       L"FidelityFX LPM 2.1 sample requires linking with a 1.4 version FidelityFX LPM library");
+                       
+    m_InitializationParameters.backendInterface.fpRegisterConstantBufferAllocator(&m_InitializationParameters.backendInterface, SDKWrapper::ffxAllocateConstantBuffer);
+
+    // Create the LPM context
+    ffxLpmContextCreate(&m_LPMContext, &m_InitializationParameters);
+}
+
 LPMRenderModule::~LPMRenderModule()
 {
+    DestroyFfxContext();
+    
+    delete m_pRootSignature;
+    delete m_pPipelineObj;
+    delete m_pParameters;
+}
+
+void LPMRenderModule::DestroyFfxContext()
+{
+    // Flush anything out of the pipes before destroying the context
+    GetDevice()->FlushAllCommandQueues();
+
     // Destroy the LPM context
     FfxErrorCode errorCode = ffxLpmContextDestroy(&m_LPMContext);
     CauldronAssert(ASSERT_CRITICAL, errorCode == FFX_OK, L"Errors occurred while destroying the FfxLpmContext.");
 
     // Destroy the FidelityFX interface memory
-    free(m_InitializationParameters.backendInterface.scratchBuffer);
-    
-    delete m_pRootSignature;
-    delete m_pPipelineObj;
-    delete m_pParameters;
+    if (m_InitializationParameters.backendInterface.scratchBuffer != nullptr)
+    {
+        free(m_InitializationParameters.backendInterface.scratchBuffer);
+        m_InitializationParameters.backendInterface.scratchBuffer = nullptr;
+    }
 }
 
 void LPMRenderModule::TextureLoadComplete(const std::vector<const Texture*>& textureList, void*)
@@ -155,7 +182,7 @@ void LPMRenderModule::TextureLoadComplete(const std::vector<const Texture*>& tex
 
     // Setup remaining information and build
     psoDesc.AddPrimitiveTopology(PrimitiveTopologyType::Triangle);
-    psoDesc.AddRasterFormats(m_pTexture->GetFormat());
+    psoDesc.AddRasterFormats(m_pRenderTarget->GetFormat());
 
     m_pPipelineObj = PipelineObject::CreatePipelineObject(L"LPM_FullscreenPS_PipelineObj", psoDesc);
 
@@ -208,7 +235,7 @@ void LPMRenderModule::Execute(double deltaTime, CommandList* pCmdList)
     const HDRMetadata&      displayModeMetadata = GetFramework()->GetSwapChain()->GetHDRMetaData();
 
     FfxLpmDispatchDescription dispatchParameters = {};
-    dispatchParameters.commandList               = ffxGetCommandList(pCmdList);
+    dispatchParameters.commandList               = SDKWrapper::ffxGetCommandList(pCmdList);
     dispatchParameters.shoulder                  = m_Shoulder;
     dispatchParameters.softGap                   = m_SoftGap;
     dispatchParameters.hdrMax                    = m_HdrMax;
@@ -235,11 +262,11 @@ void LPMRenderModule::Execute(double deltaTime, CommandList* pCmdList)
     dispatchParameters.displayMaxLuminance       = displayModeMetadata.MaxLuminance;
 
     // All cauldron resources come into a render module in a generic read state (ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource)
-    dispatchParameters.inputColor  = ffxGetResource(m_pInputColor->GetResource(), L"Lpm_InputColor", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    dispatchParameters.outputColor = ffxGetResource(m_pOutputColor->GetResource(), L"Lpm_OutputColor", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchParameters.inputColor  = SDKWrapper::ffxGetResource(m_pInputColor->GetResource(), L"Lpm_InputColor", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchParameters.outputColor = SDKWrapper::ffxGetResource(m_pOutputColor->GetResource(), L"Lpm_OutputColor", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
 
     FfxErrorCode errorCode = ffxLpmContextDispatch(&m_LPMContext, &dispatchParameters);
-    FFX_ASSERT(errorCode == FFX_OK);
+    CAULDRON_ASSERT(errorCode == FFX_OK);
 
     // FidelityFX contexts modify the set resource view heaps, so set the cauldron one back
     SetAllResourceViewHeaps(pCmdList);

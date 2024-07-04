@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -24,6 +24,7 @@
 
 #include "misc/assert.h"
 #include "misc/math.h"
+#include "shaders/surfacerendercommon.h"
 
 #include <vector>
 
@@ -68,9 +69,37 @@ namespace cauldron
     int32_t FindClosestInterpolant(const AnimInterpolants* pInterpolant, float value);
 
     /**
+     * @struct AnimationSkin
+     *
+     * Represents an Animation Skin data for a specific mesh
+     *
+     * @ingroup CauldronRender
+     */
+    struct AnimationSkin
+    {
+        AnimInterpolants m_InverseBindMatrices;
+        uint32_t         m_skeletonId;
+        std::vector<int> m_jointsNodeIdx;
+    };
+
+    /**
+     * @struct SkinningData
+     *
+     * Stores all the skins and skinning matrices for animated meshes
+     *
+     * @ingroup CauldronRender
+     */
+    struct SkinningData
+    {
+        // <skindIdx, Matrices>
+        std::vector<std::vector<MatrixPair>> m_SkinningMatrices = {};
+        const std::vector<AnimationSkin*>*   m_pSkins           = nullptr;
+    };
+
+    /**
      * @class AnimChannel
      *
-     * An animation channel represents a single channel of an <c><i>Animation</i></c>. Each channel can 
+     * An animation channel represents a single channel of an <c><i>Animation</i></c>. Each channel can
      * have multiple components to it, such as Translation, Rotation, and Scale components.
      *
      * @ingroup CauldronRender
@@ -106,7 +135,7 @@ namespace cauldron
         /**
          * @enum ComponentSampler
          *
-         * The types of components that can be found in an <c><i>AnimChannel</i></c> 
+         * The types of components that can be found in an <c><i>AnimChannel</i></c>
          *
          * @ingroup CauldronRender
          */

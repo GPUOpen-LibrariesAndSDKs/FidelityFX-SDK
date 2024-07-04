@@ -1,32 +1,32 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #include "casrendermodule.h"
-#include "validation_remap.h"
 
 #include "render/dynamicresourcepool.h"
 #include "render/profiler.h"
 #include "render/uploadheap.h"
 
+#include "core/backend_interface.h"
 #include "core/components/cameracomponent.h"
 #include "core/scene.h"
 #include "core/uimanager.h"
@@ -41,7 +41,9 @@ void CASRenderModule::Init(const json& initData)
     // Resource setup
 
     // Fetch needed resources
-    m_pColorTarget = GetFramework()->GetColorTargetForCallback(GetName());
+    // CAS is called after tonemapping, so get the correct post-tonemap target
+    m_pColorTarget = GetFramework()->GetRenderTexture(L"SwapChainProxy");
+    CauldronAssert(ASSERT_CRITICAL, m_pColorTarget != nullptr, L"Couldn't find the render target for the CAS output");
 
     // Create an temporary texture to which the color target will be copied every frame, as input
     TextureDesc           desc    = m_pColorTarget->GetDesc();
@@ -55,61 +57,77 @@ void CASRenderModule::Init(const json& initData)
             desc.Height = renderingHeight;
         });
 
-    // Setup Cauldron FidelityFX interface.
-    const size_t scratchBufferSize = ffxGetScratchMemorySize(FFX_CAS_CONTEXT_COUNT);
-    void*        scratchBuffer     = malloc(scratchBufferSize);
-    FfxErrorCode errorCode         = ffxGetInterface(&m_InitializationParameters.backendInterface, GetDevice(), scratchBuffer, scratchBufferSize, FFX_CAS_CONTEXT_COUNT);
-    FFX_ASSERT(errorCode == FFX_OK);
+    SetupFfxInterface();
 
     // Set our render resolution function as that to use during resize to get render width/height from display width/height
     m_pUpdateFunc = [this](uint32_t displayWidth, uint32_t displayHeight) { return this->UpdateResolution(displayWidth, displayHeight); };
 
     //////////////////////////////////////////////////////////////////////////
     // Build UI and register them to the framework
-
-    UISection uiSection;
-    uiSection.SectionName = "Sharpening";
-    uiSection.SectionType = UISectionType::Sample;
-
+    UISection* uiSection = GetUIManager()->RegisterUIElements("Sharpening", UISectionType::Sample);
 
     // Setup CAS state
-    std::vector<std::string>   casStateComboOptions{"No Cas", "Cas Upsample", "Cas Sharpen Only"};
-    std::function<void(void*)> CasStateCallback = [this](void* pParams) {
-        this->m_CasEnabled          = (this->m_CasState != CAS_State_NoCas);
-        this->m_CasUpscalingEnabled = (this->m_CasState == CAS_State_Upsample);
-        if (!this->m_CasUpscalingEnabled) {
-            this->m_UpscaleRatioEnabled = false;  // Upscale ratio bar must be also disabled here since UpdatePreset will not be hit if only state is changed.
-            GetFramework()->EnableUpscaling(false); // Tell the framework we are not performing upscaling, so that it can provide full display sized render target.
+    std::vector<const char*> casStateComboOptions{"No Cas", "Cas Upsample", "Cas Sharpen Only"};
+    uiSection->RegisterUIElement<UICombo>("Cas Options",
+        (int32_t&)m_CasState,
+        casStateComboOptions,
+        [this](int32_t cur, int32_t old) {
+            m_CasEnabled = m_CasState != CAS_State_NoCas;
+            m_CasUpscalingEnabled = m_CasState == CAS_State_Upsample;
+            if (!m_CasUpscalingEnabled) {
+                m_UpscaleRatioEnabled = false;  // Upscale ratio bar must be also disabled here since UpdatePreset will not be hit if only state is changed.
+                GetFramework()->EnableUpscaling(false); // Tell the framework we are not performing upscaling, so that it can provide full display sized render target.
+                                                        // Will also flush the GPU
+                DestroyCasContext();
+                InitCasContext();
+            }
+            else
+            {
+                UpdatePreset(nullptr); // this will flush the GPU
+                DestroyCasContext();
+                InitCasContext();
+            }
         }
-        else
-        {
-            UpdatePreset(nullptr);
-        }
-    };
-    uiSection.AddCombo("Cas Options", reinterpret_cast<int32_t*>(&m_CasState), &casStateComboOptions, CasStateCallback);
+    );
 
     // CAS settings
-    uiSection.AddFloatSlider("Cas Sharpness", &m_Sharpness, 0.f, 1.f, nullptr, &m_CasEnabled);
+    uiSection->RegisterUIElement<UISlider<float>>("Cas Sharpness", m_Sharpness, 0.f, 1.f, m_CasEnabled);
 
     // Setup scale preset options
-    const char*              preset[] = {"Ultra Quality (1.3x)", "Quality (1.5x)", "Balanced (1.7x)", "Performance (2x)", "Ultra Performance (3x)", "Custom"};
-    std::vector<std::string> presetComboOptions;
-    presetComboOptions.assign(preset, preset + _countof(preset));
-    std::function<void(void*)> presetCallback = [this](void* pParams) { this->UpdatePreset(static_cast<int32_t*>(pParams)); };
-    uiSection.AddCombo("Scale Preset", reinterpret_cast<int32_t*>(&m_ScalePreset), &presetComboOptions, presetCallback, &m_CasUpscalingEnabled);
+    std::vector<const char*> presetComboOptions = {"Ultra Quality (1.3x)", "Quality (1.5x)", "Balanced (1.7x)", "Performance (2x)", "Ultra Performance (3x)", "Custom"};
+    uiSection->RegisterUIElement<UICombo>(
+        "Scale Preset",
+        (int32_t&)m_ScalePreset,
+        presetComboOptions,
+        m_CasUpscalingEnabled,
+        [this](int32_t cur, int32_t old) {
+            UpdatePreset(&old);
+        }
+    );
 
     // Setup scale factor (disabled for all but custom)
-    std::function<void(void*)> ratioCallback = [this](void* pParams) { this->UpdateUpscaleRatio(static_cast<float*>(pParams)); };
-    uiSection.AddFloatSlider("Custom Scale", &m_UpscaleRatio, 1.f, 3.f, ratioCallback, &m_UpscaleRatioEnabled);
-
-    // ... and register UI elements for active upscaler
-    GetUIManager()->RegisterUIElements(uiSection);
+    uiSection->RegisterUIElement<UISlider<float>>(
+        "Custom Scale",
+        m_UpscaleRatio,
+        1.f, 3.f,
+        m_UpscaleRatioEnabled,
+        [this](float cur, float old) {
+            UpdateUpscaleRatio(&old);
+        }
+    );
 
     //////////////////////////////////////////////////////////////////////////
     // Finish up init
 
     // Create the cas context
-    ResetCas();
+    InitCasContext();
+
+    GetFramework()->ConfigureRuntimeShaderRecompiler(
+        [this](void) { DestroyCasContext(); },
+        [this](void) {
+            SetupFfxInterface();
+            InitCasContext();
+        });
 
     // That's all we need for now
     SetModuleReady(true);
@@ -128,13 +146,22 @@ void CASRenderModule::OnResize(const ResolutionInfo& resInfo)
     if (!ModuleEnabled())
         return;
 
-    ResetCas();
+    DestroyCasContext();
+    InitCasContext();
 }
 
 cauldron::ResolutionInfo CASRenderModule::UpdateResolution(uint32_t displayWidth, uint32_t displayHeight)
 {
-    return {
-        static_cast<uint32_t>((float)displayWidth / m_UpscaleRatio), static_cast<uint32_t>((float)displayHeight / m_UpscaleRatio), displayWidth, displayHeight};
+    float thisFrameUpscaleRatio = 1.f / m_UpscaleRatio;
+
+    uint32_t MaxRenderWidth = (uint32_t)((float)displayWidth * thisFrameUpscaleRatio);
+    uint32_t MaxRenderHeight = (uint32_t)((float)displayHeight * thisFrameUpscaleRatio);
+    uint32_t MaxUpscaleWidth = (uint32_t)((float)displayWidth);
+    uint32_t MaxUpscaleHeight = (uint32_t)((float)displayHeight);
+    
+    return { MaxRenderWidth, MaxRenderHeight,
+             MaxUpscaleWidth, MaxUpscaleHeight,
+             displayWidth, displayHeight };
 }
 
 void CASRenderModule::UpdatePreset(const int32_t* pOldPreset)
@@ -169,18 +196,33 @@ void CASRenderModule::UpdatePreset(const int32_t* pOldPreset)
     GetFramework()->EnableUpscaling(true, m_pUpdateFunc);
 }
 
-void CASRenderModule::ResetCas()
+void CASRenderModule::SetupFfxInterface()
 {
-    static bool s_firstReset = true;
-    if (!s_firstReset)
-    {
-        ffxCasContextDestroy(&m_CasContext);
-    }
-    else
-    {
-        s_firstReset = false;
-    }
+    if (m_InitializationParameters.backendInterface.scratchBuffer != nullptr)
+        free(m_InitializationParameters.backendInterface.scratchBuffer);
+    // Setup FidelityFX interface.
+    const size_t scratchBufferSize = SDKWrapper::ffxGetScratchMemorySize(FFX_CAS_CONTEXT_COUNT);
+    void*        scratchBuffer     = calloc(scratchBufferSize, 1u);
+    FfxErrorCode errorCode         = SDKWrapper::ffxGetInterface(&m_InitializationParameters.backendInterface, GetDevice(), scratchBuffer, scratchBufferSize, FFX_CAS_CONTEXT_COUNT);
+    CAULDRON_ASSERT(errorCode == FFX_OK);
+    CauldronAssert(ASSERT_CRITICAL, m_InitializationParameters.backendInterface.fpGetSDKVersion(&m_InitializationParameters.backendInterface) == FFX_SDK_MAKE_VERSION(1, 1, 0),
+        L"FidelityFX CAS 2.1 sample requires linking with a 1.1 version SDK backend");
+    CauldronAssert(ASSERT_CRITICAL, ffxCasGetEffectVersion() == FFX_SDK_MAKE_VERSION(1, 2, 0),
+                       L"FidelityFX CAS 2.1 sample requires linking with a 1.2 version FidelityFX CAS library");
+                       
+    m_InitializationParameters.backendInterface.fpRegisterConstantBufferAllocator(&m_InitializationParameters.backendInterface, SDKWrapper::ffxAllocateConstantBuffer);
+}
 
+void CASRenderModule::DestroyCasContext()
+{
+    // Flush anything out of the pipes before destroying the context
+    GetDevice()->FlushAllCommandQueues();
+
+    ffxCasContextDestroy(&m_CasContext);
+}
+
+void CASRenderModule::InitCasContext()
+{
     if (m_CasState == CAS_State_SharpenOnly)
         m_InitializationParameters.flags |= FFX_CAS_SHARPEN_ONLY;
     else
@@ -189,8 +231,8 @@ void CASRenderModule::ResetCas()
     m_InitializationParameters.colorSpaceConversion = FFX_CAS_COLOR_SPACE_LINEAR;
 
     const ResolutionInfo& resInfo                   = GetFramework()->GetResolutionInfo();
-    m_InitializationParameters.maxRenderSize.width  = resInfo.RenderWidth;
-    m_InitializationParameters.maxRenderSize.height = resInfo.RenderHeight;
+    m_InitializationParameters.maxRenderSize.width  = resInfo.DisplayWidth;
+    m_InitializationParameters.maxRenderSize.height = resInfo.DisplayHeight;
     m_InitializationParameters.displaySize.width    = resInfo.DisplayWidth;
     m_InitializationParameters.displaySize.height   = resInfo.DisplayHeight;
 
@@ -216,7 +258,7 @@ void CASRenderModule::Execute(double deltaTime, CommandList* pCmdList)
     CameraComponent*        pCamera = GetScene()->GetCurrentCamera();
 
     FfxCasDispatchDescription dispatchParameters = {};
-    dispatchParameters.commandList               = ffxGetCommandList(pCmdList);
+    dispatchParameters.commandList               = SDKWrapper::ffxGetCommandList(pCmdList);
     dispatchParameters.renderSize                = {resInfo.RenderWidth, resInfo.RenderHeight};
     dispatchParameters.sharpness                 = m_Sharpness;
 
@@ -243,11 +285,11 @@ void CASRenderModule::Execute(double deltaTime, CommandList* pCmdList)
     ResourceBarrier(pCmdList, static_cast<uint32_t>(barriers.size()), barriers.data());
 
     // All cauldron resources come into a render module in a generic read state (ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource)
-    dispatchParameters.color  = ffxGetResource(m_pTempColorTarget->GetResource(), L"CAS_InputColor", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
-    dispatchParameters.output = ffxGetResource(m_pColorTarget->GetResource(), L"CAS_OutputColor", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchParameters.color  = SDKWrapper::ffxGetResource(m_pTempColorTarget->GetResource(), L"CAS_InputColor", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+    dispatchParameters.output = SDKWrapper::ffxGetResource(m_pColorTarget->GetResource(), L"CAS_OutputColor", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
 
     FfxErrorCode errorCode = ffxCasContextDispatch(&m_CasContext, &dispatchParameters);
-    FFX_ASSERT(errorCode == FFX_OK);
+    CAULDRON_ASSERT(errorCode == FFX_OK);
 
     // FidelityFX contexts modify the set resource view heaps, so set the cauldron one back
     SetAllResourceViewHeaps(pCmdList);

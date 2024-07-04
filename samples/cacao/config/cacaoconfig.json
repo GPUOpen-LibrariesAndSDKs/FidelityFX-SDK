@@ -2,11 +2,11 @@
     "FidelityFX CACAO": {
 
         "RenderModules": [
-            "SkyDomeRenderModule",
             "RasterShadowRenderModule",
             "GBufferRenderModule",
             "CACAORenderModule",
             "LightingRenderModule",
+            "SkyDomeRenderModule",
             "ToneMappingRenderModule"
         ],
 

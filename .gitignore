@@ -359,5 +359,5 @@ healthchecksdb
 MigrationBackup/
 
 # Folders created by the media delivery tool
-media/
-media-cache/
+/media/
+/media-cache/

@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C)2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #ifndef FFX_DOF_COMMON_H
@@ -101,13 +101,20 @@ typedef FfxFloat32x4 FfxHalfOpt4;
 #endif // #if GL_EXT_control_flow_attributes
 #endif // #if FFX_HLSL #elif FFX_GLSL
 
+// ReadLaneFirst
+#if FFX_HLSL
+#define ffxWaveReadLaneFirst WaveReadLaneFirst
+#elif FFX_GLSL
+#define ffxWaveReadLaneFirst subgroupBroadcastFirst
+#endif // #if FFX_GLSL
+
 // Callback declarations
 FfxFloat32 FfxDofGetCoc(FfxFloat32 depth); // returns circle of confusion radius in pixels (at half-res). Sign indicates near-field (positive) or far-field (negative).
 void FfxDofStoreDilatedRadius(FfxUInt32x2 coord, FfxFloat32x2 dilatedMinMax);
 FfxFloat32x2 FfxDofSampleDilatedRadius(FfxUInt32x2 coord); // returns the dilated min and max depth for a pixel coordinate. Should be bilinearly interpolated!
 FfxFloat32x2 FfxDofLoadDilatedRadius(FfxUInt32x2 coord); // returns the dilated depth for a *tile* coordinate without interpolation
 FfxHalfOpt4 FfxDofLoadInput(FfxUInt32x2 coord); // returns input rgb and (in alpha) CoC in pixels from the most detailed mip (which is half-res)
-FfxHalfOpt4 FfxDofSampleInput(FfxFloat32x2 absCoord, FfxUInt32 mip); // returns input rgb and (in alpha) CoC in pixels. **Coordinates are in pixels, not UV**
+FfxHalfOpt4 FfxDofSampleInput(FfxFloat32x2 coord, FfxUInt32 mip); // returns input rgb and (in alpha) CoC in pixels.
 FfxFloat32x4 FfxDofGatherDepth(FfxFloat32x2 coord); // returns 4 input depth values in a quad, must use sampler with coordinate clamping
 void FfxDofStoreNear(FfxUInt32x2 coord, FfxHalfOpt4 color); // stores the near color output from the blur pass
 void FfxDofStoreFar(FfxUInt32x2 coord, FfxHalfOpt4 color); // stores the far color output from the blur pass

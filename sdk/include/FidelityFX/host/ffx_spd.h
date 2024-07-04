@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 // @defgroup FSR2
@@ -40,7 +40,7 @@
 /// FidelityFX SPD minor version.
 ///
 /// @ingroup FfxSpd
-#define FFX_SPD_VERSION_MINOR (1)
+#define FFX_SPD_VERSION_MINOR (2)
 
 /// FidelityFX SPD patch version.
 ///
@@ -57,7 +57,7 @@
 /// The size of the context specified in 32bit values.
 ///
 /// @ingroup FfxSpd
-#define FFX_SPD_CONTEXT_SIZE       (16536)
+#define FFX_SPD_CONTEXT_SIZE       (9300)
 
 /// If this ever changes, need to also reflect a change in number
 /// of resources in ffx_spd_resources.h
@@ -115,9 +115,9 @@ typedef enum FfxSpdInitializationFlagBits {
 /// @ingroup FfxSpd
 typedef struct FfxSpdContextDescription {
 
-    uint32_t                    flags;                              ///< A collection of <c><i>FfxSpdInitializationFlagBits</i></c>
+    uint32_t                    flags;                  ///< A collection of <c><i>FfxSpdInitializationFlagBits</i></c>
     FfxSpdDownsampleFilter      downsampleFilter;
-    FfxInterface                backendInterface;                   ///< A set of pointers to the backend implementation for FidelityFX.
+    FfxInterface                backendInterface;       ///< A set of pointers to the backend implementation for FidelityFX.
 
 } FfxSpdContextDescription;
 
@@ -208,6 +208,14 @@ FFX_API FfxErrorCode ffxSpdContextDispatch(FfxSpdContext* pContext, const FfxSpd
 ///
 /// @ingroup FfxSpd
 FFX_API FfxErrorCode ffxSpdContextDestroy(FfxSpdContext* pContext);
+
+/// Queries the effect version number.
+///
+/// @returns
+/// The SDK version the effect was built with.
+///
+/// @ingroup FfxSpd
+FFX_API FfxVersionNumber ffxSpdGetEffectVersion();
 
 #if defined(__cplusplus)
 }

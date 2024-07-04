@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -258,13 +258,13 @@ static FfxErrorCode createPipelineStateObjects(FfxBlurContext_Private* context)
 
     FfxDeviceCapabilities& capabilities = context->deviceCapabilities;
     // Setup a few options used to determine permutation flags
-    bool haveShaderModel66 = capabilities.minimumSupportedShaderModel >= FFX_SHADER_MODEL_6_6;
+    bool haveShaderModel66 = capabilities.maximumSupportedShaderModel >= FFX_SHADER_MODEL_6_6;
     bool fp16Supported     = capabilities.fp16Supported;
     bool canForceWave64    = false;
 
     const uint32_t waveLaneCountMin = capabilities.waveLaneCountMin;
     const uint32_t waveLaneCountMax = capabilities.waveLaneCountMax;
-    if (waveLaneCountMin == 32 && waveLaneCountMax == 64)
+    if (waveLaneCountMin <= 64 && waveLaneCountMax >= 64)
         canForceWave64 = haveShaderModel66;
     else
         canForceWave64 = false;
@@ -278,7 +278,7 @@ static FfxErrorCode createPipelineStateObjects(FfxBlurContext_Private* context)
     FFX_ASSERT_OR_RETURN(numberOfKernelSizes <= FFX_BLUR_KERNEL_SIZE_COUNT && numberOfKernelSizes != 0, FFX_ERROR_INVALID_ARGUMENT);
 
     context->pBlurPipelines =
-        (FfxPipelineState*)malloc(numberOfKernelSizes * numberOfKernelPermutations * sizeof(FfxPipelineState));
+        (FfxPipelineState*)calloc(1u, numberOfKernelSizes * numberOfKernelPermutations * sizeof(FfxPipelineState));
 
     FFX_RETURN_ON_ERROR(context->pBlurPipelines, FFX_ERROR_OUT_OF_MEMORY);
 
@@ -324,7 +324,13 @@ static FfxErrorCode createPipelineStateObjects(FfxBlurContext_Private* context)
                         pBlurPipeline));
 
                     // For each pipeline: re-route/fix-up IDs based on names
-                    patchResourceBindings(pBlurPipeline);
+                    auto patchStatus = patchResourceBindings(pBlurPipeline);
+                    if (patchStatus != FFX_OK)
+                    {
+                        free(context->pBlurPipelines);
+                        context->pBlurPipelines = nullptr;
+                        return patchStatus;
+                    }
 
                     ++curPipelineIndex;
                 }
@@ -346,12 +352,17 @@ static FfxErrorCode blurCreate(FfxBlurContext_Private* context, const FfxBlurCon
 
     memcpy(&context->contextDescription, contextDescription, sizeof(FfxBlurContextDescription));
 
+    // Check version info - make sure we are linked with the right backend version
+    FfxVersionNumber version = context->contextDescription.backendInterface.fpGetSDKVersion(&context->contextDescription.backendInterface);
+    FFX_RETURN_ON_ERROR(version == FFX_SDK_MAKE_VERSION(1, 1, 0), FFX_ERROR_INVALID_VERSION);
+
     context->blurConstants.num32BitEntries = sizeof(BlurConstants) / sizeof(uint32_t);
 
     // Create the context.
     FfxErrorCode errorCode =
         context->contextDescription.backendInterface.fpCreateBackendContext(
             &context->contextDescription.backendInterface,
+            nullptr,
             &context->effectContextId);
     FFX_RETURN_ON_ERROR(errorCode == FFX_OK, errorCode);
 
@@ -388,6 +399,7 @@ FfxErrorCode ffxBlurContextCreate(FfxBlurContext* context, const FfxBlurContextD
         FFX_ERROR_INVALID_POINTER);
 
     // Validate that all callbacks are set for the interface
+    FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpGetSDKVersion, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpGetDeviceCapabilities, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpCreateBackendContext, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpDestroyBackendContext, FFX_ERROR_INCOMPLETE_INTERFACE);
@@ -462,15 +474,18 @@ static void scheduleDispatch(FfxBlurContext_Private* context,
                              uint32_t                dispatchZ)
 {
     FfxGpuJobDescription dispatchJob = {FFX_GPU_JOB_COMPUTE};
+    wcscpy_s(dispatchJob.jobLabel, pipeline->name);
 
     for (uint32_t currentShaderResourceViewIndex = 0; currentShaderResourceViewIndex < pipeline->srvTextureCount; ++currentShaderResourceViewIndex)
     {
         const uint32_t            currentResourceId        = pipeline->srvTextureBindings[currentShaderResourceViewIndex].resourceIdentifier;
         const FfxResourceInternal currentResource          = context->srvResources[currentResourceId];
 
-        dispatchJob.computeJobDescriptor.srvTextures[currentShaderResourceViewIndex] = currentResource;
-        wcscpy_s(dispatchJob.computeJobDescriptor.srvTextureNames[currentShaderResourceViewIndex],
+        dispatchJob.computeJobDescriptor.srvTextures[currentShaderResourceViewIndex].resource = currentResource;
+#ifdef FFX_DEBUG
+        wcscpy_s(dispatchJob.computeJobDescriptor.srvTextures[currentShaderResourceViewIndex].name,
             pipeline->srvTextureBindings[currentShaderResourceViewIndex].name);
+#endif
     }
 
     uint32_t uavEntry = 0;  // Uav resource offset (accounts for uav arrays)
@@ -480,11 +495,12 @@ static void scheduleDispatch(FfxBlurContext_Private* context,
 
         const FfxResourceInternal currentResource = context->uavResources[currentResourceId];
 
-        dispatchJob.computeJobDescriptor.uavTextures[uavEntry] = currentResource;
-        dispatchJob.computeJobDescriptor.uavTextureMips[uavEntry++] = 0;
-
-        wcscpy_s(dispatchJob.computeJobDescriptor.uavTextureNames[currentUnorderedAccessViewIndex],
+        dispatchJob.computeJobDescriptor.uavTextures[uavEntry].resource = currentResource;
+        dispatchJob.computeJobDescriptor.uavTextures[uavEntry++].mip = 0;
+#ifdef FFX_DEBUG
+        wcscpy_s(dispatchJob.computeJobDescriptor.uavTextures[currentUnorderedAccessViewIndex].name,
             pipeline->uavTextureBindings[currentUnorderedAccessViewIndex].name);
+#endif
     }
 
     dispatchJob.computeJobDescriptor.dimensions[0] = dispatchX;
@@ -493,7 +509,9 @@ static void scheduleDispatch(FfxBlurContext_Private* context,
     dispatchJob.computeJobDescriptor.pipeline      = *pipeline;
 
     // Only 1 constant buffer
+#ifdef FFX_DEBUG
     wcscpy_s(dispatchJob.computeJobDescriptor.cbNames[0], pipeline->constantBufferBindings[0].name);
+#endif
     dispatchJob.computeJobDescriptor.cbs[0] = context->blurConstants;
 
 
@@ -566,10 +584,9 @@ static FfxErrorCode blurDispatch(FfxBlurContext_Private* context, const FfxBlurD
     uint32_t dispatchY = FFX_BLUR_DISPATCH_Y;
     uint32_t dispatchZ = 1;
 
-    memcpy(&context->blurConstants.data,
-        &constants,
-        sizeof(BlurConstants));
-
+    context->contextDescription.backendInterface.fpStageConstantBufferDataFunc(
+        &context->contextDescription.backendInterface, &constants, sizeof(BlurConstants), &context->blurConstants);
+    
     // Validate that specified kernel permutation and size were used during FFX Blur Context creation.
     FFX_ASSERT_OR_RETURN(context->contextDescription.kernelPermutations & params->kernelPermutation, FFX_ERROR_INVALID_ENUM);
     FFX_ASSERT_OR_RETURN(context->contextDescription.kernelSizes & params->kernelSize, FFX_ERROR_INVALID_ENUM);
@@ -583,7 +600,7 @@ static FfxErrorCode blurDispatch(FfxBlurContext_Private* context, const FfxBlurD
     scheduleDispatch(context, &context->pBlurPipelines[pipelineIndex], dispatchX, dispatchY, dispatchZ);
 
     // Execute all the work for the frame
-    context->contextDescription.backendInterface.fpExecuteGpuJobs(&context->contextDescription.backendInterface, commandList);
+    context->contextDescription.backendInterface.fpExecuteGpuJobs(&context->contextDescription.backendInterface, commandList, context->effectContextId);
 
     // Release dynamic resources
     context->contextDescription.backendInterface.fpUnregisterResources(&context->contextDescription.backendInterface, 
@@ -598,7 +615,7 @@ FfxErrorCode ffxBlurContextDispatch(FfxBlurContext* context, const FfxBlurDispat
     // check pointers are valid
     FFX_RETURN_ON_ERROR(context, FFX_ERROR_INVALID_POINTER);
     FFX_RETURN_ON_ERROR(dispatchDescription, FFX_ERROR_INVALID_POINTER);
-
+    
     FfxBlurContext_Private* contextPrivate = (FfxBlurContext_Private*)(context);
 
     FFX_RETURN_ON_ERROR(contextPrivate->device, FFX_ERROR_NULL_DEVICE);
@@ -606,4 +623,9 @@ FfxErrorCode ffxBlurContextDispatch(FfxBlurContext* context, const FfxBlurDispat
     // dispatch the SPD pass
     const FfxErrorCode errorCode = blurDispatch(contextPrivate, dispatchDescription);
     return errorCode;
+}
+
+FFX_API FfxVersionNumber ffxBlurGetEffectVersion()
+{
+    return FFX_SDK_MAKE_VERSION(FFX_BLUR_VERSION_MAJOR, FFX_BLUR_VERSION_MINOR, FFX_BLUR_VERSION_PATCH);
 }

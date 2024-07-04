@@ -1,7 +1,7 @@
 # AGS
 
 ## Current Version
-6.1
+6.2
 
 ## How to update
 1. Download the latest version of AGS from https://gpuopen.com/amd-gpu-services-ags-library/

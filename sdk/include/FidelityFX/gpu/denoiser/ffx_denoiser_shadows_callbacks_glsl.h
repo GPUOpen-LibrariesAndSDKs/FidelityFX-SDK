@@ -1,13 +1,14 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
-//
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
+// furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
@@ -164,15 +165,13 @@ FfxBoolean WaveMaskToBool(FfxUInt32 mask, FfxUInt32x2 localID)
 }
 
 
+#if defined(DENOISER_SHADOWS_BIND_SRV_INPUT_HIT_MASK_RESULTS)
 FfxBoolean HitsLight(FfxUInt32x2 did, FfxUInt32x2 gtid, FfxUInt32x2 gid)
 {
-#if defined(DENOISER_SHADOWS_BIND_SRV_INPUT_HIT_MASK_RESULTS)
     FfxUInt32 mask = texelFetch(r_hit_mask_results, ivec2(gid), 0).r;
     return !WaveMaskToBool(mask, gtid);
-#else
-    return FFX_FALSE;
-#endif
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_SRV_INPUT_HIT_MASK_RESULTS)
 
 FfxFloat32 NormalsUnpackMul()
 {
@@ -196,28 +195,26 @@ FfxFloat32 NormalsUnpackAdd()
     return 0;
 }
 
+#if defined(DENOISER_SHADOWS_BIND_UAV_SHADOW_MASK)
 void StoreShadowMask(FfxUInt32 offset, FfxUInt32 value)
 {
-#if defined(DENOISER_SHADOWS_BIND_UAV_SHADOW_MASK)
     rw_shadow_mask.data[offset] = value;
-#endif
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_UAV_SHADOW_MASK)
 
+#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
 FfxFloat32Mat4 ViewProjectionInverse()
 {
-#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
     return cb1DenoiserShadows.fViewProjectionInverse;
-#endif
-    return FfxFloat32Mat4(0);
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
 
+#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
 FfxFloat32Mat4 ReprojectionMatrix()
 {
-#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
     return cb1DenoiserShadows.fReprojectionMatrix;
-#endif
-    return FfxFloat32Mat4(0);
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
 
 FfxFloat32Mat4 ProjectionInverse()
 {
@@ -243,22 +240,19 @@ FfxFloat32x2 InvBufferDimensions()
 #endif
 }
 
+#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
 FfxInt32 IsFirstFrame()
 {
-#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
     return cb1DenoiserShadows.iFirstFrame;
-#else
-    return 0;
-#endif
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
 
+#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
 FfxFloat32x3 Eye()
 {
-#if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
     return cb1DenoiserShadows.fEye;
-#endif
-    return FfxFloat32x3(0, 0, 0);
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_CB1_DENOISER_SHADOWS)
 
 FfxFloat32 LoadDepth(FfxInt32x2 p)
 {
@@ -269,34 +263,29 @@ FfxFloat32 LoadDepth(FfxInt32x2 p)
 #endif
 }
 
+#if defined(DENOISER_SHADOWS_BIND_SRV_PREVIOUS_DEPTH)
 FfxFloat32 LoadPreviousDepth(FfxInt32x2 p)
 {
-#if defined(DENOISER_SHADOWS_BIND_SRV_PREVIOUS_DEPTH)
     return texelFetch(r_previous_depth, ivec2(p), 0).x;
-#else
-    return 0.f;
-#endif
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_SRV_PREVIOUS_DEPTH)
 
+#if defined(DENOISER_SHADOWS_BIND_SRV_NORMAL)
 FfxFloat32x3 LoadNormals(FfxUInt32x2 p)
 {
-#if defined(DENOISER_SHADOWS_BIND_SRV_NORMAL)
     FfxFloat32x3 normal = texelFetch(r_normal, ivec2(p), 0).xyz;
     normal = normal * NormalsUnpackMul().xxx + NormalsUnpackAdd().xxx;
     return normalize(normal);
-#else
-    return FfxFloat32x3(0, 0, 0);
-#endif
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_SRV_NORMAL)
 
+#if defined(DENOISER_SHADOWS_BIND_SRV_VELOCITY)
 FfxFloat32x2 LoadVelocity(FfxInt32x2 p)
 {
-#if defined(DENOISER_SHADOWS_BIND_SRV_VELOCITY)
     FfxFloat32x2 velocity = texelFetch(r_velocity, ivec2(p), 0).rg;
     return velocity * MotionVectorScale();
-#endif
-    return FfxFloat32x2(0, 0);
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_SRV_VELOCITY)
 
 #if defined(DENOISER_SHADOWS_BIND_SRV_HISTORY)
 layout (set = 0, binding = 1000) uniform sampler s_trilinerClamp;
@@ -306,42 +295,40 @@ FfxFloat32 LoadHistory(FfxFloat32x2 p)
 }
 #endif
 
+#if defined(DENOISER_SHADOWS_BIND_SRV_PREVIOUS_MOMENTS)
 FfxFloat32x3 LoadPreviousMomentsBuffer(FfxInt32x2 p)
 {
-#if defined(DENOISER_SHADOWS_BIND_SRV_PREVIOUS_MOMENTS)
     return texelFetch(r_previous_moments, ivec2(p), 0).xyz;
-#endif
-    return FfxFloat32x3(0, 0, 0);
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_SRV_PREVIOUS_MOMENTS)
 
+#if defined(DENOISER_SHADOWS_BIND_UAV_RAYTRACER_RESULT)
 FfxUInt32 LoadRaytracedShadowMask(FfxUInt32 p)
 {
-#if defined(DENOISER_SHADOWS_BIND_UAV_RAYTRACER_RESULT)
     return rw_raytracer_result.data[p];
-#endif
-    return 0;
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_UAV_RAYTRACER_RESULT)
 
+#if defined(DENOISER_SHADOWS_BIND_UAV_TILE_METADATA)
 void StoreMetadata(FfxUInt32 p, FfxUInt32 val)
 {
-#if defined(DENOISER_SHADOWS_BIND_UAV_TILE_METADATA)
     rw_tile_metadata.data[p] = val;
-#endif
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_UAV_TILE_METADATA)
 
+#if defined(DENOISER_SHADOWS_BIND_UAV_CURRENT_MOMENTS)
 void StoreMoments(FfxUInt32x2 p, FfxFloat32x3 val)
 {
-#if defined(DENOISER_SHADOWS_BIND_UAV_CURRENT_MOMENTS)
     imageStore(rw_current_moments, ivec2(p), FfxFloat32x4(val, 0));
-#endif
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_UAV_CURRENT_MOMENTS)
 
+#if defined(DENOISER_SHADOWS_BIND_UAV_REPROJECTION_RESULTS)
 void StoreReprojectionResults(FfxUInt32x2 p, FfxFloat32x2 val)
 {
-#if defined(DENOISER_SHADOWS_BIND_UAV_REPROJECTION_RESULTS)
     imageStore(rw_reprojection_results, ivec2(p), FfxFloat32x4(val, 0, 0));
-#endif
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_UAV_REPROJECTION_RESULTS)
 
 #if defined(DENOISER_SHADOWS_BIND_CB2_DENOISER_SHADOWS)
 FfxFloat32 DepthSimilaritySigma()
@@ -351,15 +338,15 @@ FfxFloat32 DepthSimilaritySigma()
 #endif
 
 #if FFX_HALF
+
+#if defined(DENOISER_SHADOWS_BIND_SRV_FILTER_INPUT)
     FfxFloat16x2 LoadFilterInput(FfxUInt32x2 p)
     {
-    #if defined(DENOISER_SHADOWS_BIND_SRV_FILTER_INPUT)
         return FfxFloat16x2(texelFetch(r_filter_input, ivec2(p), 0).xy);
-    #else
-        return FfxFloat16x2(0, 0);
-    #endif
     }
-#endif
+#endif // #if defined(DENOISER_SHADOWS_BIND_SRV_FILTER_INPUT)
+
+#endif // #if FFX_HALF
 
 FfxBoolean IsShadowReciever(FfxUInt32x2 p)
 {
@@ -367,27 +354,25 @@ FfxBoolean IsShadowReciever(FfxUInt32x2 p)
     return (depth > 0.0f) && (depth < 1.0f);
 }
 
+#if defined(DENOISER_SHADOWS_BIND_UAV_TILE_METADATA)
 FfxUInt32 LoadTileMetaData(FfxUInt32 p)
 {
-#if defined(DENOISER_SHADOWS_BIND_UAV_TILE_METADATA)
     return rw_tile_metadata.data[p];
-#else
-    return 0;
-#endif
 }
+#endif // #if defined(DENOISER_SHADOWS_BIND_UAV_TILE_METADATA)
 
 void StoreHistory(FfxUInt32x2 p, FfxFloat32x2 val)
 {
-#if defined(DENOISER_SHADOWS_BIND_UAV_HISTORY)
-    imageStore(rw_history, ivec2(p), FfxFloat32x4(val, 0, 0));
-#endif
+    #if defined(DENOISER_SHADOWS_BIND_UAV_HISTORY)
+        imageStore(rw_history, ivec2(p), FfxFloat32x4(val, 0, 0));
+    #endif // #if defined(DENOISER_SHADOWS_BIND_UAV_HISTORY)
 }
 
 void StoreFilterOutput(FfxUInt32x2 p, FfxFloat32 val)
 {
-#if defined(DENOISER_SHADOWS_BIND_UAV_FILTER_OUTPUT)
-    imageStore(rw_filter_output, ivec2(p), FfxFloat32x4(val, 0, 0, 0));
-#endif
+    #if defined(DENOISER_SHADOWS_BIND_UAV_FILTER_OUTPUT)
+        imageStore(rw_filter_output, ivec2(p), FfxFloat32x4(val, 0, 0, 0));
+    #endif // #if defined(DENOISER_SHADOWS_BIND_UAV_FILTER_OUTPUT)
 }
 
 #endif // #if defined(FFX_GPU)

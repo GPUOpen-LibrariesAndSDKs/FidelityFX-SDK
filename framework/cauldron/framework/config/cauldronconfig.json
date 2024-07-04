@@ -12,12 +12,13 @@
             "RT1.0": false,
             "RT1.1": false,
             "FP16": false,
+            "ShaderStorageBufferArrayNonUniformIndexing": false,
             "ShaderModel": "SM5_1"
         },
 
         "Presentation": {
             "BackBufferCount": 3,
-            "Vsync": false,
+            "Vsync": true,
             "Fullscreen": false,
             "Width": 2560,
             "Height": 1440,
@@ -57,6 +58,12 @@
             "DebugShaders": false,
             "EnableRenderDocCapture": false,
             "EnablePixCapture": false
+        },
+
+        "FPSLimiter": {
+            "Enable": false,
+            "UseGPULimiter": false,
+            "TargetFPS": 60
         },
 
         "Content": {

@@ -1,25 +1,31 @@
-// AMD Cauldron code
+// This file is part of the FidelityFX SDK.
+//
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sub-license, and / or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 #pragma once
 
 #if defined(_DX12)
 
+#include "core/framework.h"
+#include "render/device.h"
 #include "render/dx12/gpuresource_dx12.h"
 #include "render/dx12/dynamicbufferpool_dx12.h"
 
@@ -52,12 +58,49 @@ namespace cauldron
         m_pResource->GetImpl()->DX12Resource()->Unmap(0, nullptr);
     }
 
+    bool DynamicBufferPoolInternal::InternalAlloc(uint32_t size, uint32_t* offset)
+    {
+        std::lock_guard<std::mutex> memlock(m_Mutex);
+
+        // check if we can directly allocate from head
+        if (m_Head >= m_Tail && m_Head + size < m_TotalSize)
+        {
+            *offset = m_Head;
+            m_Head += size;
+            m_AllocationTotal += size;
+            return true;
+        }
+
+        // check head if we've wrapped
+        if (m_Tail > m_Head && m_Tail - m_Head > size)
+        {
+            *offset = m_Head;
+            m_Head += size;
+            m_AllocationTotal += size;
+            return true;
+        }
+
+        // check if we need to wrap
+        if (m_Head >= m_Tail && m_Head + size >= m_TotalSize)
+        {
+            if (size < m_Tail)
+            {
+                *offset = 0;
+                m_AllocationTotal += (m_TotalSize - m_Head) + size;
+                m_Head = size;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     BufferAddressInfo DynamicBufferPoolInternal::AllocConstantBuffer(uint32_t size, const void* pInitData)
     {
         uint32_t alignedSize = AlignUp(size, 256u);
 
         uint32_t offset;
-        CauldronAssert(ASSERT_CRITICAL, m_RingBuffer.Alloc(alignedSize, &offset), L"DynamicBufferPool has run out of memory. Please increase the allocation size.");
+        CauldronAssert(ASSERT_CRITICAL, InternalAlloc(alignedSize, &offset), L"DynamicBufferPool has run out of memory. Please increase the allocation size.");
         
         // Copy the data in
         void* pBuffer = (void*)(m_pData + offset);
@@ -75,7 +118,7 @@ namespace cauldron
         uint32_t size = AlignUp(vertexCount * vertexStride, 256u);
 
         uint32_t offset;
-        CauldronAssert(ASSERT_CRITICAL, m_RingBuffer.Alloc(size, &offset), L"DynamicBufferPool has run out of memory. Please increase the allocation size.");
+        CauldronAssert(ASSERT_CRITICAL, InternalAlloc(size, &offset), L"DynamicBufferPool has run out of memory. Please increase the allocation size.");
 
         // Set the buffer data pointer
         *pBuffer = (void*)(m_pData + offset);
@@ -96,7 +139,7 @@ namespace cauldron
         uint32_t size = AlignUp(indexCount * indexStride, 256u);
 
         uint32_t offset;
-        CauldronAssert(ASSERT_CRITICAL, m_RingBuffer.Alloc(size, &offset), L"DynamicBufferPool has run out of memory. Please increase the allocation size.");
+        CauldronAssert(ASSERT_CRITICAL, InternalAlloc(size, &offset), L"DynamicBufferPool has run out of memory. Please increase the allocation size.");
 
         // Set the buffer data pointer
         *pBuffer = (void*)(m_pData + offset);
@@ -109,6 +152,42 @@ namespace cauldron
         pInfo->Format           = (indexStride == 4) ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT;
 
         return bufferInfo;
+    }
+
+   
+
+    void DynamicBufferPoolInternal::EndFrame()
+    {
+        MemoryPoolFrameInfo poolInfo = {};
+
+        // set a fence on the command queue to know when this memory has been processed so we can move up the tail
+        poolInfo.gpuSignal = GetDevice()->SignalQueue(CommandQueue::Graphics);
+
+        {
+            std::lock_guard<std::mutex> memlock(m_Mutex);
+            poolInfo.allocationSize = m_AllocationTotal;
+            m_AllocationTotal = 0; // cleared as all allocations from here are "fresh"
+        }
+        
+        // Enqueue the information
+        m_FrameAllocationQueue.push(poolInfo);
+        
+        // Check past frame allocations to see if we can recoup them
+        while(!m_FrameAllocationQueue.empty())
+        {
+            MemoryPoolFrameInfo& frameEntry = m_FrameAllocationQueue.front();
+            if (frameEntry.gpuSignal > GetDevice()->QueryLastCompletedValue(CommandQueue::Graphics))
+            {
+                break; // nothing else is done
+            }
+
+            // Lock the mutex, and move up the tail
+            {
+                std::lock_guard<std::mutex> memlock(m_Mutex);
+                m_Tail = (m_Tail + frameEntry.allocationSize) % m_TotalSize;
+            }
+            m_FrameAllocationQueue.pop();            
+        }
     }
 
 } // namespace cauldron

@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright © 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -23,6 +23,7 @@
 #include "uicommon.h"
 #include "fullscreen.hlsl"
 #include "upscaler.h"
+#include "transferFunction.h"
 
 //--------------------------------------------------------------------------------------
 // Input structures
@@ -206,8 +207,12 @@ float4 uiPS(PS_INPUT input) : SV_Target
     switch (HDRCB.MonitorDisplayMode)
     {
         case DisplayMode::DISPLAYMODE_LDR:
+            out_col.xyz = ApplyGamma(out_col.xyz);
+            break;
+
         case DisplayMode::DISPLAYMODE_HDR10_SCRGB:
         case DisplayMode::DISPLAYMODE_FSHDR_SCRGB:
+            out_col.xyz = ApplyscRGBScale(out_col.xyz, 0.0f, HDRCB.DisplayMaxLuminance / 80.0f);
             break;
 
         case DisplayMode::DISPLAYMODE_HDR10_2084:
@@ -224,6 +229,7 @@ float4 uiPS(PS_INPUT input) : SV_Target
             // 1 * ((1000 / 80) * (80 / 10000)) = 1 / 10 = 0.1
             // For simplcity we are getting rid of conversion to per 80 nit division factor and directly dividing max luminance set by 10000 nits
             col *= (HDRCB.DisplayMaxLuminance / 10000.0f);
+            col = ApplyPQ(col);
             out_col = float4(col, out_col.a);
             break;
     }

@@ -1,17 +1,20 @@
-// AMD Cauldron code
+// This file is part of the FidelityFX SDK.
 //
-// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sub-license, and / or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -152,7 +155,7 @@ namespace cauldron
     void InputManagerInternal::PollInputStates()
     {
         // Don't poll input if we are not active
-        if (GetForegroundWindow() != GetFramework()->GetInternal()->GetHWND())
+        if (GetForegroundWindow() != GetFramework()->GetImpl()->GetHWND())
             return;
 
         // Use last frame information to calculate deltas and button release states
@@ -166,7 +169,7 @@ namespace cauldron
         m_InputStateRep[m_CurrentStateID].KeyboardUpState = 0;
 
         // Poll all mapped keyboard keys if not hijacked by UI
-        if (!io.WantCaptureKeyboard)
+        if (!io.WantCaptureKeyboard && !m_IgnoreFrameInputs)
         {
             for (uint32_t keyID = 0; keyID < static_cast<uint32_t>(Key_Count); ++keyID)
             {
@@ -191,7 +194,7 @@ namespace cauldron
         }
 
         // Poll mouse inputs if not hijacked by UI
-        if (!io.WantCaptureMouse)
+        if (!io.WantCaptureMouse && !m_IgnoreFrameInputs)
         {
             bool lButtonDown = (GetKeyState(VK_LBUTTON) & 0x80) ? true : false;
             bool rButtonDown = (GetKeyState(VK_RBUTTON) & 0x80) ? true : false;
@@ -219,7 +222,7 @@ namespace cauldron
             // Get the mouse coordinates in relation to the application window
             POINT mouseCoords;
             GetCursorPos(&mouseCoords);
-            ScreenToClient(GetFramework()->GetInternal()->GetHWND(), &mouseCoords);
+            ScreenToClient(GetFramework()->GetImpl()->GetHWND(), &mouseCoords);
 
             m_InputStateRep[m_CurrentStateID].Mouse.AxisState[Mouse_XAxis] = mouseCoords.x;
             m_InputStateRep[m_CurrentStateID].Mouse.AxisState[Mouse_YAxis] = mouseCoords.y;

@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 /// A define for a true value in a boolean expression.
@@ -45,58 +45,11 @@
 /// @ingroup GPUCore
 #define FFX_PI  (3.14159)
 
+FFX_STATIC const FfxFloat32 FFX_FP16_MIN        = 6.10e-05f;
+FFX_STATIC const FfxFloat32 FFX_FP16_MAX        = 65504.0f;
+FFX_STATIC const FfxFloat32 FFX_TONEMAP_EPSILON = 1.0f / FFX_FP16_MAX;
 
-/// Compute the reciprocal of <c><i>value</i></c>.
-///
-/// @param [in] value               The value to compute the reciprocal of.
-///
-/// @returns
-/// The 1 / <c><i>value</i></c>.
-///
-/// @ingroup GPUCore
-FfxFloat32 ffxReciprocal(FfxFloat32 value)
-{
-    return rcp(value);
-}
-
-/// Compute the reciprocal of <c><i>value</i></c>.
-///
-/// @param [in] value               The value to compute the reciprocal of.
-///
-/// @returns
-/// The 1 / <c><i>value</i></c>.
-///
-/// @ingroup GPUCore
-FfxFloat32x2 ffxReciprocal(FfxFloat32x2 value)
-{
-    return rcp(value);
-}
-
-/// Compute the reciprocal of <c><i>value</i></c>.
-///
-/// @param [in] value               The value to compute the reciprocal of.
-///
-/// @returns
-/// The 1 / <c><i>value</i></c>.
-///
-/// @ingroup GPUCore
-FfxFloat32x3 ffxReciprocal(FfxFloat32x3 value)
-{
-    return rcp(value);
-}
-
-/// Compute the reciprocal of <c><i>value</i></c>.
-///
-/// @param [in] value               The value to compute the reciprocal of.
-///
-/// @returns
-/// The 1 / <c><i>value</i></c>.
-///
-/// @ingroup GPUCore
-FfxFloat32x4 ffxReciprocal(FfxFloat32x4 value)
-{
-    return rcp(value);
-}
+#define FFX_HAS_FLAG(v, f) ((v & f) == f)
 
 /// Compute the min of two values.
 ///
@@ -779,7 +732,7 @@ FfxFloat32x4 ffxIsGreaterThanZero(FfxFloat32x4 m)
 /// @ingroup GPUCore
 FfxUInt32 ffxFloatToSortableInteger(FfxUInt32 value)
 {
-    return value ^ ((AShrSU1(value, FfxUInt32(31))) | FfxUInt32(0x80000000));
+    return value ^ ((ffxAShrSU1(value, FfxUInt32(31))) | FfxUInt32(0x80000000));
 }
 
 /// Convert a sortable integer to a 32bit floating point value.
@@ -796,7 +749,7 @@ FfxUInt32 ffxFloatToSortableInteger(FfxUInt32 value)
 /// @ingroup GPUCore
 FfxUInt32 ffxSortableIntegerToFloat(FfxUInt32 value)
 {
-    return value ^ ((~AShrSU1(value, FfxUInt32(31))) | FfxUInt32(0x80000000));
+    return value ^ ((~ffxAShrSU1(value, FfxUInt32(31))) | FfxUInt32(0x80000000));
 }
 
 /// Calculate a low-quality approximation for the square root of a value.
@@ -2405,6 +2358,51 @@ FfxFloat32x3 ffxRec709FromLinear(FfxFloat32x3 color)
     return clamp(j.xxx, color * j.yyy, pow(color, j.zzz) * k.xxx + k.yyy);
 }
 
+/// Compute a linear value from a REC.709 value.
+///
+/// @param [in] color           The value to convert to linear from REC.709.
+///
+/// @returns
+/// A value in linear space.
+///
+/// @ingroup GPUCore
+FfxFloat32 ffxLinearFromRec709(FfxFloat32 color)
+{
+    FfxFloat32x3 j = FfxFloat32x3(0.081 / 4.5, 1.0 / 4.5, 1.0 / 0.45);
+    FfxFloat32x2 k = FfxFloat32x2(1.0 / 1.099, 0.099 / 1.099);
+    return ffxZeroOneSelect(ffxZeroOneIsSigned(color - j.x), color * j.y, pow(color * k.x + k.y, j.z));
+}
+
+/// Compute a linear value from a REC.709 value.
+///
+/// @param [in] color           The value to convert to linear from REC.709.
+///
+/// @returns
+/// A value in linear space.
+///
+/// @ingroup GPUCore
+FfxFloat32x2 ffxLinearFromRec709(FfxFloat32x2 color)
+{
+    FfxFloat32x3 j = FfxFloat32x3(0.081 / 4.5, 1.0 / 4.5, 1.0 / 0.45);
+    FfxFloat32x2 k = FfxFloat32x2(1.0 / 1.099, 0.099 / 1.099);
+    return ffxZeroOneSelect(ffxZeroOneIsSigned(color - j.xx), color * j.yy, pow(color * k.xx + k.yy, j.zz));
+}
+
+/// Compute a linear value from a REC.709 value.
+///
+/// @param [in] color           The value to convert to linear from REC.709.
+///
+/// @returns
+/// A value in linear space.
+///
+/// @ingroup GPUCore
+FfxFloat32x3 ffxLinearFromRec709(FfxFloat32x3 color)
+{
+    FfxFloat32x3 j = FfxFloat32x3(0.081 / 4.5, 1.0 / 4.5, 1.0 / 0.45);
+    FfxFloat32x2 k = FfxFloat32x2(1.0 / 1.099, 0.099 / 1.099);
+    return ffxZeroOneSelect(ffxZeroOneIsSigned(color - j.xxx), color * j.yyy, pow(color * k.xxx + k.yyy, j.zzz));
+}
+
 /// Compute a gamma value from a linear value.
 ///
 /// Typically 2.2 for some PC displays, or 2.4-2.5 for CRTs, or 2.2 FreeSync2 native.
@@ -2459,138 +2457,6 @@ FfxFloat32x3 ffxGammaFromLinear(FfxFloat32x3 value, FfxFloat32 power)
     return pow(value, ffxBroadcast3(power));
 }
 
-/// Compute a PQ value from a linear value.
-///
-/// @param [in] value           The value to convert to PQ from linear.
-///
-/// @returns
-/// A value in linear space.
-///
-/// @ingroup GPUCore
-FfxFloat32 ffxPQToLinear(FfxFloat32 value)
-{
-    FfxFloat32 p = pow(value, FfxFloat32(0.159302));
-    return pow((FfxFloat32(0.835938) + FfxFloat32(18.8516) * p) / (FfxFloat32(1.0) + FfxFloat32(18.6875) * p), FfxFloat32(78.8438));
-}
-
-/// Compute a PQ value from a linear value.
-///
-/// @param [in] value           The value to convert to PQ from linear.
-///
-/// @returns
-/// A value in linear space.
-///
-/// @ingroup GPUCore
-FfxFloat32x2 ffxPQToLinear(FfxFloat32x2 value)
-{
-    FfxFloat32x2 p = pow(value, ffxBroadcast2(0.159302));
-    return pow((ffxBroadcast2(0.835938) + ffxBroadcast2(18.8516) * p) / (ffxBroadcast2(1.0) + ffxBroadcast2(18.6875) * p), ffxBroadcast2(78.8438));
-}
-
-/// Compute a PQ value from a linear value.
-///
-/// @param [in] value           The value to convert to PQ from linear.
-///
-/// @returns
-/// A value in linear space.
-///
-/// @ingroup GPUCore
-FfxFloat32x3 ffxPQToLinear(FfxFloat32x3 value)
-{
-    FfxFloat32x3 p = pow(value, ffxBroadcast3(0.159302));
-    return pow((ffxBroadcast3(0.835938) + ffxBroadcast3(18.8516) * p) / (ffxBroadcast3(1.0) + ffxBroadcast3(18.6875) * p), ffxBroadcast3(78.8438));
-}
-
-/// Compute a linear value from a SRGB value.
-///
-/// @param [in] value           The value to convert to linear from SRGB.
-///
-/// @returns
-/// A value in SRGB space.
-///
-/// @ingroup GPUCore
-FfxFloat32 ffxSrgbToLinear(FfxFloat32 value)
-{
-    FfxFloat32x3 j = FfxFloat32x3(0.0031308 * 12.92, 12.92, 1.0 / 2.4);
-    FfxFloat32x2 k = FfxFloat32x2(1.055, -0.055);
-    return clamp(j.x, value * j.y, pow(value, j.z) * k.x + k.y);
-}
-
-/// Compute a linear value from a SRGB value.
-///
-/// @param [in] value           The value to convert to linear from SRGB.
-///
-/// @returns
-/// A value in SRGB space.
-///
-/// @ingroup GPUCore
-FfxFloat32x2 ffxSrgbToLinear(FfxFloat32x2 value)
-{
-    FfxFloat32x3 j = FfxFloat32x3(0.0031308 * 12.92, 12.92, 1.0 / 2.4);
-    FfxFloat32x2 k = FfxFloat32x2(1.055, -0.055);
-    return clamp(j.xx, value * j.yy, pow(value, j.zz) * k.xx + k.yy);
-}
-
-/// Compute a linear value from a SRGB value.
-///
-/// @param [in] value           The value to convert to linear from SRGB.
-///
-/// @returns
-/// A value in SRGB space.
-///
-/// @ingroup GPUCore
-FfxFloat32x3 ffxSrgbToLinear(FfxFloat32x3 value)
-{
-    FfxFloat32x3 j = FfxFloat32x3(0.0031308 * 12.92, 12.92, 1.0 / 2.4);
-    FfxFloat32x2 k = FfxFloat32x2(1.055, -0.055);
-    return clamp(j.xxx, value * j.yyy, pow(value, j.zzz) * k.xxx + k.yyy);
-}
-
-/// Compute a linear value from a REC.709 value.
-///
-/// @param [in] color           The value to convert to linear from REC.709.
-///
-/// @returns
-/// A value in linear space.
-///
-/// @ingroup GPUCore
-FfxFloat32 ffxLinearFromRec709(FfxFloat32 color)
-{
-    FfxFloat32x3 j = FfxFloat32x3(0.081 / 4.5, 1.0 / 4.5, 1.0 / 0.45);
-    FfxFloat32x2 k = FfxFloat32x2(1.0 / 1.099, 0.099 / 1.099);
-    return ffxZeroOneSelect(ffxZeroOneIsSigned(color - j.x), color * j.y, pow(color * k.x + k.y, j.z));
-}
-
-/// Compute a linear value from a REC.709 value.
-///
-/// @param [in] color           The value to convert to linear from REC.709.
-///
-/// @returns
-/// A value in linear space.
-///
-/// @ingroup GPUCore
-FfxFloat32x2 ffxLinearFromRec709(FfxFloat32x2 color)
-{
-    FfxFloat32x3 j = FfxFloat32x3(0.081 / 4.5, 1.0 / 4.5, 1.0 / 0.45);
-    FfxFloat32x2 k = FfxFloat32x2(1.0 / 1.099, 0.099 / 1.099);
-    return ffxZeroOneSelect(ffxZeroOneIsSigned(color - j.xx), color * j.yy, pow(color * k.xx + k.yy, j.zz));
-}
-
-/// Compute a linear value from a REC.709 value.
-///
-/// @param [in] color           The value to convert to linear from REC.709.
-///
-/// @returns
-/// A value in linear space.
-///
-/// @ingroup GPUCore
-FfxFloat32x3 ffxLinearFromRec709(FfxFloat32x3 color)
-{
-    FfxFloat32x3 j = FfxFloat32x3(0.081 / 4.5, 1.0 / 4.5, 1.0 / 0.45);
-    FfxFloat32x2 k = FfxFloat32x2(1.0 / 1.099, 0.099 / 1.099);
-    return ffxZeroOneSelect(ffxZeroOneIsSigned(color - j.xxx), color * j.yyy, pow(color * k.xxx + k.yyy, j.zzz));
-}
-
 /// Compute a linear value from a value in a gamma space.
 ///
 /// Typically 2.2 for some PC displays, or 2.4-2.5 for CRTs, or 2.2 FreeSync2 native.
@@ -2639,6 +2505,48 @@ FfxFloat32x3 ffxLinearFromGamma(FfxFloat32x3 color, FfxFloat32 power)
     return pow(color, ffxBroadcast3(power));
 }
 
+/// Compute a PQ value from a linear value.
+///
+/// @param [in] value           The value to convert to PQ from linear.
+///
+/// @returns
+/// A value in linear space.
+///
+/// @ingroup GPUCore
+FfxFloat32 ffxPQFromLinear(FfxFloat32 value)
+{
+    FfxFloat32 p = pow(value, FfxFloat32(0.159302));
+    return pow((FfxFloat32(0.835938) + FfxFloat32(18.8516) * p) / (FfxFloat32(1.0) + FfxFloat32(18.6875) * p), FfxFloat32(78.8438));
+}
+
+/// Compute a PQ value from a linear value.
+///
+/// @param [in] value           The value to convert to PQ from linear.
+///
+/// @returns
+/// A value in linear space.
+///
+/// @ingroup GPUCore
+FfxFloat32x2 ffxPQFromLinear(FfxFloat32x2 value)
+{
+    FfxFloat32x2 p = pow(value, ffxBroadcast2(0.159302));
+    return pow((ffxBroadcast2(0.835938) + ffxBroadcast2(18.8516) * p) / (ffxBroadcast2(1.0) + ffxBroadcast2(18.6875) * p), ffxBroadcast2(78.8438));
+}
+
+/// Compute a PQ value from a linear value.
+///
+/// @param [in] value           The value to convert to PQ from linear.
+///
+/// @returns
+/// A value in linear space.
+///
+/// @ingroup GPUCore
+FfxFloat32x3 ffxPQFromLinear(FfxFloat32x3 value)
+{
+    FfxFloat32x3 p = pow(value, ffxBroadcast3(0.159302));
+    return pow((ffxBroadcast3(0.835938) + ffxBroadcast3(18.8516) * p) / (ffxBroadcast3(1.0) + ffxBroadcast3(18.6875) * p), ffxBroadcast3(78.8438));
+}
+
 /// Compute a linear value from a value in a PQ space.
 ///
 /// Typically 2.2 for some PC displays, or 2.4-2.5 for CRTs, or 2.2 FreeSync2 native.
@@ -2685,6 +2593,51 @@ FfxFloat32x3 ffxLinearFromPQ(FfxFloat32x3 value)
 {
     FfxFloat32x3 p = pow(value, ffxBroadcast3(0.0126833));
     return pow(ffxSaturate(p - ffxBroadcast3(0.835938)) / (ffxBroadcast3(18.8516) - ffxBroadcast3(18.6875) * p), ffxBroadcast3(6.27739));
+}
+
+/// Compute an SRGB value from a linear value.
+///
+/// @param [in] value           The value to convert to SRGB from linear.
+///
+/// @returns
+/// A value in SRGB space.
+///
+/// @ingroup GPUCore
+FfxFloat32 ffxSrgbFromLinear(FfxFloat32 value)
+{
+    FfxFloat32x3 j = FfxFloat32x3(0.0031308 * 12.92, 12.92, 1.0 / 2.4);
+    FfxFloat32x2 k = FfxFloat32x2(1.055, -0.055);
+    return clamp(j.x, value * j.y, pow(value, j.z) * k.x + k.y);
+}
+
+/// Compute an SRGB value from a linear value.
+///
+/// @param [in] value           The value to convert to SRGB from linear.
+///
+/// @returns
+/// A value in SRGB space.
+///
+/// @ingroup GPUCore
+FfxFloat32x2 ffxSrgbFromLinear(FfxFloat32x2 value)
+{
+    FfxFloat32x3 j = FfxFloat32x3(0.0031308 * 12.92, 12.92, 1.0 / 2.4);
+    FfxFloat32x2 k = FfxFloat32x2(1.055, -0.055);
+    return clamp(j.xx, value * j.yy, pow(value, j.zz) * k.xx + k.yy);
+}
+
+/// Compute an SRGB value from a linear value.
+///
+/// @param [in] value           The value to convert to SRGB from linear.
+///
+/// @returns
+/// A value in SRGB space.
+///
+/// @ingroup GPUCore
+FfxFloat32x3 ffxSrgbFromLinear(FfxFloat32x3 value)
+{
+    FfxFloat32x3 j = FfxFloat32x3(0.0031308 * 12.92, 12.92, 1.0 / 2.4);
+    FfxFloat32x2 k = FfxFloat32x2(1.055, -0.055);
+    return clamp(j.xxx, value * j.yyy, pow(value, j.zzz) * k.xxx + k.yyy);
 }
 
 /// Compute a linear value from a value in a SRGB space.
@@ -2739,11 +2692,13 @@ FfxFloat32x3 ffxLinearFromSrgb(FfxFloat32x3 value)
 }
 
 /// A remapping of 64x1 to 8x8 imposing rotated 2x2 pixel quads in quad linear.
-/// 
-///  543210
-///  ======
-///  ..xxx.
-///  yy...y
+///
+/// Remap illustration:
+///
+///     543210
+///     ~~~~~~
+///     ..xxx.
+///     yy...y
 /// 
 /// @param [in] a       The input 1D coordinates to remap.
 ///
@@ -2753,7 +2708,7 @@ FfxFloat32x3 ffxLinearFromSrgb(FfxFloat32x3 value)
 /// @ingroup GPUCore
 FfxUInt32x2 ffxRemapForQuad(FfxUInt32 a)
 {
-    return FfxUInt32x2(bitfieldExtract(a, 1u, 3u), bitfieldInsertMask(bitfieldExtract(a, 3u, 3u), a, 1u));
+    return FfxUInt32x2(ffxBitfieldExtract(a, 1u, 3u), ffxBitfieldInsertMask(ffxBitfieldExtract(a, 3u, 3u), a, 1u));
 }
 
 /// A helper function performing a remap 64x1 to 8x8 remapping which is necessary for 2D wave reductions.
@@ -2777,5 +2732,5 @@ FfxUInt32x2 ffxRemapForQuad(FfxUInt32 a)
 /// @ingroup GPUCore
 FfxUInt32x2 ffxRemapForWaveReduction(FfxUInt32 a)
 {
-    return FfxUInt32x2(bitfieldInsertMask(bitfieldExtract(a, 2u, 3u), a, 1u), bitfieldInsertMask(bitfieldExtract(a, 3u, 3u), bitfieldExtract(a, 1u, 2u), 2u));
+    return FfxUInt32x2(ffxBitfieldInsertMask(ffxBitfieldExtract(a, 2u, 3u), a, 1u), ffxBitfieldInsertMask(ffxBitfieldExtract(a, 3u, 3u), ffxBitfieldExtract(a, 1u, 2u), 2u));
 }

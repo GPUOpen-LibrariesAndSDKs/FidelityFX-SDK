@@ -1,5 +1,25 @@
-// Portions Copyright 2023 Advanced Micro Devices, Inc.All rights reserved.
+// This file is part of the FidelityFX SDK.
 //
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
+// 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions :
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -66,7 +86,7 @@ struct GBufferOutput
 {
     float4 BaseColorAlpha       : SV_Target0;
     float4 Normals              : SV_Target1;
-    float3 AoRoughnessMetallic  : SV_Target2;
+    float4 AoRoughnessMetallic  : SV_Target2;
 #ifdef HAS_MOTION_VECTORS_RT
     float2 MotionVectors : TARGET(HAS_MOTION_VECTORS_RT);
 #endif // HAS_MOTION_VECTORS_RT
@@ -81,7 +101,7 @@ GBufferOutput MainPS(VS_SURFACE_OUTPUT SurfaceInput
 #ifndef ID_doublesided
     bool isFrontFace = false;
 #endif
-#ifdef HAS_COLOR_0
+#if defined(HAS_COLOR_0) && defined(ID_alphaMask)
     if (SurfaceInput.Color0.a <= 0)
         discard;
 #endif
@@ -90,6 +110,11 @@ GBufferOutput MainPS(VS_SURFACE_OUTPUT SurfaceInput
     GetPBRParams(SurfaceInput, InstanceInfo.MaterialInfo, BaseColorAlpha, AoRoughnessMetallic, Textures, AllTextures, AllSamplers, SceneInfo.MipLODBias);
 
     DiscardPixelIfAlphaCutOff(BaseColorAlpha.a, InstanceInfo);
+
+    // This is an opaque pass, if we decided to keep that pixel it is fully opaque. 
+#ifndef ID_alphaMask
+    BaseColorAlpha.a = 1;
+#endif
 
     // Roughness is authored as perceptual roughness; as is convention,
     // convert to material roughness by squaring the perceptual roughness [2].
@@ -106,12 +131,12 @@ GBufferOutput MainPS(VS_SURFACE_OUTPUT SurfaceInput
 #endif // HAS_MOTION_VECTORS_RT
 
     GBuffer.BaseColorAlpha      = BaseColorAlpha;
-    GBuffer.AoRoughnessMetallic = AoRoughnessMetallic;
+    GBuffer.AoRoughnessMetallic = float4(AoRoughnessMetallic, 0.f);
     GBuffer.AoRoughnessMetallic.r = 1.0f; // Temp for SSAO
 
     float3 normals = GetPixelNormal(SurfaceInput, Textures, SceneInfo, AllTextures, AllSamplers, SceneInfo.MipLODBias, isFrontFace);
-    // Compress normal range from [-1, 1] to [0, 1] to fit in unsigned R11G11B10 format    
-    GBuffer.Normals             = float4(normals * 0.5 + 0.5, 0.f);
+    // Compress normal range from [-1, 1] to [0, 1] to fit in unsigned R11G11B10 format
+    GBuffer.Normals = float4(CompressNormals(normals), 0.f);
 
     return GBuffer;
 }

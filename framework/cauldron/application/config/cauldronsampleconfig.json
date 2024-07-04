@@ -6,10 +6,10 @@
         },
 
         "RenderModules": [
-            "SkyDomeRenderModule",
             "RasterShadowRenderModule",
             "GBufferRenderModule",
             "LightingRenderModule",
+            "SkyDomeRenderModule",
             "TranslucencyRenderModule",
             "TAARenderModule",
             "ToneMappingRenderModule"

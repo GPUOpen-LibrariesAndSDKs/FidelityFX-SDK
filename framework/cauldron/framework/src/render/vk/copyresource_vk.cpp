@@ -1,17 +1,20 @@
-// AMD Cauldron code
+// This file is part of the FidelityFX SDK.
+//
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Copyright(c) 2023 Advanced Micro Devices, Inc.All rights reserved.
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sub-license, and / or sell
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -28,19 +31,19 @@
 
 namespace cauldron
 {
-    CopyResource* CopyResource::CreateCopyResource(const GPUResource* pDest, void* pInitData, uint64_t dataSize, ResourceState initialState)
+    CopyResource* CopyResource::CreateCopyResource(const GPUResource* pDest, const SourceData* pSrc, ResourceState initialState)
     {
-        return new CopyResourceInternal(pDest, pInitData, dataSize, initialState);
+        return new CopyResourceInternal(pDest, pSrc, initialState);
     }
 
-    CopyResourceInternal::CopyResourceInternal(const GPUResource* pDest, void* pInitData, uint64_t dataSize, ResourceState initialState) :
-        CopyResource(pInitData, dataSize)
+    CopyResourceInternal::CopyResourceInternal(const GPUResource* pDest, const SourceData* pSrc, ResourceState initialState):
+        CopyResource(pSrc)
     {
         VkBufferCreateInfo info    = {};
         info.sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         info.pNext                 = nullptr;
         info.flags                 = 0;
-        info.size                  = static_cast<VkDeviceSize>(dataSize);
+        info.size                  = static_cast<VkDeviceSize>(pSrc->size);
         info.usage                 = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         info.sharingMode           = VK_SHARING_MODE_EXCLUSIVE;
         info.queueFamilyIndexCount = 0;
@@ -66,9 +69,16 @@ namespace cauldron
         VkResult      res        = vmaMapMemory(allocator, allocation, &pDestData);
         CauldronAssert(ASSERT_CRITICAL, res == VK_SUCCESS, L"Cannot map staging buffer");
 
-        const uint8_t* src = static_cast<uint8_t*>(pInitData);
+        const uint8_t* src = static_cast<uint8_t*>(pSrc->buffer);
         uint8_t*       dst = static_cast<uint8_t*>(pDestData);
-        memcpy(dst, src, static_cast<size_t>(info.size));
+        if (pSrc->type == SourceData::Type::BUFFER)
+            memcpy(dst, src, static_cast<size_t>(info.size));
+        else if (pSrc->type == SourceData::Type::VALUE)
+            memset(dst, pSrc->value, static_cast<size_t>(info.size));
+        else
+        {
+            CauldronCritical(L"Invalid type of source data");
+        }
 
         vmaFlushAllocation(allocator, allocation, 0, info.size);
 

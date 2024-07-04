@@ -8,7 +8,9 @@ For details on the techniques that underpin the Depth of Field effect you can re
 
 <h2>Requirements</h2>
 
-`Windows` `DirectX(R)12` `Vulkan(R)`
+ - Windows
+ - DirectX(R)12
+ - Vulkan(R)
 
 <h2>UI elements</h2>
 
@@ -31,11 +33,7 @@ The output is produced in-place (in the same color buffer) as an optimization. B
 
 <h2>Sample Controls and Configurations</h2>
 
-For sample controls, configuration and Cauldron UI element details, please see [Running the samples](../getting-started/running-samples.md)
-
-<h2>Known Issues</h2>
-
-Some artifacts may occur on some Intel Arc GPUs.
+For sample controls, configuration, and FidelityFX Cauldron Framework UI element details, see [Running the samples](../getting-started/running-samples.md).
 
 <h2>See also</h2>
 

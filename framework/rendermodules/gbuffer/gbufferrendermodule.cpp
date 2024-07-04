@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -25,6 +25,7 @@
 #include "core/framework.h"
 #include "core/components/cameracomponent.h"
 #include "core/components/meshcomponent.h"
+#include "core/components/animationcomponent.h"
 #include "core/scene.h"
 #include "render/device.h"
 #include "render/parameterset.h"
@@ -35,6 +36,7 @@
 #include "render/rootsignature.h"
 #include "render/sampler.h"
 #include "render/shaderbuilderhelper.h"
+#include "shaders/surfacerendercommon.h"
 
 #include <functional>
 
@@ -161,8 +163,8 @@ void GBufferRenderModule::Execute(double deltaTime, CommandList* pCmdList)
     uint32_t width, height;
     if (upscaleState == UpscalerState::None || upscaleState == UpscalerState::PostUpscale)
     {
-        width = resInfo.DisplayWidth;
-        height = resInfo.DisplayHeight;
+        width = resInfo.UpscaleWidth;
+        height = resInfo.UpscaleHeight;
     }
     else
     {
@@ -215,8 +217,10 @@ void GBufferRenderModule::Execute(double deltaTime, CommandList* pCmdList)
                     // Update root constants
                     BufferAddressInfo perObjectBufferInfo = GetDynamicBufferPool()->AllocConstantBuffer(sizeof(InstanceInformation), &instanceInfo);
                     BufferAddressInfo textureIndicesBufferInfo = GetDynamicBufferPool()->AllocConstantBuffer(sizeof(TextureIndices), &pipelineSurfaceInfo.TextureIndices);
+
                     m_pParameterSet->UpdateRootConstantBuffer(&perObjectBufferInfo, 1);
                     m_pParameterSet->UpdateRootConstantBuffer(&textureIndicesBufferInfo, 2);
+
 
                     // Bind for rendering
                     m_pParameterSet->Bind(pCmdList, pipelineGroup.m_Pipeline);
@@ -230,7 +234,27 @@ void GBufferRenderModule::Execute(double deltaTime, CommandList* pCmdList)
                             vertexBuffers.push_back(pSurface->GetVertexBuffer(static_cast<VertexAttributeType>(attribute)).pBuffer->GetAddressInfo());
                         }
                     }
-                    
+
+                    // Skeletal Animation
+                    if (pipelineSurfaceInfo.pOwner->HasComponent(AnimationComponentMgr::Get()))
+                    {
+                        const auto& data = pipelineSurfaceInfo.pOwner->GetComponent<const AnimationComponent>(AnimationComponentMgr::Get())->GetData();
+
+                        if (data->m_skinId != -1)
+                        {
+                            // Positions are stored at index 0
+                            // Normals are stored at index 1
+
+                            // Replace the vertices POSITION attribute with the Skinned POSITION attribute
+                            // Replace the vertices NORMAL   attribute with the Skinned NORMAL   attribute
+                            // Replace the vertices PREVIOUSPOSITION   attribute with the Skinned PREVIOUSPOSITION attribute
+                            const uint32_t surfaceID = pSurface->GetSurfaceID();
+                            vertexBuffers[0]     = data->m_skinnedPositions[surfaceID].pBuffer->GetAddressInfo();
+                            vertexBuffers[1]     = data->m_skinnedNormals[surfaceID].pBuffer->GetAddressInfo();
+                            vertexBuffers.back() = data->m_skinnedPreviousPosition[surfaceID].pBuffer->GetAddressInfo();
+                        }
+                    }
+
                     // Set vertex/index buffers
                     SetVertexBuffers(pCmdList, 0, static_cast<uint32_t>(vertexBuffers.size()), vertexBuffers.data());
 
@@ -399,12 +423,9 @@ uint32_t GBufferRenderModule::GetPipelinePermutationID(const Surface* pSurface) 
     //     - POSITION have to be present
     //     - NORMAL, TANGENT and COLOR# are always used if present
     //     - TEXCOORD# depends on which textures are using them. If there is no texture, they should be removed
-    //     - WEIGHT# and JOINTS# aren't used yet but we can add them safely
+    //     - PREVIOUSPOSITION for meshes that support skeletal animation
 
-    // so we should accept by default all the attributes except the texcoords
-    uint32_t usedAttributes = VertexAttributeFlag_Position | VertexAttributeFlag_Normal | VertexAttributeFlag_Tangent | VertexAttributeFlag_Color0 |
-                              VertexAttributeFlag_Color1 | VertexAttributeFlag_Weights0 | VertexAttributeFlag_Weights1 | VertexAttributeFlag_Joints0 |
-                              VertexAttributeFlag_Joints1;
+    uint32_t usedAttributes = VertexAttributeFlag_Position | VertexAttributeFlag_Normal | VertexAttributeFlag_Tangent | VertexAttributeFlag_Color0 | VertexAttributeFlag_Color1 | VertexAttributeFlag_PreviousPosition;
 
     // only keep the available attributes of the surface
     const uint32_t surfaceAttributes = pSurface->GetVertexAttributes();
@@ -414,8 +435,6 @@ uint32_t GBufferRenderModule::GetPipelinePermutationID(const Surface* pSurface) 
     const Material* pMaterial = pSurface->GetMaterial();
 
     // defines in the shaders
-
-    // ID_skinningMatrices - TODO
 
     // ID_normalTexCoord
     // ID_emissiveTexCoord

@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -39,7 +39,7 @@ namespace cauldron
     class Buffer;
 } // namespace cauldron
 
-/// @defgroup FfxSpdSample FidelityFX SPD Sample
+/// @defgroup FfxSpdSample FidelityFX SPD sample
 /// Sample documentation for FidelityFX Single Pass Downsampler
 ///
 /// @ingroup SDKEffects
@@ -61,6 +61,7 @@ enum class DownsampleTechnique : uint32_t
 
 /**
  * @class SPDRenderModule
+ * SPDRenderModule handles a number of tasks related to SPD.
  *
  * SPDRenderModule takes care of:
  *      - creating UI section that enable users to switch between options of SPD
@@ -100,6 +101,9 @@ private:
      * @brief   Callback for texture loading so we can complete parameter binding and mark the module "ready"
      */
     void TextureLoadComplete(const std::vector<const cauldron::Texture*>& textureList, void*);
+
+    void InitFfxContext();
+    void DestroyFfxContext();
 
     /**
      * @brief   Performs traditional raster-based hierarchical downsampling via consecutive pixel shader invocations

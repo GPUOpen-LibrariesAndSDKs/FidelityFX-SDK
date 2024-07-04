@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
 //
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -40,7 +40,7 @@
 /// FidelityFX VRS minor version.
 ///
 /// @ingroup FfxVrs
-#define FFX_VRS_VERSION_MINOR (1)
+#define FFX_VRS_VERSION_MINOR (2)
 
 /// FidelityFX VRS patch version.
 ///
@@ -57,7 +57,7 @@
 /// The size of the context specified in 32bit values.
 ///
 /// @ingroup FfxVrs
-#define FFX_VRS_CONTEXT_SIZE (2672)
+#define FFX_VRS_CONTEXT_SIZE (16536)
 
 #if defined(__cplusplus)
 extern "C" {
@@ -94,9 +94,9 @@ typedef enum FfxVrsInitializationFlagBits
 /// @ingroup FfxVrs
 typedef struct FfxVrsContextDescription
 {
-    uint32_t     flags;                     ///< A collection of <c><i>FfxVrsInitializationFlagBits</i></c>
-    uint32_t     shadingRateImageTileSize;  ///< ShadingRateImage tile size.
-    FfxInterface backendInterface;          ///< A set of pointers to the backend implementation for FidelityFX.
+    uint32_t     flags;                                 ///< A collection of <c><i>FfxVrsInitializationFlagBits</i></c>
+    uint32_t     shadingRateImageTileSize;              ///< ShadingRateImage tile size.
+    FfxInterface backendInterface;                      ///< A set of pointers to the backend implementation for FidelityFX.
 } FfxVrsContextDescription;
 
 /// A structure encapsulating the parameters for dispatching the various passes
@@ -210,6 +210,14 @@ FFX_API FfxErrorCode ffxVrsContextDestroy(FfxVrsContext* pContext);
 ///
 /// @ingroup FfxVrs
 FFX_API FfxErrorCode ffxVrsGetImageSizeFromeRenderResolution(uint32_t* pImageWidth, uint32_t* pImageHeight, uint32_t renderWidth, uint32_t renderHeight, uint32_t shadingRateImageTileSize);
+
+/// Queries the effect version number.
+///
+/// @returns
+/// The SDK version the effect was built with.
+///
+/// @ingroup FfxVrs
+FFX_API FfxVersionNumber ffxVrsGetEffectVersion();
 
 #if defined(__cplusplus)
 }

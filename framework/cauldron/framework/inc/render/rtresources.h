@@ -1,20 +1,20 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the “Software”), to deal
+// of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -39,11 +39,12 @@ namespace cauldron
 {
     class Mesh;
     class CommandList;
+    struct VertexBufferInformation;
 
     /**
      * @class BLAS
      *
-     * The <c><i>Cauldron</i></c> api/platform-agnostic representation of the Bottom Level Acceleration Structure.
+     * The <c><i>FidelityFX Cauldron Framework</i></c> api/platform-agnostic representation of the Bottom Level Acceleration Structure.
      * Only created when "BuildRayTracingAccelerationStructure" config is set to true.
      *
      * @ingroup CauldronRender
@@ -75,7 +76,7 @@ namespace cauldron
         /**
          * @brief   Adds a mesh to the BLAS instance.
          */
-        virtual void AddGeometry(const Mesh* pMesh)         = 0;
+        virtual void AddGeometry(const Mesh* pMesh, const std::vector<VertexBufferInformation>& vertexPositions) = 0;
 
         /**
          * @brief   Initializes BLAS buffer resources.
@@ -100,7 +101,7 @@ namespace cauldron
     /**
      * @class TLAS
      *
-     * The <c><i>Cauldron</i></c> api/platform-agnostic representation of the Top Level Acceleration Structure.
+     * The <c><i>FidelityFX Cauldron Framework</i></c> api/platform-agnostic representation of the Top Level Acceleration Structure.
      * Only created when "BuildRayTracingAccelerationStructure" config is set to true.
      *
      * @ingroup CauldronRender
@@ -158,8 +159,9 @@ namespace cauldron
      */
     struct ASInstance
     {
-        const Mesh* Mesh = nullptr; ///< A mesh instance.
-        const Mat4& Transform;      ///< The mesh instance's transform.
+        const Mesh* Mesh = nullptr;         ///< A mesh instance.
+        const Mat4& Transform;              ///< The mesh instance's transform.
+        const BLAS* AnimatedBlas = nullptr; ///< A pointer to the animated Blas
     };
 
     /**
@@ -197,7 +199,7 @@ namespace cauldron
         /**
          * @brief   Pushes a new <c><i>ASInstance</i></c> for a <c><i>Mesh</i></c> to the managed list of instances.
          */
-        void PushInstance(const Mesh* pMesh, const Mat4& transform) { m_ManagedInstances.push({pMesh, transform}); }
+        void PushInstance(const Mesh* pMesh, const Mat4& transform, const BLAS* animatedBlas = nullptr) { m_ManagedInstances.push({pMesh, transform, animatedBlas}); }
 
     private:
         NO_COPY(ASManager)

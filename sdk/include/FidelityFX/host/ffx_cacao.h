@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright © 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #pragma once
@@ -26,7 +26,6 @@
 
 ///Include the interface for the backend of the API. 
 #include <FidelityFX/host/ffx_interface.h>
-
 /// @defgroup FfxCacao FidelityFX CACAO
 /// FidelityFX Combined Adaptive Compute Ambient Occlusion runtime library.
 ///
@@ -40,7 +39,7 @@
 /// FidelityFX CACAO minor version.
 ///
 /// @ingroup FfxCacao
-#define FFX_CACAO_VERSION_MINOR (3)
+#define FFX_CACAO_VERSION_MINOR (4)
 
 /// FidelityFX CACAO patch version.
 ///
@@ -185,7 +184,7 @@
 /// The size of the context specified in 32bit values.
 ///
 /// @ingroup FfxCacao
-#define FFX_CACAO_CONTEXT_SIZE (320000)
+#define FFX_CACAO_CONTEXT_SIZE (300988)
 
 /// FidelityFX CACAO context count.
 ///
@@ -259,13 +258,6 @@ typedef enum FfxCacaoInitializationFlagBits {
     FFX_CACAO_ENABLE_APPLY_SMART                  = (1<<0),   ///< A bit indicating to use smart application
 } FfxCacaoInitializationFlagBits;
 
-///	A structure representing a 4x4 matrix of floats. The matrix is stored in row major order in memory.
-///
-/// @ingroup FfxCacao
-typedef struct FfxCacaoMat4x4 {
-	float elements[4][4];
-} FfxCacaoMat4x4;
-
 ///	A structure for the settings used by FidelityFX CACAO. These settings may be updated with each draw call.
 ///
 /// @ingroup FfxCacao
@@ -316,65 +308,65 @@ static const FfxCacaoSettings FFX_CACAO_DEFAULT_SETTINGS = {
 ///
 /// @ingroup FfxCacao
 typedef struct FfxCacaoConstants {
-	float                   DepthUnpackConsts[2];
-	float                   CameraTanHalfFOV[2];
+	float                   DepthUnpackConsts[2];	/// Multiply and add values for clip to view depth conversion.							
+	float                   CameraTanHalfFOV[2];	/// tan(fov/2) for the x and y dimensions.
 
-	float                   NDCToViewMul[2];
-	float                   NDCToViewAdd[2];
+	float                   NDCToViewMul[2];	/// Multiplication value for normalized device coordinates (NDC) to View conversion.
+	float                   NDCToViewAdd[2];	/// Addition value for NDC to view conversion.
 
-	float                   DepthBufferUVToViewMul[2];
-	float                   DepthBufferUVToViewAdd[2];
+	float                   DepthBufferUVToViewMul[2];	/// Multiplication value for the depth buffer's UV to View conversion.
+	float                   DepthBufferUVToViewAdd[2];	/// Addition value for the depth buffer's UV to view conversion.
 
-	float                   EffectRadius;
-	float                   EffectShadowStrength;
-	float                   EffectShadowPow;
-	float                   EffectShadowClamp;
+	float                   EffectRadius;	/// The radius in world space of the occlusion sphere. A larger radius will make further objects contribute to the ambient occlusion of a point.
+	float                   EffectShadowStrength;	/// The linear multiplier for shadows. Higher values intensify the shadow.
+	float                   EffectShadowPow;	/// The exponent for shadow values. Larger values create darker shadows.
+	float                   EffectShadowClamp;	/// Clamps the shadow values to be within a certain range.
 
-	float                   EffectFadeOutMul;
-	float                   EffectFadeOutAdd;
-	float                   EffectHorizonAngleThreshold;
-	float                   EffectSamplingRadiusNearLimitRec;
+	float                   EffectFadeOutMul;	/// Multiplication value for effect fade out.
+	float                   EffectFadeOutAdd;	/// Addition value for effect fade out.
+	float                   EffectHorizonAngleThreshold;	/// Minimum angle necessary between geometry and a point to create occlusion. Adjusting this value helps reduce self-shadowing.
+	float                   EffectSamplingRadiusNearLimitRec;	/// Default: EffectRadius∗1.2. Used to set limit on the sampling disk size when near.
 
-	float                   DepthPrecisionOffsetMod;
-	float                   NegRecEffectRadius;
-	float                   LoadCounterAvgDiv;
-	float                   AdaptiveSampleCountLimit;
+	float                   DepthPrecisionOffsetMod;	/// Default: 0.9992. Offset used to prevent artifacts due to imprecision.
+	float                   NegRecEffectRadius;	/// Negative reciprocal of the effect radius.
+	float                   LoadCounterAvgDiv;	/// Multiplier value to get average from loadcounter value.
+	float                   AdaptiveSampleCountLimit;	/// Limits the total number of samples taken at adaptive quality levels.
 
-	float                   InvSharpness;
-	int                     BlurNumPasses;
-	float                   BilateralSigmaSquared;
-	float                   BilateralSimilarityDistanceSigma;
+	float                   InvSharpness;	/// The sharpness controls how much blur should bleed over edges.
+	int                     BlurNumPasses;	/// Number of blur passes. Default uses 4, with lowest quality using 2.
+	float                   BilateralSigmaSquared;	/// Only affects downsampled SSAO. Higher values create a larger blur.
+	float                   BilateralSimilarityDistanceSigma;	/// Only affects downsampled SSAO. Lower values create sharper edges.
 
-	float                   PatternRotScaleMatrices[4][5][4];
+	float                   PatternRotScaleMatrices[4][5][4];	/// Sampling pattern rotation/scale matrices.
 
-	float                   NormalsUnpackMul;
-	float                   NormalsUnpackAdd;
-	float                   DetailAOStrength;
+	float                   NormalsUnpackMul;	/// Multiplication value to unpack normals. Set to 1 if normals are already in [−1,1] range.
+	float                   NormalsUnpackAdd;	/// Addition value to unpack normals. Set to 0 if normals are already in [−1,1]range.
+	float                   DetailAOStrength;	/// Adds in more detailed shadows based on edges. These are less temporally stable.
 	float                   Dummy0;
 
-	float                   SSAOBufferDimensions[2];
+	float                   SSAOBufferDimensions[2];	/// Dimensions of SSAO buffer.
 	float                   SSAOBufferInverseDimensions[2];
 
-	float                   DepthBufferDimensions[2];
+	float                   DepthBufferDimensions[2];	/// Dimensions of the depth buffer.
 	float                   DepthBufferInverseDimensions[2];
 
-	int                     DepthBufferOffset[2];
+	int                     DepthBufferOffset[2];	/// Default is (0,0). Read offset for depth buffer.
     int						Pad[2];
-	float                   PerPassFullResUVOffset[4*4];
+	float                   PerPassFullResUVOffset[4*4];	/// UV Offsets used in adaptive approach.
 
-	float                   InputOutputBufferDimensions[2];
+	float                   InputOutputBufferDimensions[2];	/// Dimensions of the output AO buffer.
 	float                   InputOutputBufferInverseDimensions[2];
 
-	float                   ImportanceMapDimensions[2];
+	float                   ImportanceMapDimensions[2];	/// Dimensions of the importance map.
 	float                   ImportanceMapInverseDimensions[2];
 
-	float                   DeinterleavedDepthBufferDimensions[2];
+	float                   DeinterleavedDepthBufferDimensions[2];	/// Dimensions of the deinterleaved depth buffer.
 	float                   DeinterleavedDepthBufferInverseDimensions[2];
 
-	float                   DeinterleavedDepthBufferOffset[2];
-	float                   DeinterleavedDepthBufferNormalisedOffset[2];
+	float                   DeinterleavedDepthBufferOffset[2];	/// Default is (0,0). Read offset for the deinterleaved depth buffer.
+	float                   DeinterleavedDepthBufferNormalisedOffset[2];	/// Default is (0,0). Normalized read offset for the deinterleaved depth buffer. 
 
-	FfxCacaoMat4x4       NormalsWorldToViewspaceMatrix;
+	FfxFloat32x4x4       NormalsWorldToViewspaceMatrix;	/// Normal matrix.
 
 } FfxCacaoConstants;
 
@@ -383,10 +375,11 @@ typedef struct FfxCacaoConstants {
 /// @ingroup FfxCacao
 typedef struct FfxCacaoContextDescription
 {
-    FfxInterface                      backendInterface;
-    uint32_t                          width;                ///< width of the input/output buffers
-	uint32_t                          height;               ///< height of the input/output buffers
-	bool                              useDownsampledSsao;   ///< Whether SSAO should be generated at native resolution or half resolution. It is recommended to enable this setting for improved performance.
+    
+    uint32_t                    width;                ///< width of the input/output buffers
+	uint32_t                    height;               ///< height of the input/output buffers
+	bool                        useDownsampledSsao;   ///< Whether SSAO should be generated at native resolution or half resolution. It is recommended to enable this setting for improved performance.
+    FfxInterface                backendInterface;
 } FfxCacaoContextDescription;
 
 /// A structure encapsulating the parameters and resources required to dispatch FidelityFX CACAO.
@@ -394,43 +387,43 @@ typedef struct FfxCacaoContextDescription
 /// @ingroup FfxCacao
 typedef struct FfxCacaoDispatchDescription
 {
-    FfxCommandList             commandList;
-    FfxResource                depthBuffer;
-    FfxResource                normalBuffer;
-    FfxResource                outputBuffer;
-    FfxCacaoMat4x4*       proj;
-    FfxCacaoMat4x4*       normalsToView;
-    float                      normalUnpackMul;
-    float                      normalUnpackAdd;
+    FfxCommandList             commandList;		///< The <c><i>FfxCommandList</i></c> to record CACAO rendering commands into.
+    FfxResource                depthBuffer;		///< A <c><i>FfxResource</i></c> containing the depth buffer for the current frame.
+    FfxResource                normalBuffer;	///< A <c><i>FfxResource</i></c> containing the normal buffer for the current frame.
+    FfxResource                outputBuffer;	///< A <c><i>FfxResource</i></c> containing the output color buffer for CACAO.
+    FfxFloat32x4x4*			   proj;        	///< A <c><i>FfxFloat32x4x4</i></c> containing the projection matrix for the current frame.
+    FfxFloat32x4x4*       	   normalsToView;	///< A <c><i>FfxFloat32x4x4</i></c> containing the normal matrix for the current frame.
+    float                      normalUnpackMul;	/// Multiplication value to unpack normals. Set to 1 if normals are already in [−1,1] range.
+    float                      normalUnpackAdd;	/// Addition value to unpack normals. Set to 0 if normals are already in [−1,1]range.
 } FfxCacaoDispatchDescription;
 
 ///	A structure containing sizes of each of the buffers used by FidelityFX CACAO.
 ///
 /// @ingroup FfxCacao
 typedef struct FfxCacaoBufferSizeInfo {
-	uint32_t inputOutputBufferWidth;
-	uint32_t inputOutputBufferHeight;
+	uint32_t inputOutputBufferWidth;            ///< width of the input/output buffers
+	uint32_t inputOutputBufferHeight;           ///< height of the input/output buffers
 
-	uint32_t ssaoBufferWidth;
-	uint32_t ssaoBufferHeight;
+	uint32_t ssaoBufferWidth;                   ///< width of the ssao buffer
+	uint32_t ssaoBufferHeight;                  ///< height of the ssao buffer
 
-	uint32_t depthBufferXOffset;
-	uint32_t depthBufferYOffset;
+	uint32_t depthBufferXOffset;                ///< x-offset to use when sampling depth buffer
+	uint32_t depthBufferYOffset;                ///< y-offset to use when sampling depth buffer
 
-	uint32_t depthBufferWidth;
-	uint32_t depthBufferHeight;
+	uint32_t depthBufferWidth;                  ///< width of the passed in depth buffer
+	uint32_t depthBufferHeight;                 ///< height of the passed in depth buffer
 
-	uint32_t deinterleavedDepthBufferXOffset;
-	uint32_t deinterleavedDepthBufferYOffset;
+	uint32_t deinterleavedDepthBufferXOffset;   ///< x-offset to use when sampling de-interleaved depth buffer
+	uint32_t deinterleavedDepthBufferYOffset;   ///< y-offset to use when sampling de-interleaved depth buffer
 
-	uint32_t deinterleavedDepthBufferWidth;
-	uint32_t deinterleavedDepthBufferHeight;
+	uint32_t deinterleavedDepthBufferWidth;     ///< width of the de-interleaved depth buffer
+	uint32_t deinterleavedDepthBufferHeight;    ///< height of the de-interleaved depth buffer
 
-	uint32_t importanceMapWidth;
-	uint32_t importanceMapHeight;
+	uint32_t importanceMapWidth;                ///< width of the importance map buffer
+	uint32_t importanceMapHeight;               ///< height of the importance map buffer
 
-	uint32_t downsampledSsaoBufferWidth;
-	uint32_t downsampledSsaoBufferHeight;
+	uint32_t downsampledSsaoBufferWidth;        ///< width of the downsampled ssao buffer
+	uint32_t downsampledSsaoBufferHeight;       ///< height of the downsampled ssao buffer
 } FfxCacaoBufferSizeInfo;
 
 /// An enumeration of bit flags used when dispatching FidelityFX CACAO
@@ -530,3 +523,11 @@ FFX_API FfxErrorCode ffxCacaoContextDestroy(FfxCacaoContext* context);
 ///
 /// @ingroup FfxCacao
 FFX_API FfxErrorCode ffxCacaoUpdateSettings(FfxCacaoContext* context, const FfxCacaoSettings* settings, const bool useDownsampledSsao);
+
+/// Queries the effect version number.
+///
+/// @returns
+/// The SDK version the effect was built with.
+///
+/// @ingroup FfxCacao
+FFX_API FfxVersionNumber ffxCacaoGetEffectVersion();

@@ -10,7 +10,9 @@ For details on the techniques that underpins the Variable Shading effect you can
 
 <h2>Requirements</h2>
 
-`Windows` `DirectX(R)12` `Vulkan(R)`     
+ - Windows
+ - DirectX(R)12
+ - Vulkan(R)
                                                                                        
 <h2>UI elements</h2>
 
@@ -56,9 +58,9 @@ Set up dispatch parameters and dispatch:
     FfxErrorCode errorCode = ffxVrsContextDispatch(&m_VRSContext, &dispatchParameters);
 ```
 
-<h2>Sample Controls and Configurations</h2>
+<h2>Sample controls and configurations</h2>
 
-For sample controls, configuration and Cauldron UI element details, please see [Running the samples](../getting-started/running-samples.md)
+For sample controls, configuration, and FidelityFX Cauldron Framework UI element details, see [Running the samples](../getting-started/running-samples.md).
 
 <h2>See also</h2>
 

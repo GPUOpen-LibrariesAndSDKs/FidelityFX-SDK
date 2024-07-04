@@ -1,23 +1,23 @@
 // This file is part of the FidelityFX SDK.
 //
-// Copyright (C) 2023 Advanced Micro Devices, Inc.
+// Copyright (C) 2024 Advanced Micro Devices, Inc.
 // 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
-// of this software and associated documentation files(the “Software”), to deal 
-// in the Software without restriction, including without limitation the rights 
-// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell 
-// copies of the Software, and to permit persons to whom the Software is 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
-// The above copyright notice and this permission notice shall be included in 
+//
+// The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
 #pragma once
@@ -93,9 +93,14 @@ const float FFX_EPSILON = 1e-06f;
 /// Helper macro to do safe free on a pointer.
 ///
 /// @ingroup Utils
-#define FFX_SAFE_FREE(x) \
-    if (x)               \
-    free(x)
+#define FFX_SAFE_FREE(x, freeFunc) \
+    do {                 \
+        if (x)           \
+        {                \
+            freeFunc(x); \
+            x = nullptr; \
+        }                \
+    } while (false)
 
 /// Helper macro to return the abs of an integer value.
 ///
@@ -120,4 +125,66 @@ const float FFX_EPSILON = 1e-06f;
 /// Helper macro to check if the specified key is set in a bitfield.
 ///
 /// @ingroup Utils
-#define FFX_CONTAINS_FLAG(options, key) ((options & key) == key)
+#define FFX_CONTAINS_FLAG(options, key) (((options) & key) == key)
+
+#if defined(FFX_MUTEX_IMPL_SHARED)
+/// Lock mutex exclusively.
+///
+/// @ingroup Utils
+#define FFX_MUTEX_LOCK(x)               x.lock()
+/// Lock mutex for shared access.
+///
+/// @ingroup Utils
+#define FFX_MUTEX_LOCK_SHARED(x)        x.lock_shared()
+/// Unlock exclusive mutex lock.
+///
+/// @ingroup Utils
+#define FFX_MUTEX_UNLOCK(x)             x.unlock()
+/// Unlock shared mutex lock.
+///
+/// @ingroup Utils
+#define FFX_MUTEX_UNLOCK_SHARED(x)      x.unlock_shared()
+#elif defined(FFX_MUTEX_IMPL_STANDARD)
+/// Lock mutex exclusively.
+///
+/// @ingroup Utils
+#define FFX_MUTEX_LOCK(x)               x.lock()
+/// Lock mutex for shared access.
+///
+/// @ingroup Utils
+#define FFX_MUTEX_LOCK_SHARED(x)        FFX_MUTEX_LOCK(x)
+/// Unlock exclusive mutex lock.
+///
+/// @ingroup Utils
+#define FFX_MUTEX_UNLOCK(x)             x.unlock()
+/// Unlock shared mutex lock.
+///
+/// @ingroup Utils
+#define FFX_MUTEX_UNLOCK_SHARED(x)      FFX_MUTEX_UNLOCK(x)
+#elif !defined(FFX_MUTEX_LOCK) || !defined(FFX_MUTEX_LOCK_SHARED) || !defined(FFX_MUTEX_UNLOCK) || !defined(FFX_MUTEX_UNLOCK_SHARED)
+#error When using custom mutex you have to provide all following operations too: FFX_MUTEX_LOCK, FFX_MUTEX_LOCK_SHARED, FFX_MUTEX_UNLOCK, FFX_MUTEX_UNLOCK_SHARED!
+#endif // #if defined(FFX_MUTEX_IMPL_SHARED)
+
+/// Computes the number of bits set to 1 in a integer.
+///
+/// @param [in] val Integer mask.
+///
+/// @return Number of bits set to 1 in provided val.
+///
+/// @ingroup Utils
+inline uint8_t ffxCountBitsSet(uint32_t val) noexcept
+{
+#if __cplusplus >= 202002L
+    return static_cast<uint8_t>(std::popcount(val));
+#elif defined(_MSVC_LANG)
+    return static_cast<uint8_t>(__popcnt(val));
+#elif defined(__GNUC__) || defined(__clang__)
+    return static_cast<uint8_t>(__builtin_popcount(val));
+#else
+    uint32_t c = val - ((val >> 1) & 0x55555555);
+    c = ((c >> 2) & 0x33333333) + (c & 0x33333333);
+    c = ((c >> 4) + c) & 0x0F0F0F0F;
+    c = ((c >> 8) + c) & 0x00FF00FF;
+    return static_cast<uint8_t>(((c >> 16) + c) & 0x0000FFFF);
+#endif
+}
