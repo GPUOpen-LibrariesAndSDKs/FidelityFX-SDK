@@ -48,7 +48,7 @@ void computeGameFieldMvs(FfxInt32x2 iPxPos)
     const FfxUInt32 uHighPriorityFactorPrimary = getPriorityFactorFromViewSpaceDepth(fViewSpaceDepth);
 
     FfxFloat32x3 prevBackbufferCol = SamplePreviousBackbuffer(fUvInInterpolationRect).xyz;
-    FfxFloat32x3 curBackbufferCol  = SamplePreviousBackbuffer(fUvInInterpolationRect + fGameMotionVector * fUvLetterBoxScale).xyz;
+    FfxFloat32x3 curBackbufferCol  = SampleCurrentBackbuffer(fUvInInterpolationRect + fGameMotionVector * fUvLetterBoxScale).xyz;
     FfxFloat32   prevLuma          = 0.001f + RawRGBToLuminance(prevBackbufferCol);
     FfxFloat32   currLuma          = 0.001f + RawRGBToLuminance(curBackbufferCol);
 
