@@ -35,12 +35,16 @@ FfxUInt32 getPriorityFactorFromViewSpaceDepth(FfxFloat32 fViewSpaceDepthInMeters
 void computeGameFieldMvs(FfxInt32x2 iPxPos)
 {
     const FfxFloat32x2 fUvInScreenSpace            = (FfxFloat32x2(iPxPos) + 0.5f) / RenderSize();
+
+    const FfxFloat32x4 fDistortionField            = SampleDistortionField(fUvInScreenSpace);
+    const FfxInt32x2 iDistortionPixelOffset        = fDistortionField.xy * RenderSize();
+
     const FfxFloat32x2 fUvInInterpolationRectStart = FfxFloat32x2(InterpolationRectBase()) / DisplaySize();
     const FfxFloat32x2 fUvLetterBoxScale           = FfxFloat32x2(InterpolationRectSize()) / DisplaySize();
     const FfxFloat32x2 fUvInInterpolationRect      = fUvInInterpolationRectStart + fUvInScreenSpace * fUvLetterBoxScale;
 
-    const FfxFloat32 fDepthSample = LoadDilatedDepth(iPxPos);
-    const FfxFloat32x2 fGameMotionVector = LoadDilatedMotionVector(iPxPos);
+    const FfxFloat32 fDepthSample = LoadDilatedDepth(iPxPos + iDistortionPixelOffset);
+    const FfxFloat32x2 fGameMotionVector = LoadDilatedMotionVector(iPxPos + iDistortionPixelOffset);
     const FfxFloat32x2 fMotionVectorHalf = fGameMotionVector * 0.5f;
     const FfxFloat32x2 fInterpolatedLocationUv = fUvInScreenSpace + fMotionVectorHalf;
 
@@ -48,7 +52,7 @@ void computeGameFieldMvs(FfxInt32x2 iPxPos)
     const FfxUInt32 uHighPriorityFactorPrimary = getPriorityFactorFromViewSpaceDepth(fViewSpaceDepth);
 
     FfxFloat32x3 prevBackbufferCol = SamplePreviousBackbuffer(fUvInInterpolationRect).xyz;
-    FfxFloat32x3 curBackbufferCol  = SamplePreviousBackbuffer(fUvInInterpolationRect + fGameMotionVector * fUvLetterBoxScale).xyz;
+    FfxFloat32x3 curBackbufferCol  = SampleCurrentBackbuffer(fUvInInterpolationRect + fGameMotionVector * fUvLetterBoxScale).xyz;
     FfxFloat32   prevLuma          = 0.001f + RawRGBToLuminance(prevBackbufferCol);
     FfxFloat32   currLuma          = 0.001f + RawRGBToLuminance(curBackbufferCol);
 

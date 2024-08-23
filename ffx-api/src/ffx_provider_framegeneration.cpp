@@ -353,6 +353,7 @@ ffxReturnCode_t ffxProvider_FrameGeneration::Dispatch(ffxContext* context, const
             fiDispatchDesc.renderSize.width  = prepDesc->renderSize.width;
             fiDispatchDesc.renderSize.height = prepDesc->renderSize.height;
             fiDispatchDesc.output = Convert(desc->outputs[0]);
+            fiDispatchDesc.distortionField = Convert(desc->distortionField);
             fiDispatchDesc.opticalFlowVector = internal_context->backendInterfaceShared.fpGetResource(&internal_context->backendInterfaceShared, internal_context->sharedResources[FFX_FSR3_RESOURCE_IDENTIFIER_OPTICAL_FLOW_VECTOR]);
             fiDispatchDesc.opticalFlowSceneChangeDetection = internal_context->backendInterfaceShared.fpGetResource(&internal_context->backendInterfaceShared, internal_context->sharedResources[FFX_FSR3_RESOURCE_IDENTIFIER_OPTICAL_FLOW_SCD_OUTPUT]);
             fiDispatchDesc.opticalFlowBlockSize = 8;

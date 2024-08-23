@@ -57,13 +57,17 @@ private:
     // Constant data
     uint32_t m_DispatchThreadGroupCountXY[2];
 
-    AutoExposureSpdConstants m_AutoExposureSpdConstants;
-    TonemapperCBData         m_TonemapperConstantData;
+    AutoExposureSpdConstants   m_AutoExposureSpdConstants;
+    TonemapperCBData           m_TonemapperConstantData;
 
     // common
     cauldron::RootSignature*    m_pAutoExposureSpdRootSignature = nullptr;
     cauldron::PipelineObject*   m_pAutoExposureSpdPipelineObj   = nullptr;
     cauldron::ParameterSet*     m_pAutoExposureSpdParameters    = nullptr;
+
+    cauldron::RootSignature*    m_pBuildDistortionFieldRootSignature = nullptr;
+    cauldron::PipelineObject*   m_pBuildDistortionFieldPipelineObj   = nullptr;
+    cauldron::ParameterSet*     m_pBuildDistortionFieldParameters    = nullptr;
 
     cauldron::RootSignature*    m_pTonemapperRootSignature  = nullptr;
     const cauldron::RasterView* m_pRasterView               = nullptr;
@@ -77,5 +81,6 @@ private:
     cauldron::SamplerDesc    m_LinearSamplerDesc;
 
     const cauldron::Texture* m_pRenderTargetIn   = nullptr;
-    const cauldron::Texture* m_pRenderTargetOut = nullptr;
+    const cauldron::Texture* m_pRenderTargetOut  = nullptr;
+    const cauldron::Texture* m_pDistortionField  = nullptr;
 };

@@ -3,6 +3,11 @@
         "MotionVectorGeneration": "GBufferRenderModule",
 
         "RenderResources": {
+            "DistortionField": {
+                "Format": "RGBA16_FLOAT",
+                "AllowUAV": true,
+                "RenderResolution": false
+            },
             "ReactiveMask": {
                 "Format": "R8_UNORM",
                 "AllowUAV": true,

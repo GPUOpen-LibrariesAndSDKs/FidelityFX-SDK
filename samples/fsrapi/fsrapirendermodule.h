@@ -161,6 +161,7 @@ private:
     bool m_IsNonNative                              = true;
     bool m_UpscaleRatioEnabled                      = false;
     bool m_UseMask                                  = true;
+    bool m_UseDistortionField                       = false;
     bool m_RCASSharpen                              = true;
     bool m_SharpnessEnabled                         = false;
     bool m_NeedReInit                               = false;
@@ -201,6 +202,7 @@ private:
     const cauldron::Texture*  m_pTempTexture           = nullptr;
     const cauldron::Texture*  m_pDepthTarget           = nullptr;
     const cauldron::Texture*  m_pMotionVectors         = nullptr;
+    const cauldron::Texture*  m_pDistortionField       = nullptr;
     const cauldron::Texture*  m_pReactiveMask          = nullptr;
     const cauldron::Texture*  m_pCompositionMask       = nullptr;
     const cauldron::Texture*  m_pOpaqueTexture         = nullptr;

@@ -85,6 +85,7 @@ struct ffxDispatchDescFrameGeneration
     void*                 commandList;                ///< The command list on which to register render commands.
     struct FfxApiResource presentColor;               ///< The current presentation color, this will be used as source data.
     struct FfxApiResource outputs[4];                 ///< Destination targets (1 for each frame in numGeneratedFrames).
+    struct FfxApiResource distortionField;            ///< The distortion field data.
     uint32_t              numGeneratedFrames;         ///< The number of frames to generate from the passed in color target.
     bool                  reset;                      ///< A boolean value which when set to true, indicates the camera has moved discontinuously.
     uint32_t              backbufferTransferFunction; ///< The transfer function use to convert frame generation source color data to linear RGB. One of the values from FfxApiBackbufferTransferFunction.

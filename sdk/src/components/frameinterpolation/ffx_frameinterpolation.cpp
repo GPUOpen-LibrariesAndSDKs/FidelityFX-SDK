@@ -46,6 +46,7 @@ static const ResourceBinding srvResourceBindingTable[] =
     // Frame Interpolation textures
     {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DEPTH,                                      L"r_input_depth"},
     {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_MOTION_VECTORS,                             L"r_input_motion_vectors"},
+    {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DISTORTION_FIELD,                           L"r_input_distortion_field"},
 
     {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DILATED_DEPTH,                              L"r_dilated_depth"},
     {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DILATED_MOTION_VECTORS,                     L"r_dilated_motion_vectors"},
@@ -376,6 +377,7 @@ static FfxErrorCode frameinterpolationCreate(FfxFrameInterpolationContext_Privat
     }
 
     uint8_t defaultReactiveMaskData = 0U;
+    uint8_t defaultDistortionFieldData[4] = { 0, 0, 0, 0 };
     uint32_t atomicInitData[2] = { 0, 0 };
     float defaultExposure[] = { 0.0f, 0.0f };
     const FfxResourceType texture1dResourceType = (context->contextDescription.flags & FFX_FRAMEINTERPOLATION_ENABLE_TEXTURE1D_USAGE) ? FFX_RESOURCE_TYPE_TEXTURE1D : FFX_RESOURCE_TYPE_TEXTURE2D;
@@ -414,6 +416,9 @@ static FfxErrorCode frameinterpolationCreate(FfxFrameInterpolationContext_Privat
             FFX_SURFACE_FORMAT_R32_UINT, contextDescription->maxRenderSize.width, contextDescription->maxRenderSize.height, 1, FFX_RESOURCE_FLAGS_NONE, {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
         {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_RECONSTRUCTED_DEPTH_PREVIOUS_FRAME_1,   L"FI_ReconstructedDepth_1",                     FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_UAV, 
             FFX_SURFACE_FORMAT_R32_UINT, contextDescription->maxRenderSize.width, contextDescription->maxRenderSize.height, 1, FFX_RESOURCE_FLAGS_NONE, {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
+
+        {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DEFAULT_DISTORTION_FIELD, L"FI_DefaultDistortionField", FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_READ_ONLY,
+            FFX_SURFACE_FORMAT_R8G8B8A8_UNORM, 1, 1, 1, FFX_RESOURCE_FLAGS_NONE, FfxResourceInitData::FfxResourceInitBuffer(sizeof(defaultDistortionFieldData), defaultDistortionFieldData) },
     };
 
     // clear the SRV resources to NULL.
@@ -489,6 +494,7 @@ static FfxErrorCode frameinterpolationRelease(FfxFrameInterpolationContext_Priva
     context->uavResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DILATED_MOTION_VECTORS]                = {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_NULL};
     context->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_RECONSTRUCTED_DEPTH_PREVIOUS_FRAME]    = {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_NULL};
     context->uavResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_RECONSTRUCTED_DEPTH_PREVIOUS_FRAME]    = {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_NULL};
+    context->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DISTORTION_FIELD]                      = {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_NULL};
 
     // Release the copy resources for those that had init data
     ffxSafeReleaseCopyResource(&context->contextDescription.backendInterface, context->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_COUNTERS], context->effectContextId);
@@ -857,6 +863,18 @@ FFX_API FfxErrorCode ffxFrameInterpolationDispatch(FfxFrameInterpolationContext*
     const float cameraAngleHorizontal                   = atan(tan(params->cameraFovAngleVertical / 2) * aspectRatio) * 2;
     contextPrivate->constants.fTanHalfFOV               = tanf(cameraAngleHorizontal * 0.5f);
 
+    const bool bUseExternalDistortionFieldResource = !ffxFrameInterpolationResourceIsNull(params->distortionField);
+    if (bUseExternalDistortionFieldResource)
+    {
+        contextPrivate->constants.distortionFieldSize[0] = params->distortionField.description.width;
+        contextPrivate->constants.distortionFieldSize[1] = params->distortionField.description.height;
+    }
+    else
+    {
+        contextPrivate->constants.distortionFieldSize[0] = 1;
+        contextPrivate->constants.distortionFieldSize[1] = 1;
+    }
+
     contextPrivate->renderDescription.cameraFar                 = params->cameraFar;
     contextPrivate->renderDescription.cameraNear                = params->cameraNear;
     contextPrivate->renderDescription.viewSpaceToMetersFactor = (params->viewSpaceToMetersFactor > 0.0f) ? params->viewSpaceToMetersFactor : 1.0f;
@@ -888,7 +906,7 @@ FFX_API FfxErrorCode ffxFrameInterpolationDispatch(FfxFrameInterpolationContext*
     contextPrivate->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DILATED_MOTION_VECTORS] = contextPrivate->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DILATED_MOTION_VECTORS_0 + doubleBufferId];
     contextPrivate->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_RECONSTRUCTED_DEPTH_PREVIOUS_FRAME] = contextPrivate->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_RECONSTRUCTED_DEPTH_PREVIOUS_FRAME_0 + doubleBufferId];
 
-    // Register output as SRV and UAV
+    // Register output as SRV and UAV 
     contextPrivate->contextDescription.backendInterface.fpRegisterResource(&contextPrivate->contextDescription.backendInterface, &params->output, contextPrivate->effectContextId, &contextPrivate->uavResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_OUTPUT]);
     contextPrivate->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_OUTPUT] = contextPrivate->uavResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_OUTPUT];
 
@@ -904,6 +922,19 @@ FFX_API FfxErrorCode ffxFrameInterpolationDispatch(FfxFrameInterpolationContext*
         contextPrivate->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_OPTICAL_FLOW_GLOBAL_MOTION]          = {};
         contextPrivate->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_OPTICAL_FLOW_SCENE_CHANGE_DETECTION] = {};
         contextPrivate->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_OPTICAL_FLOW_VECTOR] = {};
+    }
+
+    if (bUseExternalDistortionFieldResource)
+    {
+        contextPrivate->contextDescription.backendInterface.fpRegisterResource(
+            &contextPrivate->contextDescription.backendInterface,
+            &params->distortionField,
+            contextPrivate->effectContextId,
+            &contextPrivate->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DISTORTION_FIELD]);
+    }
+    else
+    {
+        contextPrivate->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DISTORTION_FIELD] = contextPrivate->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DEFAULT_DISTORTION_FIELD];
     }
 
     uint32_t displayDispatchSizeX = uint32_t(params->displaySize.width + 7) / 8;
