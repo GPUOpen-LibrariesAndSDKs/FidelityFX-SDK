@@ -197,6 +197,7 @@ typedef struct FfxFsr3DispatchFrameGenerationPrepareDescription
     FfxCommandList              commandList;                        ///< The <c><i>FfxCommandList</i></c> to record FSR2 rendering commands into.
     FfxResource                 depth;                              ///< A <c><i>FfxResource</i></c> containing 32bit depth values for the current frame (at render resolution).
     FfxResource                 motionVectors;                      ///< A <c><i>FfxResource</i></c> containing 2-dimensional motion vectors (at render resolution if <c><i>FFX_FSR2_ENABLE_DISPLAY_RESOLUTION_MOTION_VECTORS</i></c> is not set).
+    FfxResource                 distortionField;                    ///< A <c><i>FfxResource</i></c> containing 2-dimensional uv offsets describing the amount of distortion applied to the final image.
     FfxFloatCoords2D            jitterOffset;                       ///< The subpixel jitter offset applied to the camera.
     FfxFloatCoords2D            motionVectorScale;                  ///< The scale factor to apply to motion vectors.
     FfxDimensions2D             renderSize;                         ///< The resolution that was used for rendering the input resources.

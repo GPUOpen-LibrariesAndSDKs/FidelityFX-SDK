@@ -100,10 +100,21 @@ void drawDisocclusionMask(FfxInt32x2 iPxPos, FfxFrameInterpolationDebugViewport 
     StoreFrameinterpolationOutput(iPxPos, FfxFloat32x4(fDisocclusionFactor, 0, 1));
 }
 
-void drawPresentBackbuffer(FfxInt32x2 iPxPos, FfxFrameInterpolationDebugViewport vp)
+void drawDistortionField()
 {
     FfxFloat32x2 fUv = getTransformedUv(iPxPos, vp);
 
+    FfxFloat32x2 fDistortionField = abs(SampleDistortionField(fUv).xy);
+
+    FfxFloat32x4 fPresentColor = FfxFloat32x4(fDistortionField * 10.0f, 0.0f, 1.0f);
+
+    StoreFrameinterpolationOutput(iPxPos, fPresentColor);
+}
+
+void drawPresentBackbuffer(FfxInt32x2 iPxPos, FfxFrameInterpolationDebugViewport vp)
+{
+    FfxFloat32x2 fUv = getTransformedUv(iPxPos, vp);
+    
     FfxFloat32x4 fPresentColor = getUnusedIndicationColor(iPxPos, vp);
 
     if (GetHUDLessAttachedFactor() == 1)

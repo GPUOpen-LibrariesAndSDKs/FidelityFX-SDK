@@ -68,9 +68,10 @@ void FSRRenderModule::Init(const json& initData)
     m_pTonemappedColorTarget = GetFramework()->GetRenderTexture(L"SwapChainProxy");
     m_pDepthTarget           = GetFramework()->GetRenderTexture(L"DepthTarget");
     m_pMotionVectors         = GetFramework()->GetRenderTexture(L"GBufferMotionVectorRT");
+    m_pDistortionField       = GetFramework()->GetRenderTexture(L"DistortionField");
     m_pReactiveMask          = GetFramework()->GetRenderTexture(L"ReactiveMask");
     m_pCompositionMask       = GetFramework()->GetRenderTexture(L"TransCompMask");
-    CauldronAssert(ASSERT_CRITICAL, m_pMotionVectors && m_pReactiveMask && m_pCompositionMask, L"Could not get one of the needed resources for FSR Rendermodule.");
+    CauldronAssert(ASSERT_CRITICAL, m_pMotionVectors && m_pDistortionField && m_pReactiveMask && m_pCompositionMask, L"Could not get one of the needed resources for FSR Rendermodule.");
 
     // Get a CPU resource view that we'll use to map the render target to
     GetResourceViewAllocator()->AllocateCPURenderViews(&m_pRTResourceView);
@@ -437,6 +438,9 @@ void FSRRenderModule::InitUI(UISection* pUISection)
 
     // Use mask
     m_UIElements.emplace_back(pUISection->RegisterUIElement<UICheckBox>("Use Transparency and Composition Mask", m_UseMask, m_EnableMaskOptions, nullptr, false));
+
+    // Use distortion field
+    m_UIElements.emplace_back(pUISection->RegisterUIElement<UICheckBox>("Use Distortion Field Input", m_UseDistortionField, nullptr, false));
 
     // Sharpening
     m_UIElements.emplace_back(pUISection->RegisterUIElement<UICheckBox>("RCAS Sharpening", m_RCASSharpen, nullptr, false, false));
@@ -990,6 +994,7 @@ void FSRRenderModule::Execute(double deltaTime, CommandList* pCmdList)
 #endif  // defined(FFX_API_DX12)
     dispatchFgPrep.depth = SDKWrapper::ffxGetResourceApi(m_pDepthTarget->GetResource(), FFX_API_RESOURCE_STATE_PIXEL_COMPUTE_READ);
     dispatchFgPrep.motionVectors = SDKWrapper::ffxGetResourceApi(m_pMotionVectors->GetResource(), FFX_API_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+
     dispatchFgPrep.flags = 0;
     
     dispatchFgPrep.jitterOffset.x      = -m_JitterX;
@@ -1093,6 +1098,11 @@ void FSRRenderModule::Execute(double deltaTime, CommandList* pCmdList)
         dispatchFg.generationRect.top = (resInfo.DisplayHeight - resInfo.UpscaleHeight) / 2;
         dispatchFg.generationRect.width = resInfo.UpscaleWidth;
         dispatchFg.generationRect.height = resInfo.UpscaleHeight;
+
+        if (m_UseDistortionField)
+            dispatchFg.distortionField = SDKWrapper::ffxGetResourceApi(m_pDistortionField->GetResource(), FFX_API_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+        else
+            dispatchFg.distortionField = SDKWrapper::ffxGetResourceApi(nullptr, FFX_API_RESOURCE_STATE_PIXEL_COMPUTE_READ);
 
 #if defined(FFX_API_DX12)
         ffx::QueryDescFrameGenerationSwapChainInterpolationCommandListDX12 queryCmdList{};

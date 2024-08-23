@@ -223,6 +223,7 @@ typedef struct FfxFrameInterpolationDispatchDescription {
     FfxDimensions2D                     renderSize;                         ///< The dimensions used to render game content, dilatedDepth, dilatedMotionVectors are expected to be of ths size.
     FfxResource                         currentBackBuffer;                  ///< The current presentation color, if currentBackBuffer_HUDLess is not used, this will be used as interpolation source data.
     FfxResource                         currentBackBuffer_HUDLess;          ///< The current presentation color without HUD content, when use it will be used as interpolation source data.
+    FfxResource                         distortionField;                    ///< The distortion field data.
     FfxResource                         output;                             ///< The output resource where to store the interpolated result.
 
     FfxRect2D                           interpolationRect;                  ///< The area of the backbuffer that should be used for interpolation in case only a part of the screen is used e.g. due to movie bars
