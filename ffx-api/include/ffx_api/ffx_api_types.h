@@ -55,7 +55,8 @@ enum FfxApiSurfaceFormat
     FFX_API_SURFACE_FORMAT_R8_UNORM,                    ///<  8 bit per channel, 1 channel unsigned normalized format
     FFX_API_SURFACE_FORMAT_R8G8_UNORM,                  ///<  8 bit per channel, 2 channel unsigned normalized format
     FFX_API_SURFACE_FORMAT_R8G8_UINT,                   ///<  8 bit per channel, 2 channel unsigned integer format
-    FFX_API_SURFACE_FORMAT_R32_FLOAT                    ///< 32 bit per channel, 1 channel float format
+    FFX_API_SURFACE_FORMAT_R32_FLOAT,                   ///< 32 bit per channel, 1 channel float format
+    FFX_API_SURFACE_FORMAT_R9G9B9E5_SHAREDEXP,          ///<  9 bit per channel, 5 bit exponent format
 };
 
 /// An enumeration of resource usage.

@@ -105,7 +105,7 @@ struct ffxConfigureDescFrameGenerationSwapChainKeyValueDX12
 
 enum FfxApiConfigureFrameGenerationSwapChainKeyDX12
 {
-    // No values.
+    FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_WAITCALLBACK = 0                     ///< Sets FfxWaitCallbackFunc
 };
 
 #if defined(__cplusplus)
@@ -225,6 +225,9 @@ static inline uint32_t ffxApiGetSurfaceFormatDX12(DXGI_FORMAT format)
     //case DXGI_FORMAT_R8_SNORM:
     //case DXGI_FORMAT_R8_SINT:
     //case DXGI_FORMAT_R1_UNORM:
+
+    case DXGI_FORMAT_R9G9B9E5_SHAREDEXP:
+        return FFX_API_SURFACE_FORMAT_R9G9B9E5_SHAREDEXP;
 
     case DXGI_FORMAT_UNKNOWN:
     default:

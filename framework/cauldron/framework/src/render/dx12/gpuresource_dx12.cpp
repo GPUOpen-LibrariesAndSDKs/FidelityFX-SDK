@@ -389,6 +389,8 @@ namespace cauldron
             return DXGI_FORMAT_R10G10B10A2_UNORM;
         case ResourceFormat::RG11B10_FLOAT:
             return DXGI_FORMAT_R11G11B10_FLOAT;
+        case ResourceFormat::RGB9E5_SHAREDEXP:
+            return DXGI_FORMAT_R9G9B9E5_SHAREDEXP;
         case ResourceFormat::RG16_SINT:
             return DXGI_FORMAT_R16G16_SINT;
         case ResourceFormat::RG16_UINT:
@@ -527,6 +529,7 @@ namespace cauldron
         case ResourceFormat::RGBA8_TYPELESS:
         case ResourceFormat::RGB10A2_UNORM:
         case ResourceFormat::RG11B10_FLOAT:
+        case ResourceFormat::RGB9E5_SHAREDEXP:
         case ResourceFormat::RG16_FLOAT:
         case ResourceFormat::R32_UINT:
         case ResourceFormat::R32_FLOAT:

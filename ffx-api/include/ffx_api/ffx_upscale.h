@@ -47,11 +47,12 @@ enum FfxApiCreateContextUpscaleFlags
     FFX_UPSCALE_ENABLE_AUTO_EXPOSURE                      = (1<<5), ///< A bit indicating if automatic exposure should be applied to input color data.
     FFX_UPSCALE_ENABLE_DYNAMIC_RESOLUTION                 = (1<<6), ///< A bit indicating that the application uses dynamic resolution scaling.
     FFX_UPSCALE_ENABLE_DEBUG_CHECKING                     = (1<<7), ///< A bit indicating that the runtime should check some API values and report issues.
+    FFX_UPSCALE_ENABLE_NON_LINEAR_COLORSPACE              = (1<<8),  ///< A bit indicating that the color resource contains perceptual (gamma corrected) colors
 };
 
 enum FfxApiDispatchFsrUpscaleFlags
 {
-    FFX_UPSCALE_FLAG_DRAW_DEBUG_VIEW = (1 << 0),  ///< A bit indicating that the output resource will contain debug views with relevant information.
+    FFX_UPSCALE_FLAG_DRAW_DEBUG_VIEW                    = (1 << 0),  ///< A bit indicating that the output resource will contain debug views with relevant information.    
 };
 
 enum FfxApiDispatchUpscaleAutoreactiveFlags
@@ -166,7 +167,7 @@ struct ffxConfigureDescUpscaleKeyValue
 
 enum FfxApiConfigureUpscaleKey
 {
-    // No values.
+    FFX_API_CONFIGURE_UPSCALE_KEY_FVELOCITYFACTOR = 0 //Override constant buffer fVelocityFactor (from 1.0f at context creation) to floating point value casted from void * ptr. Value of 0.0f can improve temporal stability of bright pixels. Value is clamped to [0.0f, 1.0f].
 };
 
 #ifdef __cplusplus

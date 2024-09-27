@@ -1,6 +1,6 @@
-<!-- @page page_techniques_super-resolution-interpolation FidelityFX Super Resolution 3.1 -->
+<!-- @page page_techniques_super-resolution-interpolation FidelityFX Super Resolution 3.1.1 -->
 
-<h1>FidelityFX Super Resolution 3.1.0 (FSR3) - Upscaling and Frame Generation</h1>
+<h1>FidelityFX Super Resolution 3.1.1 (FSR3) - Upscaling and Frame Generation</h1>
 
 ![Screenshot](media/super-resolution-temporal/fsr3-sample_resized.jpg "A screenshot showcasing the final output of the effect")
 
@@ -21,6 +21,7 @@
       - [Configure frame interpolation](#configure-frame-interpolation)
       - [UI composition](#ui-composition)
       - [Shutdown](#shutdown)
+    - [Thread Safety](#thread-safety)
   - [The Technique](#the-technique)
   - [Memory Usage](#memory-usage)
   - [See also](#see-also)
@@ -82,9 +83,9 @@ FSR3 uses the [FidelityFX API](../getting-started/ffx-api.md). See the link for 
 
 <h4>Add upscaling through FSR3 interface</h4>
 
-Note: if an FSR2 or FSR 3.0 upscaling implementation is already present and working correctly, please refer to the [migration guide](/ffx-api/migration.md) for the new interface.
+Note: if an FSR2 or FSR 3.0 upscaling implementation is already present and working correctly, please refer to the [migration guide](../getting-started/migrating-to-fsr-3-1.md) for the new interface.
 
-Include the [`ffx_upscale.h`](/ffx-api/include/ffx_api/ffx_upscale.h) header (or for C++ helpers `ffx_upscale.hpp`):
+Include the [`ffx_upscale.h`](../../ffx-api/include/ffx_api/ffx_upscale.h) header (or for C++ helpers `ffx_upscale.hpp`):
 
 ```C++
 #include <ffx_api/ffx_upscale.h>
@@ -228,7 +229,7 @@ ffx::ReturnCode retCode = ffx::Dispatch(m_UpscalingContext, dispatchUpscale);
 CauldronAssert(ASSERT_CRITICAL, !!retCode, L"Dispatching FSR upscaling failed: %d", (uint32_t)retCode);
 ```
 
-The full code can be found in [`fsrapirendermodule.cpp`](/samples/fsrapi/fsrapirendermodule.cpp#L909).
+The full code can be found in [`fsrapirendermodule.cpp`](../../samples/fsrapi/fsrapirendermodule.cpp#L909).
 
 <h4>Enable FSR3's proxy frame generation swapchain</h4>
 
@@ -516,6 +517,11 @@ ffx::DestroyContext(m_FrameGenContext);
 
 Finally, destroy the proxy swap chain by releasing the handle, destroying the context  with `ffxDestroyContext` and re-create the normal DX12 swap chain.
 
+<h3>Thread safety</h3>
+
+  The ffx-api context is not guarranted to be thread safe. In this technique, `FrameGenContext` and `SwapChainContext` are not thread safe. Race condition symptom includes `access violation error` crash or interpolation visual artifact. It's not obvious but `FrameInterpolationSwapchainDX12::Present()` actually access `SwapChainContext` and `FrameGenContext` (for dispatching Optical Flow and Frame Generation). A race condition occurs if app threads can simutaneously call `FrameInterpolationSwapchainDX12::Present()` and `Dispatch(m_FrameGenContext, DispatchDescFrameGenerationPrepare)`. Another race condition occurance is if app threads can simutaneously call `FrameInterpolationSwapchainDX12::Present()` and `DestroyContext(SwapChainContext)`. App could acquire mutex lock before calling ffx functions that access `FrameGenContext` or `SwapChainContext` to guarantee at any time there is at most 1 thread that can access the context.
+  
+
 <h2>The Technique</h2>
 
 FSR3 is a container effect consisting of four components. For details on each component, please refer to the dedicated documentation page:
@@ -546,6 +552,5 @@ Figures are given to the nearest MB, taken on Radeon RX 7900 XTX using DirectX 1
 
 <h2>See also</h2>
 
-- [Frame Pacing](frame-pacing.md)
 - [FidelityFX Super Resolution Sample](../samples/super-resolution.md)
 - [FidelityFX Naming guidelines](../getting-started/naming-guidelines.md)

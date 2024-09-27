@@ -231,6 +231,7 @@ public:
     FfxResource     interpolationOutput(int index = 0);
     VkCommandBuffer getInterpolationCommandList();
     void            registerUiResource(FfxResource uiResource, uint32_t flags);
+    void            setWaitCallback(FfxWaitCallbackFunc waitCallbackFunc);
 
 private:
     bool spawnPresenterThread();
@@ -310,6 +311,7 @@ private:
     void*                          presentCallbackContext         = nullptr;
     FfxFrameGenerationDispatchFunc frameGenerationCallback        = nullptr;
     void*                          frameGenerationCallbackContext = nullptr;
+    FfxWaitCallbackFunc            waitCallback                   = nullptr;
 
     uint32_t    backBufferTransferFunction                                                               = 0;
     float       minLuminance                                                                             = 0.0f;

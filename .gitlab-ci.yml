@@ -221,7 +221,7 @@ package_release_samples_pc:
   - echo "Packaging FidelityFX SDK Samples"
   - 'copy %VULKAN_SDK%\Bin\glslc.exe .\bin'
   artifacts:
-    name: "FIDELITYFX-SDK-SAMPLES-%CI_COMMIT_TAG%-%CI_COMMIT_REF_NAME%-%CI_COMMIT_SHORT_SHA%"
+    name: "FIDELITYFX-SDK-SAMPLES-$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
     paths:
     - ./bin
     - ./docs

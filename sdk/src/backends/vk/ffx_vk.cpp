@@ -38,7 +38,7 @@
 // prototypes for functions in the interface
 FfxVersionNumber       GetSDKVersionVK(FfxInterface* backendInterface);
 FfxErrorCode           GetEffectGpuMemoryUsageVK(FfxInterface* backendInterface, FfxUInt32 effectContextId, FfxEffectMemoryUsage* outVramUsage);
-FfxErrorCode           CreateBackendContextVK(FfxInterface* backendInterface, FfxEffectBindlessConfig* bindlessConfig, FfxUInt32* effectContextId);
+FfxErrorCode           CreateBackendContextVK(FfxInterface* backendInterface, FfxEffect effect, FfxEffectBindlessConfig* bindlessConfig, FfxUInt32* effectContextId);
 FfxErrorCode           GetDeviceCapabilitiesVK(FfxInterface* backendInterface, FfxDeviceCapabilities* deviceCapabilities);
 FfxErrorCode           DestroyBackendContextVK(FfxInterface* backendInterface, FfxUInt32 effectContextId);
 FfxErrorCode           CreateResourceVK(FfxInterface* backendInterface, const FfxCreateResourceDescription* desc, FfxUInt32 effectContextId, FfxResourceInternal* outTexture);
@@ -208,6 +208,9 @@ typedef struct BackendContext_VK {
     VkPipelineStageFlags    dstStageMask = 0;
 
     typedef struct alignas(32) EffectContext {
+
+        // Effect identifier -- used for various resource callbacks to application
+        FfxEffect           effectId;
 
         // Resource allocation
         uint32_t              nextStaticResource;
@@ -484,6 +487,7 @@ bool ffxIsSurfaceFormatSRGB(FfxSurfaceFormat fmt)
     case (FFX_SURFACE_FORMAT_R8G8_UNORM):
     case (FFX_SURFACE_FORMAT_R8G8_UINT):
     case (FFX_SURFACE_FORMAT_R32_FLOAT):
+    case (FFX_SURFACE_FORMAT_R9G9B9E5_SHAREDEXP):
     case (FFX_SURFACE_FORMAT_UNKNOWN):
         return false;
     default:
@@ -580,6 +584,8 @@ VkFormat ffxGetVkFormatFromSurfaceFormat(FfxSurfaceFormat fmt)
         return VK_FORMAT_R8G8_UINT;
     case(FFX_SURFACE_FORMAT_R32_FLOAT):
         return VK_FORMAT_R32_SFLOAT;
+    case(FFX_SURFACE_FORMAT_R9G9B9E5_SHAREDEXP):
+        return VK_FORMAT_E5B9G9R9_UFLOAT_PACK32;
 
     default:
         FFX_ASSERT_MESSAGE(false, "Format not yet supported");
@@ -645,6 +651,8 @@ VkFormat ffxGetVKUAVFormatFromSurfaceFormat(FfxSurfaceFormat fmt)
         return VK_FORMAT_R8G8_UINT;
     case(FFX_SURFACE_FORMAT_R32_FLOAT):
         return VK_FORMAT_R32_SFLOAT;
+    case(FFX_SURFACE_FORMAT_R9G9B9E5_SHAREDEXP):
+        return VK_FORMAT_E5B9G9R9_UFLOAT_PACK32;
 
     default:
         FFX_ASSERT_MESSAGE(false, "Format not yet supported");
@@ -706,6 +714,8 @@ FfxSurfaceFormat ffxGetSurfaceFormatVK(VkFormat fmt)
         return FFX_SURFACE_FORMAT_R32_FLOAT;
     case VK_FORMAT_D32_SFLOAT:
         return FFX_SURFACE_FORMAT_R32_FLOAT;
+    case VK_FORMAT_E5B9G9R9_UFLOAT_PACK32:
+        return FFX_SURFACE_FORMAT_R9G9B9E5_SHAREDEXP;
     case VK_FORMAT_UNDEFINED:
         return FFX_SURFACE_FORMAT_UNKNOWN;
 
@@ -1261,7 +1271,7 @@ FfxErrorCode GetEffectGpuMemoryUsageVK(FfxInterface* backendInterface, FfxUInt32
     return FFX_OK;
 }
 
-FfxErrorCode CreateBackendContextVK(FfxInterface* backendInterface, FfxEffectBindlessConfig* bindlessConfig, FfxUInt32* effectContextId)
+FfxErrorCode CreateBackendContextVK(FfxInterface* backendInterface, FfxEffect effect, FfxEffectBindlessConfig* bindlessConfig, FfxUInt32* effectContextId)
 {
     VkDeviceContext* vkDeviceContext = reinterpret_cast<VkDeviceContext*>(backendInterface->device);
 
@@ -1610,6 +1620,8 @@ FfxErrorCode CreateBackendContextVK(FfxInterface* backendInterface, FfxEffectBin
             // Reset everything accordingly
             BackendContext_VK::EffectContext& effectContext = backendContext->pEffectContexts[i];
             effectContext.active = true;
+            effectContext.effectId = effect;
+
             effectContext.nextStaticResource = (i * FFX_MAX_RESOURCE_COUNT) + 1;
             effectContext.nextDynamicResource = getDynamicResourcesStartIndex(i);
             effectContext.nextStaticResourceView = (i * FFX_MAX_QUEUED_FRAMES * FFX_MAX_RESOURCE_COUNT * 2);

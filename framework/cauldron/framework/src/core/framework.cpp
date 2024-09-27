@@ -57,7 +57,7 @@
 #include "render/rendermodules/ui/uirendermodule.h"
 #include "render/rendermodules/skinning/skinningrendermodule.h"
 #include "render/rendermodules/raytracing/raytracingrendermodule.h"
-#include "render/rendermodules/runtimeshaderrecompiler/runtimeshaderrecompilerrendermodule.h"
+#include "render/rendermodules/rsr/runtimeshaderrecompilerrendermodule.h"
 #include "render/shaderbuilder.h"
 
 #include <fstream>
@@ -96,6 +96,7 @@ namespace cauldron
         {ResourceFormat::RGBA8_SRGB, "RGBA8_SRGB"},
         {ResourceFormat::RGB10A2_UNORM, "RGB10A2_UNORM"},
         {ResourceFormat::RG11B10_FLOAT, "RG11B10_FLOAT"},
+        {ResourceFormat::RGB9E5_SHAREDEXP, "RGB9E5_SHAREDEXP"},
         {ResourceFormat::RG16_FLOAT, "RG16_FLOAT"},
         {ResourceFormat::R32_FLOAT, "R32_FLOAT"},
         {ResourceFormat::RGBA16_UNORM, "RGBA16_UNORM"},
@@ -833,6 +834,7 @@ namespace cauldron
         // Initialize other settings
         m_Config.FontSize              = configData.value("FontSize", m_Config.FontSize);
         m_Config.AGSEnabled            = configData.value("AGSEnabled", m_Config.AGSEnabled);
+        m_Config.AntiLag2              = configData.value("AntiLag2", m_Config.AntiLag2);
         m_Config.StablePowerState      = configData.value("StablePowerState", m_Config.StablePowerState);
         m_Config.InvertedDepth         = configData.value("InvertedDepth", m_Config.InvertedDepth);
         m_Config.OverrideSceneSamplers = configData.value("OverrideSceneSamplers", m_Config.OverrideSceneSamplers);

@@ -1,7 +1,7 @@
 // This file is part of the FidelityFX SDK.
 //
 // Copyright (C) 2024 Advanced Micro Devices, Inc.
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -24,7 +24,7 @@
 #include "utils.h"
 
 // D3D12SDKVersion needs to line up with the version number on Microsoft's DirectX12 Agility SDK Download page
-extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 608; }
+extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 614; }
 extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\D3D12\\"; }
 
 struct DxcCustomIncludeHandler : public IDxcIncludeHandler
@@ -219,7 +219,7 @@ HLSLCompiler::HLSLCompiler(HLSLCompiler::Backend backend,
             std::string errorMsg("Failed to load DXC library! Failed with error ");
             errorMsg += std::to_string(err);
             throw std::runtime_error(errorMsg);
-        } 
+        }
 
         // Create compiler and utils.
         HRESULT hr = m_DxcCreateInstanceFunc(CLSID_DxcUtils, IID_PPV_ARGS(&m_DxcUtils));
@@ -233,25 +233,30 @@ HLSLCompiler::HLSLCompiler(HLSLCompiler::Backend backend,
 
         break;
     }
-    case HLSLCompiler::GDK_DESKTOP_X64:
     case HLSLCompiler::GDK_SCARLETT_X64:
+    case HLSLCompiler::GDK_XBOXONE_X64:
     {
         // Setup the path to the compiler dll
         std::wstring dllPath;
 
-        if (m_backend == HLSLCompiler::GDK_DESKTOP_X64)
+        // Xbox One
+        if (m_backend == HLSLCompiler::GDK_XBOXONE_X64)
         {
-            // Look for the GDK environment variable. If not present, fail
-            const wchar_t* gdkPath = _wgetenv(L"GameDK");
+            const wchar_t* gdkPath = _wgetenv(L"GXDKLatest");
             if (!gdkPath)
             {
-                throw std::runtime_error("GDK Desktop compile requested, but could not find \"GameDK\" environment variable. Please ensure the GDK is installed");
+                throw std::runtime_error("GDK Xbox One compile requested, but could not find \"GXDKLatest\" environment variable. Please ensure the GDK is installed");
             }
 
             dllPath = gdkPath;
-            dllPath += L"bin\\dxcompiler.dll";
+            dllPath += L"bin\\XboxOne\\dxcompiler_x.dll";
+
+            // Compiler internally looks for local paths
+            std::wstring dllPathSearch = gdkPath;
+            dllPathSearch += L"bin\\XboxOne\\";
+            SetDllDirectoryW(dllPathSearch.c_str());
         }
-        
+
         // Scarlett
         else
         {
@@ -382,7 +387,7 @@ bool HLSLCompiler::CompileDXC(Permutation& permutation, const std::vector<std::s
             continue;
         }
 
-        
+
         if (arguments[i] == "-I")
         {
             includePaths.push_back(arguments[i + 1].c_str());
@@ -417,6 +422,11 @@ bool HLSLCompiler::CompileDXC(Permutation& permutation, const std::vector<std::s
         strArgs.push_back(UTF8ToWChar(arg));
     }
 
+    if (m_backend == HLSLCompiler::GDK_SCARLETT_X64 || m_backend == HLSLCompiler::GDK_XBOXONE_X64)
+    {
+        strArgs.push_back(L"-Qstrip_debug");
+    }
+
     std::wstring pdbPath;
     if (m_DebugCompile)
     {
@@ -424,14 +434,6 @@ bool HLSLCompiler::CompileDXC(Permutation& permutation, const std::vector<std::s
         strArgs.push_back(DXC_ARG_DEBUG_NAME_FOR_SOURCE);  // -Zss
         strArgs.push_back(DXC_ARG_DEBUG);  // -Zi
         strArgs.push_back(DXC_ARG_SKIP_OPTIMIZATIONS);
-        strArgs.push_back(L"-Fd"); // Need to specify the pdb file with Fd flag, so later the pix can find it automatically.
-        std::wstring hashString{entry};
-        hashString += UTF8ToWChar(m_Source);
-        std::hash<std::wstring> hasher;
-        const size_t            hashID{hasher(hashString)};
-        hashString                     = std::to_wstring(hashID);
-        pdbPath                        = UTF8ToWChar(m_OutputPath + "/") + hashString + L".lld";
-        strArgs.push_back(pdbPath);
     }
 
     std::vector<LPCWSTR> args = {};
@@ -528,6 +530,21 @@ bool HLSLCompiler::CompileDXC(Permutation& permutation, const std::vector<std::s
             CComPtr<IDxcBlob>      pPDB     = nullptr;
             CComPtr<IDxcBlobUtf16> pPDBName = nullptr;
 
+            std::wstring pdbPath;
+            // Use a unique name that takes the hash into consideration
+            pdbPath = UTF8ToWChar(m_OutputPath + "\\") + UTF8ToWChar(permutation.hashDigest) + L".pdb";
+
+
+            // Account for longer than MAX_PATH length file paths
+            if (pdbPath.length() > MAX_PATH - 1)
+            {
+                // We can get around MAX_PATH with "\\\\?\\", but this requires only having backslashes in the path (CMake uses forward slashes)
+                size_t pos;
+                while ((pos = pdbPath.find(L"/")) != std::wstring::npos) {
+                    pdbPath.replace(pos, 1, L"\\");
+                }
+                pdbPath = L"\\\\?\\" + pdbPath;
+            }
             hlslShaderBinary->pResults->GetOutput(DXC_OUT_PDB, IID_PPV_ARGS(&pPDB), &pPDBName);
 
             FILE* fp = NULL;
@@ -539,18 +556,6 @@ bool HLSLCompiler::CompileDXC(Permutation& permutation, const std::vector<std::s
             {
                 fwrite(pPDB->GetBufferPointer(), pPDB->GetBufferSize(), 1, fp);
                 fclose(fp);
-            }
-            else
-            {
-                // Could not open file. Print a warning message.
-                // FIXME/Note: because multiple permutations may generate the same shader, there is a race
-                // condition causing fopen to fail if another thread is in the process of writing
-                // the same PDB file. In that case, warnings will be printed from here but the PDB
-                // will be generated correctly regardless.
-                std::string errMsg = std::string("Failed to open ") + pathToPDB + " for PDB output";
-                writeMutex.lock();
-                perror(errMsg.c_str());
-                writeMutex.unlock();
             }
         }
 
@@ -710,7 +715,18 @@ bool HLSLCompiler::CompileFXC(Permutation&                    permutation,
             FILE* fp = NULL;
 
             std::string pdbName = permutation.hashDigest + ".pdb";
-            std::string pathToPDB = m_OutputPath + "/" + pdbName;
+            std::string pathToPDB = m_OutputPath + "\\" + pdbName;
+
+            // Account for longer than MAX_PATH length file paths
+            if (pathToPDB.length() > MAX_PATH - 1)
+            {
+                // We can get around MAX_PATH with "\\\\?\\", but this requires only having backslashes in the path (CMake uses forward slashes)
+                size_t pos;
+                while ((pos = pathToPDB.find("/")) != std::string::npos) {
+                    pathToPDB.replace(pos, 1, "\\");
+                }
+                pathToPDB = "\\\\?\\" + pathToPDB;
+            }
 
             fp = fopen(pathToPDB.c_str(), "wb");
             fwrite(pPDB->GetBufferPointer(), pPDB->GetBufferSize(), 1, fp);
@@ -731,8 +747,8 @@ bool HLSLCompiler::Compile(Permutation&                    permutation,
     switch (m_backend)
     {
     case HLSLCompiler::DXC:
-    case HLSLCompiler::GDK_DESKTOP_X64:
     case HLSLCompiler::GDK_SCARLETT_X64:
+    case HLSLCompiler::GDK_XBOXONE_X64:
         return CompileDXC(permutation, arguments, writeMutex);
     case HLSLCompiler::FXC:
         return CompileFXC(permutation, arguments, writeMutex);
@@ -909,8 +925,8 @@ bool HLSLCompiler::ExtractReflectionData(Permutation& permutation)
     switch (m_backend)
     {
     case HLSLCompiler::DXC:
-    case HLSLCompiler::GDK_DESKTOP_X64:
     case HLSLCompiler::GDK_SCARLETT_X64:
+    case HLSLCompiler::GDK_XBOXONE_X64:
         return ExtractDXCReflectionData(permutation);
     case HLSLCompiler::FXC:
         return ExtractFXCReflectionData(permutation);

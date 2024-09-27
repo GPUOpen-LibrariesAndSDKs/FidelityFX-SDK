@@ -485,7 +485,7 @@ void HybridShadowsRenderModule::InitEffect()
                                                  scratchBufferSize,
                                                  FFX_CLASSIFIER_CONTEXT_COUNT + FFX_DENOISER_CONTEXT_COUNT);
         CAULDRON_ASSERT(errorCode == FFX_OK);
-        CauldronAssert(ASSERT_CRITICAL, m_SDKInterface.fpGetSDKVersion(&m_SDKInterface) == FFX_SDK_MAKE_VERSION(1, 1, 0),
+        CauldronAssert(ASSERT_CRITICAL, m_SDKInterface.fpGetSDKVersion(&m_SDKInterface) == FFX_SDK_MAKE_VERSION(1, 1, 1),
             L"FidelityFX HybridShadows 2.1 sample requires linking with a 1.1 version SDK backend");
         CauldronAssert(ASSERT_CRITICAL, ffxClassifierGetEffectVersion() == FFX_SDK_MAKE_VERSION(1, 3, 0),
                            L"FidelityFX HybridShadows 2.1 sample requires linking with a 1.3 version FidelityFX Classifier library");

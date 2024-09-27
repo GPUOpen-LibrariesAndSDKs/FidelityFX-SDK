@@ -223,6 +223,15 @@ private:
     TAARenderModule*          m_pTAARenderModule         = nullptr;
     ToneMappingRenderModule*  m_pToneMappingRenderModule = nullptr;
     TranslucencyRenderModule* m_pTransRenderModule       = nullptr;
+
+    //Set Constant Buffer KeyValue via Configure Context KeyValue API. Valid Post Context creation.
+    int32_t                  m_UpscalerCBKey = 0;
+    float                    m_UpscalerCBValue = 1.f;
+    void                     SetUpscaleConstantBuffer(uint64_t key, float value);
+
+    //Set Swapchain waitcallback via Configure Context KeyValue API
+    int32_t                  m_waitCallbackMode = 0;
+
 };
 
 // alias to get sample.cpp to use this class.
