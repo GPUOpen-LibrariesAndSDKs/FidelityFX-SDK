@@ -56,12 +56,10 @@ namespace detail
     }
 }
 
-template<class First, class Second, class... Rest>
-First* LinkHeaders(First& first, Second& second, Rest&... rest)
+template<class Header>
+Header* LinkHeaders(Header& hdr)
 {
-    first.pNext = &second;
-    LinkHeaders(second, rest...);
-    return &first;
+    return &hdr;
 }
 
 template<class First, class Second>
@@ -72,10 +70,12 @@ First* LinkHeaders(First& first, Second& second)
     return &first;
 }
 
-template<class Header>
-Header* LinkHeaders(Header& hdr)
+template<class First, class Second, class... Rest>
+First* LinkHeaders(First& first, Second& second, Rest&... rest)
 {
-    return &hdr;
+    first.pNext = &second;
+    LinkHeaders(second, rest...);
+    return &first;
 }
 
 template<class... Desc>
