@@ -31,6 +31,7 @@
 #include <memoryapi.h> // for VirtualAlloc
 #include <mutex>
 #include <tuple> // std::ignore
+#include <limits> // std::numeric_limits
 
 // Disable this to remove the dll load of PIX and PIX tracing
 #define ENABLE_PIX_CAPTURES 1
@@ -41,7 +42,18 @@
 #ifndef USE_PIX
 #define USE_PIX  // Should enable it at anytime, as we already have a runtime switch for this purpose
 #endif           // #ifndef USE_PIX
-#include "pix/pix3.h"
+
+#ifdef _GAMING_DESKTOP
+	#include <pix3.h>
+#else
+	#include "pix/pix3.h"
+#endif // _GAMING_DESKTOP
+
+
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wunused-function"
+#pragma clang diagnostic ignored "-Wpointer-bool-conversion"
+#endif
 
 static bool s_PIXDLLLoaded = false;
 
@@ -56,7 +68,7 @@ EndEventOnCommandList   pixEndEventOnCommandList;
 // DX12 prototypes for functions in the backend interface
 FfxVersionNumber GetSDKVersionDX12(FfxInterface* backendInterface);
 FfxErrorCode GetEffectGpuMemoryUsageDX12(FfxInterface* backendInterface, FfxUInt32 effectContextId, FfxEffectMemoryUsage* outVramUsage);
-FfxErrorCode CreateBackendContextDX12(FfxInterface* backendInterface, FfxEffectBindlessConfig* bindlessConfig, FfxUInt32* effectContextId);
+FfxErrorCode CreateBackendContextDX12(FfxInterface* backendInterface, FfxEffect effect, FfxEffectBindlessConfig* bindlessConfig, FfxUInt32* effectContextId);
 FfxErrorCode GetDeviceCapabilitiesDX12(FfxInterface* backendInterface, FfxDeviceCapabilities* deviceCapabilities);
 FfxErrorCode DestroyBackendContextDX12(FfxInterface* backendInterface, FfxUInt32 effectContextId);
 FfxErrorCode CreateResourceDX12(FfxInterface* backendInterface, const FfxCreateResourceDescription* desc, FfxUInt32 effectContextId, FfxResourceInternal* outTexture);
@@ -131,6 +143,9 @@ typedef struct BackendContext_DX12 {
     IDXGIFactory*           dxgiFactory = nullptr;
 
     typedef struct alignas(32) EffectContext {
+
+        // Effect identifier -- used for various resource callbacks to application
+        FfxEffect           effectId;
 
         // Resource allocation
         uint32_t            nextStaticResource;
@@ -256,7 +271,11 @@ FfxErrorCode ffxGetInterfaceDX12(
     backendInterface->fpBreadcrumbsFreeBlock = BreadcrumbsFreeBlockDX12;
     backendInterface->fpBreadcrumbsWrite = BreadcrumbsWriteDX12;
     backendInterface->fpBreadcrumbsPrintDeviceInfo = BreadcrumbsPrintDeviceInfoDX12;
+#if defined(FFX_FI) || defined(FFX_ALL)
     backendInterface->fpSwapChainConfigureFrameGeneration = ffxSetFrameGenerationConfigToSwapchainDX12;
+#else
+    backendInterface->fpSwapChainConfigureFrameGeneration = 0;
+#endif // defined(FFX_FI) || defined(FFX_ALL)
     backendInterface->fpRegisterConstantBufferAllocator = RegisterConstantBufferAllocatorDX12;
 
     // Memory assignments
@@ -579,6 +598,8 @@ DXGI_FORMAT ffxGetDX12FormatFromSurfaceFormat(FfxSurfaceFormat surfaceFormat)
             return DXGI_FORMAT_R8G8_UNORM;
         case (FFX_SURFACE_FORMAT_R32_FLOAT):
             return DXGI_FORMAT_R32_FLOAT;
+        case (FFX_SURFACE_FORMAT_R9G9B9E5_SHAREDEXP):
+            return DXGI_FORMAT_R9G9B9E5_SHAREDEXP;
         case (FFX_SURFACE_FORMAT_UNKNOWN):
             return DXGI_FORMAT_UNKNOWN;
 
@@ -691,6 +712,9 @@ FfxSurfaceFormat ffxGetSurfaceFormatDX12(DXGI_FORMAT format)
             return FFX_SURFACE_FORMAT_R8_UNORM;
         case DXGI_FORMAT_R8_UINT:
             return FFX_SURFACE_FORMAT_R8_UINT;
+
+        case DXGI_FORMAT_R9G9B9E5_SHAREDEXP:
+            return FFX_SURFACE_FORMAT_R9G9B9E5_SHAREDEXP;
 
         case DXGI_FORMAT_UNKNOWN:
             return FFX_SURFACE_FORMAT_UNKNOWN;
@@ -923,7 +947,7 @@ FfxErrorCode GetEffectGpuMemoryUsageDX12(FfxInterface* backendInterface, FfxUInt
 }
 
 // initialize the DX12 backend
-FfxErrorCode CreateBackendContextDX12(FfxInterface* backendInterface, FfxEffectBindlessConfig* bindlessConfig, FfxUInt32* effectContextId)
+FfxErrorCode CreateBackendContextDX12(FfxInterface* backendInterface, FfxEffect effect, FfxEffectBindlessConfig* bindlessConfig, FfxUInt32* effectContextId)
 {
     FFX_ASSERT(NULL != backendInterface);
     FFX_ASSERT(NULL != backendInterface->device);
@@ -1004,6 +1028,8 @@ FfxErrorCode CreateBackendContextDX12(FfxInterface* backendInterface, FfxEffectB
 
         // DXGI factory used for memory usage tracking
         result = CreateDXGIFactory2(0, IID_PPV_ARGS(&backendContext->dxgiFactory));
+
+        FFX_UNUSED(result);
     }
 
     // Increment the ref count
@@ -1017,6 +1043,8 @@ FfxErrorCode CreateBackendContextDX12(FfxInterface* backendInterface, FfxEffectB
             // Reset everything accordingly
             BackendContext_DX12::EffectContext& effectContext = backendContext->pEffectContexts[i];
             effectContext.active = true;
+            effectContext.effectId = effect;
+
             effectContext.nextStaticResource = (i * FFX_MAX_RESOURCE_COUNT) + 1;
             effectContext.nextDynamicResource = (i * FFX_MAX_RESOURCE_COUNT) + FFX_MAX_RESOURCE_COUNT - 1;
             effectContext.nextStaticUavDescriptor = (i * FFX_MAX_RESOURCE_COUNT);
@@ -3335,9 +3363,6 @@ static FfxErrorCode executeGpuJobCopy(BackendContext_DX12* backendContext, FfxGp
 
 static FfxErrorCode executeGpuJobBarrier(BackendContext_DX12* backendContext, FfxGpuJobDescription* job, ID3D12GraphicsCommandList* dx12CommandList)
 {
-    ID3D12Resource* dx12ResourceSrc = getDX12ResourcePtr(backendContext, job->barrierDescriptor.resource.internalIndex);
-    D3D12_RESOURCE_DESC dx12ResourceDescriptionSrc = dx12ResourceSrc->GetDesc();
-
     addBarrier(backendContext, &job->barrierDescriptor.resource, job->barrierDescriptor.newState);
     flushBarriers(backendContext, dx12CommandList);
 
@@ -3375,6 +3400,22 @@ static FfxErrorCode executeGpuJobClearFloat(BackendContext_DX12* backendContext,
     clearColorAsUint[2] = reinterpret_cast<uint32_t&> (job->clearJobDescriptor.color[2]);
     clearColorAsUint[3] = reinterpret_cast<uint32_t&> (job->clearJobDescriptor.color[3]);
     dx12CommandList->ClearUnorderedAccessViewUint(dx12GpuHandle, dx12CpuHandle, dx12Resource, clearColorAsUint, 0, nullptr);
+
+    return FFX_OK;
+}
+
+static FfxErrorCode executeGpuJobDiscard(BackendContext_DX12*       backendContext,
+                                         FfxGpuJobDescription*      job,
+                                         ID3D12GraphicsCommandList* dx12CommandList)
+{
+    uint32_t                            idx           = job->discardJobDescriptor.target.internalIndex;
+    BackendContext_DX12::Resource       ffxResource   = backendContext->pResources[idx];
+    ID3D12Resource*                     dx12Resource  = reinterpret_cast<ID3D12Resource*>(ffxResource.resourcePtr);
+
+    addBarrier(backendContext, &job->discardJobDescriptor.target, FFX_RESOURCE_STATE_UNORDERED_ACCESS);
+    flushBarriers(backendContext, dx12CommandList);
+
+    dx12CommandList->DiscardResource(dx12Resource, nullptr);
 
     return FFX_OK;
 }
@@ -3420,6 +3461,9 @@ FfxErrorCode ExecuteGpuJobsDX12(
                 errorCode = executeGpuJobBarrier(backendContext, GpuJob, dx12CommandList);
                 break;
 
+            case FFX_GPU_JOB_DISCARD:
+                errorCode = executeGpuJobDiscard(backendContext, GpuJob, dx12CommandList);
+                break;
             default:
                 break;
         }
@@ -4116,7 +4160,3 @@ IDXGISwapChain4* ffxGetDX12SwapchainPtr(FfxSwapchain ffxSwapchain)
 {
     return reinterpret_cast<IDXGISwapChain4*>(ffxSwapchain);
 }
-
-#include <FidelityFX/host/ffx_fsr2.h>
-#include <FidelityFX/host/ffx_fsr3.h>
-#include "FrameInterpolationSwapchain/FrameInterpolationSwapchainDX12.h"

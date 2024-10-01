@@ -240,7 +240,7 @@ void HybridReflectionsRenderModule::CreateFfxContexts()
     void*        scratchBuffer     = calloc(scratchBufferSize, 1u);
     FfxErrorCode errorCode         = SDKWrapper::ffxGetInterface(&m_BackendInterface, GetDevice(), scratchBuffer, scratchBufferSize, FFX_HYBRID_REFLECTIONS_CONTEXT_COUNT);
     CAULDRON_ASSERT(errorCode == FFX_OK);
-    CauldronAssert(ASSERT_CRITICAL, m_BackendInterface.fpGetSDKVersion(&m_BackendInterface) == FFX_SDK_MAKE_VERSION(1, 1, 0),
+    CauldronAssert(ASSERT_CRITICAL, m_BackendInterface.fpGetSDKVersion(&m_BackendInterface) == FFX_SDK_MAKE_VERSION(1, 1, 1),
         L"FidelityFX HybridReflections 2.1 sample requires linking with a 1.1 version SDK backend");
     CauldronAssert(ASSERT_CRITICAL, ffxClassifierGetEffectVersion() == FFX_SDK_MAKE_VERSION(1, 3, 0),
                        L"FidelityFX HybridReflections 2.1 sample requires linking with a 1.3 version FidelityFX Classifier library");

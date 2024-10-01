@@ -240,6 +240,7 @@ namespace cauldron
         BGRA8_TYPELESS,     ///< 4-Component (BGRA) 32-bit (typeless) type.
         RGB10A2_UNORM,      ///< 4-Component (RGBA) 32-bit (unsigned normalized) type.
         RG11B10_FLOAT,      ///< 3-Component (RGB) 32-bit (floating point) type.
+        RGB9E5_SHAREDEXP,   ///< 3-Component (RGB) 32-bit (floating point) type.
         RG16_SINT,          ///< 2-Component (RG) 32-bit (signed int) type.
         RG16_UINT,          ///< 2-Component (RG) 32-bit (unsigned int) type.
         RG16_FLOAT,         ///< 2-Component (R) 32-bit (floating point) type.

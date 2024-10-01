@@ -372,6 +372,12 @@ void FSRRenderModule::EnableModule(bool enabled)
     }
 }
 
+FfxErrorCode waitCallback(wchar_t* fenceName, uint64_t fenceValueToWaitFor)
+{
+    CAUDRON_LOG_DEBUG(L"waiting on '%ls' with value %llu", fenceName, fenceValueToWaitFor);
+    return FFX_API_RETURN_OK;
+}
+
 void FSRRenderModule::InitUI(UISection* pUISection)
 {
     std::vector<const char*> comboOptions = {"Native", "FSR (ffxapi)"};
@@ -426,7 +432,7 @@ void FSRRenderModule::InitUI(UISection* pUISection)
     ));
 
     m_UIElements.emplace_back(pUISection->RegisterUIElement<UISlider<float>>(
-        "Letterbox size", m_LetterboxRatio, 0.f, 1.f, [this](float cur, float old) { UpdateUpscaleRatio(&old); }, false));
+        "Letterbox size", m_LetterboxRatio, 0.1f, 1.f, [this](float cur, float old) { UpdateUpscaleRatio(&old); }, false));
 
     m_UIElements.emplace_back(pUISection->RegisterUIElement<UIButton>("Reset Upscaling", m_FrameInterpolation, [this]() { m_ResetUpscale = true; }));
     m_UIElements.emplace_back(pUISection->RegisterUIElement<UICheckBox>("Draw upscaler debug view", m_DrawUpscalerDebugView, nullptr, false));
@@ -441,6 +447,24 @@ void FSRRenderModule::InitUI(UISection* pUISection)
     // Sharpening
     m_UIElements.emplace_back(pUISection->RegisterUIElement<UICheckBox>("RCAS Sharpening", m_RCASSharpen, nullptr, false, false));
     m_UIElements.emplace_back(pUISection->RegisterUIElement<UISlider<float>>("Sharpness", m_Sharpness, 0.f, 1.f, m_RCASSharpen, nullptr, false));
+
+    //Set Upscaler CB KeyValue post context creation
+    std::vector<const char*>        configureUpscaleKeyLabels = { "fVelocity" };
+    
+    m_UIElements.emplace_back(pUISection->RegisterUIElement<UICombo>(
+        "Upscaler CB Key to set",
+        m_UpscalerCBKey,
+        configureUpscaleKeyLabels,
+        m_EnableMaskOptions,
+        nullptr,
+        m_EnableMaskOptions));
+    m_UIElements.emplace_back(pUISection->RegisterUIElement<UISlider<float>>(
+        "Upscaler CB Value to set",
+        m_UpscalerCBValue,
+        0.f, 1.f,
+        m_EnableMaskOptions,
+        [this](float, float) { SetUpscaleConstantBuffer(m_UpscalerCBKey, m_UpscalerCBValue); },
+        m_EnableMaskOptions));
 
     // Frame interpolation
     m_UIElements.emplace_back(pUISection->RegisterUIElement<UICheckBox>("Frame Interpolation", m_FrameInterpolation, 
@@ -490,6 +514,33 @@ void FSRRenderModule::InitUI(UISection* pUISection)
         false));
     m_UIElements.emplace_back(pUISection->RegisterUIElement<UICheckBox>("DoubleBuffer UI resource in swapchain", m_DoublebufferInSwapchain, m_FrameInterpolation, nullptr, false));
 
+    std::vector<const char*>        waitCallbackModeLabels = { "nullptr", "CAUDRON_LOG_DEBUG(\"waitCallback\")"};
+    m_UIElements.emplace_back(pUISection->RegisterUIElement<UICombo>(
+        "WaitCallback Mode",
+        m_waitCallbackMode,
+        waitCallbackModeLabels,
+        m_EnableMaskOptions,
+        [this](int32_t, int32_t)
+        {
+#if defined(FFX_API_DX12)
+            ffx::ConfigureDescFrameGenerationSwapChainKeyValueDX12 m_swapchainKeyValueConfig{};
+#elif defined(FFX_API_VK)
+            ffx::ConfigureDescFrameGenerationSwapChainKeyValueVK m_swapchainKeyValueConfig{};
+#endif
+            m_swapchainKeyValueConfig.key = FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_WAITCALLBACK;
+            if (m_waitCallbackMode == 0)
+            {
+                m_swapchainKeyValueConfig.ptr = nullptr;
+            }
+            else if (m_waitCallbackMode == 1)
+            {
+                //FuncWithinStruct waitCallbackStruct = { &waitCallback };
+                m_swapchainKeyValueConfig.ptr = waitCallback;
+            }
+            ffx::Configure(m_SwapChainContext, m_swapchainKeyValueConfig);
+
+        },
+        m_EnableMaskOptions));
     EnableModule(true);
 }
 
@@ -809,6 +860,14 @@ void FSRRenderModule::UpdateFSRContext(bool enabled)
     }
 }
 
+void FSRRenderModule::SetUpscaleConstantBuffer(uint64_t key, float value)
+{
+    ffx::ConfigureDescUpscaleKeyValue m_upscalerKeyValueConfig{};
+    m_upscalerKeyValueConfig.key = key;
+    m_upscalerKeyValueConfig.ptr = &value;
+    ffx::Configure(m_UpscalingContext, m_upscalerKeyValueConfig);
+}
+
 ResolutionInfo FSRRenderModule::UpdateResolution(uint32_t displayWidth, uint32_t displayHeight)
 {
     return {static_cast<uint32_t>((float)displayWidth / m_UpscaleRatio * m_LetterboxRatio),
@@ -947,7 +1006,7 @@ void FSRRenderModule::Execute(double deltaTime, CommandList* pCmdList)
         dispatchUpscale.jitterOffset.y      = -m_JitterY;
         dispatchUpscale.motionVectorScale.x = resInfo.fRenderWidth();
         dispatchUpscale.motionVectorScale.y = resInfo.fRenderHeight();
-        dispatchUpscale.reset               = m_ResetUpscale;
+        dispatchUpscale.reset               = m_ResetUpscale || GetScene()->GetCurrentCamera()->WasCameraReset();
         dispatchUpscale.enableSharpening    = m_RCASSharpen;
         dispatchUpscale.sharpness           = m_Sharpness;
 

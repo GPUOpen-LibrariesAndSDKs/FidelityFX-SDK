@@ -37,6 +37,7 @@
 
         "FontSize": 13,
         "AGSEnabled": false,
+        "AntiLag2": true,
         "StablePowerState": false,
         "InvertedDepth": true,
         "MotionVectorGeneration": "",
