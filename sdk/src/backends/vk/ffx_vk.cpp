@@ -172,8 +172,10 @@ typedef struct BackendContext_VK {
         PFN_vkCmdFillBuffer                     vkCmdFillBuffer = 0;
         PFN_vkCmdWriteBufferMarkerAMD           vkCmdWriteBufferMarkerAMD = 0;
         PFN_vkCmdWriteBufferMarker2AMD          vkCmdWriteBufferMarker2AMD = 0;
+#ifdef _DEBUG
         PFN_vkCmdBeginDebugUtilsLabelEXT        vkCmdBeginDebugUtilsLabelEXT = 0;
         PFN_vkCmdEndDebugUtilsLabelEXT          vkCmdEndDebugUtilsLabelEXT = 0;
+#endif
 
     } VkFunctionTable;
 
@@ -1031,6 +1033,7 @@ void ConvertUTF16ToUTF8(const wchar_t* inputName, char* outputBuffer, size_t out
 }
 #endif  // _WIN32
 
+#ifdef _DEBUG
 void beginMarkerVK(BackendContext_VK* backendContext, VkCommandBuffer commandBuffer, const wchar_t* label)
 {
     constexpr size_t strLen = 64;
@@ -1054,6 +1057,7 @@ void endMarkerVK(BackendContext_VK* backendContext, VkCommandBuffer commandBuffe
 {
     backendContext->vkFunctionTable.vkCmdEndDebugUtilsLabelEXT(commandBuffer);
 }
+#endif
 
 void addBarrier(BackendContext_VK* backendContext, FfxResourceInternal* resource, FfxResourceStates newState)
 {
@@ -1396,8 +1400,10 @@ FfxErrorCode CreateBackendContextVK(FfxInterface* backendInterface, FfxEffect ef
         backendContext->vkFunctionTable.vkCmdFillBuffer = (PFN_vkCmdFillBuffer)vkDeviceContext->vkDeviceProcAddr(backendContext->device, "vkCmdFillBuffer");
         backendContext->vkFunctionTable.vkCmdWriteBufferMarkerAMD = (PFN_vkCmdWriteBufferMarkerAMD)vkDeviceContext->vkDeviceProcAddr(backendContext->device, "vkCmdWriteBufferMarkerAMD");
         backendContext->vkFunctionTable.vkCmdWriteBufferMarker2AMD = (PFN_vkCmdWriteBufferMarker2AMD)vkDeviceContext->vkDeviceProcAddr(backendContext->device, "vkCmdWriteBufferMarker2AMD");
+#ifdef _DEBUG
         backendContext->vkFunctionTable.vkCmdBeginDebugUtilsLabelEXT = (PFN_vkCmdBeginDebugUtilsLabelEXT)vkDeviceContext->vkDeviceProcAddr(backendContext->device, "vkCmdBeginDebugUtilsLabelEXT");
         backendContext->vkFunctionTable.vkCmdEndDebugUtilsLabelEXT = (PFN_vkCmdEndDebugUtilsLabelEXT)vkDeviceContext->vkDeviceProcAddr(backendContext->device, "vkCmdEndDebugUtilsLabelEXT");
+#endif
 
         // enumerate all the device extensions
         backendContext->numDeviceExtensions = 0;
@@ -4043,10 +4049,12 @@ FfxErrorCode ExecuteGpuJobsVK(FfxInterface* backendInterface, FfxCommandList com
     {
         FfxGpuJobDescription* gpuJob = &backendContext->pGpuJobs[i];
 
+#ifdef _DEBUG
         // If we have a label for the job, drop a marker for it
         if (gpuJob->jobLabel[0]) {
             beginMarkerVK(backendContext, vkCommandBuffer, gpuJob->jobLabel);
         }
+#endif
 
         
         switch (gpuJob->jobType)
@@ -4074,9 +4082,11 @@ FfxErrorCode ExecuteGpuJobsVK(FfxInterface* backendInterface, FfxCommandList com
         default:;
         }
 
+#ifdef _DEBUG
         if (gpuJob->jobLabel[0]) {
             endMarkerVK(backendContext, vkCommandBuffer);
         }
+#endif
     }
 
     // check the execute function returned cleanly.
