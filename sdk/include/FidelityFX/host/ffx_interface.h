@@ -56,7 +56,7 @@ FFX_FORWARD_DECLARE(FfxInterface);
 /// FidelityFX SDK patch version.
 ///
 /// @ingroup FfxInterface
-#define FFX_SDK_VERSION_PATCH (1)
+#define FFX_SDK_VERSION_PATCH (2)
 
 /// Macro to pack a FidelityFX SDK version id together.
 ///

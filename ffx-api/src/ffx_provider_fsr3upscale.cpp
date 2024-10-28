@@ -274,6 +274,14 @@ ffxReturnCode_t ffxProvider_FSR3Upscale::Query(ffxContext* context, ffxQueryDesc
         }
         break;
     }
+    case FFX_API_QUERY_DESC_TYPE_UPSCALE_GPU_MEMORY_USAGE:
+    {
+        InternalFsr3UpscalerUContext* internal_context = reinterpret_cast<InternalFsr3UpscalerUContext*>(*context);
+        auto desc = reinterpret_cast<ffxQueryDescUpscaleGetGPUMemoryUsage*>(header);
+        
+        TRY2(ffxFsr3UpscalerContextGetGpuMemoryUsage(&internal_context->context, reinterpret_cast <FfxEffectMemoryUsage*> (desc->gpuMemoryUsageUpscaler)));
+        break;
+    }
     default:
         return FFX_API_RETURN_ERROR_UNKNOWN_DESCTYPE;
     }

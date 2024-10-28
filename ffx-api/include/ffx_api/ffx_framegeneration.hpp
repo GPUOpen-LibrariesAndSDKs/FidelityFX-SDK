@@ -55,4 +55,14 @@ struct struct_type<ffxConfigureDescFrameGenerationKeyValue> : std::integral_cons
 
 struct ConfigureDescFrameGenerationKeyValue : public InitHelper<ffxConfigureDescFrameGenerationKeyValue> {};
 
+template<>
+struct struct_type<ffxQueryDescFrameGenerationGetGPUMemoryUsage> : std::integral_constant<uint64_t, FFX_API_QUERY_DESC_TYPE_FRAMEGENERATION_GPU_MEMORY_USAGE> {};
+
+struct QueryDescFrameGenerationGetGPUMemoryUsage : public InitHelper<ffxQueryDescFrameGenerationGetGPUMemoryUsage> {};
+
+template<>
+struct struct_type<ffxConfigureDescFrameGenerationRegisterDistortionFieldResource> : std::integral_constant<uint64_t, FFX_API_CONFIGURE_DESC_TYPE_FRAMEGENERATION_REGISTERDISTORTIONRESOURCE> {};
+
+struct ConfigureDescFrameGenerationRegisterDistortionFieldResource : public InitHelper<ffxConfigureDescFrameGenerationRegisterDistortionFieldResource> {};
+
 }

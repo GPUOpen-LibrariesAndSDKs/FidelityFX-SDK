@@ -68,9 +68,11 @@ void FSRRenderModule::Init(const json& initData)
     m_pTonemappedColorTarget = GetFramework()->GetRenderTexture(L"SwapChainProxy");
     m_pDepthTarget           = GetFramework()->GetRenderTexture(L"DepthTarget");
     m_pMotionVectors         = GetFramework()->GetRenderTexture(L"GBufferMotionVectorRT");
+    m_pDistortionField[0] = GetFramework()->GetRenderTexture(L"DistortionField0");
+    m_pDistortionField[1] = GetFramework()->GetRenderTexture(L"DistortionField1");
     m_pReactiveMask          = GetFramework()->GetRenderTexture(L"ReactiveMask");
     m_pCompositionMask       = GetFramework()->GetRenderTexture(L"TransCompMask");
-    CauldronAssert(ASSERT_CRITICAL, m_pMotionVectors && m_pReactiveMask && m_pCompositionMask, L"Could not get one of the needed resources for FSR Rendermodule.");
+    CauldronAssert(ASSERT_CRITICAL, m_pMotionVectors && m_pDistortionField[0] && m_pDistortionField[1] && m_pReactiveMask && m_pCompositionMask, L"Could not get one of the needed resources for FSR Rendermodule.");
 
     // Get a CPU resource view that we'll use to map the render target to
     GetResourceViewAllocator()->AllocateCPURenderViews(&m_pRTResourceView);
@@ -444,6 +446,9 @@ void FSRRenderModule::InitUI(UISection* pUISection)
     // Use mask
     m_UIElements.emplace_back(pUISection->RegisterUIElement<UICheckBox>("Use Transparency and Composition Mask", m_UseMask, m_EnableMaskOptions, nullptr, false));
 
+    // Use distortion field
+    m_UIElements.emplace_back(pUISection->RegisterUIElement<UICheckBox>("Use Distortion Field Input", m_UseDistortionField, nullptr, false));
+
     // Sharpening
     m_UIElements.emplace_back(pUISection->RegisterUIElement<UICheckBox>("RCAS Sharpening", m_RCASSharpen, nullptr, false, false));
     m_UIElements.emplace_back(pUISection->RegisterUIElement<UISlider<float>>("Sharpness", m_Sharpness, 0.f, 1.f, m_RCASSharpen, nullptr, false));
@@ -764,6 +769,14 @@ void FSRRenderModule::UpdateFSRContext(bool enabled)
 
                 CauldronAssert(ASSERT_CRITICAL, retCode == ffx::ReturnCode::Ok, L"Couldn't create the ffxapi upscaling context: %d", (uint32_t)retCode);
             }
+            FfxApiEffectMemoryUsage gpuMemoryUsageUpscaler;
+            ffx::QueryDescUpscaleGetGPUMemoryUsage upscalerGetGPUMemoryUsage{};
+            upscalerGetGPUMemoryUsage.gpuMemoryUsageUpscaler = &gpuMemoryUsageUpscaler;
+
+            ffx::Query(m_UpscalingContext, upscalerGetGPUMemoryUsage);
+
+            CAUDRON_LOG_INFO(L"Upscaler Context VRAM totalUsageInBytes %f MB aliasableUsageInBytes %f MB", gpuMemoryUsageUpscaler.totalUsageInBytes / 1048576.f, gpuMemoryUsageUpscaler.aliasableUsageInBytes / 1048576.f);
+
         }
 
         // Create the FrameGen context
@@ -820,7 +833,22 @@ void FSRRenderModule::UpdateFSRContext(bool enabled)
 
             retCode = ffx::Configure(m_FrameGenContext, m_FrameGenerationConfig);
             CauldronAssert(ASSERT_CRITICAL, retCode == ffx::ReturnCode::Ok, L"Couldn't create the ffxapi upscaling context: %d", (uint32_t)retCode);
+            
+            FfxApiEffectMemoryUsage gpuMemoryUsageFrameGeneration;
+            ffx::QueryDescFrameGenerationGetGPUMemoryUsage frameGenGetGPUMemoryUsage{};
+            frameGenGetGPUMemoryUsage.gpuMemoryUsageFrameGeneration = &gpuMemoryUsageFrameGeneration;
+            ffx::Query(m_FrameGenContext, frameGenGetGPUMemoryUsage);
+
+            CAUDRON_LOG_INFO(L"FrameGeneration Context VRAM totalUsageInBytes %f MB aliasableUsageInBytes %f MB", gpuMemoryUsageFrameGeneration.totalUsageInBytes / 1048576.f, gpuMemoryUsageFrameGeneration.aliasableUsageInBytes / 1048576.f);
+
         }
+#if defined(FFX_API_DX12)
+        FfxApiEffectMemoryUsage gpuMemoryUsageFrameGenerationSwapchain;
+        ffx::QueryFrameGenerationSwapChainGetGPUMemoryUsageDX12 frameGenSwapchainGetGPUMemoryUsage{};
+        frameGenSwapchainGetGPUMemoryUsage.gpuMemoryUsageFrameGenerationSwapchain = &gpuMemoryUsageFrameGenerationSwapchain;
+        ffx::Query(m_SwapChainContext, frameGenSwapchainGetGPUMemoryUsage);
+        CAUDRON_LOG_INFO(L"Swapchain Context VRAM totalUsageInBytes %f MB aliasableUsageInBytes %f MB", gpuMemoryUsageFrameGenerationSwapchain.totalUsageInBytes / 1048576.f, gpuMemoryUsageFrameGenerationSwapchain.aliasableUsageInBytes / 1048576.f);
+#endif  // defined(FFX_API_DX12)
     }
     else
     {
@@ -1116,8 +1144,18 @@ void FSRRenderModule::Execute(double deltaTime, CommandList* pCmdList)
     ffxSwapChain = GetSwapChain()->GetImpl()->VKSwapChain();
 #endif  // defined(FFX_API_DX12)
     m_FrameGenerationConfig.swapChain = ffxSwapChain;
-
-    ffx::ReturnCode retCode = ffx::Configure(m_FrameGenContext, m_FrameGenerationConfig);
+    ffx::ReturnCode retCode = ffx::ReturnCode::ErrorParameter;
+    if (m_UseDistortionField)
+    {
+        ffx::ConfigureDescFrameGenerationRegisterDistortionFieldResource dfConfig{};
+        dfConfig.distortionField = SDKWrapper::ffxGetResourceApi(m_pDistortionField[m_curUiTextureIndex]->GetResource(), FFX_API_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+        retCode = ffx::Configure(m_FrameGenContext, m_FrameGenerationConfig, dfConfig);
+    }
+    else
+    {
+        retCode = ffx::Configure(m_FrameGenContext, m_FrameGenerationConfig);
+    }
+    
     CauldronAssert(ASSERT_CRITICAL, !!retCode, L"Configuring FSR FG failed: %d", (uint32_t)retCode);
 
     retCode = ffx::Dispatch(m_FrameGenContext, dispatchFgPrep);
@@ -1130,21 +1168,23 @@ void FSRRenderModule::Execute(double deltaTime, CommandList* pCmdList)
 #if defined(FFX_API_DX12)
     ffx::ConfigureDescFrameGenerationSwapChainRegisterUiResourceDX12 uiConfig{};
     uiConfig.uiResource = uiColor;
-    uiConfig.flags      = m_DoublebufferInSwapchain ? FFX_UI_COMPOSITION_FLAG_ENABLE_INTERNAL_UI_DOUBLE_BUFFERING : 0;
+    uiConfig.flags      = m_DoublebufferInSwapchain ? FFX_FRAMEGENERATION_UI_COMPOSITION_FLAG_ENABLE_INTERNAL_UI_DOUBLE_BUFFERING : 0;
     ffx::Configure(m_SwapChainContext, uiConfig);
 #elif defined(FFX_API_VK)
     ffx::ConfigureDescFrameGenerationSwapChainRegisterUiResourceVK uiConfig{};
     uiConfig.uiResource = uiColor;
-    uiConfig.flags      = m_DoublebufferInSwapchain ? FFX_UI_COMPOSITION_FLAG_ENABLE_INTERNAL_UI_DOUBLE_BUFFERING : 0;
+    uiConfig.flags      = m_DoublebufferInSwapchain ? FFX_FRAMEGENERATION_UI_COMPOSITION_FLAG_ENABLE_INTERNAL_UI_DOUBLE_BUFFERING : 0;
     ffx::Configure(m_SwapChainContext, uiConfig);
 #endif  // defined(FFX_API_DX12)
+
+    
 
     // Dispatch frame generation, if not using the callback
     if (m_FrameInterpolation && !m_UseCallback)
     {
         ffx::DispatchDescFrameGeneration dispatchFg{};
 
-        dispatchFg.presentColor       = backbuffer;
+        dispatchFg.presentColor = backbuffer;
         dispatchFg.numGeneratedFrames = 1;
 
         // assume symmetric letterbox
@@ -1172,9 +1212,10 @@ void FSRRenderModule::Execute(double deltaTime, CommandList* pCmdList)
 #endif  // defined(FFX_API_DX12)
 
         dispatchFg.frameID = m_FrameID;
-        dispatchFg.reset   = m_ResetFrameInterpolation;
+        dispatchFg.reset = m_ResetFrameInterpolation;
 
         retCode = ffx::Dispatch(m_FrameGenContext, dispatchFg);
+        
         CauldronAssert(ASSERT_CRITICAL, !!retCode, L"Dispatching Frame Generation failed: %d", (uint32_t)retCode);
     }
 
@@ -1210,6 +1251,14 @@ void FSRRenderModule::PreTransCallback(double deltaTime, CommandList* pCmdList)
     barriers.push_back(Barrier::Transition(m_pCompositionMask->GetResource(), ResourceState::RenderTargetResource, ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource));
     ResourceBarrier(pCmdList, static_cast<uint32_t>(barriers.size()), barriers.data());
 
+    // update index for UI doublebuffering
+    UIRenderModule* uimod = static_cast<UIRenderModule*>(GetFramework()->GetRenderModule("UIRenderModule"));
+    m_curUiTextureIndex = (++m_curUiTextureIndex) & 1;
+    uimod->SetUiSurfaceIndex(m_curUiTextureIndex);
+
+    //update index for distortion texture doublebuffering
+    m_pToneMappingRenderModule->SetDoubleBufferedTextureIndex(m_curUiTextureIndex);
+
     if (m_MaskMode != FSRMaskMode::Auto)
         return;
 
@@ -1226,11 +1275,6 @@ void FSRRenderModule::PreTransCallback(double deltaTime, CommandList* pCmdList)
     barriers.push_back(Barrier::Transition(m_pColorTarget->GetResource(), ResourceState::CopySource, ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource));
     barriers.push_back(Barrier::Transition(m_pOpaqueTexture->GetResource(), ResourceState::CopyDest, ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource));
     ResourceBarrier(pCmdList, static_cast<uint32_t>(barriers.size()), barriers.data());
-
-    // update intex for UI doublebuffering
-    UIRenderModule* uimod = static_cast<UIRenderModule*>(GetFramework()->GetRenderModule("UIRenderModule"));
-    m_curUiTextureIndex   = m_DoublebufferInSwapchain ? 0 : (++m_curUiTextureIndex) & 1;
-    uimod->SetUiSurfaceIndex(m_curUiTextureIndex);
 }
 
 void FSRRenderModule::PostTransCallback(double deltaTime, CommandList* pCmdList)

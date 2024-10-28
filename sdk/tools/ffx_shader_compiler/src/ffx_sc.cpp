@@ -31,6 +31,8 @@
 #include <filesystem>
 #include <unordered_set>
 #include <locale>
+#include <stdexcept>
+
 
 #pragma comment(lib, "pathcch.lib")
 
@@ -726,7 +728,11 @@ void Application::CompilePermutation(Permutation& permutation)
     // Compile it with specified arguments.
     // ------------------------------------------------------------------------------------------------
     if (!m_Compiler->Compile(permutation, args, m_WriteMutex))
-        return;
+    {   
+        fprintf(stderr, "failed to compile shader : %s\n", permutation.sourcePath.generic_string().c_str());
+        throw std::runtime_error("failed to compile shader: " + permutation.sourcePath.generic_string());
+    }
+        
 
     // ------------------------------------------------------------------------------------------------
     // Retrieve reflection data
@@ -1097,8 +1103,9 @@ int wmain(int argc, wchar_t** argv)
         return 0;
     }
     catch (const std::exception& ex)
-    {
+    {   
         fprintf(stderr, "ffx_sc failed: %s\n", ex.what());
+        fflush(stderr);
         return -1;
     }
 }

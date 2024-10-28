@@ -52,6 +52,7 @@ struct InternalFgContext
     bool asyncWorkloadSupported;
 
     FfxResource HUDLessColor;
+    FfxResource distortionField;
 
     bool frameGenEnabled;
     uint32_t frameGenFlags;
@@ -253,7 +254,7 @@ ffxReturnCode_t ffxProvider_FrameGeneration::Configure(ffxContext* context, cons
                 dispatchDesc.generationRect.height = desc->interpolationRect.height;
                 dispatchDesc.generationRect.width = desc->interpolationRect.width;
                 dispatchDesc.frameID = desc->frameID;
-
+                
                 if (FFX_API_RETURN_OK != callbacks->frameGenerationCallback(&dispatchDesc, callbacks->frameGenerationCallbackUserContext))
                     return FFX_ERROR_BACKEND_API_ERROR;
                 return FFX_OK;
@@ -333,6 +334,18 @@ ffxReturnCode_t ffxProvider_FrameGeneration::Configure(ffxContext* context, cons
             }
         }
 
+        internal_context->distortionField = FfxResource({});
+        for (auto it = header; it; it = it->pNext)
+        {
+            if (auto distortionFieldDesc = ffx::DynamicCast<ffxConfigureDescFrameGenerationRegisterDistortionFieldResource>(it))
+            {
+                if (distortionFieldDesc->distortionField.resource)
+                {
+                    internal_context->distortionField = Convert(distortionFieldDesc->distortionField);
+                }
+            }
+        }
+
         return FFX_API_RETURN_OK;
     }
     else
@@ -341,9 +354,30 @@ ffxReturnCode_t ffxProvider_FrameGeneration::Configure(ffxContext* context, cons
     }
 }
 
-ffxReturnCode_t ffxProvider_FrameGeneration::Query(ffxContext* context, ffxQueryDescHeader* desc) const
+ffxReturnCode_t ffxProvider_FrameGeneration::Query(ffxContext* context, ffxQueryDescHeader* header) const
 {
-    return FFX_API_RETURN_ERROR;
+    VERIFY(header, FFX_API_RETURN_ERROR_PARAMETER);
+    VERIFY(context, FFX_API_RETURN_ERROR_PARAMETER);
+    VERIFY(*context, FFX_API_RETURN_ERROR_PARAMETER);
+
+    InternalFgContext* internal_context = reinterpret_cast<InternalFgContext*>(*context);
+    if (auto desc = ffx::DynamicCast<ffxQueryDescFrameGenerationGetGPUMemoryUsage>(header))
+    {
+        FfxEffectMemoryUsage pGpuMemoryUsageFrameGeneration;
+        FfxEffectMemoryUsage pGpuMemoryUsageOpticalFlow;
+        FfxEffectMemoryUsage pGpuMemoryUsageShared;
+
+        TRY2(ffxFrameInterpolationContextGetGpuMemoryUsage(&internal_context->fiContext, &pGpuMemoryUsageFrameGeneration));
+        TRY2(ffxOpticalflowContextGetGpuMemoryUsage(&internal_context->ofContext, &pGpuMemoryUsageOpticalFlow));
+        TRY2(ffxSharedContextGetGpuMemoryUsage(&internal_context->backendInterfaceShared, &pGpuMemoryUsageShared));
+        desc->gpuMemoryUsageFrameGeneration->totalUsageInBytes = pGpuMemoryUsageFrameGeneration.totalUsageInBytes + pGpuMemoryUsageOpticalFlow.totalUsageInBytes + pGpuMemoryUsageShared.totalUsageInBytes;
+        desc->gpuMemoryUsageFrameGeneration->aliasableUsageInBytes = pGpuMemoryUsageFrameGeneration.aliasableUsageInBytes + pGpuMemoryUsageOpticalFlow.aliasableUsageInBytes + pGpuMemoryUsageShared.aliasableUsageInBytes;
+        return FFX_API_RETURN_OK;
+    }
+    else
+    {
+        return FFX_API_RETURN_ERROR_UNKNOWN_DESCTYPE;
+    }
 }
 
 ffxReturnCode_t ffxProvider_FrameGeneration::Dispatch(ffxContext* context, const ffxDispatchDescHeader* header) const
@@ -441,6 +475,10 @@ ffxReturnCode_t ffxProvider_FrameGeneration::Dispatch(ffxContext* context, const
 
             fiDispatchDesc.frameID = desc->frameID;
 
+            if (internal_context->distortionField.resource)
+            {
+                fiDispatchDesc.distortionField = internal_context->distortionField;
+            }
             TRY2(ffxFrameInterpolationDispatch(&internal_context->fiContext, &fiDispatchDesc));
         }
 

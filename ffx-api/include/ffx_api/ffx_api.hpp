@@ -75,6 +75,7 @@ First* LinkHeaders(First& first, Second& second)
 template<class Header>
 Header* LinkHeaders(Header& hdr)
 {
+    hdr.pNext = nullptr;
     return &hdr;
 }
 

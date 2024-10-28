@@ -2685,5 +2685,6 @@ VkImageMemoryBarrier FrameInterpolationSwapChainVK::copyUiResource(VkCommandBuff
     postCopyBarriers.add(dstBarrier);
     postCopyBarriers.record(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
+    presentInfo.currentUiSurface.resource = nullptr;
     return dstBarrier;
 }

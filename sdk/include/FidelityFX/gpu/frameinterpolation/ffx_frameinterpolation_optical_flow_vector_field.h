@@ -30,8 +30,6 @@ void computeOpticalFlowFieldMvs(FfxUInt32x2 dtID, FfxFloat32x2 fOpticalFlowVecto
     const FfxFloat32 scaleFactor = 1.0f;
     FfxFloat32x2 fMotionVectorHalf = fOpticalFlowVector * 0.5f;
 
-    FfxFloat32 fDilatedDepth = ConvertFromDeviceDepthToViewSpace(LoadDilatedDepth(FfxInt32x2(dtID)));
-
     FfxFloat32x3 prevBackbufferCol = SamplePreviousBackbuffer(fUv).xyz;
     FfxFloat32x3 curBackbufferCol  = SampleCurrentBackbuffer(fUv + fOpticalFlowVector).xyz;
 

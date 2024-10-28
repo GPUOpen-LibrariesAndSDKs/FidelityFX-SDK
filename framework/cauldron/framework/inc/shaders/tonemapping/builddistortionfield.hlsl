@@ -20,42 +20,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#if __cplusplus
-    #pragma once
+#include "tonemappercommon.h"
+#include "lensdistortion.h"
 
-namespace UpscaleRM
+//--------------------------------------------------------------------------------------
+// Texture definitions
+//--------------------------------------------------------------------------------------
+RWTexture2D<float4> OutputTexture : register(u0);
+
+bool IsInsideLetterbox(int2 pixel)
 {
-enum class UpscaleMethod : uint32_t
-{
-    Native = 0,
-    Point,
-    Bilinear,
-    Bicubic,
+    if (pixel.x > LetterboxRectBase.x && pixel.y > LetterboxRectBase.y &&
+        pixel.x < LetterboxRectBase.x + LetterboxRectSize.x &&
+        pixel.y <= LetterboxRectBase.y + LetterboxRectSize.y)
+        return true;
 
-    // the following modes are not part of this shader, still the Rendermodule uses them to select the upscaler
-    FSR1,
-    FSR2,
-    FSR3,
-
-    Count
-};
+    return false;
 }
 
-struct UpscaleCBData
+//--------------------------------------------------------------------------------------
+// Main function
+//--------------------------------------------------------------------------------------
+[numthreads(NUM_THREAD_X, NUM_THREAD_Y, 1)]
+void MainCS(uint3 dtID : SV_DispatchThreadID)
 {
-    UpscaleRM::UpscaleMethod Type = UpscaleRM::UpscaleMethod::Point;
-    float invRenderWidth;
-    float invRenderHeight;
-    float invDisplayWidth;
-    float invDisplayHeight;
-};
-#else
-cbuffer UpscaleCBData : register(b0)
-{
-    uint Type : packoffset(c0.x);
-    float invRenderWidth : packoffset(c0.y);
-    float invRenderHeight : packoffset(c0.z);
-    float invDisplayWidth;
-    float invDisplayHeight;
+    const uint2 pixel = dtID.xy;
+
+    float4 distortionField = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    if (IsInsideLetterbox(pixel))
+    {
+        float2 uv = (pixel + 0.5f) / LetterboxRectSize;
+        distortionField = GenerateDistortionField(uv);
+    }
+    OutputTexture[pixel] = distortionField;
 }
-#endif // __cplusplus

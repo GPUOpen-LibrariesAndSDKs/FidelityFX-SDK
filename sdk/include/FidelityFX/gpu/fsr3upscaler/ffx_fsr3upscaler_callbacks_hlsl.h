@@ -779,7 +779,7 @@ FfxFloat32 Exposure()
     FfxFloat32 exposure = r_input_exposure[FfxUInt32x2(0, 0)].x;
 
 #if defined(__XBOX_SCARLETT)
-    if (exposure < 0.000030517578/** 2^15 */) {
+    if (exposure < 0.000030517578/** 2^-15 */) {
         exposure = 1.0f;
     }
 #else

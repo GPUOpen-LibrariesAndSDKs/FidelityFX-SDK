@@ -123,7 +123,7 @@ struct AccumulationPassCommonParams
 
 FfxFloat32 Get4KVelocity(FfxFloat32x2 fMotionVector)
 {
-    return length(fMotionVector * FfxFloat32x2(3840.0f, 2160.0f)) * VelocityFactor();
+    return length(fMotionVector * FfxFloat32x2(3840.0f, 2160.0f));
 }
 
 struct RectificationBox

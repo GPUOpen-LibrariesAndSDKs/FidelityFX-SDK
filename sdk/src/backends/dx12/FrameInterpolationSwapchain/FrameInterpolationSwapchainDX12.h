@@ -208,6 +208,9 @@ protected:
 
     IDXGISwapChain4* real();
 
+    UINT64 totalUsageInBytes = 0;
+    UINT64 aliasableUsageInBytes = 0;
+
 public:
     void setFrameGenerationConfig(FfxFrameGenerationConfig const* config);
     bool waitForPresents();
@@ -217,6 +220,8 @@ public:
 
     void registerUiResource(FfxResource uiResource, uint32_t flags);
     void setWaitCallback(FfxWaitCallbackFunc waitCallbackFunc);
+
+    void GetGpuMemoryUsage(FfxEffectMemoryUsage * vramUsage);
 
     FrameInterpolationSwapChainDX12();
     virtual ~FrameInterpolationSwapChainDX12();

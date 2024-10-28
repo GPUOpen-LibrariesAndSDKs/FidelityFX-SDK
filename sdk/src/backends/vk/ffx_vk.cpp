@@ -673,6 +673,8 @@ FfxSurfaceFormat ffxGetSurfaceFormatVK(VkFormat fmt)
     case VK_FORMAT_R32G32_SFLOAT:
         return FFX_SURFACE_FORMAT_R32G32_FLOAT;
     case VK_FORMAT_R32_UINT:
+    case VK_FORMAT_D24_UNORM_S8_UINT:
+    case VK_FORMAT_X8_D24_UNORM_PACK32:
         return FFX_SURFACE_FORMAT_R32_UINT;
     case VK_FORMAT_R8G8B8A8_UNORM:
         return FFX_SURFACE_FORMAT_R8G8B8A8_UNORM;
@@ -699,20 +701,23 @@ FfxSurfaceFormat ffxGetSurfaceFormatVK(VkFormat fmt)
     case VK_FORMAT_R16_UINT:
         return FFX_SURFACE_FORMAT_R16_UINT;
     case VK_FORMAT_R16_UNORM:
+    case VK_FORMAT_D16_UNORM:
+    case VK_FORMAT_D16_UNORM_S8_UINT:
         return FFX_SURFACE_FORMAT_R16_UNORM;
     case VK_FORMAT_R16_SNORM:
         return FFX_SURFACE_FORMAT_R16_SNORM;
     case VK_FORMAT_R8_UNORM:
         return FFX_SURFACE_FORMAT_R8_UNORM;
     case VK_FORMAT_R8_UINT:
+    case VK_FORMAT_S8_UINT:
         return FFX_SURFACE_FORMAT_R8_UINT;
     case VK_FORMAT_R8G8_UNORM:
         return FFX_SURFACE_FORMAT_R8G8_UNORM;
     case VK_FORMAT_R8G8_UINT:
         return FFX_SURFACE_FORMAT_R8G8_UINT;
     case VK_FORMAT_R32_SFLOAT:
-        return FFX_SURFACE_FORMAT_R32_FLOAT;
     case VK_FORMAT_D32_SFLOAT:
+    case VK_FORMAT_D32_SFLOAT_S8_UINT:
         return FFX_SURFACE_FORMAT_R32_FLOAT;
     case VK_FORMAT_E5B9G9R9_UFLOAT_PACK32:
         return FFX_SURFACE_FORMAT_R9G9B9E5_SHAREDEXP;
@@ -725,6 +730,98 @@ FfxSurfaceFormat ffxGetSurfaceFormatVK(VkFormat fmt)
         return FFX_SURFACE_FORMAT_UNKNOWN;
     }
 }
+
+bool isDepthFormat(VkFormat format)
+{
+    switch (format)
+    {
+    case VK_FORMAT_D16_UNORM:
+    case VK_FORMAT_X8_D24_UNORM_PACK32:
+    case VK_FORMAT_D32_SFLOAT:
+    case VK_FORMAT_D16_UNORM_S8_UINT:
+    case VK_FORMAT_D24_UNORM_S8_UINT:
+    case VK_FORMAT_D32_SFLOAT_S8_UINT:
+        return true;
+
+    default:
+        return false;
+    }
+}
+
+bool isStencilFormat(VkFormat format)
+{
+    switch (format)
+    {
+    case VK_FORMAT_S8_UINT:
+    case VK_FORMAT_D16_UNORM_S8_UINT:
+    case VK_FORMAT_D24_UNORM_S8_UINT:
+    case VK_FORMAT_D32_SFLOAT_S8_UINT:
+        return true;
+
+    default:
+        return false;
+    }
+}
+
+VkImageAspectFlags getImageAspect(FfxResourceUsage usage)
+{
+    // No VK_IMAGE_ASPECT_STENCIL_BIT support for now
+    if (FFX_CONTAINS_FLAG(usage, FFX_RESOURCE_USAGE_DEPTHTARGET))
+        return VK_IMAGE_ASPECT_DEPTH_BIT;
+    else
+        return VK_IMAGE_ASPECT_COLOR_BIT;
+}
+
+VkFormat getVkFormatFromSurfaceFormatAndUsage(FfxSurfaceFormat fmt, FfxResourceUsage usage)
+{
+    VkFormat format = ffxGetVkFormatFromSurfaceFormat(fmt);
+    bool hasDepth = FFX_CONTAINS_FLAG(usage, FFX_RESOURCE_USAGE_DEPTHTARGET);
+    bool hasStencil = FFX_CONTAINS_FLAG(usage, FFX_RESOURCE_USAGE_STENCILTARGET);
+    if (hasDepth || hasStencil)
+    {
+        switch (fmt)
+        {
+        case FFX_SURFACE_FORMAT_R16_UNORM:
+        {
+            if (hasDepth && hasStencil)
+                return VK_FORMAT_D16_UNORM_S8_UINT;
+            else if (hasDepth)
+                return VK_FORMAT_D16_UNORM;
+            // stencil only doesn't exist
+            break;
+        }
+        case FFX_SURFACE_FORMAT_R32_FLOAT:
+        {
+            if (hasDepth && hasStencil)
+                return VK_FORMAT_D32_SFLOAT_S8_UINT;
+            else if (hasDepth)
+                return VK_FORMAT_D32_SFLOAT;
+            // stencil only doesn't exist
+            break;
+        }
+        case FFX_SURFACE_FORMAT_R32_UINT:
+        {
+            if (hasDepth && hasStencil)
+                return VK_FORMAT_D24_UNORM_S8_UINT;
+            else if (hasDepth)
+                return VK_FORMAT_X8_D24_UNORM_PACK32;
+            // stencil only doesn't exist
+            break;
+        }
+        case FFX_SURFACE_FORMAT_R8_UINT:
+        {
+            if (hasStencil)
+                return VK_FORMAT_S8_UINT;
+            break;
+        }
+        default:
+            break;
+        }
+    }
+
+    return format;
+}
+
 
 VkImageUsageFlags getVKImageUsageFlagsFromResourceUsage(FfxResourceUsage flags)
 {
@@ -748,9 +845,9 @@ FfxResourceDescription ffxGetBufferResourceDescriptionVK(const VkBuffer buffer, 
     resourceDescription.stride = 0;
     resourceDescription.format = FFX_SURFACE_FORMAT_UNKNOWN;
 
-    if ((createInfo.usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT) != 0)
+    if (FFX_CONTAINS_FLAG(createInfo.usage, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT))
         resourceDescription.usage = (FfxResourceUsage)(resourceDescription.usage | FFX_RESOURCE_USAGE_UAV);
-    if ((createInfo.usage & VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT) != 0)
+    if (FFX_CONTAINS_FLAG(createInfo.usage, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT))
         resourceDescription.usage = (FfxResourceUsage)(resourceDescription.usage | FFX_RESOURCE_USAGE_INDIRECT);
 
     // What should we initialize this to?? No case for this yet
@@ -775,15 +872,16 @@ FfxResourceDescription ffxGetImageResourceDescriptionVK(const VkImage           
 
     // Set flags properly for resource registration
     resourceDescription.flags = FFX_RESOURCE_FLAGS_NONE;
+    resourceDescription.usage = FFX_RESOURCE_USAGE_READ_ONLY;
 
-    // Check for depth use
-    if ((createInfo.usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) != 0)
-        resourceDescription.usage = FFX_RESOURCE_USAGE_DEPTHTARGET;
-    else
-        resourceDescription.usage = FFX_RESOURCE_USAGE_READ_ONLY;
-    
+    // Check for depth and stencil use
+    if (isDepthFormat(createInfo.format))
+        resourceDescription.usage = (FfxResourceUsage)(resourceDescription.usage | FFX_RESOURCE_USAGE_DEPTHTARGET);
+    if (isStencilFormat(createInfo.format))
+        resourceDescription.usage = (FfxResourceUsage)(resourceDescription.usage | FFX_RESOURCE_USAGE_STENCILTARGET);
+
     // Unordered access use
-    if ((createInfo.usage & VK_IMAGE_USAGE_STORAGE_BIT) != 0)
+    if (FFX_CONTAINS_FLAG(createInfo.usage, VK_IMAGE_USAGE_STORAGE_BIT))
         resourceDescription.usage = (FfxResourceUsage)(resourceDescription.usage | FFX_RESOURCE_USAGE_UAV);
 
     // Resource-specific supplemental use flags
@@ -807,7 +905,7 @@ FfxResourceDescription ffxGetImageResourceDescriptionVK(const VkImage           
         resourceDescription.depth = createInfo.arrayLayers;
         if (FFX_CONTAINS_FLAG(additionalUsages, FFX_RESOURCE_USAGE_ARRAYVIEW))
             resourceDescription.type = FFX_RESOURCE_TYPE_TEXTURE2D;
-        else if ((createInfo.flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) != 0)
+        else if (FFX_CONTAINS_FLAG(createInfo.flags, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT))
             resourceDescription.type = FFX_RESOURCE_TYPE_TEXTURE_CUBE;
         else
             resourceDescription.type  = FFX_RESOURCE_TYPE_TEXTURE2D;
@@ -1094,7 +1192,7 @@ void addBarrier(BackendContext_VK* backendContext, FfxResourceInternal* resource
         FfxResourceStates& curState = backendContext->pResources[resource->internalIndex].currentState;
 
         VkImageSubresourceRange range;
-        range.aspectMask = FFX_CONTAINS_FLAG(ffxResource.resourceDescription.usage, FFX_RESOURCE_USAGE_DEPTHTARGET) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+        range.aspectMask = getImageAspect(ffxResource.resourceDescription.usage);
         range.baseMipLevel = 0;
         range.levelCount = VK_REMAINING_MIP_LEVELS;
         range.baseArrayLayer = 0;
@@ -2219,7 +2317,7 @@ FfxErrorCode CreateResourceVK(
         imageInfo.arrayLayers = (createResourceDescription->resourceDescription.type ==
                                 FFX_RESOURCE_TYPE_TEXTURE1D || createResourceDescription->resourceDescription.type == FFX_RESOURCE_TYPE_TEXTURE2D)
             ? createResourceDescription->resourceDescription.depth : 1;
-        imageInfo.format = FFX_CONTAINS_FLAG(resourceDesc.usage, FFX_RESOURCE_USAGE_DEPTHTARGET) ? VK_FORMAT_D32_SFLOAT : ffxGetVkFormatFromSurfaceFormat(createResourceDescription->resourceDescription.format);
+        imageInfo.format = getVkFormatFromSurfaceFormatAndUsage(createResourceDescription->resourceDescription.format, resourceDesc.usage);
         imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
         imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         imageInfo.usage = getVKImageUsageFlagsFromResourceUsage(resourceDesc.usage);
@@ -2296,14 +2394,13 @@ FfxErrorCode CreateResourceVK(
             break;
         }
 
-        bool isDepth = FFX_CONTAINS_FLAG(backendResource->resourceDescription.usage, FFX_RESOURCE_USAGE_DEPTHTARGET);
         imageViewCreateInfo.image = backendResource->imageResource;
-        imageViewCreateInfo.format = isDepth ? VK_FORMAT_D32_SFLOAT : ffxGetVkFormatFromSurfaceFormat(createResourceDescription->resourceDescription.format);
+        imageViewCreateInfo.format = getVkFormatFromSurfaceFormatAndUsage(createResourceDescription->resourceDescription.format, backendResource->resourceDescription.usage);
         imageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
         imageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
         imageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
         imageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-        imageViewCreateInfo.subresourceRange.aspectMask = isDepth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+        imageViewCreateInfo.subresourceRange.aspectMask = getImageAspect(backendResource->resourceDescription.usage);
         imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
         imageViewCreateInfo.subresourceRange.levelCount = backendResource->resourceDescription.mipCount;
         imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
@@ -2593,12 +2690,12 @@ FfxErrorCode RegisterResourceVK(
         }
 
         imageViewCreateInfo.image = backendResource->imageResource;
-        imageViewCreateInfo.format = FFX_CONTAINS_FLAG(backendResource->resourceDescription.usage, FFX_RESOURCE_USAGE_DEPTHTARGET) ? VK_FORMAT_D32_SFLOAT : ffxGetVkFormatFromSurfaceFormat(backendResource->resourceDescription.format);
+        imageViewCreateInfo.format = getVkFormatFromSurfaceFormatAndUsage(backendResource->resourceDescription.format, backendResource->resourceDescription.usage);
         imageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
         imageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
         imageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
         imageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-        imageViewCreateInfo.subresourceRange.aspectMask = FFX_CONTAINS_FLAG(backendResource->resourceDescription.usage, FFX_RESOURCE_USAGE_DEPTHTARGET) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+        imageViewCreateInfo.subresourceRange.aspectMask = getImageAspect(backendResource->resourceDescription.usage);
         imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
         imageViewCreateInfo.subresourceRange.levelCount = backendResource->resourceDescription.mipCount;
         imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
@@ -2774,12 +2871,12 @@ FfxErrorCode registerStaticTextureSrv(BackendContext_VK* backendContext, const F
         }
 
         imageViewCreateInfo.image                           = vkImage;
-        imageViewCreateInfo.format                          = FFX_CONTAINS_FLAG(inResource->description.usage, FFX_RESOURCE_USAGE_DEPTHTARGET) ? VK_FORMAT_D32_SFLOAT : ffxGetVkFormatFromSurfaceFormat(inResource->description.format);
+        imageViewCreateInfo.format                          = getVkFormatFromSurfaceFormatAndUsage(inResource->description.format, inResource->description.usage);
         imageViewCreateInfo.components.r                    = VK_COMPONENT_SWIZZLE_IDENTITY;
         imageViewCreateInfo.components.g                    = VK_COMPONENT_SWIZZLE_IDENTITY;
         imageViewCreateInfo.components.b                    = VK_COMPONENT_SWIZZLE_IDENTITY;
         imageViewCreateInfo.components.a                    = VK_COMPONENT_SWIZZLE_IDENTITY;
-        imageViewCreateInfo.subresourceRange.aspectMask     = FFX_CONTAINS_FLAG(inResource->description.usage, FFX_RESOURCE_USAGE_DEPTHTARGET) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+        imageViewCreateInfo.subresourceRange.aspectMask     = getImageAspect(inResource->description.usage);
         imageViewCreateInfo.subresourceRange.baseMipLevel   = 0;
         imageViewCreateInfo.subresourceRange.levelCount     = inResource->description.mipCount;
         imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
@@ -2925,12 +3022,12 @@ FfxErrorCode registerStaticTextureUav(BackendContext_VK* backendContext, const F
         }
 
         imageViewCreateInfo.image                           = vkImage;
-        imageViewCreateInfo.format                          = FFX_CONTAINS_FLAG(inResource->description.usage, FFX_RESOURCE_USAGE_DEPTHTARGET) ? VK_FORMAT_D32_SFLOAT : ffxGetVkFormatFromSurfaceFormat(inResource->description.format);
+        imageViewCreateInfo.format                          = getVkFormatFromSurfaceFormatAndUsage(inResource->description.format, inResource->description.usage);
         imageViewCreateInfo.components.r                    = VK_COMPONENT_SWIZZLE_IDENTITY;
         imageViewCreateInfo.components.g                    = VK_COMPONENT_SWIZZLE_IDENTITY;
         imageViewCreateInfo.components.b                    = VK_COMPONENT_SWIZZLE_IDENTITY;
         imageViewCreateInfo.components.a                    = VK_COMPONENT_SWIZZLE_IDENTITY;
-        imageViewCreateInfo.subresourceRange.aspectMask     = FFX_CONTAINS_FLAG(inResource->description.usage, FFX_RESOURCE_USAGE_DEPTHTARGET) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+        imageViewCreateInfo.subresourceRange.aspectMask     = getImageAspect(inResource->description.usage);
         imageViewCreateInfo.subresourceRange.baseMipLevel   = 0;
         imageViewCreateInfo.subresourceRange.levelCount     = inResource->description.mipCount;
         imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
@@ -3886,7 +3983,7 @@ static FfxErrorCode executeGpuJobCopy(BackendContext_VK* backendContext, FfxGpuJ
 
         VkImageSubresourceLayers subresourceLayers = {};
 
-        subresourceLayers.aspectMask = FFX_CONTAINS_FLAG(ffxResourceDst.resourceDescription.usage, FFX_RESOURCE_USAGE_DEPTHTARGET) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+        subresourceLayers.aspectMask = getImageAspect(ffxResourceDst.resourceDescription.usage);
         subresourceLayers.baseArrayLayer = 0;
         subresourceLayers.layerCount = 1;
         subresourceLayers.mipLevel = 0;
@@ -3932,14 +4029,14 @@ static FfxErrorCode executeGpuJobCopy(BackendContext_VK* backendContext, FfxGpuJ
         {
             VkImageSubresourceLayers srcSubresourceLayers = {};
 
-            srcSubresourceLayers.aspectMask     = isSrcDepth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+            srcSubresourceLayers.aspectMask     = getImageAspect(ffxResourceSrc.resourceDescription.usage);
             srcSubresourceLayers.baseArrayLayer = 0;
             srcSubresourceLayers.layerCount     = 1;
             srcSubresourceLayers.mipLevel       = mip;
 
             VkImageSubresourceLayers dstSubresourceLayers = {};
 
-            dstSubresourceLayers.aspectMask     = isDstDepth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+            dstSubresourceLayers.aspectMask     = getImageAspect(ffxResourceDst.resourceDescription.usage);
             dstSubresourceLayers.baseArrayLayer = 0;
             dstSubresourceLayers.layerCount     = 1;
             dstSubresourceLayers.mipLevel       = mip;

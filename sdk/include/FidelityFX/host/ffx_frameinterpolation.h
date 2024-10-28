@@ -40,7 +40,7 @@
 /// FidelityFX Frameinterpolation patch version.
 ///
 /// @ingroup FRAMEINTERPOLATIONFRAMEINTERPOLATION
-#define FFX_FRAMEINTERPOLATION_VERSION_PATCH      (0)
+#define FFX_FRAMEINTERPOLATION_VERSION_PATCH      (1)
 
 /// FidelityFX Frame Interpolation context count
 ///
@@ -199,6 +199,8 @@ FFX_API FfxErrorCode ffxFrameInterpolationContextGetGpuMemoryUsage(FfxFrameInter
 
 FFX_API FfxErrorCode ffxFrameInterpolationGetSharedResourceDescriptions(FfxFrameInterpolationContext* pContext, FfxFrameInterpolationSharedResourceDescriptions* SharedResources);
 
+FFX_API FfxErrorCode ffxSharedContextGetGpuMemoryUsage(FfxInterface* backendInterfaceShared, FfxEffectMemoryUsage* vramUsage);
+
 typedef struct FfxFrameInterpolationPrepareDescription
 {
     uint32_t            flags;                      ///< combination of FfxFrameInterpolationDispatchFlags
@@ -264,6 +266,9 @@ typedef struct FfxFrameInterpolationDispatchDescription {
     FfxResource                         dilatedDepth;                       ///< The dilated depth buffer data
     FfxResource                         dilatedMotionVectors;               ///< The dilated motion vector data
     FfxResource                         reconstructedPrevDepth;             ///< The reconstructed depth buffer data
+
+    FfxResource                         distortionField;                    ///< A resource containing distortion offset data used when distortion post effects are enabled.
+ 
 } FfxFrameInterpolationDispatchDescription;
 
 FFX_API FfxErrorCode ffxFrameInterpolationDispatch(FfxFrameInterpolationContext* context, const FfxFrameInterpolationDispatchDescription* params);
