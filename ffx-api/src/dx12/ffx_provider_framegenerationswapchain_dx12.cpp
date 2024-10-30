@@ -135,6 +135,12 @@ ffxReturnCode_t ffxProvider_FrameGenerationSwapChain_DX12::Configure(ffxContext*
 
         return FFX_API_RETURN_OK;
     }
+    else if (auto desc = ffx::DynamicCast<ffxConfigureDescFrameGenerationSwapChainKeyValueDX12>(header))
+    {
+        TRY2(ffxConfigureFrameInterpolationSwapchainDX12(ffxGetSwapchainDX12(internal_context->fiSwapChain), static_cast <FfxFrameInterpolationSwapchainConfigureKey> (desc->key), desc->ptr));
+
+        return FFX_API_RETURN_OK;
+    }
     else
     {
         return FFX_API_RETURN_ERROR_PARAMETER;

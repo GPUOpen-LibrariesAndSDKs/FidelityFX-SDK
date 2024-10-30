@@ -54,3 +54,4 @@ If you find an issue, or have a request for the SDK, please consider opening an 
 <!-- - @subpage page_running-samples_index "Running the samples for the SDK" -->
 <!-- - @subpage page_getting-started_naming-guidelines "FidelityFX naming guidelines for game applications" -->
 <!-- - @subpage page_ffx-api "Introduction to FidelityFX API" -->
+<!-- - @subpage page_migration "Migrating from FSR 3.0 to FSR 3.1" -->

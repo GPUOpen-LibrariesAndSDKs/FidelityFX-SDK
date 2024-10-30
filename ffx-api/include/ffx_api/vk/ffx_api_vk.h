@@ -101,7 +101,7 @@ struct ffxConfigureDescFrameGenerationSwapChainKeyValueVK
 
 enum FfxApiConfigureFrameGenerationSwapChainKeyVK
 {
-    // No values.
+    FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_WAITCALLBACK = 0                     ///< Sets FfxWaitCallbackFunc
 };
 
 /// Function to get the number of presents. This is useful when using frame interpolation
@@ -178,6 +178,8 @@ static inline uint32_t ffxApiGetSurfaceFormatVK(VkFormat fmt)
         return FFX_API_SURFACE_FORMAT_R32_FLOAT;
     case VK_FORMAT_D32_SFLOAT:
         return FFX_API_SURFACE_FORMAT_R32_FLOAT;
+    case VK_FORMAT_E5B9G9R9_UFLOAT_PACK32:
+        return FFX_API_SURFACE_FORMAT_R9G9B9E5_SHAREDEXP;
     case VK_FORMAT_UNDEFINED:
         return FFX_API_SURFACE_FORMAT_UNKNOWN;
 

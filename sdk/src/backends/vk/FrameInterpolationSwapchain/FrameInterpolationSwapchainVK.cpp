@@ -272,7 +272,7 @@ uint32_t findMemoryType(const VkPhysicalDeviceMemoryProperties& memProperties, u
     return 0u;
 };
 
-bool waitForSemaphoreValue(VkDevice device, VkSemaphore semaphore, uint64_t value, uint64_t nanoseconds = UINT64_MAX)
+bool waitForSemaphoreValue(VkDevice device, VkSemaphore semaphore, uint64_t value, uint64_t nanoseconds = UINT64_MAX, FfxWaitCallbackFunc waitCallback = nullptr)
 {
     if (semaphore != VK_NULL_HANDLE)
     {
@@ -283,7 +283,28 @@ bool waitForSemaphoreValue(VkDevice device, VkSemaphore semaphore, uint64_t valu
         waitInfo.semaphoreCount      = 1;
         waitInfo.pSemaphores         = &semaphore;
         waitInfo.pValues             = &value;
-        VkResult res                 = vkWaitSemaphores(device, &waitInfo, nanoseconds);
+        VkResult res = VK_TIMEOUT;
+        if (nanoseconds == UINT64_MAX)
+        {
+            if (waitCallback)
+            {
+                uint64_t waitIntervalInNanoSeconds = 1000000; //1ms
+                res = vkWaitSemaphores(device, &waitInfo, waitIntervalInNanoSeconds);
+                while (res == VK_TIMEOUT)
+                {
+                    res = vkWaitSemaphores(device, &waitInfo, waitIntervalInNanoSeconds);
+                    waitCallback(L"FenceName", value);
+                }
+            }
+            else
+            {
+                res = vkWaitSemaphores(device, &waitInfo, nanoseconds);
+            }
+        }
+        else
+        {
+            res = vkWaitSemaphores(device, &waitInfo, nanoseconds);
+        }
 
         return (res == VK_SUCCESS);
     }
@@ -581,6 +602,23 @@ FFX_API FfxErrorCode ffxSetFrameGenerationConfigToSwapchainVK(FfxFrameGeneration
     }
 
     return result;
+}
+
+FfxErrorCode ffxConfigureFrameInterpolationSwapchainVK(FfxSwapchain gameSwapChain, FfxFrameInterpolationSwapchainConfigureKey key, void* valuePtr)
+{
+    if (gameSwapChain)
+    {
+        FrameInterpolationSwapChainVK* pSwapChainVK = reinterpret_cast<FrameInterpolationSwapChainVK*>(gameSwapChain);
+        switch (key)
+        {
+            case FFX_FI_SWAPCHAIN_CONFIGURE_KEY_WAITCALLBACK:
+                pSwapChainVK->setWaitCallback(static_cast<FfxWaitCallbackFunc>(valuePtr));
+            break;
+            return FFX_OK;
+        }
+    }
+
+    return FFX_ERROR_INVALID_ARGUMENT;
 }
 
 FfxResource ffxGetFrameinterpolationTextureVK(FfxSwapchain gameSwapChain)
@@ -1658,11 +1696,9 @@ void FrameInterpolationSwapChainVK::setFrameGenerationConfig(FfxFrameGenerationC
 bool FrameInterpolationSwapChainVK::waitForPresents()
 {
     // wait for interpolation to finish
-    bool waitRes = waitForSemaphoreValue(presentInfo.device, presentInfo.gameSemaphore, gameSemaphoreValue);
-    EnterCriticalSection(&presentInfo.interpolationCriticalSection);
-    waitRes &= waitForSemaphoreValue(presentInfo.device, presentInfo.interpolationSemaphore, interpolationSemaphoreValue);
-    LeaveCriticalSection(&presentInfo.interpolationCriticalSection);
-    waitRes &= waitForSemaphoreValue(presentInfo.device, presentInfo.presentSemaphore, framesSentForPresentation);
+    bool waitRes = waitForSemaphoreValue(presentInfo.device, presentInfo.gameSemaphore, gameSemaphoreValue, UINT64_MAX, waitCallback);
+    waitRes &= waitForSemaphoreValue(presentInfo.device, presentInfo.interpolationSemaphore, interpolationSemaphoreValue, UINT64_MAX, waitCallback);
+    waitRes &= waitForSemaphoreValue(presentInfo.device, presentInfo.presentSemaphore, framesSentForPresentation, UINT64_MAX, waitCallback);
 
     FFX_ASSERT(waitRes);
 
@@ -1989,6 +2025,11 @@ void FrameInterpolationSwapChainVK::registerUiResource(FfxResource uiResource, u
         presentInfo.uiCompositionFlags &= ~FFX_UI_COMPOSITION_FLAG_ENABLE_INTERNAL_UI_DOUBLE_BUFFERING;
 
     LeaveCriticalSection(&criticalSection);
+}
+
+void FrameInterpolationSwapChainVK::setWaitCallback(FfxWaitCallbackFunc waitCallbackFunc)
+{
+    waitCallback = waitCallbackFunc;
 }
 
 VkResult FrameInterpolationSwapChainVK::queuePresentNonInterpolated(VkCommands* pCommands, uint32_t imageIndex, SubmissionSemaphores& semaphoresToWait)
@@ -2434,7 +2475,7 @@ VkResult FrameInterpolationSwapChainVK::queuePresent(VkQueue queue, const VkPres
     LeaveCriticalSection(&criticalSection);
 
     waitForSemaphoreValue(
-        presentInfo.device, presentInfo.replacementBufferSemaphore, replacementSwapBuffers[replacementSwapBufferIndex].availabilitySemaphoreValue);
+        presentInfo.device, presentInfo.replacementBufferSemaphore, replacementSwapBuffers[replacementSwapBufferIndex].availabilitySemaphoreValue, UINT64_MAX, waitCallback);
     
     return res;
 }
@@ -2574,7 +2615,7 @@ bool FrameInterpolationSwapChainVK::verifyUiDuplicateResource()
     {
         if (uiReplacementBuffer.image != VK_NULL_HANDLE)
         {
-            waitForSemaphoreValue(presentInfo.device, presentInfo.compositionSemaphore, framesSentForPresentation);
+            waitForSemaphoreValue(presentInfo.device, presentInfo.compositionSemaphore, framesSentForPresentation, UINT64_MAX, waitCallback);
             destroyImage(presentInfo.device, uiReplacementBuffer, pAllocator);
             uiReplacementBuffer = {};
         }
@@ -2587,7 +2628,7 @@ bool FrameInterpolationSwapChainVK::verifyUiDuplicateResource()
 
             if (uiResourceDesc.format != internalDesc.format || uiResourceDesc.width != internalDesc.width || uiResourceDesc.height != internalDesc.height)
             {
-                waitForSemaphoreValue(presentInfo.device, presentInfo.compositionSemaphore, framesSentForPresentation);
+                waitForSemaphoreValue(presentInfo.device, presentInfo.compositionSemaphore, framesSentForPresentation, UINT64_MAX, waitCallback);
                 destroyImage(presentInfo.device, uiReplacementBuffer, pAllocator);
                 uiReplacementBuffer = {};
             }

@@ -184,6 +184,12 @@ ffxReturnCode_t ffxProvider_FrameGenerationSwapChain_VK::Configure(ffxContext* c
 
         return FFX_API_RETURN_OK;
     }
+    else if (auto desc = ffx::DynamicCast<ffxConfigureDescFrameGenerationSwapChainKeyValueVK>(header))
+    {
+        TRY2(ffxConfigureFrameInterpolationSwapchainVK(ffxGetSwapchainVK(internal_context->fiSwapChain), static_cast <FfxFrameInterpolationSwapchainConfigureKey> (desc->key), desc->ptr));
+
+        return FFX_API_RETURN_OK;
+    }
     else
     {
         return FFX_API_RETURN_ERROR_PARAMETER;

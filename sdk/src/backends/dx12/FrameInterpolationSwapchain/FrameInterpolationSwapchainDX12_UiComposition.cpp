@@ -300,7 +300,7 @@ FFX_API FfxErrorCode ffxFrameInterpolationUiComposition(const FfxPresentCallback
 
         pCmdList->CopyResource(pRtResource, pResBackbuffer);
 
-        for (int i = 0; i < _countof(barriers); ++i)
+        for (size_t i = 0; i < _countof(barriers); ++i)
         {
             D3D12_RESOURCE_STATES tmpStateBefore = barriers[i].Transition.StateBefore;
             barriers[i].Transition.StateBefore   = barriers[i].Transition.StateAfter;
@@ -358,8 +358,6 @@ FFX_API FfxErrorCode ffxFrameInterpolationUiComposition(const FfxPresentCallback
         
         D3D12_CPU_DESCRIPTOR_HANDLE cpuView = dx12DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
         cpuView.ptr += s_uiCompositionDescRingBufferBase * dx12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-        D3D12_RESOURCE_DESC bbDesc = pResBackbuffer->GetDesc();
 
         D3D12_SHADER_RESOURCE_VIEW_DESC dx12SrvDescription  = {};
         dx12SrvDescription.Shader4ComponentMapping          = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;

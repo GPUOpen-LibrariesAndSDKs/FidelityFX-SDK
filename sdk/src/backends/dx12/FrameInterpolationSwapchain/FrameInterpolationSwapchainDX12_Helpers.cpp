@@ -48,7 +48,7 @@ void waitForPerformanceCount(const int64_t targetCount)
     } while (currentCount < targetCount);
 }
 
-bool waitForFenceValue(ID3D12Fence* fence, UINT64 value, DWORD dwMilliseconds)
+bool waitForFenceValue(ID3D12Fence* fence, UINT64 value, DWORD dwMilliseconds, FfxWaitCallbackFunc waitCallback)
 {
     bool status = false;
 
@@ -56,7 +56,31 @@ bool waitForFenceValue(ID3D12Fence* fence, UINT64 value, DWORD dwMilliseconds)
     {
         if (dwMilliseconds == INFINITE)
         {
-            while (fence->GetCompletedValue() < value);
+            int64_t previousQpc = 0;
+            int64_t currentQpc = 0;
+            QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&previousQpc));
+
+            // call waitCallback every fTimeoutInSeconds
+            int64_t qpcFrequency;
+            QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER*>(&qpcFrequency));
+            const float fTimeoutInSeconds       = 0.001f; //1ms
+            double      deltaQpcResetThreashold = double(qpcFrequency * fTimeoutInSeconds);
+            wchar_t fenceName[64];
+            uint32_t fenceNameLen = sizeof(fenceName);
+            fence->GetPrivateData(WKPDID_D3DDebugObjectNameW, &fenceNameLen, &fenceName);
+            while (fence->GetCompletedValue() < value)
+            {
+                if (waitCallback)
+                {
+                    QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&currentQpc));
+                    double deltaQpc = double(currentQpc - previousQpc);
+                    if ((deltaQpc > deltaQpcResetThreashold))
+                    {
+                        waitCallback(fenceName, value);
+                        previousQpc = currentQpc;
+                    }
+                }
+            }
             status = true;
         }
         else

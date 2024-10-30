@@ -46,7 +46,8 @@ struct InternalFgContext
     FfxOpticalflowContext ofContext;
     FfxFrameInterpolationContext fiContext;
     FfxResourceInternal sharedResources[FFX_FSR3_RESOURCE_IDENTIFIER_COUNT];
-    uint32_t effectContextIdShared, effectContextIdFi;
+    uint32_t            sharedResoureFrameToggle;
+    uint32_t effectContextIdShared;
     float deltaTime;
     bool asyncWorkloadSupported;
 
@@ -95,7 +96,7 @@ ffxReturnCode_t ffxProvider_FrameGeneration::CreateContext(ffxContext* context, 
         { // copied from ffxFsr3ContextCreate, simplified.
             internal_context->asyncWorkloadSupported = (desc->flags & FFX_FRAMEGENERATION_ENABLE_ASYNC_WORKLOAD_SUPPORT) != 0;
 
-            TRY2(internal_context->backendInterfaceShared.fpCreateBackendContext(&internal_context->backendInterfaceShared, nullptr, &internal_context->effectContextIdShared));
+            TRY2(internal_context->backendInterfaceShared.fpCreateBackendContext(&internal_context->backendInterfaceShared, FFX_EFFECT_SHAREDAPIBACKEND, nullptr, &internal_context->effectContextIdShared));
         
             FfxOpticalflowContextDescription ofDescription = {};
             ofDescription.backendInterface                 = internal_context->backendInterfaceFi;
@@ -128,6 +129,42 @@ ffxReturnCode_t ffxProvider_FrameGeneration::CreateContext(ffxContext* context, 
 
             TRY2(internal_context->backendInterfaceShared.fpCreateResource(&internal_context->backendInterfaceShared, &ofResourceDescs.opticalFlowVector, internal_context->effectContextIdShared, &internal_context->sharedResources[FFX_FSR3_RESOURCE_IDENTIFIER_OPTICAL_FLOW_VECTOR]));
             TRY2(internal_context->backendInterfaceShared.fpCreateResource(&internal_context->backendInterfaceShared, &ofResourceDescs.opticalFlowSCD, internal_context->effectContextIdShared, &internal_context->sharedResources[FFX_FSR3_RESOURCE_IDENTIFIER_OPTICAL_FLOW_SCD_OUTPUT]));
+        }
+        {
+            FfxFrameInterpolationSharedResourceDescriptions fiResourceDescs = {};
+            TRY2(ffxFrameInterpolationGetSharedResourceDescriptions(&internal_context->fiContext, &fiResourceDescs));
+
+            internal_context->sharedResoureFrameToggle = 0;
+            wchar_t Name[256] = {};
+            for (FfxUInt32 i = 0; i < 2; i++)
+            {
+                FfxCreateResourceDescription dilD = fiResourceDescs.dilatedDepth;
+                swprintf(Name, 255, L"%s%d", fiResourceDescs.dilatedDepth.name, i);
+                dilD.name = Name;
+                TRY2(internal_context->backendInterfaceShared.fpCreateResource(
+                    &internal_context->backendInterfaceShared,
+                    &dilD,
+                    internal_context->effectContextIdShared,
+                    &internal_context->sharedResources[FFX_FSR3_RESOURCE_IDENTIFIER_DILATED_DEPTH_0 + (i * FFX_FSR3_RESOURCE_IDENTIFIER_UPSCALED_COUNT)]));
+
+                FfxCreateResourceDescription dilMVs = fiResourceDescs.dilatedMotionVectors;
+                swprintf(Name, 255, L"%s%d", fiResourceDescs.dilatedMotionVectors.name, i);
+                dilMVs.name = Name;
+                TRY2(internal_context->backendInterfaceShared.fpCreateResource(
+                    &internal_context->backendInterfaceShared,
+                    &dilMVs,
+                    internal_context->effectContextIdShared,
+                    &internal_context->sharedResources[FFX_FSR3_RESOURCE_IDENTIFIER_DILATED_MOTION_VECTORS_0 + (i * FFX_FSR3_RESOURCE_IDENTIFIER_UPSCALED_COUNT)]));
+
+                FfxCreateResourceDescription recND = fiResourceDescs.reconstructedPrevNearestDepth;
+                swprintf(Name, 255, L"%s%d", fiResourceDescs.reconstructedPrevNearestDepth.name, i);
+                recND.name = Name;
+                TRY2(internal_context->backendInterfaceShared.fpCreateResource(
+                    &internal_context->backendInterfaceShared,
+                    &recND,
+                    internal_context->effectContextIdShared,
+                    &internal_context->sharedResources[FFX_FSR3_RESOURCE_IDENTIFIER_RECONSTRUCTED_PREVIOUS_NEAREST_DEPTH_0 + (i * FFX_FSR3_RESOURCE_IDENTIFIER_UPSCALED_COUNT)]));
+            }
         }
 
         *context = internal_context;
@@ -363,6 +400,10 @@ ffxReturnCode_t ffxProvider_FrameGeneration::Dispatch(ffxContext* context, const
             fiDispatchDesc.viewSpaceToMetersFactor = prepDesc->viewSpaceToMetersFactor;
             fiDispatchDesc.cameraFovAngleVertical = prepDesc->cameraFovAngleVertical;
             
+            fiDispatchDesc.dilatedDepth = internal_context->backendInterfaceShared.fpGetResource( &internal_context->backendInterfaceShared, internal_context->sharedResources[FFX_FSR3_RESOURCE_IDENTIFIER_DILATED_DEPTH_0 + (internal_context->sharedResoureFrameToggle * FFX_FSR3_RESOURCE_IDENTIFIER_UPSCALED_COUNT)]);
+            fiDispatchDesc.dilatedMotionVectors = internal_context->backendInterfaceShared.fpGetResource( &internal_context->backendInterfaceShared, internal_context->sharedResources[FFX_FSR3_RESOURCE_IDENTIFIER_DILATED_MOTION_VECTORS_0 + (internal_context->sharedResoureFrameToggle * FFX_FSR3_RESOURCE_IDENTIFIER_UPSCALED_COUNT)]);
+            fiDispatchDesc.reconstructedPrevDepth = internal_context->backendInterfaceShared.fpGetResource( &internal_context->backendInterfaceShared, internal_context->sharedResources[FFX_FSR3_RESOURCE_IDENTIFIER_RECONSTRUCTED_PREVIOUS_NEAREST_DEPTH_0 + (internal_context->sharedResoureFrameToggle * FFX_FSR3_RESOURCE_IDENTIFIER_UPSCALED_COUNT)]);
+
             if (desc->generationRect.height == 0 && desc->generationRect.width == 0)
             {
                 fiDispatchDesc.interpolationRect.left   = 0;
@@ -409,6 +450,8 @@ ffxReturnCode_t ffxProvider_FrameGeneration::Dispatch(ffxContext* context, const
     {
         internal_context->prepareDescriptions[desc->frameID % MAX_QUEUED_FRAMES] = *desc;
 
+        internal_context->sharedResoureFrameToggle = (internal_context->sharedResoureFrameToggle + 1) & 1;
+
         FfxFrameInterpolationPrepareDescription dispatchDesc{};
         dispatchDesc.flags = desc->flags; // TODO: flag conversion?
         dispatchDesc.commandList = desc->commandList;
@@ -426,6 +469,11 @@ ffxReturnCode_t ffxProvider_FrameGeneration::Dispatch(ffxContext* context, const
         dispatchDesc.depth = Convert(desc->depth);
         dispatchDesc.motionVectors = Convert(desc->motionVectors);
         dispatchDesc.frameID = desc->frameID;
+
+        dispatchDesc.dilatedDepth = internal_context->backendInterfaceShared.fpGetResource( &internal_context->backendInterfaceShared, internal_context->sharedResources[FFX_FSR3_RESOURCE_IDENTIFIER_DILATED_DEPTH_0 + (internal_context->sharedResoureFrameToggle * FFX_FSR3_RESOURCE_IDENTIFIER_UPSCALED_COUNT)]);
+        dispatchDesc.dilatedMotionVectors = internal_context->backendInterfaceShared.fpGetResource( &internal_context->backendInterfaceShared, internal_context->sharedResources[FFX_FSR3_RESOURCE_IDENTIFIER_DILATED_MOTION_VECTORS_0 + (internal_context->sharedResoureFrameToggle * FFX_FSR3_RESOURCE_IDENTIFIER_UPSCALED_COUNT)]);
+        dispatchDesc.reconstructedPrevDepth = internal_context->backendInterfaceShared.fpGetResource( &internal_context->backendInterfaceShared, internal_context->sharedResources[FFX_FSR3_RESOURCE_IDENTIFIER_RECONSTRUCTED_PREVIOUS_NEAREST_DEPTH_0 + (internal_context->sharedResoureFrameToggle * FFX_FSR3_RESOURCE_IDENTIFIER_UPSCALED_COUNT)]);
+
         TRY2(ffxFrameInterpolationPrepare(&internal_context->fiContext, &dispatchDesc));
 
         return FFX_API_RETURN_OK;
