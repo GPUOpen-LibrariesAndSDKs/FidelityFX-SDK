@@ -1040,12 +1040,14 @@ void beginMarkerVK(BackendContext_VK* backendContext, VkCommandBuffer commandBuf
     debugLabel.color[1] = 0.14f;
     debugLabel.color[2] = 0.14f;
     debugLabel.color[3] = 1.0f;
-    backendContext->vkFunctionTable.vkCmdBeginDebugUtilsLabelEXT(commandBuffer, &debugLabel);
+    if (backendContext->vkFunctionTable.vkCmdBeginDebugUtilsLabelEXT)
+        backendContext->vkFunctionTable.vkCmdBeginDebugUtilsLabelEXT(commandBuffer, &debugLabel);
 }
 
 void endMarkerVK(BackendContext_VK* backendContext, VkCommandBuffer commandBuffer)
 {
-    backendContext->vkFunctionTable.vkCmdEndDebugUtilsLabelEXT(commandBuffer);
+    if (backendContext->vkFunctionTable.vkCmdEndDebugUtilsLabelEXT)
+        backendContext->vkFunctionTable.vkCmdEndDebugUtilsLabelEXT(commandBuffer);
 }
 #endif
 

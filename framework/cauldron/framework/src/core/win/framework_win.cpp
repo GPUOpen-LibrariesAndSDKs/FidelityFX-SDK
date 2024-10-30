@@ -386,7 +386,7 @@ namespace cauldron
             }
 
             // Only update if we aren't minimized and we aren't quitting
-            if (!m_pFramework->m_pImpl->m_Minimized && !m_pFramework->m_pImpl->m_Quitting)
+            if (!m_pFramework->m_pImpl->m_Minimized && !m_pFramework->m_pImpl->m_Quitting)  //!m_pFramework->m_pImpl->m_Minimized && 
             {
                 if (m_sendResizeEvent)
                 {

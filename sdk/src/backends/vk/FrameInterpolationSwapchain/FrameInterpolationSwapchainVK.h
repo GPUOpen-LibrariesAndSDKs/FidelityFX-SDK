@@ -147,7 +147,7 @@ typedef struct ReplacementResource
 
 struct FrameinterpolationPresentInfo
 {
-    VulkanCommandPool<3, 8> commandPool; // at most 3 families: game, asyncCompute, present
+    VulkanCommandPool<1, 32> commandPool; // at most 3 families: game, asyncCompute, present
 
     PacingData scheduledInterpolations;
     PacingData scheduledPresents;
@@ -190,6 +190,7 @@ struct FrameinterpolationPresentInfo
     HANDLE           interpolationEvent            = NULL;
     HANDLE           pacerEvent                    = NULL;
     CRITICAL_SECTION swapchainCriticalSection;
+    CRITICAL_SECTION interpolationCriticalSection;
 
     bool          resetTimer = false;
     volatile bool shutdown = false;

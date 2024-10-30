@@ -187,9 +187,9 @@ private:
     uint32_t m_FsrVersionIndex = 0;
 
     bool m_ffxBackendInitialized = false;
-    ffx::Context m_UpscalingContext;
-    ffx::Context m_FrameGenContext;
-    ffx::Context m_SwapChainContext;
+    ffx::Context m_UpscalingContext = nullptr;
+    ffx::Context m_FrameGenContext = nullptr;
+    ffx::Context m_SwapChainContext = nullptr;
     ffx::ConfigureDescFrameGeneration m_FrameGenerationConfig{};
 
     // Backup UI elements
@@ -213,7 +213,7 @@ private:
     std::function<cauldron::ResolutionInfo(uint32_t, uint32_t)> m_pUpdateFunc = nullptr;
 
     bool     s_enableSoftwareMotionEstimation = true;
-    int32_t  s_uiRenderMode      = 2;
+    int32_t  s_uiRenderMode      = 1;
 
     // Surfaces for different UI render modes
     uint32_t                 m_curUiTextureIndex  = 0;

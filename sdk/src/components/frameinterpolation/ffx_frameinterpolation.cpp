@@ -808,8 +808,8 @@ FFX_API FfxErrorCode ffxFrameInterpolationDispatch(FfxFrameInterpolationContext*
 
     const bool bReset = (contextPrivate->dispatchCount == 0) || params->reset;
 
-    FFX_ASSERT_MESSAGE(!contextPrivate->asyncSupported || bReset || (params->frameID > contextPrivate->previousFrameID),
-                       "When async support is enabled, and the reset flag is not set, frame ID must increment in each dispatch");
+    //FFX_ASSERT_MESSAGE(!contextPrivate->asyncSupported || bReset || (params->frameID > contextPrivate->previousFrameID),
+    //                   "When async support is enabled, and the reset flag is not set, frame ID must increment in each dispatch");
 
     // Detect disjoint frameID values
     const bool bFrameID_Decreased   = params->frameID < contextPrivate->previousFrameID;

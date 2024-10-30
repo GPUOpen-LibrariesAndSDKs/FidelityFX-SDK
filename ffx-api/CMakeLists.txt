@@ -27,6 +27,7 @@ if(POLICY CMP0147)
 	cmake_policy(SET CMP0147 NEW)
 endif()
 
+set(FFX_API_BACKEND VK_X64)
 if (FFX_API_BACKEND STREQUAL VK_X64)
 	set(FFX_PLATFORM_NAME vk)
 endif()

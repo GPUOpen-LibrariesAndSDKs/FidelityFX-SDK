@@ -20,8 +20,8 @@
             "BackBufferCount": 3,
             "Vsync": true,
             "Fullscreen": false,
-            "Width": 2560,
-            "Height": 1440,
+            "Width": 1280,
+            "Height": 720,
             "Mode": "DISPLAYMODE_LDR"
         },
 

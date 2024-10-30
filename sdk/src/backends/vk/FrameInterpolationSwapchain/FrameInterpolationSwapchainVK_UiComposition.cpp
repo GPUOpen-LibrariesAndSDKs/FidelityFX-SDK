@@ -66,35 +66,35 @@ void releaseUiBlitGpuResources(const VkAllocationCallbacks* pAllocator)
 {
     for (uint32_t i = 0; i < _countof(s_uiCompositionDescriptorSets); ++i)
     {
-        vkFreeDescriptorSets(s_uiCompositionDevice, s_uiCompositionDescriptorPool, 1, &s_uiCompositionDescriptorSets[i]);
+        //vkFreeDescriptorSets(s_uiCompositionDevice, s_uiCompositionDescriptorPool, 1, &s_uiCompositionDescriptorSets[i]);
         s_uiCompositionDescriptorSets[i] = VK_NULL_HANDLE;
     }
 
-    vkDestroyDescriptorPool(s_uiCompositionDevice, s_uiCompositionDescriptorPool, pAllocator);
+    //vkDestroyDescriptorPool(s_uiCompositionDevice, s_uiCompositionDescriptorPool, pAllocator);
     s_uiCompositionDescriptorPool = VK_NULL_HANDLE;
 
-    vkDestroyPipeline(s_uiCompositionDevice, s_uiCompositionPipeline, pAllocator);
+    //vkDestroyPipeline(s_uiCompositionDevice, s_uiCompositionPipeline, pAllocator);
     s_uiCompositionPipeline = VK_NULL_HANDLE;
-    vkDestroyPipeline(s_uiCompositionDevice, s_uiCompositionPremulPipeline, pAllocator);
+    //vkDestroyPipeline(s_uiCompositionDevice, s_uiCompositionPremulPipeline, pAllocator);
     s_uiCompositionPremulPipeline = VK_NULL_HANDLE;
 
-    vkDestroyPipelineLayout(s_uiCompositionDevice, s_uiCompositionPipelineLayout, pAllocator);
+    //vkDestroyPipelineLayout(s_uiCompositionDevice, s_uiCompositionPipelineLayout, pAllocator);
     s_uiCompositionPipelineLayout = VK_NULL_HANDLE;
 
-    vkDestroyDescriptorSetLayout(s_uiCompositionDevice, s_uiCompositionDescriptorSetLayout, pAllocator);
+    //vkDestroyDescriptorSetLayout(s_uiCompositionDevice, s_uiCompositionDescriptorSetLayout, pAllocator);
     s_uiCompositionDescriptorSetLayout = VK_NULL_HANDLE;
 
-    vkDestroyRenderPass(s_uiCompositionDevice, s_uiCompositionRenderPass, pAllocator);
+    //vkDestroyRenderPass(s_uiCompositionDevice, s_uiCompositionRenderPass, pAllocator);
     s_uiCompositionRenderPass = nullptr;
 
     for (uint32_t i = 0; i < _countof(s_uiCompositionImageViews); ++i)
     {
-        vkDestroyImageView(s_uiCompositionDevice, s_uiCompositionImageViews[i], pAllocator);
+        //vkDestroyImageView(s_uiCompositionDevice, s_uiCompositionImageViews[i], pAllocator);
         s_uiCompositionImageViews[i] = VK_NULL_HANDLE;
     }
     for (uint32_t i = 0; i < _countof(s_uiCompositionFramebuffers); ++i)
     {
-        vkDestroyFramebuffer(s_uiCompositionDevice, s_uiCompositionFramebuffers[i], pAllocator);
+        //vkDestroyFramebuffer(s_uiCompositionDevice, s_uiCompositionFramebuffers[i], pAllocator);
         s_uiCompositionFramebuffers[i] = VK_NULL_HANDLE;
     }
 }
@@ -253,7 +253,7 @@ VkResult CreateUiCompositionPipeline(VkDevice device, VkFormat fmt, const VkAllo
         rasterizationStateCreateInfo.depthBiasConstantFactor                = 0.0f;
         rasterizationStateCreateInfo.depthBiasClamp                         = 0.0f;
         rasterizationStateCreateInfo.depthBiasSlopeFactor                   = 0.0f;
-        rasterizationStateCreateInfo.lineWidth                              = 0.0f;
+        rasterizationStateCreateInfo.lineWidth                              = 1.0f;
 
         VkPipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo = {};
         depthStencilStateCreateInfo.sType                                 = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
