@@ -84,7 +84,7 @@ Call `FfxLensApplyFilmGrain` with the following parameters to write out a new ca
 
 <h3>Chromatic aberration (CA)</h3>
 
-Chromatic aberration has two [types](https://en.wikipedia.org/wiki/Chromatic_aberration#Types) that arise when the lens system of a camera either:
+Chromatic aberration has two types that arise when the lens system of a camera either:
 * magnifies each color differently (transverse), or  
 * focuses each color differently (axial).  
   

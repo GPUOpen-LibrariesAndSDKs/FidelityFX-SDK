@@ -51,6 +51,7 @@ static const ResourceBinding srvResourceBindingTable[] =
     // Frame Interpolation textures
     {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DEPTH,                                      L"r_input_depth"},
     {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_MOTION_VECTORS,                             L"r_input_motion_vectors"},
+    {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DISTORTION_FIELD,                           L"r_input_distortion_field"},
 
     {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DILATED_DEPTH,                              L"r_dilated_depth"},
     {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DILATED_MOTION_VECTORS,                     L"r_dilated_motion_vectors"},
@@ -346,7 +347,7 @@ static FfxErrorCode frameinterpolationCreate(FfxFrameInterpolationContext_Privat
 
     // Check version info - make sure we are linked with the right backend version
     FfxVersionNumber version = context->contextDescription.backendInterface.fpGetSDKVersion(&context->contextDescription.backendInterface);
-    FFX_RETURN_ON_ERROR(version == FFX_SDK_MAKE_VERSION(1, 1, 1), FFX_ERROR_INVALID_VERSION);
+    FFX_RETURN_ON_ERROR(version == FFX_SDK_MAKE_VERSION(1, 1, 2), FFX_ERROR_INVALID_VERSION);
 
     // Create the context.
     FfxErrorCode errorCode = context->contextDescription.backendInterface.fpCreateBackendContext(&context->contextDescription.backendInterface, FFX_EFFECT_FRAMEINTERPOLATION, nullptr, &context->effectContextId);
@@ -382,6 +383,7 @@ static FfxErrorCode frameinterpolationCreate(FfxFrameInterpolationContext_Privat
         lanczos2Weights[currentLanczosWidthIndex] = int16_t(roundf(y * 32767.0f));
     }
 
+    uint8_t defaultDistortionFieldData[4] = { 0, 0, 0, 0 };
     uint32_t atomicInitData[2] = { 0, 0 };
     float defaultExposure[] = { 0.0f, 0.0f };
     const FfxResourceType texture1dResourceType = (context->contextDescription.flags & FFX_FRAMEINTERPOLATION_ENABLE_TEXTURE1D_USAGE) ? FFX_RESOURCE_TYPE_TEXTURE1D : FFX_RESOURCE_TYPE_TEXTURE2D;
@@ -409,6 +411,8 @@ static FfxErrorCode frameinterpolationCreate(FfxFrameInterpolationContext_Privat
             FFX_SURFACE_FORMAT_R8_UNORM, contextDescription->displaySize.width, contextDescription->displaySize.height, 1,          FFX_RESOURCE_FLAGS_ALIASABLE, {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
         {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DISOCCLUSION_MASK,                      L"FI_DisocclusionMask",                     FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_UAV, 
             FFX_SURFACE_FORMAT_R8G8_UNORM, contextDescription->maxRenderSize.width, contextDescription->maxRenderSize.height, 1,    FFX_RESOURCE_FLAGS_ALIASABLE, {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
+        {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DEFAULT_DISTORTION_FIELD, L"FI_DefaultDistortionField", FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_READ_ONLY,
+            FFX_SURFACE_FORMAT_R8G8B8A8_UNORM, 1, 1, 1, FFX_RESOURCE_FLAGS_NONE, FfxResourceInitData::FfxResourceInitBuffer(sizeof(defaultDistortionFieldData), defaultDistortionFieldData) },
 
     };
 
@@ -478,9 +482,11 @@ static FfxErrorCode frameinterpolationRelease(FfxFrameInterpolationContext_Priva
     context->uavResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DILATED_MOTION_VECTORS]                = {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_NULL};
     context->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_RECONSTRUCTED_DEPTH_PREVIOUS_FRAME]    = {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_NULL};
     context->uavResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_RECONSTRUCTED_DEPTH_PREVIOUS_FRAME]    = {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_NULL};
+    context->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DISTORTION_FIELD]                      = {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_NULL};
 
     // Release the copy resources for those that had init data
     ffxSafeReleaseCopyResource(&context->contextDescription.backendInterface, context->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_COUNTERS], context->effectContextId);
+    ffxSafeReleaseCopyResource(&context->contextDescription.backendInterface, context->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DEFAULT_DISTORTION_FIELD], context->effectContextId);
 
     // release internal resources
     for (int32_t currentResourceIndex = 0; currentResourceIndex < FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_COUNT; ++currentResourceIndex) {
@@ -631,6 +637,18 @@ FFX_API FfxErrorCode ffxFrameInterpolationContextGetGpuMemoryUsage(FfxFrameInter
 
     FfxErrorCode errorCode = contextPrivate->contextDescription.backendInterface.fpGetEffectGpuMemoryUsage(
         &contextPrivate->contextDescription.backendInterface, contextPrivate->effectContextId, vramUsage);
+    FFX_RETURN_ON_ERROR(errorCode == FFX_OK, errorCode);
+
+    return FFX_OK;
+}
+
+FFX_API FfxErrorCode ffxSharedContextGetGpuMemoryUsage(FfxInterface* backendInterfaceShared, FfxEffectMemoryUsage* vramUsage)
+{
+    FFX_RETURN_ON_ERROR(backendInterfaceShared, FFX_ERROR_INVALID_POINTER);
+    FFX_RETURN_ON_ERROR(vramUsage, FFX_ERROR_INVALID_POINTER);
+
+    FfxErrorCode errorCode = backendInterfaceShared->fpGetEffectGpuMemoryUsage(
+        backendInterfaceShared, 0, vramUsage);
     FFX_RETURN_ON_ERROR(errorCode == FFX_OK, errorCode);
 
     return FFX_OK;
@@ -876,6 +894,18 @@ FFX_API FfxErrorCode ffxFrameInterpolationDispatch(FfxFrameInterpolationContext*
     const float cameraAngleHorizontal                   = atan(tan(params->cameraFovAngleVertical / 2) * aspectRatio) * 2;
     contextPrivate->constants.fTanHalfFOV               = tanf(cameraAngleHorizontal * 0.5f);
 
+    const bool bUseExternalDistortionFieldResource = !ffxFrameInterpolationResourceIsNull(params->distortionField);
+    if (bUseExternalDistortionFieldResource)
+    {
+        contextPrivate->constants.distortionFieldSize[0] = params->distortionField.description.width;
+        contextPrivate->constants.distortionFieldSize[1] = params->distortionField.description.height;
+    }
+    else
+    {
+        contextPrivate->constants.distortionFieldSize[0] = 1;
+        contextPrivate->constants.distortionFieldSize[1] = 1;
+    }
+
     contextPrivate->renderDescription.cameraFar                 = params->cameraFar;
     contextPrivate->renderDescription.cameraNear                = params->cameraNear;
     contextPrivate->renderDescription.viewSpaceToMetersFactor = (params->viewSpaceToMetersFactor > 0.0f) ? params->viewSpaceToMetersFactor : 1.0f;
@@ -943,6 +973,19 @@ FFX_API FfxErrorCode ffxFrameInterpolationDispatch(FfxFrameInterpolationContext*
         contextPrivate->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_OPTICAL_FLOW_GLOBAL_MOTION]          = {};
         contextPrivate->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_OPTICAL_FLOW_SCENE_CHANGE_DETECTION] = {};
         contextPrivate->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_OPTICAL_FLOW_VECTOR] = {};
+    }
+
+    if (bUseExternalDistortionFieldResource)
+    {
+        contextPrivate->contextDescription.backendInterface.fpRegisterResource(
+            &contextPrivate->contextDescription.backendInterface,
+            &params->distortionField,
+            contextPrivate->effectContextId,
+            &contextPrivate->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DISTORTION_FIELD]);
+    }
+    else
+    {
+        contextPrivate->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DISTORTION_FIELD] = contextPrivate->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DEFAULT_DISTORTION_FIELD];
     }
 
     uint32_t displayDispatchSizeX = uint32_t(params->displaySize.width + 7) / 8;

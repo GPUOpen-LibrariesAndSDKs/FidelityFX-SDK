@@ -149,6 +149,20 @@ enum FfxApiConfigureFrameGenerationKey
     // No values.
 };
 
+#define FFX_API_QUERY_DESC_TYPE_FRAMEGENERATION_GPU_MEMORY_USAGE 0x00020007u
+struct ffxQueryDescFrameGenerationGetGPUMemoryUsage
+{
+    ffxQueryDescHeader header;
+    struct FfxApiEffectMemoryUsage* gpuMemoryUsageFrameGeneration;
+};
+
+#define FFX_API_CONFIGURE_DESC_TYPE_FRAMEGENERATION_REGISTERDISTORTIONRESOURCE 0x00020008u
+struct ffxConfigureDescFrameGenerationRegisterDistortionFieldResource
+{
+    ffxConfigureDescHeader header;
+    struct FfxApiResource distortionField;            ///< A resource containing distortion offset data. Needs to be 4-component (ie. RGBA). Read by FG shaders via Sample. Resource's xy components encodes [UV coordinate of pixel after lens distortion effect- UV coordinate of pixel before lens distortion]. 
+};
+
 #if defined(__cplusplus)
 } // extern "C"
 #endif

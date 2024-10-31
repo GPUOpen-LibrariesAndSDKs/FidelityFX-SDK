@@ -222,3 +222,21 @@ bool getMonitorLuminanceRange(IDXGISwapChain* swapChain, float *outMinLuminance,
     return bResult;
 }
 
+uint64_t GetResourceGpuMemorySize(ID3D12Resource* resource)
+{
+    uint64_t      size = 0;
+    D3D12_RESOURCE_ALLOCATION_INFO allocInfo = {};
+    if (resource)
+    {
+        D3D12_RESOURCE_DESC desc = resource->GetDesc();
+        ID3D12Device4* pDevice4 = nullptr;
+        if (SUCCEEDED(resource->GetDevice(IID_PPV_ARGS(&pDevice4))))
+        {
+            allocInfo = pDevice4->GetResourceAllocationInfo(0, 1, &desc);
+            size = allocInfo.SizeInBytes;
+            SafeRelease(pDevice4);
+        }
+    }
+    return size;
+}
+

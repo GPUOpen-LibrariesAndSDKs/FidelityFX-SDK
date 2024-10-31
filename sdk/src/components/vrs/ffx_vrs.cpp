@@ -195,7 +195,7 @@ static FfxErrorCode vrsCreate(FfxVrsContext_Private* context, const FfxVrsContex
 
     // Check version info - make sure we are linked with the right backend version
     FfxVersionNumber version = context->contextDescription.backendInterface.fpGetSDKVersion(&context->contextDescription.backendInterface);
-    FFX_RETURN_ON_ERROR(version == FFX_SDK_MAKE_VERSION(1, 1, 1), FFX_ERROR_INVALID_VERSION);
+    FFX_RETURN_ON_ERROR(version == FFX_SDK_MAKE_VERSION(1, 1, 2), FFX_ERROR_INVALID_VERSION);
 
     context->constantBuffer.num32BitEntries = sizeof(VrsConstants) / sizeof(uint32_t);
 

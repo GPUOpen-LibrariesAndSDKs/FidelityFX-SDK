@@ -42,6 +42,7 @@ bool                    isTearingSupported(IDXGIFactory* dxgiFactory);
 bool                    getMonitorLuminanceRange(IDXGISwapChain* swapChain, float* outMinLuminance, float* outMaxLuminance);
 inline bool             isValidHandle(HANDLE handle);
 IDXGIOutput6*           getMostRelevantOutputFromSwapChain(IDXGISwapChain* swapChain);
+uint64_t                GetResourceGpuMemorySize(ID3D12Resource* resource);
 
     // Safe release for interfaces
 template<class Interface>

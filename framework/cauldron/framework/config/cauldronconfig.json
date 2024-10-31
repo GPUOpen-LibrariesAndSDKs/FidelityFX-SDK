@@ -32,6 +32,16 @@
             },
             "DepthTarget": {
                 "Format": "D32_FLOAT"
+            },
+            "DistortionField0": {
+                "Format": "RGBA16_FLOAT",
+                "AllowUAV": true,
+                "RenderResolution": false
+            },
+            "DistortionField1": {
+                "Format": "RGBA16_FLOAT",
+                "AllowUAV": true,
+                "RenderResolution": false
             }
         },
 

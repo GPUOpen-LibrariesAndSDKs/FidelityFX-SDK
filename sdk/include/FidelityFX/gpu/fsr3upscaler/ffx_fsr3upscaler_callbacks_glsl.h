@@ -645,7 +645,7 @@ void SetReconstructedDepth(FfxInt32x2 iPxSample, FfxUInt32 uValue)
 #endif
 
 #if defined(FSR3UPSCALER_BIND_UAV_DILATED_DEPTH)
-layout (set = 0, binding = FSR3UPSCALER_BIND_UAV_DILATED_DEPTH, r16f) writeonly uniform image2D  rw_dilated_depth;
+layout (set = 0, binding = FSR3UPSCALER_BIND_UAV_DILATED_DEPTH, r32f) writeonly uniform image2D  rw_dilated_depth;
 
 void StoreDilatedDepth(FFX_PARAMETER_IN FfxInt32x2 iPxPos, FFX_PARAMETER_IN FfxFloat32 fDepth)
 {
