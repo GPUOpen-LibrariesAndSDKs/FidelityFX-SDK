@@ -246,6 +246,8 @@ namespace cauldron
             return ResourceFormat::BGRA8_SRGB;
         case VK_FORMAT_A2B10G10R10_UNORM_PACK32:
             return ResourceFormat::RGB10A2_UNORM;
+        case VK_FORMAT_E5B9G9R9_UFLOAT_PACK32:
+            return ResourceFormat::RGB9E5_SHAREDEXP;
         case VK_FORMAT_R16G16_SFLOAT:
             return ResourceFormat::RG16_FLOAT;
         case VK_FORMAT_R32_SFLOAT:

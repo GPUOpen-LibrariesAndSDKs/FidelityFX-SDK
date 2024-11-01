@@ -24,7 +24,6 @@ format_check:
   
 build_release_cauldron:
   stage: build
-  needs: []
   script:
   - 'mkdir build'
   - 'cd build'
@@ -37,7 +36,6 @@ build_release_cauldron:
 
 build_debug_cauldron:
   stage: build
-  needs: []
   script:
   - 'mkdir build'
   - 'cd build'
@@ -50,7 +48,6 @@ build_debug_cauldron:
     
 build_release_sdk_dx12:
   stage: build
-  needs: []
   script:
   - 'cd sdk/'
   - 'mkdir build'
@@ -63,7 +60,6 @@ build_release_sdk_dx12:
 
 build_debug_sdk_dx12:
   stage: build
-  needs: []
   script:
   - 'cd sdk/'
   - 'mkdir build'
@@ -76,7 +72,6 @@ build_debug_sdk_dx12:
     
 build_release_sdk_vk:
   stage: build
-  needs: []
   script:
   - 'cd sdk/'
   - 'mkdir build'
@@ -89,7 +84,6 @@ build_release_sdk_vk:
 
 build_debug_sdk_vk:
   stage: build
-  needs: []
   script:
   - 'cd sdk/'
   - 'mkdir build'
@@ -102,7 +96,6 @@ build_debug_sdk_vk:
 
 build_debug_api_dll_dx12:
   stage: build
-  needs: []
   script:
   - 'cd ffx-api'
   - 'mkdir build'
@@ -115,7 +108,6 @@ build_debug_api_dll_dx12:
 
 build_release_api_dll_dx12:
   stage: build
-  needs: []
   script:
   - 'cd ffx-api'
   - 'mkdir build'
@@ -129,7 +121,6 @@ build_release_api_dll_dx12:
     
 build_debug_api_dll_vk:
   stage: build
-  needs: []
   script:
   - 'cd ffx-api'
   - 'mkdir build'
@@ -142,7 +133,6 @@ build_debug_api_dll_vk:
 
 build_release_api_dll_vk:
   stage: build
-  needs: []
   script:
   - 'cd ffx-api'
   - 'mkdir build'
@@ -209,19 +199,19 @@ build_debug_samples_vk:
   artifacts:
     paths:
     - ./bin
-
+    
 package_release_samples_pc:
   stage: package
   needs:
   - job: build_release_api_dll_dx12
   - job: build_release_api_dll_vk
   - job: build_release_samples_dx12
-  - job: build_release_samples_vk
+  - job: build_release_samples_vk  
   script:
   - echo "Packaging FidelityFX SDK Samples"
   - 'copy %VULKAN_SDK%\Bin\glslc.exe .\bin'
   artifacts:
-    name: "FIDELITYFX-SDK-SAMPLES-%CI_COMMIT_TAG%-%CI_COMMIT_REF_NAME%-%CI_COMMIT_SHORT_SHA%"
+    name: "FIDELITYFX-SDK-SAMPLES-$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
     paths:
     - ./bin
     - ./docs

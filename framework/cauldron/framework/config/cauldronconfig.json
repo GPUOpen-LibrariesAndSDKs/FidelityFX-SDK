@@ -32,11 +32,22 @@
             },
             "DepthTarget": {
                 "Format": "D32_FLOAT"
+            },
+            "DistortionField0": {
+                "Format": "RGBA16_FLOAT",
+                "AllowUAV": true,
+                "RenderResolution": false
+            },
+            "DistortionField1": {
+                "Format": "RGBA16_FLOAT",
+                "AllowUAV": true,
+                "RenderResolution": false
             }
         },
 
         "FontSize": 13,
         "AGSEnabled": false,
+        "AntiLag2": true,
         "StablePowerState": false,
         "InvertedDepth": true,
         "MotionVectorGeneration": "",

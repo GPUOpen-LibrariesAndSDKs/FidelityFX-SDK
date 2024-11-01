@@ -247,6 +247,35 @@ void releaseUiBlitGpuResources()
     s_uiCompositionNextRtvDescriptor = 0;
 }
 
+// fix up format in case resource passed for SRV cannot be mapped
+static DXGI_FORMAT convertFormatSrv(DXGI_FORMAT format)
+{
+    switch (format) {
+        // Handle Depth
+    case DXGI_FORMAT_R32G8X24_TYPELESS:
+    case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
+        return DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
+    case DXGI_FORMAT_D32_FLOAT:
+        return DXGI_FORMAT_R32_FLOAT;
+    case DXGI_FORMAT_R24G8_TYPELESS:
+    case DXGI_FORMAT_X24_TYPELESS_G8_UINT:
+    case DXGI_FORMAT_D24_UNORM_S8_UINT:
+        return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+    case DXGI_FORMAT_D16_UNORM:
+        return DXGI_FORMAT_R16_UNORM;
+
+        // Handle Color
+    case DXGI_FORMAT_B8G8R8A8_TYPELESS:
+        return DXGI_FORMAT_B8G8R8A8_UNORM;
+    case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+        return DXGI_FORMAT_R8G8B8A8_UNORM;
+
+        // Others can map as is
+    default:
+        return format;
+    }
+}
+
 FFX_API FfxErrorCode ffxFrameInterpolationUiComposition(const FfxPresentCallbackDescription* params, void* unusedUserCtx)
 {
     (void)unusedUserCtx;
@@ -300,7 +329,7 @@ FFX_API FfxErrorCode ffxFrameInterpolationUiComposition(const FfxPresentCallback
 
         pCmdList->CopyResource(pRtResource, pResBackbuffer);
 
-        for (int i = 0; i < _countof(barriers); ++i)
+        for (size_t i = 0; i < _countof(barriers); ++i)
         {
             D3D12_RESOURCE_STATES tmpStateBefore = barriers[i].Transition.StateBefore;
             barriers[i].Transition.StateBefore   = barriers[i].Transition.StateAfter;
@@ -359,8 +388,6 @@ FFX_API FfxErrorCode ffxFrameInterpolationUiComposition(const FfxPresentCallback
         D3D12_CPU_DESCRIPTOR_HANDLE cpuView = dx12DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
         cpuView.ptr += s_uiCompositionDescRingBufferBase * dx12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-        D3D12_RESOURCE_DESC bbDesc = pResBackbuffer->GetDesc();
-
         D3D12_SHADER_RESOURCE_VIEW_DESC dx12SrvDescription  = {};
         dx12SrvDescription.Shader4ComponentMapping          = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
         dx12SrvDescription.Format                           = ffxGetDX12FormatFromSurfaceFormat(params->currentBackBuffer.description.format);
@@ -371,7 +398,7 @@ FFX_API FfxErrorCode ffxFrameInterpolationUiComposition(const FfxPresentCallback
         cpuView.ptr += dx12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
         
         const D3D12_RESOURCE_DESC uiDesc                    = pResUI->GetDesc();
-        dx12SrvDescription.Format                           = ffxGetDX12FormatFromSurfaceFormat(params->currentUI.description.format);
+        dx12SrvDescription.Format                           = convertFormatSrv(ffxGetDX12FormatFromSurfaceFormat(params->currentUI.description.format));
         dx12SrvDescription.Texture2D.MipLevels              = uiDesc.MipLevels;
         dx12Device->CreateShaderResourceView(pResUI, &dx12SrvDescription, cpuView);
 

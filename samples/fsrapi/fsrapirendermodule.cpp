@@ -68,9 +68,11 @@ void FSRRenderModule::Init(const json& initData)
     m_pTonemappedColorTarget = GetFramework()->GetRenderTexture(L"SwapChainProxy");
     m_pDepthTarget           = GetFramework()->GetRenderTexture(L"DepthTarget");
     m_pMotionVectors         = GetFramework()->GetRenderTexture(L"GBufferMotionVectorRT");
+    m_pDistortionField[0] = GetFramework()->GetRenderTexture(L"DistortionField0");
+    m_pDistortionField[1] = GetFramework()->GetRenderTexture(L"DistortionField1");
     m_pReactiveMask          = GetFramework()->GetRenderTexture(L"ReactiveMask");
     m_pCompositionMask       = GetFramework()->GetRenderTexture(L"TransCompMask");
-    CauldronAssert(ASSERT_CRITICAL, m_pMotionVectors && m_pReactiveMask && m_pCompositionMask, L"Could not get one of the needed resources for FSR Rendermodule.");
+    CauldronAssert(ASSERT_CRITICAL, m_pMotionVectors && m_pDistortionField[0] && m_pDistortionField[1] && m_pReactiveMask && m_pCompositionMask, L"Could not get one of the needed resources for FSR Rendermodule.");
 
     // Get a CPU resource view that we'll use to map the render target to
     GetResourceViewAllocator()->AllocateCPURenderViews(&m_pRTResourceView);
@@ -372,6 +374,12 @@ void FSRRenderModule::EnableModule(bool enabled)
     }
 }
 
+FfxErrorCode waitCallback(wchar_t* fenceName, uint64_t fenceValueToWaitFor)
+{
+    CAUDRON_LOG_DEBUG(L"waiting on '%ls' with value %llu", fenceName, fenceValueToWaitFor);
+    return FFX_API_RETURN_OK;
+}
+
 void FSRRenderModule::InitUI(UISection* pUISection)
 {
     std::vector<const char*> comboOptions = {"Native", "FSR (ffxapi)"};
@@ -426,7 +434,7 @@ void FSRRenderModule::InitUI(UISection* pUISection)
     ));
 
     m_UIElements.emplace_back(pUISection->RegisterUIElement<UISlider<float>>(
-        "Letterbox size", m_LetterboxRatio, 0.f, 1.f, [this](float cur, float old) { UpdateUpscaleRatio(&old); }, false));
+        "Letterbox size", m_LetterboxRatio, 0.1f, 1.f, [this](float cur, float old) { UpdateUpscaleRatio(&old); }, false));
 
     m_UIElements.emplace_back(pUISection->RegisterUIElement<UIButton>("Reset Upscaling", m_FrameInterpolation, [this]() { m_ResetUpscale = true; }));
     m_UIElements.emplace_back(pUISection->RegisterUIElement<UICheckBox>("Draw upscaler debug view", m_DrawUpscalerDebugView, nullptr, false));
@@ -438,9 +446,30 @@ void FSRRenderModule::InitUI(UISection* pUISection)
     // Use mask
     m_UIElements.emplace_back(pUISection->RegisterUIElement<UICheckBox>("Use Transparency and Composition Mask", m_UseMask, m_EnableMaskOptions, nullptr, false));
 
+    // Use distortion field
+    m_UIElements.emplace_back(pUISection->RegisterUIElement<UICheckBox>("Use Distortion Field Input", m_UseDistortionField, nullptr, false));
+
     // Sharpening
     m_UIElements.emplace_back(pUISection->RegisterUIElement<UICheckBox>("RCAS Sharpening", m_RCASSharpen, nullptr, false, false));
     m_UIElements.emplace_back(pUISection->RegisterUIElement<UISlider<float>>("Sharpness", m_Sharpness, 0.f, 1.f, m_RCASSharpen, nullptr, false));
+
+    //Set Upscaler CB KeyValue post context creation
+    std::vector<const char*>        configureUpscaleKeyLabels = { "fVelocity" };
+    
+    m_UIElements.emplace_back(pUISection->RegisterUIElement<UICombo>(
+        "Upscaler CB Key to set",
+        m_UpscalerCBKey,
+        configureUpscaleKeyLabels,
+        m_EnableMaskOptions,
+        nullptr,
+        m_EnableMaskOptions));
+    m_UIElements.emplace_back(pUISection->RegisterUIElement<UISlider<float>>(
+        "Upscaler CB Value to set",
+        m_UpscalerCBValue,
+        0.f, 1.f,
+        m_EnableMaskOptions,
+        [this](float, float) { SetUpscaleConstantBuffer(m_UpscalerCBKey, m_UpscalerCBValue); },
+        m_EnableMaskOptions));
 
     // Frame interpolation
     m_UIElements.emplace_back(pUISection->RegisterUIElement<UICheckBox>("Frame Interpolation", m_FrameInterpolation, 
@@ -490,6 +519,33 @@ void FSRRenderModule::InitUI(UISection* pUISection)
         false));
     m_UIElements.emplace_back(pUISection->RegisterUIElement<UICheckBox>("DoubleBuffer UI resource in swapchain", m_DoublebufferInSwapchain, m_FrameInterpolation, nullptr, false));
 
+    std::vector<const char*>        waitCallbackModeLabels = { "nullptr", "CAUDRON_LOG_DEBUG(\"waitCallback\")"};
+    m_UIElements.emplace_back(pUISection->RegisterUIElement<UICombo>(
+        "WaitCallback Mode",
+        m_waitCallbackMode,
+        waitCallbackModeLabels,
+        m_EnableMaskOptions,
+        [this](int32_t, int32_t)
+        {
+#if defined(FFX_API_DX12)
+            ffx::ConfigureDescFrameGenerationSwapChainKeyValueDX12 m_swapchainKeyValueConfig{};
+#elif defined(FFX_API_VK)
+            ffx::ConfigureDescFrameGenerationSwapChainKeyValueVK m_swapchainKeyValueConfig{};
+#endif
+            m_swapchainKeyValueConfig.key = FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_WAITCALLBACK;
+            if (m_waitCallbackMode == 0)
+            {
+                m_swapchainKeyValueConfig.ptr = nullptr;
+            }
+            else if (m_waitCallbackMode == 1)
+            {
+                //FuncWithinStruct waitCallbackStruct = { &waitCallback };
+                m_swapchainKeyValueConfig.ptr = waitCallback;
+            }
+            ffx::Configure(m_SwapChainContext, m_swapchainKeyValueConfig);
+
+        },
+        m_EnableMaskOptions));
     EnableModule(true);
 }
 
@@ -713,6 +769,14 @@ void FSRRenderModule::UpdateFSRContext(bool enabled)
 
                 CauldronAssert(ASSERT_CRITICAL, retCode == ffx::ReturnCode::Ok, L"Couldn't create the ffxapi upscaling context: %d", (uint32_t)retCode);
             }
+            FfxApiEffectMemoryUsage gpuMemoryUsageUpscaler;
+            ffx::QueryDescUpscaleGetGPUMemoryUsage upscalerGetGPUMemoryUsage{};
+            upscalerGetGPUMemoryUsage.gpuMemoryUsageUpscaler = &gpuMemoryUsageUpscaler;
+
+            ffx::Query(m_UpscalingContext, upscalerGetGPUMemoryUsage);
+
+            CAUDRON_LOG_INFO(L"Upscaler Context VRAM totalUsageInBytes %f MB aliasableUsageInBytes %f MB", gpuMemoryUsageUpscaler.totalUsageInBytes / 1048576.f, gpuMemoryUsageUpscaler.aliasableUsageInBytes / 1048576.f);
+
         }
 
         // Create the FrameGen context
@@ -769,7 +833,22 @@ void FSRRenderModule::UpdateFSRContext(bool enabled)
 
             retCode = ffx::Configure(m_FrameGenContext, m_FrameGenerationConfig);
             CauldronAssert(ASSERT_CRITICAL, retCode == ffx::ReturnCode::Ok, L"Couldn't create the ffxapi upscaling context: %d", (uint32_t)retCode);
+            
+            FfxApiEffectMemoryUsage gpuMemoryUsageFrameGeneration;
+            ffx::QueryDescFrameGenerationGetGPUMemoryUsage frameGenGetGPUMemoryUsage{};
+            frameGenGetGPUMemoryUsage.gpuMemoryUsageFrameGeneration = &gpuMemoryUsageFrameGeneration;
+            ffx::Query(m_FrameGenContext, frameGenGetGPUMemoryUsage);
+
+            CAUDRON_LOG_INFO(L"FrameGeneration Context VRAM totalUsageInBytes %f MB aliasableUsageInBytes %f MB", gpuMemoryUsageFrameGeneration.totalUsageInBytes / 1048576.f, gpuMemoryUsageFrameGeneration.aliasableUsageInBytes / 1048576.f);
+
         }
+#if defined(FFX_API_DX12)
+        FfxApiEffectMemoryUsage gpuMemoryUsageFrameGenerationSwapchain;
+        ffx::QueryFrameGenerationSwapChainGetGPUMemoryUsageDX12 frameGenSwapchainGetGPUMemoryUsage{};
+        frameGenSwapchainGetGPUMemoryUsage.gpuMemoryUsageFrameGenerationSwapchain = &gpuMemoryUsageFrameGenerationSwapchain;
+        ffx::Query(m_SwapChainContext, frameGenSwapchainGetGPUMemoryUsage);
+        CAUDRON_LOG_INFO(L"Swapchain Context VRAM totalUsageInBytes %f MB aliasableUsageInBytes %f MB", gpuMemoryUsageFrameGenerationSwapchain.totalUsageInBytes / 1048576.f, gpuMemoryUsageFrameGenerationSwapchain.aliasableUsageInBytes / 1048576.f);
+#endif  // defined(FFX_API_DX12)
     }
     else
     {
@@ -807,6 +886,14 @@ void FSRRenderModule::UpdateFSRContext(bool enabled)
         }
         ffx::DestroyContext(m_FrameGenContext);
     }
+}
+
+void FSRRenderModule::SetUpscaleConstantBuffer(uint64_t key, float value)
+{
+    ffx::ConfigureDescUpscaleKeyValue m_upscalerKeyValueConfig{};
+    m_upscalerKeyValueConfig.key = key;
+    m_upscalerKeyValueConfig.ptr = &value;
+    ffx::Configure(m_UpscalingContext, m_upscalerKeyValueConfig);
 }
 
 ResolutionInfo FSRRenderModule::UpdateResolution(uint32_t displayWidth, uint32_t displayHeight)
@@ -947,7 +1034,7 @@ void FSRRenderModule::Execute(double deltaTime, CommandList* pCmdList)
         dispatchUpscale.jitterOffset.y      = -m_JitterY;
         dispatchUpscale.motionVectorScale.x = resInfo.fRenderWidth();
         dispatchUpscale.motionVectorScale.y = resInfo.fRenderHeight();
-        dispatchUpscale.reset               = m_ResetUpscale;
+        dispatchUpscale.reset               = m_ResetUpscale || GetScene()->GetCurrentCamera()->WasCameraReset();
         dispatchUpscale.enableSharpening    = m_RCASSharpen;
         dispatchUpscale.sharpness           = m_Sharpness;
 
@@ -1057,8 +1144,18 @@ void FSRRenderModule::Execute(double deltaTime, CommandList* pCmdList)
     ffxSwapChain = GetSwapChain()->GetImpl()->VKSwapChain();
 #endif  // defined(FFX_API_DX12)
     m_FrameGenerationConfig.swapChain = ffxSwapChain;
-
-    ffx::ReturnCode retCode = ffx::Configure(m_FrameGenContext, m_FrameGenerationConfig);
+    ffx::ReturnCode retCode = ffx::ReturnCode::ErrorParameter;
+    if (m_UseDistortionField)
+    {
+        ffx::ConfigureDescFrameGenerationRegisterDistortionFieldResource dfConfig{};
+        dfConfig.distortionField = SDKWrapper::ffxGetResourceApi(m_pDistortionField[m_curUiTextureIndex]->GetResource(), FFX_API_RESOURCE_STATE_PIXEL_COMPUTE_READ);
+        retCode = ffx::Configure(m_FrameGenContext, m_FrameGenerationConfig, dfConfig);
+    }
+    else
+    {
+        retCode = ffx::Configure(m_FrameGenContext, m_FrameGenerationConfig);
+    }
+    
     CauldronAssert(ASSERT_CRITICAL, !!retCode, L"Configuring FSR FG failed: %d", (uint32_t)retCode);
 
     retCode = ffx::Dispatch(m_FrameGenContext, dispatchFgPrep);
@@ -1071,21 +1168,23 @@ void FSRRenderModule::Execute(double deltaTime, CommandList* pCmdList)
 #if defined(FFX_API_DX12)
     ffx::ConfigureDescFrameGenerationSwapChainRegisterUiResourceDX12 uiConfig{};
     uiConfig.uiResource = uiColor;
-    uiConfig.flags      = m_DoublebufferInSwapchain ? FFX_UI_COMPOSITION_FLAG_ENABLE_INTERNAL_UI_DOUBLE_BUFFERING : 0;
+    uiConfig.flags      = m_DoublebufferInSwapchain ? FFX_FRAMEGENERATION_UI_COMPOSITION_FLAG_ENABLE_INTERNAL_UI_DOUBLE_BUFFERING : 0;
     ffx::Configure(m_SwapChainContext, uiConfig);
 #elif defined(FFX_API_VK)
     ffx::ConfigureDescFrameGenerationSwapChainRegisterUiResourceVK uiConfig{};
     uiConfig.uiResource = uiColor;
-    uiConfig.flags      = m_DoublebufferInSwapchain ? FFX_UI_COMPOSITION_FLAG_ENABLE_INTERNAL_UI_DOUBLE_BUFFERING : 0;
+    uiConfig.flags      = m_DoublebufferInSwapchain ? FFX_FRAMEGENERATION_UI_COMPOSITION_FLAG_ENABLE_INTERNAL_UI_DOUBLE_BUFFERING : 0;
     ffx::Configure(m_SwapChainContext, uiConfig);
 #endif  // defined(FFX_API_DX12)
+
+    
 
     // Dispatch frame generation, if not using the callback
     if (m_FrameInterpolation && !m_UseCallback)
     {
         ffx::DispatchDescFrameGeneration dispatchFg{};
 
-        dispatchFg.presentColor       = backbuffer;
+        dispatchFg.presentColor = backbuffer;
         dispatchFg.numGeneratedFrames = 1;
 
         // assume symmetric letterbox
@@ -1113,9 +1212,10 @@ void FSRRenderModule::Execute(double deltaTime, CommandList* pCmdList)
 #endif  // defined(FFX_API_DX12)
 
         dispatchFg.frameID = m_FrameID;
-        dispatchFg.reset   = m_ResetFrameInterpolation;
+        dispatchFg.reset = m_ResetFrameInterpolation;
 
         retCode = ffx::Dispatch(m_FrameGenContext, dispatchFg);
+        
         CauldronAssert(ASSERT_CRITICAL, !!retCode, L"Dispatching Frame Generation failed: %d", (uint32_t)retCode);
     }
 
@@ -1151,6 +1251,14 @@ void FSRRenderModule::PreTransCallback(double deltaTime, CommandList* pCmdList)
     barriers.push_back(Barrier::Transition(m_pCompositionMask->GetResource(), ResourceState::RenderTargetResource, ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource));
     ResourceBarrier(pCmdList, static_cast<uint32_t>(barriers.size()), barriers.data());
 
+    // update index for UI doublebuffering
+    UIRenderModule* uimod = static_cast<UIRenderModule*>(GetFramework()->GetRenderModule("UIRenderModule"));
+    m_curUiTextureIndex = (++m_curUiTextureIndex) & 1;
+    uimod->SetUiSurfaceIndex(m_curUiTextureIndex);
+
+    //update index for distortion texture doublebuffering
+    m_pToneMappingRenderModule->SetDoubleBufferedTextureIndex(m_curUiTextureIndex);
+
     if (m_MaskMode != FSRMaskMode::Auto)
         return;
 
@@ -1167,11 +1275,6 @@ void FSRRenderModule::PreTransCallback(double deltaTime, CommandList* pCmdList)
     barriers.push_back(Barrier::Transition(m_pColorTarget->GetResource(), ResourceState::CopySource, ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource));
     barriers.push_back(Barrier::Transition(m_pOpaqueTexture->GetResource(), ResourceState::CopyDest, ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource));
     ResourceBarrier(pCmdList, static_cast<uint32_t>(barriers.size()), barriers.data());
-
-    // update intex for UI doublebuffering
-    UIRenderModule* uimod = static_cast<UIRenderModule*>(GetFramework()->GetRenderModule("UIRenderModule"));
-    m_curUiTextureIndex   = m_DoublebufferInSwapchain ? 0 : (++m_curUiTextureIndex) & 1;
-    uimod->SetUiSurfaceIndex(m_curUiTextureIndex);
 }
 
 void FSRRenderModule::PostTransCallback(double deltaTime, CommandList* pCmdList)

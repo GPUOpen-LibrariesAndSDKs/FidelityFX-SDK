@@ -1,6 +1,6 @@
-<!-- @page page_techniques_lens FidelityFX Lens 1.0 -->
+<!-- @page page_techniques_lens FidelityFX Lens 1.1 -->
 
-<h1>FidelityFX Lens 1.0</h1>
+<h1>FidelityFX Lens 1.1</h1>
 
 FidelityFX Lens is a light-weight shader with lens and film effects. Its purpose is to help move effects, such as film and camera effects, which can interfere with the operation of upscalers and sharpeners, which can be sensitive to noise, to after those respective algorithms/passes. It requires no textures and only a few constants that probably already exist in an engine.
 
@@ -84,7 +84,7 @@ Call `FfxLensApplyFilmGrain` with the following parameters to write out a new ca
 
 <h3>Chromatic aberration (CA)</h3>
 
-Chromatic aberration has two [types](https://en.wikipedia.org/wiki/Chromatic_aberration#Types) that arise when the lens system of a camera either:
+Chromatic aberration has two types that arise when the lens system of a camera either:
 * magnifies each color differently (transverse), or  
 * focuses each color differently (axial).  
   

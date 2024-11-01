@@ -48,7 +48,7 @@ void waitForPerformanceCount(const int64_t targetCount)
     } while (currentCount < targetCount);
 }
 
-bool waitForFenceValue(ID3D12Fence* fence, UINT64 value, DWORD dwMilliseconds)
+bool waitForFenceValue(ID3D12Fence* fence, UINT64 value, DWORD dwMilliseconds, FfxWaitCallbackFunc waitCallback)
 {
     bool status = false;
 
@@ -56,7 +56,31 @@ bool waitForFenceValue(ID3D12Fence* fence, UINT64 value, DWORD dwMilliseconds)
     {
         if (dwMilliseconds == INFINITE)
         {
-            while (fence->GetCompletedValue() < value);
+            int64_t previousQpc = 0;
+            int64_t currentQpc = 0;
+            QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&previousQpc));
+
+            // call waitCallback every fTimeoutInSeconds
+            int64_t qpcFrequency;
+            QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER*>(&qpcFrequency));
+            const float fTimeoutInSeconds       = 0.001f; //1ms
+            double      deltaQpcResetThreashold = double(qpcFrequency * fTimeoutInSeconds);
+            wchar_t fenceName[64];
+            uint32_t fenceNameLen = sizeof(fenceName);
+            fence->GetPrivateData(WKPDID_D3DDebugObjectNameW, &fenceNameLen, &fenceName);
+            while (fence->GetCompletedValue() < value)
+            {
+                if (waitCallback)
+                {
+                    QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&currentQpc));
+                    double deltaQpc = double(currentQpc - previousQpc);
+                    if ((deltaQpc > deltaQpcResetThreashold))
+                    {
+                        waitCallback(fenceName, value);
+                        previousQpc = currentQpc;
+                    }
+                }
+            }
             status = true;
         }
         else
@@ -196,5 +220,23 @@ bool getMonitorLuminanceRange(IDXGISwapChain* swapChain, float *outMinLuminance,
     }
 
     return bResult;
+}
+
+uint64_t GetResourceGpuMemorySize(ID3D12Resource* resource)
+{
+    uint64_t      size = 0;
+    D3D12_RESOURCE_ALLOCATION_INFO allocInfo = {};
+    if (resource)
+    {
+        D3D12_RESOURCE_DESC desc = resource->GetDesc();
+        ID3D12Device4* pDevice4 = nullptr;
+        if (SUCCEEDED(resource->GetDevice(IID_PPV_ARGS(&pDevice4))))
+        {
+            allocInfo = pDevice4->GetResourceAllocationInfo(0, 1, &desc);
+            size = allocInfo.SizeInBytes;
+            SafeRelease(pDevice4);
+        }
+    }
+    return size;
 }
 

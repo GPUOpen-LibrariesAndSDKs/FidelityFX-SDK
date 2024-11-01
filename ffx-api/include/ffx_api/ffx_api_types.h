@@ -55,7 +55,8 @@ enum FfxApiSurfaceFormat
     FFX_API_SURFACE_FORMAT_R8_UNORM,                    ///<  8 bit per channel, 1 channel unsigned normalized format
     FFX_API_SURFACE_FORMAT_R8G8_UNORM,                  ///<  8 bit per channel, 2 channel unsigned normalized format
     FFX_API_SURFACE_FORMAT_R8G8_UINT,                   ///<  8 bit per channel, 2 channel unsigned integer format
-    FFX_API_SURFACE_FORMAT_R32_FLOAT                    ///< 32 bit per channel, 1 channel float format
+    FFX_API_SURFACE_FORMAT_R32_FLOAT,                   ///< 32 bit per channel, 1 channel float format
+    FFX_API_SURFACE_FORMAT_R9G9B9E5_SHAREDEXP,          ///<  9 bit per channel, 5 bit exponent format
 };
 
 /// An enumeration of resource usage.
@@ -67,6 +68,7 @@ enum FfxApiResorceUsage
     FFX_API_RESOURCE_USAGE_DEPTHTARGET = (1<<2),            ///< Indicates a resource will be used as depth target.
     FFX_API_RESOURCE_USAGE_INDIRECT = (1<<3),               ///< Indicates a resource will be used as indirect argument buffer
     FFX_API_RESOURCE_USAGE_ARRAYVIEW = (1<<4),              ///< Indicates a resource that will generate array views. Works on 2D and cubemap textures
+    FFX_API_RESOURCE_USAGE_STENCILTARGET = (1<<5),          ///< Indicates a resource will be used as stencil target.
 };
 
 /// An enumeration of resource states.
@@ -173,3 +175,9 @@ struct FfxApiResource
     struct FfxApiResourceDescription description;
     uint32_t state;
 };
+
+typedef struct FfxApiEffectMemoryUsage
+{
+    uint64_t totalUsageInBytes;
+    uint64_t aliasableUsageInBytes;
+} FfxApiEffectMemoryUsage;

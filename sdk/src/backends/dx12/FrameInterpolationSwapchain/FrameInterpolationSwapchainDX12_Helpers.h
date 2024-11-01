@@ -31,14 +31,18 @@
 
 #include <FidelityFX/host/ffx_assert.h>
 
+typedef int32_t FfxErrorCode;
+typedef FfxErrorCode(*FfxWaitCallbackFunc)(wchar_t* fenceName, uint64_t fenceValueToWaitFor);
+
 IDXGIFactory*           getDXGIFactoryFromSwapChain(IDXGISwapChain* swapChain);
 bool                    isExclusiveFullscreen(IDXGISwapChain* swapChain);
 void                    waitForPerformanceCount(const int64_t targetCount);
-bool                    waitForFenceValue(ID3D12Fence* fence, UINT64 value, DWORD dwMilliseconds = INFINITE);
+bool                    waitForFenceValue(ID3D12Fence* fence, UINT64 value, DWORD dwMilliseconds = INFINITE, FfxWaitCallbackFunc waitCallback = nullptr);
 bool                    isTearingSupported(IDXGIFactory* dxgiFactory);
 bool                    getMonitorLuminanceRange(IDXGISwapChain* swapChain, float* outMinLuminance, float* outMaxLuminance);
 inline bool             isValidHandle(HANDLE handle);
 IDXGIOutput6*           getMostRelevantOutputFromSwapChain(IDXGISwapChain* swapChain);
+uint64_t                GetResourceGpuMemorySize(ID3D12Resource* resource);
 
     // Safe release for interfaces
 template<class Interface>

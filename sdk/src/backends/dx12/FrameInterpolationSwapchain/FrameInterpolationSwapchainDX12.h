@@ -33,7 +33,9 @@
 #include <FidelityFX/host/backends/dx12/ffx_dx12.h>
 #include <FidelityFX/host/ffx_fsr3.h>
 
-#define FFX_FRAME_INTERPOLATION_SWAP_CHAIN_VERSION          1
+#define FFX_FRAME_INTERPOLATION_SWAP_CHAIN_VERSION_MAJOR    1
+#define FFX_FRAME_INTERPOLATION_SWAP_CHAIN_VERSION_MINOR    1
+#define FFX_FRAME_INTERPOLATION_SWAP_CHAIN_VERSION_PATCH    1
 #define FFX_FRAME_INTERPOLATION_SWAP_CHAIN_MAX_BUFFER_COUNT 6
 
 typedef struct PacingData
@@ -187,6 +189,7 @@ protected:
     void*                          presentCallbackContext          = nullptr;
     FfxFrameGenerationDispatchFunc frameGenerationCallback         = nullptr;
     void*                          frameGenerationCallbackContext  = nullptr;
+    FfxWaitCallbackFunc            waitCallback                    = nullptr;
 
     void presentPassthrough(UINT SyncInterval, UINT Flags);
     void presentWithUiComposition(UINT SyncInterval, UINT Flags);
@@ -205,6 +208,9 @@ protected:
 
     IDXGISwapChain4* real();
 
+    UINT64 totalUsageInBytes = 0;
+    UINT64 aliasableUsageInBytes = 0;
+
 public:
     void setFrameGenerationConfig(FfxFrameGenerationConfig const* config);
     bool waitForPresents();
@@ -213,6 +219,9 @@ public:
     ID3D12GraphicsCommandList* getInterpolationCommandList();
 
     void registerUiResource(FfxResource uiResource, uint32_t flags);
+    void setWaitCallback(FfxWaitCallbackFunc waitCallbackFunc);
+
+    void GetGpuMemoryUsage(FfxEffectMemoryUsage * vramUsage);
 
     FrameInterpolationSwapChainDX12();
     virtual ~FrameInterpolationSwapChainDX12();

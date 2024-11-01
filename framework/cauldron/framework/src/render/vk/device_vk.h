@@ -206,6 +206,8 @@ namespace cauldron
         friend class Device;
         DeviceInternal();
 
+        virtual void UpdateAntiLag2() override {}
+
         class QueueSyncPrimitive
         {
         public:

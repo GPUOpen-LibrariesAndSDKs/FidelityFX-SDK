@@ -188,6 +188,8 @@ static cauldron::ResourceFormat GetFrameworkSurfaceFormat(FfxSurfaceFormat forma
         return cauldron::ResourceFormat::BGRA8_SRGB;
     case FFX_SURFACE_FORMAT_R11G11B10_FLOAT:
         return cauldron::ResourceFormat::RG11B10_FLOAT;
+    case FFX_SURFACE_FORMAT_R9G9B9E5_SHAREDEXP:
+        return cauldron::ResourceFormat::RGB9E5_SHAREDEXP;
     case FFX_SURFACE_FORMAT_R16G16_FLOAT:
         return cauldron::ResourceFormat::RG16_FLOAT;
     case FFX_SURFACE_FORMAT_R16G16_UINT:
@@ -334,6 +336,8 @@ static cauldron::ResourceFormat GetFrameworkSurfaceFormatApi(uint32_t format)
         return cauldron::ResourceFormat::BGRA8_SRGB;
     case FFX_API_SURFACE_FORMAT_R11G11B10_FLOAT:
         return cauldron::ResourceFormat::RG11B10_FLOAT;
+    case FFX_API_SURFACE_FORMAT_R9G9B9E5_SHAREDEXP:
+        return cauldron::ResourceFormat::RGB9E5_SHAREDEXP;
     case FFX_API_SURFACE_FORMAT_R16G16_FLOAT:
         return cauldron::ResourceFormat::RG16_FLOAT;
     case FFX_API_SURFACE_FORMAT_R16G16_UINT:
@@ -457,6 +461,8 @@ inline FfxSurfaceFormat GetFfxSurfaceFormat(cauldron::ResourceFormat format)
         return FFX_SURFACE_FORMAT_B8G8R8A8_SRGB;
     case (cauldron::ResourceFormat::RG11B10_FLOAT):
         return FFX_SURFACE_FORMAT_R11G11B10_FLOAT;
+    case (cauldron::ResourceFormat::RGB9E5_SHAREDEXP):
+        return FFX_SURFACE_FORMAT_R9G9B9E5_SHAREDEXP;
     case (cauldron::ResourceFormat::RGB10A2_UNORM):
         return FFX_SURFACE_FORMAT_R10G10B10A2_UNORM;
     case (cauldron::ResourceFormat::RG16_FLOAT):

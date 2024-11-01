@@ -161,6 +161,7 @@ private:
     bool m_IsNonNative                              = true;
     bool m_UpscaleRatioEnabled                      = false;
     bool m_UseMask                                  = true;
+    bool m_UseDistortionField                       = false;
     bool m_RCASSharpen                              = true;
     bool m_SharpnessEnabled                         = false;
     bool m_NeedReInit                               = false;
@@ -219,10 +220,20 @@ private:
     uint32_t                 m_curUiTextureIndex  = 0;
     const cauldron::Texture* m_pUiTexture[2]      = {};
     const cauldron::Texture* m_pHudLessTexture[2] = {};
+    const cauldron::Texture* m_pDistortionField[2] = {};
 
     TAARenderModule*          m_pTAARenderModule         = nullptr;
     ToneMappingRenderModule*  m_pToneMappingRenderModule = nullptr;
     TranslucencyRenderModule* m_pTransRenderModule       = nullptr;
+
+    //Set Constant Buffer KeyValue via Configure Context KeyValue API. Valid Post Context creation.
+    int32_t                  m_UpscalerCBKey = 0;
+    float                    m_UpscalerCBValue = 1.f;
+    void                     SetUpscaleConstantBuffer(uint64_t key, float value);
+
+    //Set Swapchain waitcallback via Configure Context KeyValue API
+    int32_t                  m_waitCallbackMode = 0;
+
 };
 
 // alias to get sample.cpp to use this class.
