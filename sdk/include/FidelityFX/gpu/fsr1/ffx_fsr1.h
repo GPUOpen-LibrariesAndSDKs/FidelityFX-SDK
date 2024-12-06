@@ -763,6 +763,9 @@ void FsrEasuH(
 #ifdef FSR_RCAS_DENOISE
      lobe *= nz;
 #endif
+#ifdef FSR_RCAS_LOWER_LIMITER_COMPENSATION
+     lobe *= ffxSaturate(eL / ffxMin(ffxMin3(bL, dL, fL), hL)); 
+#endif
      // Resolve, which needs the medium precision rcp approximation to avoid visible tonality changes.
      FfxFloat32 rcpL = ffxApproximateReciprocalMedium(FfxFloat32(4.0) * lobe + FfxFloat32(1.0));
      pixR            = (lobe * bR + lobe * dR + lobe * hR + lobe * fR + eR) * rcpL;
