@@ -748,9 +748,14 @@ void FsrEasuH(
      // Immediate constants for peak range.
      FfxFloat32x2 peakC = FfxFloat32x2(1.0, -1.0 * 4.0);
      // Limiters, these need to be high precision RCPs.
-     FfxFloat32 hitMinR = mn4R * ffxReciprocal(FfxFloat32(4.0) * mx4R);
-     FfxFloat32 hitMinG = mn4G * ffxReciprocal(FfxFloat32(4.0) * mx4G);
-     FfxFloat32 hitMinB = mn4B * ffxReciprocal(FfxFloat32(4.0) * mx4B);
+     #ifdef FSR_RCAS_LOWER_LIMITER_COMPENSATION
+      const FfxFloat32 lowerLimiterMultiplier = ffxSaturate(eL / ffxMin(ffxMin3(bL, dL, fL), hL)); 
+     #else
+      const FfxFloat32 lowerLimiterMultiplier = 1.f;
+     #endif
+     FfxFloat32 hitMinR = mn4R * ffxReciprocal(FfxFloat32(4.0) * mx4R) * lowerLimiterMultiplier;
+     FfxFloat32 hitMinG = mn4G * ffxReciprocal(FfxFloat32(4.0) * mx4G) * lowerLimiterMultiplier;
+     FfxFloat32 hitMinB = mn4B * ffxReciprocal(FfxFloat32(4.0) * mx4B) * lowerLimiterMultiplier;
      FfxFloat32 hitMaxR = (peakC.x - mx4R) * ffxReciprocal(FfxFloat32(4.0) * mn4R + peakC.y);
      FfxFloat32 hitMaxG = (peakC.x - mx4G) * ffxReciprocal(FfxFloat32(4.0) * mn4G + peakC.y);
      FfxFloat32 hitMaxB = (peakC.x - mx4B) * ffxReciprocal(FfxFloat32(4.0) * mn4B + peakC.y);
@@ -762,9 +767,6 @@ void FsrEasuH(
  // Apply noise removal.
 #ifdef FSR_RCAS_DENOISE
      lobe *= nz;
-#endif
-#ifdef FSR_RCAS_LOWER_LIMITER_COMPENSATION
-     lobe *= ffxSaturate(eL / ffxMin(ffxMin3(bL, dL, fL), hL)); 
 #endif
      // Resolve, which needs the medium precision rcp approximation to avoid visible tonality changes.
      FfxFloat32 rcpL = ffxApproximateReciprocalMedium(FfxFloat32(4.0) * lobe + FfxFloat32(1.0));
@@ -851,9 +853,14 @@ void FsrEasuH(
   // Immediate constants for peak range.
   FfxFloat16x2 peakC=FfxFloat16x2(1.0,-1.0*4.0);
   // Limiters, these need to be high precision RCPs.
-  FfxFloat16 hitMinR=mn4R*ffxReciprocalHalf(FFX_BROADCAST_FLOAT16(4.0)*mx4R);
-  FfxFloat16 hitMinG=mn4G*ffxReciprocalHalf(FFX_BROADCAST_FLOAT16(4.0)*mx4G);
-  FfxFloat16 hitMinB=mn4B*ffxReciprocalHalf(FFX_BROADCAST_FLOAT16(4.0)*mx4B);
+  #ifdef FSR_RCAS_LOWER_LIMITER_COMPENSATION
+   const FfxFloat16 lowerLimiterMultiplier = ffxSaturate(eL / min(ffxMin3Half(bL, dL, fL), hL)); 
+  #else
+   const FfxFloat16 lowerLimiterMultiplier = 1.f;
+  #endif
+  FfxFloat16 hitMinR=mn4R*ffxReciprocalHalf(FFX_BROADCAST_FLOAT16(4.0)*mx4R)*lowerLimiterMultiplier;
+  FfxFloat16 hitMinG=mn4G*ffxReciprocalHalf(FFX_BROADCAST_FLOAT16(4.0)*mx4G)*lowerLimiterMultiplier;
+  FfxFloat16 hitMinB=mn4B*ffxReciprocalHalf(FFX_BROADCAST_FLOAT16(4.0)*mx4B)*lowerLimiterMultiplier;
   FfxFloat16 hitMaxR=(peakC.x-mx4R)*ffxReciprocalHalf(FFX_BROADCAST_FLOAT16(4.0)*mn4R+peakC.y);
   FfxFloat16 hitMaxG=(peakC.x-mx4G)*ffxReciprocalHalf(FFX_BROADCAST_FLOAT16(4.0)*mn4G+peakC.y);
   FfxFloat16 hitMaxB=(peakC.x-mx4B)*ffxReciprocalHalf(FFX_BROADCAST_FLOAT16(4.0)*mn4B+peakC.y);
@@ -970,9 +977,14 @@ void FsrEasuH(
   // Immediate constants for peak range.
   FfxFloat16x2 peakC=FfxFloat16x2(1.0,-1.0*4.0);
   // Limiters, these need to be high precision RCPs.
-  FfxFloat16x2 hitMinR=mn4R*ffxReciprocalHalf(FFX_BROADCAST_FLOAT16X2(4.0)*mx4R);
-  FfxFloat16x2 hitMinG=mn4G*ffxReciprocalHalf(FFX_BROADCAST_FLOAT16X2(4.0)*mx4G);
-  FfxFloat16x2 hitMinB=mn4B*ffxReciprocalHalf(FFX_BROADCAST_FLOAT16X2(4.0)*mx4B);
+  #ifdef FSR_RCAS_LOWER_LIMITER_COMPENSATION
+   const FfxFloat16x2 lowerLimiterMultiplier = ffxSaturate(eL / min(ffxMin3Half(bL, dL, fL), hL)); 
+  #else
+   const FfxFloat16x2 lowerLimiterMultiplier = 1.f;
+  #endif
+  FfxFloat16x2 hitMinR=mn4R*ffxReciprocalHalf(FFX_BROADCAST_FLOAT16X2(4.0)*mx4R)*lowerLimiterMultiplier;
+  FfxFloat16x2 hitMinG=mn4G*ffxReciprocalHalf(FFX_BROADCAST_FLOAT16X2(4.0)*mx4G)*lowerLimiterMultiplier;
+  FfxFloat16x2 hitMinB=mn4B*ffxReciprocalHalf(FFX_BROADCAST_FLOAT16X2(4.0)*mx4B)*lowerLimiterMultiplier;
   FfxFloat16x2 hitMaxR=(peakC.x-mx4R)*ffxReciprocalHalf(FFX_BROADCAST_FLOAT16X2(4.0)*mn4R+peakC.y);
   FfxFloat16x2 hitMaxG=(peakC.x-mx4G)*ffxReciprocalHalf(FFX_BROADCAST_FLOAT16X2(4.0)*mn4G+peakC.y);
   FfxFloat16x2 hitMaxB=(peakC.x-mx4B)*ffxReciprocalHalf(FFX_BROADCAST_FLOAT16X2(4.0)*mn4B+peakC.y);
