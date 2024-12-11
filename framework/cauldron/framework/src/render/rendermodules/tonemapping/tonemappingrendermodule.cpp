@@ -32,6 +32,8 @@
 #include "render/color_conversion.h"
 #include "render/swapchain.h"
 #include "render/dynamicresourcepool.h"
+#include "render/rasterview.h"
+
 
 #define FFX_CPU
 #include <FidelityFX/host/ffx_spd.h>
@@ -67,6 +69,9 @@ void ToneMappingRenderModule::Init(const json& InitData)
 
     m_pDistortionField[0] = GetFramework()->GetRenderTexture(L"DistortionField0");
     m_pDistortionField[1] = GetFramework()->GetRenderTexture(L"DistortionField1");
+    m_pDistortionFieldRasterView[0] = GetRasterViewAllocator()->RequestRasterView(m_pDistortionField[0], ViewDimension::Texture2D);
+    m_pDistortionFieldRasterView[1] = GetRasterViewAllocator()->RequestRasterView(m_pDistortionField[1], ViewDimension::Texture2D);
+
 
     TextureDesc desc = TextureDesc::Tex2D(L"AutomaticExposureSpdAtomicCounter", ResourceFormat::R32_UINT, 1, 1, 1, 1, ResourceFlags::AllowUnorderedAccess);
     m_pAutomaticExposureSpdAtomicCounter = GetDynamicResourcePool()->CreateRenderTexture(&desc);
@@ -337,6 +342,33 @@ void ToneMappingRenderModule::Execute(double deltaTime, CommandList* pCmdList)
             ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource);
         ResourceBarrier(pCmdList, 1, &barrier);
     }
+        
+    if (shouldClearRenderTargets)
+    {
+        GPUScopedProfileCapture distortionFieldMarker(pCmdList, L"Clear Distortion Field");
+        std::vector<Barrier> barriers;
+        barriers.push_back(Barrier::Transition(m_pDistortionField[0]->GetResource(),
+            ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource,
+            ResourceState::RenderTargetResource));
+        barriers.push_back(Barrier::Transition(m_pDistortionField[1]->GetResource(),
+            ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource,
+            ResourceState::RenderTargetResource));
+        ResourceBarrier(pCmdList, static_cast<uint32_t> (barriers.size()), barriers.data());
+
+        float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+        ClearRenderTarget(pCmdList, &m_pDistortionFieldRasterView[0]->GetResourceView(), clearColor);
+        ClearRenderTarget(pCmdList, &m_pDistortionFieldRasterView[1]->GetResourceView(), clearColor);
+        shouldClearRenderTargets = false;
+            
+        barriers.clear();
+        barriers.push_back(Barrier::Transition(m_pDistortionField[0]->GetResource(),
+            ResourceState::RenderTargetResource,
+            ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource));
+        barriers.push_back(Barrier::Transition(m_pDistortionField[1]->GetResource(),
+            ResourceState::RenderTargetResource,
+            ResourceState::NonPixelShaderResource | ResourceState::PixelShaderResource));
+        ResourceBarrier(pCmdList, static_cast<uint32_t> (barriers.size()), barriers.data());
+    }
 
     if (m_TonemapperConstantData.LensDistortionEnabled)
     {
@@ -372,4 +404,11 @@ void ToneMappingRenderModule::Execute(double deltaTime, CommandList* pCmdList)
 void ToneMappingRenderModule::SetDoubleBufferedTextureIndex(uint32_t textureIndex)
 {
     m_curDoubleBufferedTextureIndex = textureIndex;
+}
+
+void ToneMappingRenderModule::OnResize(const cauldron::ResolutionInfo& resInfo)
+{
+    if (!ModuleEnabled())
+        return;
+    shouldClearRenderTargets = true;
 }

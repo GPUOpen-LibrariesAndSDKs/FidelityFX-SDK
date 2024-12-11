@@ -1,6 +1,6 @@
-<!-- @page page_techniques_super-resolution-interpolation FidelityFX Super Resolution 3.1.2 -->
+<!-- @page page_techniques_super-resolution-interpolation FidelityFX Super Resolution 3.1.3 -->
 
-<h1>FidelityFX Super Resolution 3.1.2 (FSR3) - Upscaling and Frame Generation</h1>
+<h1>FidelityFX Super Resolution 3.1.3 (FSR3) - Upscaling and Frame Generation</h1>
 
 ![Screenshot](media/super-resolution-temporal/fsr3-sample_resized.jpg "A screenshot showcasing the final output of the effect")
 

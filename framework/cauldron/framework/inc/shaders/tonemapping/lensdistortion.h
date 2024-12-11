@@ -58,11 +58,10 @@ float2 InverseZoom(in float2 Uv)
 	return (translatedCoord + 1.0f) / 2.0f;
 }
 
-float4 GenerateDistortionField(in float2 Uv)
+float2 GenerateDistortionField(in float2 Uv)
 {
     float2 xy = Zoom(BarrelDistortion(Uv)) - Uv;
-    float2 zw = InverseBarrelDistortion(InverseZoom(Uv)) - Uv;
-    return float4(xy, zw);
+    return xy;
 }
 
 float2 ApplyLensDistortion(in float2 Uv)

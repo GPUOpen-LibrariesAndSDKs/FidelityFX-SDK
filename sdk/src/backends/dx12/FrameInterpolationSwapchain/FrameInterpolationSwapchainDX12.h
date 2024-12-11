@@ -47,6 +47,8 @@ typedef struct PacingData
     bool                            vsync;
     bool                            tearingSupported;
     bool                            usePremulAlphaComposite;
+    bool                            drawDebugPacingLines;
+
 
     UINT64                          interpolationCompletedFenceValue;
     UINT64                          replacementBufferFenceSignal;
@@ -100,14 +102,25 @@ typedef struct FrameinterpolationPresentInfo
     ID3D12Fence*        interpolationFence      = nullptr;
     ID3D12Fence*        presentFence            = nullptr;
     ID3D12Fence*        replacementBufferFence  = nullptr;
-    ID3D12Fence*        compositionFence        = nullptr;
+    ID3D12Fence*        compositionFenceCPU     = nullptr;
+    ID3D12Fence*        compositionFenceGPU     = nullptr;
 
     HANDLE              presentEvent            = 0;
     HANDLE              interpolationEvent      = 0;
     HANDLE              pacerEvent              = 0;
 
-    bool                resetTimer              = false;
+    volatile bool       resetTimer              = false;
     volatile bool       shutdown                = false;
+
+    volatile double     safetyMarginInSec       = 0.0001; //0.1ms
+    volatile double     varianceFactor          = 0.1;
+    volatile bool       allowHybridSpin         = false;
+    volatile uint32_t   hybridSpinTime          = 2; //Measured in system timer resolution units. Default is 2. Below 1 will frequently result in overshoot. Overshoots stop showing up >=2.
+    volatile bool       allowWaitForSingleObjectOnFence = false;
+    
+    FfxWaitCallbackFunc waitCallback            = nullptr;
+
+    volatile int64_t    previousPresentQpc         = 0;
 } FrameinterpolationPresentInfo;
 
 typedef struct ReplacementResource
@@ -173,6 +186,7 @@ protected:
     bool                interpolationEnabled            = false;
     bool                presentInterpolatedOnly         = false;
     bool                previousFrameWasInterpolated    = false;
+    bool                drawDebugPacingLines            = false;
 
     UINT64              currentFrameID              = 0;
 
@@ -189,7 +203,6 @@ protected:
     void*                          presentCallbackContext          = nullptr;
     FfxFrameGenerationDispatchFunc frameGenerationCallback         = nullptr;
     void*                          frameGenerationCallbackContext  = nullptr;
-    FfxWaitCallbackFunc            waitCallback                    = nullptr;
 
     void presentPassthrough(UINT SyncInterval, UINT Flags);
     void presentWithUiComposition(UINT SyncInterval, UINT Flags);
@@ -220,6 +233,7 @@ public:
 
     void registerUiResource(FfxResource uiResource, uint32_t flags);
     void setWaitCallback(FfxWaitCallbackFunc waitCallbackFunc);
+    void setFramePacingTuning(const FfxSwapchainFramePacingTuning* framePacingTuning);
 
     void GetGpuMemoryUsage(FfxEffectMemoryUsage * vramUsage);
 

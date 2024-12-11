@@ -71,16 +71,8 @@ static VkDeviceContext sVkDeviceContext = { VK_NULL_HANDLE, VK_NULL_HANDLE, VK_N
 // Constant buffer allocation callback
 static FfxConstantBufferAllocator s_fpConstantAllocator = nullptr;
 
-// Redefine offsets for compilation purposes
-#define BINDING_SHIFT(name, shift)                       \
-constexpr uint32_t name##_BINDING_SHIFT     = shift; \
-constexpr wchar_t* name##_BINDING_SHIFT_STR = L#shift;
-
-// put it there for now
-BINDING_SHIFT(TEXTURE, 0);
-BINDING_SHIFT(SAMPLER, 1000);
-BINDING_SHIFT(UNORDERED_ACCESS_VIEW, 2000);
-BINDING_SHIFT(CONSTANT_BUFFER, 3000);
+// Offset the binding of samplers to avoid collisions
+constexpr uint32_t SAMPLER_BINDING_SHIFT = 1000;
 
 typedef struct BackendContext_VK {
 
@@ -103,6 +95,7 @@ typedef struct BackendContext_VK {
         uint32_t                uavViewCount;
 
         VkDeviceMemory          deviceMemory;
+        VkDeviceSize            allocationSize;
         VkMemoryPropertyFlags   memoryProperties;
 
         bool                    undefined;
@@ -245,6 +238,9 @@ typedef struct BackendContext_VK {
 
         // Usage
         bool                  active;
+
+        // VRAM usage
+        FfxEffectMemoryUsage vramUsage;
 
     } EffectContext;
 
@@ -1364,7 +1360,10 @@ FfxErrorCode GetEffectGpuMemoryUsageVK(FfxInterface* backendInterface, FfxUInt32
     FFX_ASSERT(NULL != backendInterface);
     FFX_ASSERT(NULL != outVramUsage);
 
-    *outVramUsage = {};
+    BackendContext_VK*                backendContext = (BackendContext_VK*)backendInterface->scratchBuffer;
+    BackendContext_VK::EffectContext& effectContext  = backendContext->pEffectContexts[effectContextId];
+
+    *outVramUsage = effectContext.vramUsage;
 
     return FFX_OK;
 }
@@ -2213,6 +2212,7 @@ FfxErrorCode CreateResourceVK(
     backendResource->undefined = true;  // A flag to make sure the first barrier for this image resource always uses an src layout of undefined
     backendResource->dynamic = false;   // Not a dynamic resource (need to track them separately for image views)
     backendResource->resourceDescription = resourceDesc;
+    backendResource->allocationSize = 0;
 
     const auto& initData = createResourceDescription->initData;
 
@@ -2475,6 +2475,13 @@ FfxErrorCode CreateResourceVK(
         backendInterface->fpScheduleGpuJob(backendInterface, &copyJob);
     }
 
+    backendResource->allocationSize = memRequirements.size;
+    effectContext.vramUsage.totalUsageInBytes += static_cast<uint64_t>(backendResource->allocationSize);
+    if ((createResourceDescription->resourceDescription.flags & FFX_RESOURCE_FLAGS_ALIASABLE) == FFX_RESOURCE_FLAGS_ALIASABLE)
+    {
+        effectContext.vramUsage.aliasableUsageInBytes += static_cast<uint64_t>(backendResource->allocationSize);
+    }
+
     return FFX_OK;
 }
 
@@ -2536,6 +2543,13 @@ FfxErrorCode DestroyResourceVK(FfxInterface* backendInterface, FfxResourceIntern
         {
             backendContext->vkFunctionTable.vkFreeMemory(backendContext->device, backgroundResource.deviceMemory, nullptr);
             backgroundResource.deviceMemory = VK_NULL_HANDLE;
+
+            effectContext.vramUsage.totalUsageInBytes -= static_cast<uint64_t>(backgroundResource.allocationSize);
+            if ((backendContext->pResources[resource.internalIndex].resourceDescription.flags & FFX_RESOURCE_FLAGS_ALIASABLE) == FFX_RESOURCE_FLAGS_ALIASABLE)
+            {
+                effectContext.vramUsage.aliasableUsageInBytes -= static_cast<uint64_t>(backgroundResource.allocationSize);
+            }
+            backgroundResource.allocationSize = 0;
         }
     }
 

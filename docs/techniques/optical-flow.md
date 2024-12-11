@@ -20,7 +20,7 @@ The final iteration result is what is output to the consumer of the technique.
 
 <h3>Technical Requirements</h3>
 
-SM 6.2 is required. The effect uses wave operations, and also uses the HLSL `msad4` intrinsic extensively. In architectures where `msad4` is not natively executed by the GPU, this may result in reduced performance.
+SM 6.2 is required. The effect uses wave operations, and also uses the [HLSL `msad4`](https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-msad4) intrinsic extensively. In architectures where `msad4` is not natively executed by the GPU, this may result in reduced performance.
 
 <h3>Create the effect</h3>
 
