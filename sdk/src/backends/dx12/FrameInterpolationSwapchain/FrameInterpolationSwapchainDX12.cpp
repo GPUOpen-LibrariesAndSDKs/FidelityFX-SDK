@@ -1746,6 +1746,8 @@ HRESULT STDMETHODCALLTYPE FrameInterpolationSwapChainDX12::ResizeBuffers(UINT Bu
 
     LeaveCriticalSection(&criticalSection);
 
+    verifyBackbufferDuplicateResources();
+
     return hr;
 }
 
