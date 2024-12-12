@@ -1,4 +1,4 @@
-<h1>Welcome to the AMD FidelityFX™ SDK 1.1.2</h1>
+<h1>Welcome to the AMD FidelityFX™ SDK 1.1.3</h1>
 
 ![alt text](/docs/media/fidelityfxsdk-logo-rescaled.png)
 
@@ -18,10 +18,10 @@ The FidelityFX SDK includes:
 | [Stochastic Screen-Space Reflections](/docs/techniques/stochastic-screen-space-reflections.md) 1.5 | [SSSR sample](/docs/samples/stochastic-screen-space-reflections.md) | [FidelityFX Screen Space Reflections](https://gpuopen.com/fidelityfx-sssr/) | Provides high-fidelity screen-spaced reflections in your scene, without a hefty performance price tag. |
 | [Super Resolution (Spatial)](/docs/techniques/super-resolution-spatial.md) 1.2 | [Super Resolution sample](/docs/samples/super-resolution.md) | [FidelityFX Super Resolution](https://gpuopen.com/fidelityfx-superresolution/) | Offers a spatial single-frame solution for producing higher resolution frames from lower resolution inputs. |
 | [Super Resolution (Temporal)](/docs/techniques/super-resolution-temporal.md) 2.3.2 | [Super Resolution sample](/docs/samples/super-resolution.md) | [FidelityFX Super Resolution 2](https://gpuopen.com/fidelityfx-superresolution-2/) | Offers both spatial single-frame and temporal multi-frame solutions for producing high resolution frames from lower resolution inputs. |
-| [Super Resolution 3](/docs/techniques/super-resolution-interpolation.md) 3.1.2 | [Super Resolution sample](/docs/samples/super-resolution.md) | [FidelityFX Super Resolution 3](https://gpuopen.com/fidelityfx-superresolution-3/) | Offers generation of interpolated frames in combination with our temporal multi-frame solution for producing high resolution frames from lower resolution inputs. |
-| [Super Resolution (Upscaler)](/docs/techniques/super-resolution-upscaler.md) 3.1.2 | [Super Resolution sample](/docs.samples/super-resolution.md) | [FidelityFX Super Resolution 3](https://gpuopen.com/fidelityfx-superresolution-3/) | Offers temporal multi-frame solutions for producing high resolution frames from lower resolution inputs. |
-| [Frame Interpolation](techniques/frame-interpolation.md) 1.1.1 | [Super Resolution sample](/docs/samples/super-resolution.md) | [FidelityFX Super Resolution 3](https://gpuopen.com/fidelityfx-superresolution-3/) | Offers generation of interpolated frames from multiple real input frames, and multiple sources of motion vector data. |
-| [Frame Interpolation SwapChain](/docs/techniques/frame-interpolation-swap-chain.md) 1.1.1 | [Super Resolution sample](/docs/samples/super-resolution.md) | [FidelityFX Super Resolution 3](https://gpuopen.com/fidelityfx-superresolution-3/) | A replacement DXGI Swapchain implementation for DX12 which allows for additional frames to be presented along with real game frames, with relevant frame pacing. |
+| [Super Resolution 3](/docs/techniques/super-resolution-interpolation.md) 3.1.3 | [Super Resolution sample](/docs/samples/super-resolution.md) | [FidelityFX Super Resolution 3](https://gpuopen.com/fidelityfx-superresolution-3/) | Offers generation of interpolated frames in combination with our temporal multi-frame solution for producing high resolution frames from lower resolution inputs. |
+| [Super Resolution (Upscaler)](/docs/techniques/super-resolution-upscaler.md) 3.1.3 | [Super Resolution sample](/docs.samples/super-resolution.md) | [FidelityFX Super Resolution 3](https://gpuopen.com/fidelityfx-superresolution-3/) | Offers temporal multi-frame solutions for producing high resolution frames from lower resolution inputs. |
+| [Frame Interpolation](techniques/frame-interpolation.md) 1.1.2 | [Super Resolution sample](/docs/samples/super-resolution.md) | [FidelityFX Super Resolution 3](https://gpuopen.com/fidelityfx-superresolution-3/) | Offers generation of interpolated frames from multiple real input frames, and multiple sources of motion vector data. |
+| [Frame Interpolation SwapChain](/docs/techniques/frame-interpolation-swap-chain.md) 1.1.2 | [Super Resolution sample](/docs/samples/super-resolution.md) | [FidelityFX Super Resolution 3](https://gpuopen.com/fidelityfx-superresolution-3/) | A replacement DXGI Swapchain implementation for DX12 which allows for additional frames to be presented along with real game frames, with relevant frame pacing. |
 | [Optical Flow](/docs/techniques/optical-flow.md) 1.1.2 | [Super Resolution sample](/docs/samples/super-resolution.md) | [FidelityFX Super Resolution 3](https://gpuopen.com/fidelityfx-superresolution-3/) | Offers a motion-estimation algorithm which is useful for generating block-based motion vectors from temporal image inputs. |
 | [Variable Shading](/docs/techniques/variable-shading.md) 1.2 | [Variable Shading sample](/docs/samples/variable-shading.md) | [FidelityFX Variable Shading](https://gpuopen.com/fidelityfx-variable-shading/) | Helps you to drive Variable Rate Shading hardware introduced in RDNA2-based and contemporary GPUs, by analyzing the luminance of pixels in a tile to determine where the shading rate can be lowered to increase performance. |
 | [Blur](/docs/samples/blur.md) 1.1 | [Blur sample](/docs/samples/blur.md) | [FidelityFX Blur](https://gpuopen.com/fidelityfx-blur/) | A library of highly optimized functions which perform common blurring operations such as Gaussian blur, radial blurs, and others. |
@@ -36,7 +36,7 @@ The FidelityFX SDK includes:
 <h2>Further information</h2>
 
 - [What's new in AMD FidelityFX SDK](/docs/whats-new/index.md)
-  - [FidelityFX SDK 1.1.2](/docs/whats-new/index.md)
+  - [FidelityFX SDK 1.1.2](/docs/whats-new/version_1_1_2.md)
   - [FidelityFX SDK 1.1.1](/docs/whats-new/version_1_1_1.md)
   - [FidelityFX SDK 1.1](/docs/whats-new/version_1_1.md)
   - [FidelityFX SDK 1.0](/docs/whats-new/version_1_0.md)
@@ -50,7 +50,7 @@ The FidelityFX SDK includes:
 
 - [Tools](/docs/tools/index.md)
   - [Shader Precompiler](/docs/tools/ffx-sc.md)
-  - [FidelityFX SDK Media Delivery System](/docs/media-delivery.md)
+  - [FidelityFX SDK Media Delivery System](/docs/tools/media-delivery.md)
 
 <h2>Known issues</h2>
 
@@ -65,12 +65,13 @@ The FidelityFX SDK includes:
 | FidelityFX DOF | All APIs / All Configs | Some artifacts may occur on some Intel Arc GPUs. |
 | All FidelityFX SDK Samples | All APIs / All Configs | There is a resource leak in the UploadContext used to load glTF content. |
 | All FidelityFX SDK Samples | All APIs / All Configs | Windows path length restrictions may cause compile issues. It is recommended to place the SDK close to the root of a drive or use subst or a mklink to shorten the path. |
+| All FidelityFX SDK Samples | All APIs / All Configs | There is a build error when using CMake 3.31 or newer |
 
 <h2>Open source</h2>
 
 AMD FidelityFX SDK is open source, and available under the MIT license.
 
-For more information on the license terms please refer to [license](/sdk/license.txt).
+For more information on the license terms please refer to [license](/sdk/LICENSE.txt).
 
 <h2>Disclaimer</h2>
 
@@ -98,4 +99,4 @@ Microsoft is a registered trademark of Microsoft Corporation in the US and other
 
 Windows is a registered trademark of Microsoft Corporation in the US and other jurisdictions.
 
-© 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
+© 2022-2024 Advanced Micro Devices, Inc. All rights reserved.

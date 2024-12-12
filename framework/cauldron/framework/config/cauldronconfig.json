@@ -34,12 +34,22 @@
                 "Format": "D32_FLOAT"
             },
             "DistortionField0": {
-                "Format": "RGBA16_FLOAT",
+                "Format": "RG16_FLOAT",
                 "AllowUAV": true,
                 "RenderResolution": false
             },
             "DistortionField1": {
-                "Format": "RGBA16_FLOAT",
+                "Format": "RG16_FLOAT",
+                "AllowUAV": true,
+                "RenderResolution": false
+            },
+            "HudlessTarget0": {
+                "Format": "RGBA8_UNORM",
+                "AllowUAV": true,
+                "RenderResolution": false
+            },
+            "HudlessTarget1": {
+                "Format": "RGBA8_UNORM",
                 "AllowUAV": true,
                 "RenderResolution": false
             }

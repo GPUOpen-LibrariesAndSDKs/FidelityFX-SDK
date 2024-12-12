@@ -187,6 +187,8 @@ namespace cauldron
         // DisplayMode
         DisplayMode CurrentDisplayMode = DisplayMode::DISPLAYMODE_LDR;
 
+        ResourceFormat SwapChainFormat = ResourceFormat::Unknown;
+
         // Requested minimum shader model
         ShaderModel MinShaderModel = ShaderModel::SM5_1;
 

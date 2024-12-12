@@ -43,8 +43,18 @@ if not exist build\ (
 	mkdir build
 )
 
+:: determine architecture
+echo.
+echo architecture %PROCESSOR_ARCHITECTURE% detected
+echo.
+if /i "%PROCESSOR_ARCHITECTURE%" == "ARM64" (
+    set arch=ARM64
+) else (
+    set arch=X64
+)
+
 cd build
-cmake ..
+cmake -A %arch% ..
 cd..
 
 :: Pause so the user can acknowledge any errors or other outputs from the build process

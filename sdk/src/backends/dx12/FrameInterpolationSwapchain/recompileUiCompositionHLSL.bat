@@ -36,3 +36,5 @@ if /i "%PROCESSOR_ARCHITECTURE%" == "ARM64" (
 ..\..\..\..\tools\ffx_shader_compiler\libs\dxc\bin\%arch%\dxc.exe -Fh FrameInterpolationSwapchainUiCompositionPS.h -DFFX_UI_PREMUL=0 -T ps_6_0 -E mainPS FrameInterpolationSwapchainUiComposition.hlsl
 ..\..\..\..\tools\ffx_shader_compiler\libs\dxc\bin\%arch%\dxc.exe -Fh FrameInterpolationSwapchainUiCompositionPremulVS.h -DFFX_UI_PREMUL=1 -T vs_6_0 -E mainVS FrameInterpolationSwapchainUiComposition.hlsl
 ..\..\..\..\tools\ffx_shader_compiler\libs\dxc\bin\%arch%\dxc.exe -Fh FrameInterpolationSwapchainUiCompositionPremulPS.h -DFFX_UI_PREMUL=1 -T ps_6_0 -E mainPS FrameInterpolationSwapchainUiComposition.hlsl
+..\..\..\..\tools\ffx_shader_compiler\libs\dxc\bin\%arch%\dxc.exe -Fh FrameInterpolationSwapchainDebugPacingVS.h -T vs_6_0 -E mainVS FrameInterpolationSwapchainDebugPacing.hlsl
+..\..\..\..\tools\ffx_shader_compiler\libs\dxc\bin\%arch%\dxc.exe -Fh FrameInterpolationSwapchainDebugPacingPS.h -T ps_6_0 -E mainPS FrameInterpolationSwapchainDebugPacing.hlsl

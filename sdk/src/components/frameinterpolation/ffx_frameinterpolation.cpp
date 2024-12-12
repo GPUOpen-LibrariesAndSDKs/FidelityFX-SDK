@@ -334,10 +334,77 @@ static FfxErrorCode createPipelineStates(FfxFrameInterpolationContext_Private* c
     return FFX_OK;
 }
 
+
+// Format precision group for HUDless.
+// Also format needs at least the 3 RGB channels to be valid
+// int formats aren't accepted.
+int GetFormatPrecisionGroup(FfxSurfaceFormat format)
+{
+    switch (format)
+    {
+    case FFX_SURFACE_FORMAT_R32G32B32A32_TYPELESS:
+    case FFX_SURFACE_FORMAT_R32G32B32A32_FLOAT:
+    case FFX_SURFACE_FORMAT_R32G32B32_FLOAT:
+        return 0;
+
+    case FFX_SURFACE_FORMAT_R16G16B16A16_TYPELESS:
+    case FFX_SURFACE_FORMAT_R16G16B16A16_FLOAT:
+        return 1;
+
+    case FFX_SURFACE_FORMAT_R8G8B8A8_TYPELESS:
+    case FFX_SURFACE_FORMAT_R8G8B8A8_UNORM:
+    case FFX_SURFACE_FORMAT_B8G8R8A8_TYPELESS:
+    case FFX_SURFACE_FORMAT_B8G8R8A8_UNORM:
+        return 2;
+
+    case FFX_SURFACE_FORMAT_R8G8B8A8_SNORM:
+        return 3;
+
+    case FFX_SURFACE_FORMAT_R8G8B8A8_SRGB:
+    case FFX_SURFACE_FORMAT_B8G8R8A8_SRGB:
+        return 4;
+
+    case FFX_SURFACE_FORMAT_R11G11B10_FLOAT:
+        return 5;
+
+    case FFX_SURFACE_FORMAT_R10G10B10A2_TYPELESS:
+    case FFX_SURFACE_FORMAT_R10G10B10A2_UNORM:
+        return 6;
+
+    case FFX_SURFACE_FORMAT_R9G9B9E5_SHAREDEXP:
+        return 7;
+
+    // we don't accept the following formats
+    case FFX_SURFACE_FORMAT_R32G32B32A32_UINT:
+    case FFX_SURFACE_FORMAT_R32G32_FLOAT:
+    case FFX_SURFACE_FORMAT_R8_UINT:
+    case FFX_SURFACE_FORMAT_R32_UINT:
+    case FFX_SURFACE_FORMAT_R16G16_UINT:
+    case FFX_SURFACE_FORMAT_R16G16_SINT:
+    case FFX_SURFACE_FORMAT_R16G16_FLOAT:
+    case FFX_SURFACE_FORMAT_R16_FLOAT:
+    case FFX_SURFACE_FORMAT_R16_UINT:
+    case FFX_SURFACE_FORMAT_R16_UNORM:
+    case FFX_SURFACE_FORMAT_R16_SNORM:
+    case FFX_SURFACE_FORMAT_R8_UNORM:
+    case FFX_SURFACE_FORMAT_R8G8_UNORM:
+    case FFX_SURFACE_FORMAT_R8G8_UINT:
+    case FFX_SURFACE_FORMAT_R32_FLOAT:
+    case FFX_SURFACE_FORMAT_UNKNOWN:
+    default:
+        return -1;
+    }
+}
+
 static FfxErrorCode frameinterpolationCreate(FfxFrameInterpolationContext_Private* context, const FfxFrameInterpolationContextDescription* contextDescription)
 {
     FFX_ASSERT(context);
     FFX_ASSERT(contextDescription);
+
+    // validate compatibility between backbuffer and hudless formats
+    int backBufferGroup = GetFormatPrecisionGroup(contextDescription->backBufferFormat);
+    int previousInterpolationSourceGroup = GetFormatPrecisionGroup(contextDescription->previousInterpolationSourceFormat);
+    FFX_RETURN_ON_ERROR(backBufferGroup >= 0 && previousInterpolationSourceGroup >= 0 && backBufferGroup == previousInterpolationSourceGroup, FFX_ERROR_INVALID_ARGUMENT);
 
     // Setup the data for implementation.
     memset(context, 0, sizeof(FfxFrameInterpolationContext_Private));
@@ -383,7 +450,7 @@ static FfxErrorCode frameinterpolationCreate(FfxFrameInterpolationContext_Privat
         lanczos2Weights[currentLanczosWidthIndex] = int16_t(roundf(y * 32767.0f));
     }
 
-    uint8_t defaultDistortionFieldData[4] = { 0, 0, 0, 0 };
+    uint8_t defaultDistortionFieldData[2] = { 0, 0 };
     uint32_t atomicInitData[2] = { 0, 0 };
     float defaultExposure[] = { 0.0f, 0.0f };
     const FfxResourceType texture1dResourceType = (context->contextDescription.flags & FFX_FRAMEINTERPOLATION_ENABLE_TEXTURE1D_USAGE) ? FFX_RESOURCE_TYPE_TEXTURE1D : FFX_RESOURCE_TYPE_TEXTURE2D;
@@ -406,13 +473,13 @@ static FfxErrorCode frameinterpolationCreate(FfxFrameInterpolationContext_Privat
         {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_OPTICAL_FLOW_MOTION_VECTOR_FIELD_Y,     L"FI_OpticalFlowMotionVectorFieldY",        FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_UAV,
             FFX_SURFACE_FORMAT_R32_UINT, contextDescription->maxRenderSize.width, contextDescription->maxRenderSize.height, 1,      FFX_RESOURCE_FLAGS_ALIASABLE, {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
         {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_PREVIOUS_INTERPOLATION_SOURCE,          L"FI_PreviousInterpolationSouce",           FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_UAV,
-            contextDescription->backBufferFormat, contextDescription->displaySize.width, contextDescription->displaySize.height, 1, FFX_RESOURCE_FLAGS_NONE, {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
+            contextDescription->previousInterpolationSourceFormat, contextDescription->displaySize.width, contextDescription->displaySize.height, 1, FFX_RESOURCE_FLAGS_NONE, {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
         {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_INPAINTING_MASK,                        L"FI_InpaintingMask",                       FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_UAV,
             FFX_SURFACE_FORMAT_R8_UNORM, contextDescription->displaySize.width, contextDescription->displaySize.height, 1,          FFX_RESOURCE_FLAGS_ALIASABLE, {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
         {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DISOCCLUSION_MASK,                      L"FI_DisocclusionMask",                     FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_UAV, 
             FFX_SURFACE_FORMAT_R8G8_UNORM, contextDescription->maxRenderSize.width, contextDescription->maxRenderSize.height, 1,    FFX_RESOURCE_FLAGS_ALIASABLE, {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED}},
         {FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DEFAULT_DISTORTION_FIELD, L"FI_DefaultDistortionField", FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_READ_ONLY,
-            FFX_SURFACE_FORMAT_R8G8B8A8_UNORM, 1, 1, 1, FFX_RESOURCE_FLAGS_NONE, FfxResourceInitData::FfxResourceInitBuffer(sizeof(defaultDistortionFieldData), defaultDistortionFieldData) },
+            FFX_SURFACE_FORMAT_R8G8_UNORM, 1, 1, 1, FFX_RESOURCE_FLAGS_NONE, FfxResourceInitData::FfxResourceInitBuffer(sizeof(defaultDistortionFieldData), defaultDistortionFieldData) },
 
     };
 
@@ -922,12 +989,15 @@ FFX_API FfxErrorCode ffxFrameInterpolationDispatch(FfxFrameInterpolationContext*
 
     if (contextPrivate->constants.HUDLessAttachedFactor == 1) {
 
-        FFX_ASSERT_MESSAGE(params->currentBackBuffer.description.format == params->currentBackBuffer_HUDLess.description.format, "HUDLess and Backbuffer resource formats have to be identical.");
+        FFX_ASSERT_MESSAGE(contextPrivate->contextDescription.previousInterpolationSourceFormat == params->currentBackBuffer_HUDLess.description.format,
+                           "Dispatch FI param currentBackBuffer_HUDLess format and Create FG Context's hudlessBackBufferFormat have to be identical. Otherwise, CopyTextureRegion from FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_CURRENT_INTERPOLATION_SOURCE to FI_PreviousInterpolationSource would fail");
 
         contextPrivate->contextDescription.backendInterface.fpRegisterResource(&contextPrivate->contextDescription.backendInterface, &params->currentBackBuffer, contextPrivate->effectContextId, &contextPrivate->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_PRESENT_BACKBUFFER]);
         contextPrivate->contextDescription.backendInterface.fpRegisterResource(&contextPrivate->contextDescription.backendInterface, &params->currentBackBuffer_HUDLess, contextPrivate->effectContextId, &contextPrivate->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_CURRENT_INTERPOLATION_SOURCE]);
     }
     else {
+        FFX_ASSERT_MESSAGE(contextPrivate->contextDescription.previousInterpolationSourceFormat == params->currentBackBuffer.description.format,
+                           "Dispatch FI param currentBackBuffer format and Create FG Context's backBufferFormat have to be identical. This assert can also be triggered if create FG Context with optional hudlessBackBufferFormat that is different from backBufferFormat and Dispatch FI param's currentBackBuffer_HUDLess is null.");
         contextPrivate->contextDescription.backendInterface.fpRegisterResource(&contextPrivate->contextDescription.backendInterface, &params->currentBackBuffer, contextPrivate->effectContextId, &contextPrivate->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_CURRENT_INTERPOLATION_SOURCE]);
         contextPrivate->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_PRESENT_BACKBUFFER] = contextPrivate->srvResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_CURRENT_INTERPOLATION_SOURCE];
     }

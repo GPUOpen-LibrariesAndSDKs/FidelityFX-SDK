@@ -480,29 +480,50 @@ static DXGI_FORMAT convertFormatUav(DXGI_FORMAT format)
 // fix up format in case resource passed for SRV cannot be mapped
 static DXGI_FORMAT convertFormatSrv(DXGI_FORMAT format)
 {
-    switch (format) {
+    switch (format) 
+    {
         // Handle Depth
-    case DXGI_FORMAT_R32G8X24_TYPELESS:
-    case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
-        return DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
-    case DXGI_FORMAT_D32_FLOAT:
-        return DXGI_FORMAT_R32_FLOAT;
-    case DXGI_FORMAT_R24G8_TYPELESS:
-    case DXGI_FORMAT_X24_TYPELESS_G8_UINT:
-    case DXGI_FORMAT_D24_UNORM_S8_UINT:
-        return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-    case DXGI_FORMAT_D16_UNORM:
-        return DXGI_FORMAT_R16_UNORM;
+        case DXGI_FORMAT_R32G8X24_TYPELESS:
+        case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
+            return DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
+        case DXGI_FORMAT_D32_FLOAT:
+            return DXGI_FORMAT_R32_FLOAT;
+        case DXGI_FORMAT_R24G8_TYPELESS:
+        case DXGI_FORMAT_X24_TYPELESS_G8_UINT:
+        case DXGI_FORMAT_D24_UNORM_S8_UINT:
+            return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+        case DXGI_FORMAT_D16_UNORM:
+            return DXGI_FORMAT_R16_UNORM;
 
-        // Handle Color
-    case DXGI_FORMAT_B8G8R8A8_TYPELESS:
-        return DXGI_FORMAT_B8G8R8A8_UNORM;
-    case DXGI_FORMAT_R8G8B8A8_TYPELESS:
-        return DXGI_FORMAT_R8G8B8A8_UNORM;
-
-        // Others can map as is
-    default:
-        return format;
+        // Handle color: assume FLOAT for 16 and 32 bit channels, else UNORM
+        case DXGI_FORMAT_R32G32B32A32_TYPELESS:
+            return DXGI_FORMAT_R32G32B32A32_FLOAT;
+        case DXGI_FORMAT_R32G32B32_TYPELESS:
+            return DXGI_FORMAT_R32G32B32_FLOAT;
+        case DXGI_FORMAT_R16G16B16A16_TYPELESS:
+            return DXGI_FORMAT_R16G16B16A16_FLOAT;
+        case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+            return DXGI_FORMAT_R8G8B8A8_UNORM;
+        case DXGI_FORMAT_R32G32_TYPELESS:
+            return DXGI_FORMAT_R32G32_FLOAT;
+        case DXGI_FORMAT_R16G16_TYPELESS:
+            return DXGI_FORMAT_R16G16_FLOAT;
+        case DXGI_FORMAT_R10G10B10A2_TYPELESS:
+            return DXGI_FORMAT_R10G10B10A2_UNORM;
+        case DXGI_FORMAT_B8G8R8A8_TYPELESS:
+            return DXGI_FORMAT_B8G8R8A8_UNORM;
+        case DXGI_FORMAT_B8G8R8X8_TYPELESS:
+            return DXGI_FORMAT_B8G8R8X8_UNORM_SRGB;
+        case DXGI_FORMAT_R32_TYPELESS:
+            return DXGI_FORMAT_R32_FLOAT;
+        case DXGI_FORMAT_R8G8_TYPELESS:
+            return DXGI_FORMAT_R8G8_UNORM;
+        case DXGI_FORMAT_R16_TYPELESS:
+            return DXGI_FORMAT_R16_FLOAT;
+        case DXGI_FORMAT_R8_TYPELESS:
+            return DXGI_FORMAT_R8_UNORM;
+        default:
+            return format;
     }
 }
 
@@ -540,22 +561,28 @@ D3D12_RESOURCE_STATES ffxGetDX12StateFromResourceState(FfxResourceStates state)
 
 DXGI_FORMAT ffxGetDX12FormatFromSurfaceFormat(FfxSurfaceFormat surfaceFormat)
 {
-    switch (surfaceFormat) {
-
+    switch (surfaceFormat) 
+    {
         case (FFX_SURFACE_FORMAT_R32G32B32A32_TYPELESS):
             return DXGI_FORMAT_R32G32B32A32_TYPELESS;
         case (FFX_SURFACE_FORMAT_R32G32B32A32_UINT):
             return DXGI_FORMAT_R32G32B32A32_UINT;
         case (FFX_SURFACE_FORMAT_R32G32B32A32_FLOAT):
             return DXGI_FORMAT_R32G32B32A32_FLOAT;
+        case (FFX_SURFACE_FORMAT_R16G16B16A16_TYPELESS):
+            return DXGI_FORMAT_R16G16B16A16_TYPELESS;
         case (FFX_SURFACE_FORMAT_R16G16B16A16_FLOAT):
             return DXGI_FORMAT_R16G16B16A16_FLOAT;
         case (FFX_SURFACE_FORMAT_R32G32B32_FLOAT):
             return DXGI_FORMAT_R32G32B32_FLOAT;
+        case (FFX_SURFACE_FORMAT_R32G32_TYPELESS):
+            return DXGI_FORMAT_R32G32_TYPELESS;
         case (FFX_SURFACE_FORMAT_R32G32_FLOAT):
             return DXGI_FORMAT_R32G32_FLOAT;
         case (FFX_SURFACE_FORMAT_R32_UINT):
             return DXGI_FORMAT_R32_UINT;
+        case(FFX_SURFACE_FORMAT_R10G10B10A2_TYPELESS):
+            return DXGI_FORMAT_R10G10B10A2_TYPELESS;
         case(FFX_SURFACE_FORMAT_R10G10B10A2_UNORM):
             return DXGI_FORMAT_R10G10B10A2_UNORM;
         case (FFX_SURFACE_FORMAT_R8G8B8A8_TYPELESS):
@@ -574,12 +601,16 @@ DXGI_FORMAT ffxGetDX12FormatFromSurfaceFormat(FfxSurfaceFormat surfaceFormat)
             return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
         case (FFX_SURFACE_FORMAT_R11G11B10_FLOAT):
             return DXGI_FORMAT_R11G11B10_FLOAT;
+        case (FFX_SURFACE_FORMAT_R16G16_TYPELESS):
+            return DXGI_FORMAT_R16G16_TYPELESS;
         case (FFX_SURFACE_FORMAT_R16G16_FLOAT):
             return DXGI_FORMAT_R16G16_FLOAT;
         case (FFX_SURFACE_FORMAT_R16G16_UINT):
             return DXGI_FORMAT_R16G16_UINT;
         case (FFX_SURFACE_FORMAT_R16G16_SINT):
             return DXGI_FORMAT_R16G16_SINT;
+        case (FFX_SURFACE_FORMAT_R16_TYPELESS):
+            return DXGI_FORMAT_R16_TYPELESS;
         case (FFX_SURFACE_FORMAT_R16_FLOAT):
             return DXGI_FORMAT_R16_FLOAT;
         case (FFX_SURFACE_FORMAT_R16_UINT):
@@ -588,14 +619,20 @@ DXGI_FORMAT ffxGetDX12FormatFromSurfaceFormat(FfxSurfaceFormat surfaceFormat)
             return DXGI_FORMAT_R16_UNORM;
         case (FFX_SURFACE_FORMAT_R16_SNORM):
             return DXGI_FORMAT_R16_SNORM;
+        case (FFX_SURFACE_FORMAT_R8_TYPELESS):
+            return DXGI_FORMAT_R8_TYPELESS;
         case (FFX_SURFACE_FORMAT_R8_UNORM):
             return DXGI_FORMAT_R8_UNORM;
         case (FFX_SURFACE_FORMAT_R8_UINT):
             return DXGI_FORMAT_R8_UINT;
         case (FFX_SURFACE_FORMAT_R8G8_UINT):
             return DXGI_FORMAT_R8G8_UINT;
+        case (FFX_SURFACE_FORMAT_R8G8_TYPELESS):
+            return DXGI_FORMAT_R8G8_TYPELESS;
         case (FFX_SURFACE_FORMAT_R8G8_UNORM):
             return DXGI_FORMAT_R8G8_UNORM;
+        case (FFX_SURFACE_FORMAT_R32_TYPELESS):
+            return DXGI_FORMAT_R32_TYPELESS;
         case (FFX_SURFACE_FORMAT_R32_FLOAT):
             return DXGI_FORMAT_R32_FLOAT;
         case (FFX_SURFACE_FORMAT_R9G9B9E5_SHAREDEXP):
@@ -1651,19 +1688,7 @@ DXGI_FORMAT patchDxgiFormatWithFfxUsage(DXGI_FORMAT dxResFmt, FfxSurfaceFormat f
 
     switch (fmt)
     {
-    // fixup typeless formats with what is passed in the ffxSurfaceFormat
     case DXGI_FORMAT_UNKNOWN:
-    case DXGI_FORMAT_R32G32B32A32_TYPELESS:
-    case DXGI_FORMAT_R32G32B32_TYPELESS:
-    case DXGI_FORMAT_R16G16B16A16_TYPELESS:
-    case DXGI_FORMAT_R32G32_TYPELESS:
-    case DXGI_FORMAT_R10G10B10A2_TYPELESS:
-    case DXGI_FORMAT_R16G16_TYPELESS:
-    case DXGI_FORMAT_R32_TYPELESS:
-    case DXGI_FORMAT_R8G8_TYPELESS:
-    case DXGI_FORMAT_R16_TYPELESS:
-    case DXGI_FORMAT_R8_TYPELESS:
-    case DXGI_FORMAT_R8G8B8A8_TYPELESS:
         return fromFfx;
 
     // fixup RGBA8 with SRGB flag passed in the ffxSurfaceFormat

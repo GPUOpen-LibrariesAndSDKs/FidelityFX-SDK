@@ -120,7 +120,14 @@ ffxReturnCode_t ffxProvider_FrameGeneration::CreateContext(ffxContext* context, 
             fiDescription.displaySize.width       = desc->displaySize.width;
             fiDescription.displaySize.height      = desc->displaySize.height;
             fiDescription.backBufferFormat = ConvertEnum<FfxSurfaceFormat>(desc->backBufferFormat);
-
+            fiDescription.previousInterpolationSourceFormat = ConvertEnum<FfxSurfaceFormat>(desc->backBufferFormat);
+            for (auto it = header; it; it = it->pNext)
+            {
+                if (auto descHudless = ffx::DynamicCast<ffxCreateContextDescFrameGenerationHudless>(it))
+                {
+                    fiDescription.previousInterpolationSourceFormat = ConvertEnum<FfxSurfaceFormat>(descHudless->hudlessBackBufferFormat);
+                }
+            }
             // set up Frameinterpolation
             TRY2(ffxFrameInterpolationContextCreate(&internal_context->fiContext, &fiDescription));
 
@@ -289,6 +296,12 @@ ffxReturnCode_t ffxProvider_FrameGeneration::Configure(ffxContext* context, cons
                 return FFX_OK;
             };
             config.presentCallbackContext = internal_context;
+        }
+
+        config.drawDebugPacingLines = false;
+        if (desc->flags & FFX_FRAMEGENERATION_FLAG_DRAW_DEBUG_PACING_LINES)
+        {
+            config.drawDebugPacingLines = true;
         }
 
         config.frameGenerationEnabled = desc->frameGenerationEnabled;
