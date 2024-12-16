@@ -22,6 +22,7 @@
 
 #define GROUP_SIZE  8
 #define FSR_RCAS_DENOISE 1
+#define FSR_RCAS_LOWER_LIMITER_COMPENSATION 1
 
 #include "ffx_core.h"
 
