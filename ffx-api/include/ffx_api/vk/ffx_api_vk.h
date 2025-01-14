@@ -102,8 +102,8 @@ struct ffxConfigureDescFrameGenerationSwapChainKeyValueVK
 //enum value matches enum FfxFrameInterpolationSwapchainConfigureKey
 enum FfxApiConfigureFrameGenerationSwapChainKeyVK
 {
-    FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_WAITCALLBACK = 0,                     ///< Sets FfxWaitCallbackFunc
-    FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_FRAMEPACINGTUNING = 2,                ///< Sets FfxApiSwapchainFramePacingTuning casted from ptr
+    FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_WAITCALLBACK_VK = 0,                     ///< Sets FfxWaitCallbackFunc
+    FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_FRAMEPACINGTUNING_VK = 2,                ///< Sets FfxApiSwapchainFramePacingTuning casted from ptr
 };
 
 #define FFX_API_QUERY_DESC_TYPE_FRAMEGENERATIONSWAPCHAIN_GPU_MEMORY_USAGE_VK 0x00040009u
