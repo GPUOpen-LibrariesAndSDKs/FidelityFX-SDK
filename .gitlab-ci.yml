@@ -21,30 +21,6 @@ format_check:
   needs: []
   script:
   - echo Coming soon!
-  
-build_release_cauldron:
-  stage: build
-  script:
-  - 'mkdir build'
-  - 'cd build'
-  - 'cmake -A x64 .. -DBUILD_TYPE=CAULDRON'
-  - 'cmake --build . --config ReleaseDX12 %CMAKE_BUILD_DRIVER%'
-  - 'cmake --build . --config ReleaseVK %CMAKE_BUILD_DRIVER%'
-  artifacts:
-    paths:
-    - ./bin
-
-build_debug_cauldron:
-  stage: build
-  script:
-  - 'mkdir build'
-  - 'cd build'
-  - 'cmake -A x64 .. -DBUILD_TYPE=CAULDRON'
-  - 'cmake --build . --config DebugDX12 %CMAKE_BUILD_DRIVER%'
-  - 'cmake --build . --config DebugVK %CMAKE_BUILD_DRIVER%'
-  artifacts:
-    paths:
-    - ./bin
     
 build_release_sdk_dx12:
   stage: build
@@ -57,6 +33,7 @@ build_release_sdk_dx12:
   artifacts:
     paths:
     - ./sdk/bin
+    expire_in: 2 weeks
 
 build_debug_sdk_dx12:
   stage: build
@@ -69,6 +46,7 @@ build_debug_sdk_dx12:
   artifacts:
     paths:
     - ./sdk/bin
+    expire_in: 2 weeks
     
 build_release_sdk_vk:
   stage: build
@@ -81,6 +59,7 @@ build_release_sdk_vk:
   artifacts:
     paths:
     - ./sdk/bin
+    expire_in: 2 weeks
 
 build_debug_sdk_vk:
   stage: build
@@ -93,6 +72,7 @@ build_debug_sdk_vk:
   artifacts:
     paths:
     - ./sdk/bin
+    expire_in: 2 weeks
 
 build_debug_api_dll_dx12:
   stage: build
@@ -105,6 +85,7 @@ build_debug_api_dll_dx12:
   artifacts:
     paths:
     - ./ffx-api/bin
+    expire_in: 2 weeks
 
 build_release_api_dll_dx12:
   stage: build
@@ -130,6 +111,7 @@ build_debug_api_dll_vk:
   artifacts:
     paths:
     - ./ffx-api/bin
+    expire_in: 2 weeks
 
 build_release_api_dll_vk:
   stage: build
@@ -157,6 +139,7 @@ build_release_samples_dx12:
   artifacts:
     paths:
     - ./bin
+    expire_in: 2 weeks
 
 build_release_samples_vk:
   stage: build
@@ -171,6 +154,7 @@ build_release_samples_vk:
   artifacts:
     paths:
     - ./bin
+    expire_in: 2 weeks
 
 build_debug_samples_dx12:
   stage: build
@@ -185,6 +169,7 @@ build_debug_samples_dx12:
   artifacts:
     paths:
     - ./bin
+    expire_in: 2 weeks
 
 build_debug_samples_vk:
   stage: build
@@ -199,6 +184,7 @@ build_debug_samples_vk:
   artifacts:
     paths:
     - ./bin
+    expire_in: 2 weeks
     
 package_release_samples_pc:
   stage: package
@@ -223,6 +209,6 @@ package_release_samples_pc:
     - ./*.bat
     - ./CMakeLists.txt
     - ./common.cmake
-    - ./LICENSE.txt
+    - ./sdk/LICENSE.txt
     - ./readme.md
     - ./sample.cmake

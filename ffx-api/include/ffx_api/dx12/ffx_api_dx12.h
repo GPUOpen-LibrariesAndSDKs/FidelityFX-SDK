@@ -103,9 +103,11 @@ struct ffxConfigureDescFrameGenerationSwapChainKeyValueDX12
     void*                   ptr;        ///< Pointer to set or pointer to value to set.
 };
 
+//enum value matches enum FfxFrameInterpolationSwapchainConfigureKey
 enum FfxApiConfigureFrameGenerationSwapChainKeyDX12
 {
-    FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_WAITCALLBACK = 0                     ///< Sets FfxWaitCallbackFunc
+    FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_WAITCALLBACK = 0,                     ///< Sets FfxWaitCallbackFunc
+    FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_FRAMEPACINGTUNING = 2,                ///< Sets FfxApiSwapchainFramePacingTuning
 };
 
 #define FFX_API_QUERY_DESC_TYPE_FRAMEGENERATIONSWAPCHAIN_GPU_MEMORY_USAGE_DX12 0x00030009u
@@ -134,6 +136,7 @@ static inline uint32_t ffxApiGetSurfaceFormatDX12(DXGI_FORMAT format)
     //case DXGI_FORMAT_R32G32B32_SINT:
 
     case DXGI_FORMAT_R16G16B16A16_TYPELESS:
+        return FFX_API_SURFACE_FORMAT_R16G16B16A16_TYPELESS;
     case DXGI_FORMAT_R16G16B16A16_FLOAT:
         return FFX_API_SURFACE_FORMAT_R16G16B16A16_FLOAT;
     //case DXGI_FORMAT_R16G16B16A16_UNORM:
@@ -142,6 +145,7 @@ static inline uint32_t ffxApiGetSurfaceFormatDX12(DXGI_FORMAT format)
     //case DXGI_FORMAT_R16G16B16A16_SINT:
 
     case DXGI_FORMAT_R32G32_TYPELESS:
+        return FFX_API_SURFACE_FORMAT_R32G32_TYPELESS;
     case DXGI_FORMAT_R32G32_FLOAT:
         return FFX_API_SURFACE_FORMAT_R32G32_FLOAT;
     //case DXGI_FORMAT_R32G32_FLOAT:
@@ -163,6 +167,7 @@ static inline uint32_t ffxApiGetSurfaceFormatDX12(DXGI_FORMAT format)
         return FFX_API_SURFACE_FORMAT_R8_UINT;
 
     case DXGI_FORMAT_R10G10B10A2_TYPELESS:
+        return FFX_API_SURFACE_FORMAT_R10G10B10A2_TYPELESS;
     case DXGI_FORMAT_R10G10B10A2_UNORM:
         return FFX_API_SURFACE_FORMAT_R10G10B10A2_UNORM;
     //case DXGI_FORMAT_R10G10B10A2_UINT:
@@ -188,6 +193,7 @@ static inline uint32_t ffxApiGetSurfaceFormatDX12(DXGI_FORMAT format)
         return FFX_API_SURFACE_FORMAT_B8G8R8A8_SRGB;
 
     case DXGI_FORMAT_R16G16_TYPELESS:
+        return FFX_API_SURFACE_FORMAT_R16G16_TYPELESS;
     case DXGI_FORMAT_R16G16_FLOAT:
         return FFX_API_SURFACE_FORMAT_R16G16_FLOAT;
     //case DXGI_FORMAT_R16G16_UNORM:
@@ -200,18 +206,22 @@ static inline uint32_t ffxApiGetSurfaceFormatDX12(DXGI_FORMAT format)
     case DXGI_FORMAT_R32_UINT:
         return FFX_API_SURFACE_FORMAT_R32_UINT;
     case DXGI_FORMAT_R32_TYPELESS:
+        return FFX_API_SURFACE_FORMAT_R32_TYPELESS;
     case DXGI_FORMAT_D32_FLOAT:
     case DXGI_FORMAT_R32_FLOAT:
         return FFX_API_SURFACE_FORMAT_R32_FLOAT;
 
-    case DXGI_FORMAT_R8G8_TYPELESS:
     case DXGI_FORMAT_R8G8_UINT:
         return FFX_API_SURFACE_FORMAT_R8G8_UINT;
-    //case DXGI_FORMAT_R8G8_UNORM:
+    case DXGI_FORMAT_R8G8_TYPELESS:
+        return FFX_API_SURFACE_FORMAT_R8G8_TYPELESS;
+    case DXGI_FORMAT_R8G8_UNORM:
+        return FFX_API_SURFACE_FORMAT_R8G8_UNORM;
     //case DXGI_FORMAT_R8G8_SNORM:
     //case DXGI_FORMAT_R8G8_SINT:
 
     case DXGI_FORMAT_R16_TYPELESS:
+        return FFX_API_SURFACE_FORMAT_R16_TYPELESS;
     case DXGI_FORMAT_R16_FLOAT:
         return FFX_API_SURFACE_FORMAT_R16_FLOAT;
     case DXGI_FORMAT_R16_UINT:
@@ -224,6 +234,7 @@ static inline uint32_t ffxApiGetSurfaceFormatDX12(DXGI_FORMAT format)
     //case DXGI_FORMAT_R16_SINT:
 
     case DXGI_FORMAT_R8_TYPELESS:
+        return FFX_API_SURFACE_FORMAT_R8_TYPELESS;
     case DXGI_FORMAT_R8_UNORM:
     case DXGI_FORMAT_A8_UNORM:
         return FFX_API_SURFACE_FORMAT_R8_UNORM;

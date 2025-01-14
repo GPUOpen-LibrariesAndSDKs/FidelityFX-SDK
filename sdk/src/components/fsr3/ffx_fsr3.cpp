@@ -176,6 +176,8 @@ FfxErrorCode ffxFsr3ContextCreate(FfxFsr3Context* context, FfxFsr3ContextDescrip
         fiDescription.maxRenderSize = contextDescription->maxRenderSize;
         fiDescription.displaySize      = contextDescription->displaySize;
         fiDescription.backBufferFormat = contextDescription->backBufferFormat;
+        // This is a new item exposed only through ffx API on PC
+        fiDescription.previousInterpolationSourceFormat = contextDescription->backBufferFormat;
 
         // set up Frameinterpolation
         FFX_VALIDATE(ffxFrameInterpolationContextCreate(&contextPrivate->fiContext, &fiDescription));
@@ -500,6 +502,11 @@ FfxErrorCode ffxFsr3ConfigureFrameGeneration(FfxFsr3Context* context, const FfxF
     if (patchedConfig.flags & FFX_FSR3_FRAME_GENERATION_FLAG_DRAW_DEBUG_VIEW)
     {
         patchedConfig.onlyPresentInterpolated = true;
+    }
+
+    if (patchedConfig.flags & FFX_FSR3_FRAME_GENERATION_FLAG_DRAW_DEBUG_PACING_LINES)
+    {
+        patchedConfig.drawDebugPacingLines = true;
     }
 
     // reset shared resource indices

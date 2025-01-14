@@ -26,7 +26,7 @@
 //--------------------------------------------------------------------------------------
 // Texture definitions
 //--------------------------------------------------------------------------------------
-RWTexture2D<float4> OutputTexture : register(u0);
+RWTexture2D<float2> OutputTexture : register(u0);
 
 bool IsInsideLetterbox(int2 pixel)
 {
@@ -46,7 +46,7 @@ void MainCS(uint3 dtID : SV_DispatchThreadID)
 {
     const uint2 pixel = dtID.xy;
 
-    float4 distortionField = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    float2 distortionField = float2(0.0f, 0.0f);
     if (IsInsideLetterbox(pixel))
     {
         float2 uv = (pixel + 0.5f) / LetterboxRectSize;

@@ -99,9 +99,18 @@ struct ffxConfigureDescFrameGenerationSwapChainKeyValueVK
     void*                  ptr;        ///< Pointer to set or pointer to value to set.
 };
 
+//enum value matches enum FfxFrameInterpolationSwapchainConfigureKey
 enum FfxApiConfigureFrameGenerationSwapChainKeyVK
 {
-    FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_WAITCALLBACK_VK = 0                     ///< Sets FfxWaitCallbackFunc
+    FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_WAITCALLBACK = 0,                     ///< Sets FfxWaitCallbackFunc
+    FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_FRAMEPACINGTUNING = 2,                ///< Sets FfxApiSwapchainFramePacingTuning casted from ptr
+};
+
+#define FFX_API_QUERY_DESC_TYPE_FRAMEGENERATIONSWAPCHAIN_GPU_MEMORY_USAGE_VK 0x00040009u
+struct ffxQueryFrameGenerationSwapChainGetGPUMemoryUsageVK
+{
+    ffxQueryDescHeader header;
+    struct FfxApiEffectMemoryUsage* gpuMemoryUsageFrameGenerationSwapchain;
 };
 
 /// Function to get the number of presents. This is useful when using frame interpolation
@@ -124,12 +133,21 @@ struct ffxQueryDescSwapchainReplacementFunctionsVK
     PFN_getLastPresentCountFFXAPI pOutGetLastPresentCountFFXAPI;  ///< Additional function to get the number of times present has been called since the swapchain creation.
 };
 
+#define FFX_API_CREATE_CONTEXT_DESC_TYPE_FGSWAPCHAIN_MODE_VK 0x40010u
+struct ffxCreateContextDescFrameGenerationSwapChainModeVK
+{
+    ffxCreateContextDescHeader header;
+    bool                       composeOnPresentQueue;  ///< flags indicating that composition will happen on the present queue
+};
+
 static inline uint32_t ffxApiGetSurfaceFormatVK(VkFormat fmt)
 {
     switch (fmt)
     {
     case VK_FORMAT_R32G32B32A32_SFLOAT:
         return FFX_API_SURFACE_FORMAT_R32G32B32A32_FLOAT;
+    case VK_FORMAT_R32G32B32_SFLOAT:
+        return FFX_API_SURFACE_FORMAT_R32G32B32_FLOAT;
     case VK_FORMAT_R32G32B32A32_UINT:
         return FFX_API_SURFACE_FORMAT_R32G32B32A32_UINT;
     case VK_FORMAT_R16G16B16A16_SFLOAT:

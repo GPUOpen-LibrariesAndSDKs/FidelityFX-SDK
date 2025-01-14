@@ -129,6 +129,7 @@ namespace cauldron
         MSComPtr<IDXGIAdapter>       m_pAdapter        = nullptr;
 
         AMD::AntiLag2DX12::Context m_AntiLag2Context = {};
+
     };
 
 } // namespace cauldron

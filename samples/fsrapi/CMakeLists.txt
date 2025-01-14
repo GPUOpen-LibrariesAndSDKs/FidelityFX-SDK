@@ -77,7 +77,7 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 	${api_dlls} ${BIN_OUTPUT})
 
 # Add compile definitions to identify the sample
-target_compile_definitions(${PROJECT_NAME} PRIVATE SampleName=L"FidelityFX FSR FFXAPI v1.2"
+target_compile_definitions(${PROJECT_NAME} PRIVATE SampleName=L"FidelityFX FSR FFXAPI v1.3"
 										   ConfigFileName=L"configs/fsrapiconfig.json"
 										   ConfigSampleName="FidelityFX FSR FFXAPI"
 										   RenderModuleName=FSRApi)

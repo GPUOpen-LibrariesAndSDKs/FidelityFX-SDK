@@ -56,7 +56,15 @@ class FSRRenderModule : public cauldron::RenderModule
     } UpscalerType;
 
 public:
-    FSRRenderModule() : RenderModule(L"FSRApiRenderModule") {}
+    FSRRenderModule()
+        : RenderModule(L"FSRApiRenderModule"),
+          m_SafetyMarginInMs(0.1f),
+          m_VarianceFactor (0.1f),
+          m_AllowHybridSpin (false),
+          m_HybridSpinTime(2),
+          m_AllowWaitForSingleObjectOnFence(false),
+          framePacingTuning { m_SafetyMarginInMs, m_VarianceFactor, m_AllowHybridSpin, m_HybridSpinTime, m_AllowWaitForSingleObjectOnFence }
+    {}
     virtual ~FSRRenderModule();
 
     void Init(const json& initData);
@@ -166,7 +174,10 @@ private:
     bool m_SharpnessEnabled                         = false;
     bool m_NeedReInit                               = false;
 
+    bool m_FrameInterpolationAvailable              = false;
+    bool m_AsyncComputeAvailable                    = false;
     bool m_EnableMaskOptions                        = true;
+    bool m_EnableWaitCallbackModeUI                 = true;
     bool m_FrameInterpolation                       = true;
     bool m_EnableAsyncCompute                       = true;
     bool m_AllowAsyncCompute                        = true;
@@ -174,6 +185,7 @@ private:
     bool m_UseCallback                              = true;
     bool m_DrawFrameGenerationDebugTearLines        = true;
     bool m_DrawFrameGenerationDebugResetIndicators  = true;
+    bool m_DrawFrameGenerationDebugPacingLines      = false;
     bool m_DrawFrameGenerationDebugView             = false;
     bool m_DrawUpscalerDebugView                    = false;
     bool m_PresentInterpolatedOnly                  = false;
@@ -188,9 +200,9 @@ private:
     uint32_t m_FsrVersionIndex = 0;
 
     bool m_ffxBackendInitialized = false;
-    ffx::Context m_UpscalingContext;
-    ffx::Context m_FrameGenContext;
-    ffx::Context m_SwapChainContext;
+    ffx::Context m_UpscalingContext = nullptr;
+    ffx::Context m_FrameGenContext  = nullptr;
+    ffx::Context m_SwapChainContext = nullptr;
     ffx::ConfigureDescFrameGeneration m_FrameGenerationConfig{};
 
     // Backup UI elements
@@ -234,6 +246,13 @@ private:
     //Set Swapchain waitcallback via Configure Context KeyValue API
     int32_t                  m_waitCallbackMode = 0;
 
+    //Set Swapchain Frame pacing Tuning
+    float m_SafetyMarginInMs; // in Millisecond
+    float m_VarianceFactor; // valid range [0.0,1.0]
+    bool  m_AllowHybridSpin;
+    uint32_t m_HybridSpinTime;
+    bool m_AllowWaitForSingleObjectOnFence;
+    FfxApiSwapchainFramePacingTuning framePacingTuning;
 };
 
 // alias to get sample.cpp to use this class.
