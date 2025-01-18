@@ -573,11 +573,10 @@ void FSRRenderModule::InitUI(UISection* pUISection)
         {
 #if defined(FFX_API_DX12)
             ffx::ConfigureDescFrameGenerationSwapChainKeyValueDX12 m_swapchainKeyValueConfig{};
-            m_swapchainKeyValueConfig.key = FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_WAITCALLBACK;
 #elif defined(FFX_API_VK)
             ffx::ConfigureDescFrameGenerationSwapChainKeyValueVK m_swapchainKeyValueConfig{};
-            m_swapchainKeyValueConfig.key = FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_WAITCALLBACK_VK;
 #endif
+            m_swapchainKeyValueConfig.key = FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_WAITCALLBACK;
             if (m_waitCallbackMode == 0)
             {
                 m_swapchainKeyValueConfig.ptr = nullptr;
