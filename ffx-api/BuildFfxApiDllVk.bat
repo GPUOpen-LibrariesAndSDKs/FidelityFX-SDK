@@ -35,9 +35,9 @@ if exist CMakeCache.txt (
 	del /S /Q CMakeCache.txt
 )
 cmake -DFFX_API_BACKEND=VK_X64 -A x64 .. %*%
-cmake --build ./ --config Debug --parallel 4 -- /p:CL_MPcount=16
+::cmake --build ./ --config Debug --parallel 4 -- /p:CL_MPcount=16
 cmake --build ./ --config Release --parallel 4 -- /p:CL_MPcount=16
-cmake --build ./ --config RelWithDebInfo --parallel 4 -- /p:CL_MPcount=16
+::cmake --build ./ --config RelWithDebInfo --parallel 4 -- /p:CL_MPcount=16
 
 :: Come back to root level
 cd ..
