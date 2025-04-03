@@ -50,11 +50,14 @@
     cbuffer cbVRS : FFX_VRS_DECLARE_CB(VRS_BIND_CB_VRS)
     {
         FfxFloat32x2 motionVectorScale;
+        FfxFloat32x2 foveationCenter;
+        FfxFloat32x4 foveationRadiiSquared;
         FfxFloat32 varianceCutoff;
         FfxFloat32 motionFactor;
         FfxInt32x2 resolution;
         FfxUInt32 tileSize;
-        #define FFX_VRS_CONSTANT_BUFFER_1_SIZE 7
+        FfxUInt32 vrsAlgorithm;
+        #define FFX_VRS_CONSTANT_BUFFER_1_SIZE 14
     }
 #else
     #define resolution          0
@@ -62,6 +65,9 @@
     #define varianceCutoff      0
     #define motionFactor        0
     #define motionVectorScale   0
+    #define foveationCenter     0
+    #define foveationRadiiSquared  0
+    #define vrsAlgorithm        0
 #endif
 
 FfxInt32x2 Resolution()
@@ -87,6 +93,21 @@ FfxFloat32 MotionFactor()
 FfxFloat32x2 MotionVectorScale()
 {
     return motionVectorScale;
+}
+
+FfxFloat32x2 FoveationCenter()
+{
+    return foveationCenter;
+}
+
+FfxFloat32x4 FoveationRadiiSquared()
+{
+    return foveationRadiiSquared;
+}
+
+FfxUInt32 VrsAlgorithm()
+{
+    return vrsAlgorithm;
 }
 
 #if defined(FFX_GPU)

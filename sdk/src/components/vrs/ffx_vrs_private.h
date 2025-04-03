@@ -1,7 +1,7 @@
 // This file is part of the FidelityFX SDK.
 //
 // Copyright (C) 2024 Advanced Micro Devices, Inc.
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -40,10 +40,13 @@ typedef enum VrsShaderPermutationOptions
 typedef struct VrsConstants
 {
     float       motionVectorScale[2];
+    float       foveationCenter[2];
+    float       foveationRadiiSquared[4];
     float       varianceCutoff;
     float       motionFactor;
     uint32_t    width, height;
     uint32_t    tileSize;
+    uint32_t    vrsAlgorithm;
 } VrsConstants;
 
 // FfxFsr1Context_Private

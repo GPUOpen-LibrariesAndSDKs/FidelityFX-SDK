@@ -99,6 +99,17 @@ typedef struct FfxVrsContextDescription
     FfxInterface backendInterface;                      ///< A set of pointers to the backend implementation for FidelityFX.
 } FfxVrsContextDescription;
 
+/// A structure encapsulating the 4 foveation shading rate regions radii.
+///
+/// @ingroup FfxVrs
+typedef struct FfxVrsFovRadii
+{
+    float                           radius1x1;  ///< The radius of the 1x1 foveated shading rate outer boundary.
+    float                           radius1x2;  ///< The radius of the 1x2 foveated shading rate outer boundary.
+    float                           radius2x2;  ///< The radius of the 2x2 foveated shading rate outer boundary.
+    float                           radius2x4;  ///< The radius of the 2x4 foveated shading rate outer boundary.
+} FfxVrsFovRadii;
+
 /// A structure encapsulating the parameters for dispatching the various passes
 /// of FidelityFX Variable Shading
 ///
@@ -106,6 +117,7 @@ typedef struct FfxVrsContextDescription
 typedef struct FfxVrsDispatchDescription
 {
     FfxCommandList   commandList;        ///< The <c><i>FfxCommandList</i></c> to record VRS rendering commands into.
+    uint32_t         vrsAlgorithm;       ///< The algorithm to use for the VRS.
     FfxResource      historyColor;       ///< A <c><i>FfxResource</i></c> containing the color buffer for the previous frame (at presentation resolution).
     FfxResource      motionVectors;      ///< A <c><i>FfxResource</i></c> containing the velocity buffer for the current frame (at presentation resolution).
     FfxResource      output;             ///< A <c><i>FfxResource</i></c> containing the ShadingRateImage buffer for the current frame.
@@ -114,6 +126,8 @@ typedef struct FfxVrsDispatchDescription
     float            motionFactor;       ///< The lower this value, the faster a pixel has to move to get the shading rate reduced.
     uint32_t         tileSize;           ///< ShadingRateImage tile size.
     FfxFloatCoords2D motionVectorScale;  ///< Scale motion vectors to different format
+    FfxFloatCoords2D foveationCenter;    ///< The center of the foveated region.
+    FfxVrsFovRadii   foveationRadiiSquared; ///< The radius of the foveated regions, expected squared by the shader.
 } FfxVrsDispatchDescription;
 
 /// A structure encapsulating the FidelityFX Variable Shading context.

@@ -33,10 +33,13 @@
     layout(set = 0, binding = VRS_BIND_CB_VRS, std140) uniform cbVRS_t
     {
         FfxFloat32x2 motionVectorScale;
+        FfxFloat32x2 foveationCenter;
+        FfxFloat32x4 foveationRadiiSquared;
         FfxFloat32   varianceCutoff;
         FfxFloat32   motionFactor;
         FfxInt32x2   resolution;
         FfxUInt32    tileSize;
+        FfxUInt32    vrsAlgorithm;
     } cbVRS;
 
 #endif
@@ -83,6 +86,33 @@ FfxFloat32x2 MotionVectorScale()
     return cbVRS.motionVectorScale;
 #else
     return FfxFloat32x2(0.0f);
+#endif
+}
+
+FfxFloat32x2 FoveationCenter()
+{
+#if defined(VRS_BIND_CB_VRS)
+    return cbVRS.foveationCenter;
+#else
+    return FfxFloat32x2(0.0f);
+#endif
+}
+
+FfxFloat32x4 FoveationRadiiSquared()
+{
+#if defined(VRS_BIND_CB_VRS)
+    return cbVRS.foveationRadiiSquared;
+#else
+    return FfxFloat32x4(0.0f);
+#endif
+}
+
+FfxUInt32 VrsAlgorithm()
+{
+#if defined(VRS_BIND_CB_VRS)
+    return cbVRS.vrsAlgorithm;
+#else
+    return 0;
 #endif
 }
 

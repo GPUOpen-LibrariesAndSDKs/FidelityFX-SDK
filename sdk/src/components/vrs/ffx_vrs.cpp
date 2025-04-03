@@ -313,6 +313,7 @@ static FfxErrorCode vrsDispatch(FfxVrsContext_Private* context, const FfxVrsDisp
     VrsConstants constants;
 
     // Complete setting up the constant buffer data
+    constants.vrsAlgorithm         = params->vrsAlgorithm;
     constants.width                = params->renderSize.width;
     constants.height               = params->renderSize.height;
     constants.tileSize             = params->tileSize;
@@ -320,6 +321,12 @@ static FfxErrorCode vrsDispatch(FfxVrsContext_Private* context, const FfxVrsDisp
     constants.varianceCutoff       = params->varianceCutoff;
     constants.motionVectorScale[0] = params->motionVectorScale.x;
     constants.motionVectorScale[1] = params->motionVectorScale.y;
+    constants.foveationCenter[0]   = params->foveationCenter.x;
+    constants.foveationCenter[1]   = params->foveationCenter.y;
+    constants.foveationRadiiSquared[0] = params->foveationRadiiSquared.radius1x1;
+    constants.foveationRadiiSquared[1] = params->foveationRadiiSquared.radius1x2;
+    constants.foveationRadiiSquared[2] = params->foveationRadiiSquared.radius2x2;
+    constants.foveationRadiiSquared[3] = params->foveationRadiiSquared.radius2x4;
 
     // This value is the image region dimension that each thread group of the FSR shader operates on
     uint32_t dispatchX;

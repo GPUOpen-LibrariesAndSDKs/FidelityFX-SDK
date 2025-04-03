@@ -29,6 +29,9 @@
 #define FFX_CPU
 #include <FidelityFX/gpu/ffx_core.h>
 
+FFX_STATIC const FfxUInt32 FFX_VARIABLESHADING_IMAGE_ALGORITHM_LUMINANCE_AND_MOTION_VECTORS   = 0x1;
+FFX_STATIC const FfxUInt32 FFX_VARIABLESHADING_IMAGE_ALGORITHM_FOVEATED = 0x2;
+
 FFX_STATIC void ffxVariableShadingGetDispatchInfo(
     const FfxDimensions2D resolution, const FfxUInt32 tileSize, const bool useAditionalShadingRates, FfxUInt32& numThreadGroupsX, FfxUInt32& numThreadGroupsY)
 {
@@ -61,6 +64,9 @@ FFX_STATIC void ffxVariableShadingGetDispatchInfo(
 }
 #elif defined(FFX_GPU)
 
+FFX_STATIC const FfxUInt32 FFX_VARIABLESHADING_IMAGE_ALGORITHM_LUMINANCE_AND_MOTION_VECTORS   = 0x1;
+FFX_STATIC const FfxUInt32 FFX_VARIABLESHADING_IMAGE_ALGORITHM_FOVEATED = 0x2;
+
 // Forward declaration of functions that need to be implemented by shader code using this technique
 FfxFloat32   ReadLuminance(FfxInt32x2 pos);
 FfxFloat32x2 ReadMotionVec2D(FfxInt32x2 pos);
@@ -70,6 +76,8 @@ FFX_STATIC const FfxUInt32 FFX_VARIABLESHADING_RATE1D_1X = 0x0;
 FFX_STATIC const FfxUInt32 FFX_VARIABLESHADING_RATE1D_2X = 0x1;
 FFX_STATIC const FfxUInt32 FFX_VARIABLESHADING_RATE1D_4X = 0x2;
 #define FFX_VARIABLESHADING_MAKE_SHADING_RATE(x,y) ((x << 2) | (y))
+#define FFX_VARIABLESHADING_SHADING_RATE_2D_MAX(xy, wz) \
+   FFX_VARIABLESHADING_MAKE_SHADING_RATE(max(xy >> 2, wz >> 2), max(xy & 0x3,wz & 0x3))
 
 FFX_STATIC const FfxUInt32 FFX_VARIABLESHADING_RATE_1X1 = FFX_VARIABLESHADING_MAKE_SHADING_RATE(FFX_VARIABLESHADING_RATE1D_1X, FFX_VARIABLESHADING_RATE1D_1X); // 0;
 FFX_STATIC const FfxUInt32 FFX_VARIABLESHADING_RATE_1X2 = FFX_VARIABLESHADING_MAKE_SHADING_RATE(FFX_VARIABLESHADING_RATE1D_1X, FFX_VARIABLESHADING_RATE1D_2X); // 0x1;
@@ -91,6 +99,7 @@ FFX_STATIC const FfxUInt32 FFX_VariableShading_ThreadCount1D = 16;
 FFX_STATIC const FfxUInt32 FFX_VariableShading_NumBlocks1D = 1;
 #endif
 FFX_STATIC const FfxUInt32 FFX_VariableShading_SampleCount1D = FFX_VariableShading_ThreadCount1D + 2;
+FFX_STATIC const FfxUInt32 FFX_VariableShading_TileCenterOffset1D = FFX_VARIABLESHADING_TILESIZE >> 1 - 1;
 
 FFX_GROUPSHARED FfxUInt32 FFX_VariableShading_LdsGroupReduce;
 
@@ -107,6 +116,7 @@ FFX_STATIC const FfxUInt32 FFX_VariableShading_ThreadCount1D = 8;
 FFX_STATIC const FfxUInt32 FFX_VariableShading_NumBlocks1D = 32 / FFX_VARIABLESHADING_TILESIZE;
 FFX_STATIC const FfxUInt32 FFX_VariableShading_TilesPerGroup = FFX_VariableShading_NumBlocks1D * FFX_VariableShading_NumBlocks1D;
 FFX_STATIC const FfxUInt32 FFX_VariableShading_SampleCount1D = FFX_VariableShading_ThreadCount1D + 2;
+FFX_STATIC const FfxUInt32 FFX_VariableShading_TileCenterOffset1D = FFX_VARIABLESHADING_TILESIZE >> 1 - 1;
 
 FFX_GROUPSHARED FfxUInt32 FFX_VariableShading_LdsGroupReduce[FFX_VariableShading_TilesPerGroup];
 
@@ -117,6 +127,46 @@ FFX_STATIC const FfxUInt32 FFX_VariableShading_NumBlocks = FFX_VariableShading_N
 // load and compute variance for 1x2, 2x1, 2x2, 2x4, 4x2, 4x4 for 8x8 coarse pixels
 FFX_GROUPSHARED FfxUInt32 FFX_VariableShading_LdsShadingRate[FFX_VariableShading_SampleCount];
 #endif
+
+FfxUInt32 VrsComputeFoveatedShadingRate(FfxUInt32x3 Gid, FfxUInt32x3 Gtid, FfxUInt32 Gidx)
+{
+    FfxFloat32x2 tileVRSImageCoords = FfxFloat32x2(Gid.xy * FFX_VariableShading_NumBlocks1D + FfxUInt32x2(Gidx / FFX_VariableShading_NumBlocks1D, Gidx % FFX_VariableShading_NumBlocks1D));
+    FfxFloat32x2 tileRenderingTargetCoords = FfxFloat32x2(tileVRSImageCoords.x * FFX_VARIABLESHADING_TILESIZE, tileVRSImageCoords.y * FFX_VARIABLESHADING_TILESIZE) + FfxFloat32x2(FFX_VariableShading_TileCenterOffset1D, FFX_VariableShading_TileCenterOffset1D);
+    FfxFloat32x2 dxy        = tileRenderingTargetCoords - FoveationCenter();
+    FfxFloat32 distSquared = dot(dxy, dxy);
+
+    FfxUInt32 shadingRate;
+    if (distSquared < FoveationRadiiSquared().x)  // 1X1
+    {
+        shadingRate = FFX_VARIABLESHADING_MAKE_SHADING_RATE(FFX_VARIABLESHADING_RATE1D_1X, FFX_VARIABLESHADING_RATE1D_1X);
+    }
+    else if (distSquared < FoveationRadiiSquared().y)  // 1X2 or 2X1
+    {
+        bool horizontal = abs(dxy.x) > abs(dxy.y);
+        shadingRate = FFX_VARIABLESHADING_MAKE_SHADING_RATE(horizontal ? FFX_VARIABLESHADING_RATE1D_1X : FFX_VARIABLESHADING_RATE1D_2X, horizontal ? FFX_VARIABLESHADING_RATE1D_2X : FFX_VARIABLESHADING_RATE1D_1X);
+    }
+#if !defined FFX_VARIABLESHADING_ADDITIONALSHADINGRATES
+    else // 2X2
+    {
+        shadingRate = FFX_VARIABLESHADING_MAKE_SHADING_RATE(FFX_VARIABLESHADING_RATE1D_2X, FFX_VARIABLESHADING_RATE1D_2X);
+    }
+#else // if defined FFX_VARIABLESHADING_ADDITIONALSHADINGRATES
+    else if (distSquared < FoveationRadiiSquared().z)  // 2X2
+    {
+        shadingRate = FFX_VARIABLESHADING_MAKE_SHADING_RATE(FFX_VARIABLESHADING_RATE1D_2X, FFX_VARIABLESHADING_RATE1D_2X);
+    }
+    else if (distSquared < FoveationRadiiSquared().w)  // 2X4 or 4X2
+    {
+        bool horizontal = abs(dxy.x) > abs(dxy.y);
+        shadingRate = FFX_VARIABLESHADING_MAKE_SHADING_RATE(horizontal ? FFX_VARIABLESHADING_RATE1D_2X : FFX_VARIABLESHADING_RATE1D_4X, horizontal ? FFX_VARIABLESHADING_RATE1D_4X : FFX_VARIABLESHADING_RATE1D_2X);
+    }
+    else // 4X4
+    {
+        shadingRate = FFX_VARIABLESHADING_MAKE_SHADING_RATE(FFX_VARIABLESHADING_RATE1D_4X, FFX_VARIABLESHADING_RATE1D_4X);
+    }
+#endif
+    return shadingRate;
+}
 
 // Read luminance value from previous frame's color buffer.
 FfxFloat32 VrsGetLuminance(FfxInt32x2 pos)
@@ -152,6 +202,24 @@ FfxInt32 VrsFlattenLdsOffset(FfxInt32x2 coord)
 /// @ingroup FfxGPUVrs
 void VrsGenerateVrsImage(FfxUInt32x3 Gid, FfxUInt32x3 Gtid, FfxUInt32 Gidx)
 {
+    FfxUInt32 foveatedShadingRate = FFX_VARIABLESHADING_MAKE_SHADING_RATE(FFX_VARIABLESHADING_RATE1D_1X, FFX_VARIABLESHADING_RATE1D_1X);
+    if ((VrsAlgorithm() & FFX_VARIABLESHADING_IMAGE_ALGORITHM_FOVEATED) != 0)
+    {
+        foveatedShadingRate = VrsComputeFoveatedShadingRate(Gid, Gtid, Gidx);
+    }
+
+    // if motion based algorithm is disabled, or if foveation is returning coarsest rate already, early exit
+    if (((VrsAlgorithm() & FFX_VARIABLESHADING_IMAGE_ALGORITHM_LUMINANCE_AND_MOTION_VECTORS) == 0) ||
+         (foveatedShadingRate == FFX_VARIABLESHADING_MAKE_SHADING_RATE(FFX_VARIABLESHADING_RATE1D_2X, FFX_VARIABLESHADING_RATE1D_2X)))
+    {
+        if (Gidx < FFX_VariableShading_NumBlocks)
+        {
+            WriteVrsImage(
+                    FfxInt32x2(Gid.xy * FFX_VariableShading_NumBlocks1D + FfxUInt32x2(Gidx / FFX_VariableShading_NumBlocks1D, Gidx % FFX_VariableShading_NumBlocks1D)), foveatedShadingRate);
+        }
+        return;
+    }
+
     FfxInt32x2 tileOffset = FfxInt32x2(Gid.xy * FFX_VariableShading_ThreadCount1D * 2);
     FfxInt32x2 baseOffset = tileOffset + FfxInt32x2(-2, -2);
     FfxUInt32 index = Gidx;
@@ -315,6 +383,9 @@ void VrsGenerateVrsImage(FfxUInt32x3 Gid, FfxUInt32x3 Gtid, FfxUInt32 Gidx)
                 shadingRate = FFX_VARIABLESHADING_MAKE_SHADING_RATE((varH > VarianceCutoff()) ? FFX_VARIABLESHADING_RATE1D_1X : FFX_VARIABLESHADING_RATE1D_2X, FFX_VARIABLESHADING_RATE1D_1X);
             }
         }
+
+        shadingRate = FFX_VARIABLESHADING_SHADING_RATE_2D_MAX(shadingRate, foveatedShadingRate);
+
         // Store
           WriteVrsImage(
             FfxInt32x2(Gid.xy * FFX_VariableShading_NumBlocks1D + FfxUInt32x2(Gidx / FFX_VariableShading_NumBlocks1D, Gidx % FFX_VariableShading_NumBlocks1D)), shadingRate);
@@ -333,6 +404,24 @@ void VrsGenerateVrsImage(FfxUInt32x3 Gid, FfxUInt32x3 Gtid, FfxUInt32 Gidx)
 /// @ingroup FfxGPUVrs
 void VrsGenerateVrsImage(FfxUInt32x3 Gid, FfxUInt32x3 Gtid, FfxUInt32 Gidx)
 {
+    FfxUInt32 foveatedShadingRate = FFX_VARIABLESHADING_MAKE_SHADING_RATE(FFX_VARIABLESHADING_RATE1D_1X, FFX_VARIABLESHADING_RATE1D_1X);
+    if ((VrsAlgorithm() & FFX_VARIABLESHADING_IMAGE_ALGORITHM_FOVEATED) != 0)
+    {
+        foveatedShadingRate = VrsComputeFoveatedShadingRate(Gid, Gtid, Gidx);
+    }
+
+    // if motion based algorithm is disabled, or if foveation is returning coarsest rate already, early exit
+    if (((VrsAlgorithm() & FFX_VARIABLESHADING_IMAGE_ALGORITHM_LUMINANCE_AND_MOTION_VECTORS) == 0) ||
+         (foveatedShadingRate == FFX_VARIABLESHADING_MAKE_SHADING_RATE(FFX_VARIABLESHADING_RATE1D_4X, FFX_VARIABLESHADING_RATE1D_4X)))
+    {
+        if (Gidx < FFX_VariableShading_TilesPerGroup)
+        {
+            WriteVrsImage(
+                    FfxInt32x2(Gid.xy * FFX_VariableShading_NumBlocks1D + FfxUInt32x2(Gidx / FFX_VariableShading_NumBlocks1D, Gidx % FFX_VariableShading_NumBlocks1D)), foveatedShadingRate);
+        }
+        return;
+    }
+
     FfxInt32x2 tileOffset = FfxInt32x2(Gid.xy * FFX_VariableShading_ThreadCount1D * 4);
     FfxInt32x2 baseOffset = tileOffset;
     FfxUInt32 index      = Gidx;
@@ -469,6 +558,8 @@ void VrsGenerateVrsImage(FfxUInt32x3 Gid, FfxUInt32x3 Gtid, FfxUInt32 Gidx)
     // write out final rates
     if (Gidx < FFX_VariableShading_TilesPerGroup)
     {
+        FFX_VariableShading_LdsGroupReduce[Gidx] = FFX_VARIABLESHADING_SHADING_RATE_2D_MAX(FFX_VariableShading_LdsGroupReduce[Gidx], foveatedShadingRate);
+
         WriteVrsImage(
             FfxInt32x2(Gid.xy * FFX_VariableShading_NumBlocks1D + FfxUInt32x2(Gidx / FFX_VariableShading_NumBlocks1D, Gidx % FFX_VariableShading_NumBlocks1D)),
             FFX_VariableShading_LdsGroupReduce[Gidx]);
@@ -477,6 +568,8 @@ void VrsGenerateVrsImage(FfxUInt32x3 Gid, FfxUInt32x3 Gtid, FfxUInt32 Gidx)
     // write out final rates
     if (Gidx < FFX_VariableShading_TilesPerGroup)
     {
+        shadingRate[Gidx] = FFX_VARIABLESHADING_SHADING_RATE_2D_MAX(shadingRate[Gidx], foveatedShadingRate);
+
         WriteVrsImage(
             FfxInt32x2(Gid.xy * FFX_VariableShading_NumBlocks1D + FfxUInt32x2(Gidx / FFX_VariableShading_NumBlocks1D, Gidx % FFX_VariableShading_NumBlocks1D)),
             shadingRate[Gidx]);
