@@ -106,6 +106,7 @@ typedef struct PacingData
 
     VkPresentModeKHR presentMode;
     bool             usePremulAlphaComposite;
+    bool             drawDebugPacingLines;
 
     uint64_t gameSemaphoreValue;
     uint64_t replacementBufferSemaphoreSignal;
@@ -166,8 +167,9 @@ struct FrameinterpolationPresentInfo
     FfxResource currentUiSurface   = {};
     uint32_t    uiCompositionFlags = 0;
 
-    VkDevice       device        = VK_NULL_HANDLE;
-    VkSwapchainKHR realSwapchain = VK_NULL_HANDLE;
+    VkDevice         device         = VK_NULL_HANDLE;
+    VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+    VkSwapchainKHR   realSwapchain  = VK_NULL_HANDLE;
 
     uint32_t               realSwapchainImageCount = 0;
     VkImage                realSwapchainImages[FFX_FRAME_INTERPOLATION_SWAP_CHAIN_MAX_BUFFER_COUNT];
@@ -299,8 +301,6 @@ private:
     void destroyImage(ReplacementResource& resource, const VkAllocationCallbacks* pAllocator);
 
 private:
-    VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-
     // swapchain settings
     VkPresentModeKHR presentMode       = VK_PRESENT_MODE_IMMEDIATE_KHR;
     VulkanQueue      imageAcquireQueue = {};
@@ -332,6 +332,7 @@ private:
     bool interpolationEnabled           = false;
     bool presentInterpolatedOnly        = false;
     bool previousFrameWasInterpolated   = false;
+    bool drawDebugPacingLines           = false;
 
     UINT64        currentFrameID = 0;
 

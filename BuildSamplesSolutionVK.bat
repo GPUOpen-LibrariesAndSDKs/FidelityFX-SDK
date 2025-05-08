@@ -32,6 +32,18 @@ echo.
 set samples_build_options=-DRUNTIME_SHADER_RECOMPILE=0
 set sdk_build_options=-DFFX_AUTO_COMPILE_SHADERS=1
 
+set rsr=
+set /P rsr=Support runtime shader recompile [y/n]? 
+
+if /i "%rsr%" == "Y" (
+    set samples_build_options=-DRUNTIME_SHADER_RECOMPILE=1
+    set sdk_build_options=-DFFX_AUTO_COMPILE_SHADERS=0 -DFFX_BUILD_AS_DLL=1
+    goto :select_component
+) else (
+    goto :build_dll
+)
+
+:build_dll
 set build_as_dll=
 set /P build_as_dll=Build the SDK as DLL [y/n]? 
 

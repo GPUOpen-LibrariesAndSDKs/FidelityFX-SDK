@@ -30,7 +30,6 @@
 #if defined(__cplusplus)
 extern "C" {
 #endif
-
 enum FfxApiCreateContextFramegenerationFlags
 {
     FFX_FRAMEGENERATION_ENABLE_ASYNC_WORKLOAD_SUPPORT              = (1<<0),
@@ -39,6 +38,7 @@ enum FfxApiCreateContextFramegenerationFlags
     FFX_FRAMEGENERATION_ENABLE_DEPTH_INVERTED                      = (1<<3), ///< A bit indicating that the input depth buffer data provided is inverted [1..0].
     FFX_FRAMEGENERATION_ENABLE_DEPTH_INFINITE                      = (1<<4), ///< A bit indicating that the input depth buffer data provided is using an infinite far plane.
     FFX_FRAMEGENERATION_ENABLE_HIGH_DYNAMIC_RANGE                  = (1<<5), ///< A bit indicating if the input color data provided to all inputs is using a high-dynamic range.
+    FFX_FRAMEGENERATION_ENABLE_DEBUG_CHECKING                      = (1<<6), ///< A bit indicating that the runtime should check some API values and report issues.
 };
 
 enum FfxApiDispatchFramegenerationFlags
@@ -48,7 +48,8 @@ enum FfxApiDispatchFramegenerationFlags
     FFX_FRAMEGENERATION_FLAG_DRAW_DEBUG_VIEW = (1 << 2),              ///< A bit indicating that the generated output resource will contain debug views with relevant information.
     FFX_FRAMEGENERATION_FLAG_NO_SWAPCHAIN_CONTEXT_NOTIFY = (1 << 3),  ///< A bit indicating that the context should only run frame interpolation and not modify the swapchain.
     FFX_FRAMEGENERATION_FLAG_DRAW_DEBUG_PACING_LINES = (1 << 4),      ///< A bit indicating that the debug pacing lines will be drawn to the generated output.
-
+    FFX_FRAMEGENERATION_FLAG_RESERVED_1 = (1 << 5),
+    FFX_FRAMEGENERATION_FLAG_RESERVED_2 = (1 << 6), 
 };
 
 enum FfxApiUiCompositionFlags
@@ -68,7 +69,7 @@ struct ffxCreateContextDescFrameGeneration
 };
 
 #define FFX_API_CALLBACK_DESC_TYPE_FRAMEGENERATION_PRESENT 0x00020005u
-struct ffxCallbackDescFrameGenerationPresent
+typedef struct ffxCallbackDescFrameGenerationPresent
 {
     ffxDispatchDescHeader header;
     void* device;                                   ///< The device passed in (from a backend description) during context creation.
@@ -78,10 +79,10 @@ struct ffxCallbackDescFrameGenerationPresent
     struct FfxApiResource outputSwapChainBuffer;    ///< Output image that will be presented.
     bool isGeneratedFrame;                          ///< true if this frame is generated, false if rendered.
     uint64_t              frameID;                  ///< Identifier used to select internal resources when async support is enabled. Must increment by exactly one (1) for each frame. Any non-exactly-one difference will reset the frame generation logic.
-};
+} ffxCallbackDescFrameGenerationPresent;
 
 #define FFX_API_DISPATCH_DESC_TYPE_FRAMEGENERATION 0x00020003u
-struct ffxDispatchDescFrameGeneration
+typedef struct ffxDispatchDescFrameGeneration
 {
     ffxDispatchDescHeader header;
     void*                 commandList;                ///< The command list on which to register render commands.
@@ -93,7 +94,7 @@ struct ffxDispatchDescFrameGeneration
     float                 minMaxLuminance[2];         ///< Min and max luminance values, used when converting HDR colors to linear RGB.
     struct FfxApiRect2D   generationRect;             ///< The area of the backbuffer that should be used for generation in case only a part of the screen is used e.g. due to movie bars.
     uint64_t              frameID;                    ///< Identifier used to select internal resources when async support is enabled. Must increment by exactly one (1) for each frame. Any non-exactly-one difference will reset the frame generation logic.
-};
+} ffxDispatchDescFrameGeneration;
 
 typedef ffxReturnCode_t(*FfxApiPresentCallbackFunc)(ffxCallbackDescFrameGenerationPresent* params, void* pUserCtx);
 typedef ffxReturnCode_t(*FfxApiFrameGenerationDispatchFunc)(ffxDispatchDescFrameGeneration* params, void* pUserCtx);
@@ -166,10 +167,22 @@ struct ffxConfigureDescFrameGenerationRegisterDistortionFieldResource
 };
 
 #define FFX_API_CREATE_CONTEXT_DESC_TYPE_FRAMEGENERATION_HUDLESS 0x00020009u
+//Pass this optional linked struct at FG context creation to enable app to use different hudlessBackBufferformat (IE.RGBA8_UNORM) from backBufferFormat (IE. BGRA8_UNORM)
 struct ffxCreateContextDescFrameGenerationHudless
 {
     ffxCreateContextDescHeader header;
     uint32_t hudlessBackBufferFormat;           ///< The surface format for the hudless back buffer. One of the values from FfxApiSurfaceFormat.
+};
+
+#define FFX_API_DISPATCH_DESC_TYPE_FRAMEGENERATION_PREPARE_CAMERAINFO 0x0002000au
+//Link this struct after ffxDispatchDescFrameGenerationPrepare. This is a required input to FSR3.1.4 and onwards for best quality.
+struct ffxDispatchDescFrameGenerationPrepareCameraInfo
+{
+    ffxConfigureDescHeader header;
+    float                  cameraPosition[3];   ///< The camera position in world space
+    float                  cameraUp[3];         ///< The camera up normalized vector in world space.
+    float                  cameraRight[3];      ///< The camera right normalized vector in world space.
+    float                  cameraForward[3];    ///< The camera forward normalized vector in world space.
 };
 
 #if defined(__cplusplus)

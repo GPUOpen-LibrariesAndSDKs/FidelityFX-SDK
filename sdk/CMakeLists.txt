@@ -190,6 +190,7 @@ file(GLOB FFX_SHARED_SOURCES
 
 set(FFX_PUBLIC_SOURCES
     "${FFX_HOST_PATH}/ffx_assert.h"
+	"${FFX_HOST_PATH}/ffx_message.h"
     "${FFX_HOST_PATH}/ffx_error.h"
 	"${FFX_HOST_PATH}/ffx_fx.h"
 	"${FFX_HOST_PATH}/ffx_interface.h"

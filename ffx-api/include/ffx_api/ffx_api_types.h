@@ -23,6 +23,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 
 /// An enumeration of surface formats. Needs to match enum FfxSurfaceFormat
 enum FfxApiSurfaceFormat
@@ -79,7 +80,7 @@ enum FfxApiResourceUsage
     FFX_API_RESOURCE_USAGE_ARRAYVIEW = (1<<4),              ///< Indicates a resource that will generate array views. Works on 2D and cubemap textures
     FFX_API_RESOURCE_USAGE_STENCILTARGET = (1<<5),          ///< Indicates a resource will be used as stencil target.
 };
-typedef FfxApiResourceUsage FfxApiResorceUsage;             // Corrects a typo that shipped with original API
+
 
 /// An enumeration of resource states.
 enum FfxApiResourceState

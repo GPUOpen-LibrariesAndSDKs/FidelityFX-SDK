@@ -414,7 +414,7 @@ static FfxErrorCode frameinterpolationCreate(FfxFrameInterpolationContext_Privat
 
     // Check version info - make sure we are linked with the right backend version
     FfxVersionNumber version = context->contextDescription.backendInterface.fpGetSDKVersion(&context->contextDescription.backendInterface);
-    FFX_RETURN_ON_ERROR(version == FFX_SDK_MAKE_VERSION(1, 1, 2), FFX_ERROR_INVALID_VERSION);
+    FFX_RETURN_ON_ERROR(version == FFX_SDK_MAKE_VERSION(1, 1, 4), FFX_ERROR_INVALID_VERSION);
 
     // Create the context.
     FfxErrorCode errorCode = context->contextDescription.backendInterface.fpCreateBackendContext(&context->contextDescription.backendInterface, FFX_EFFECT_FRAMEINTERPOLATION, nullptr, &context->effectContextId);
@@ -814,11 +814,29 @@ static const float debugBarColorSequence[] = {
 };
 const size_t debugBarColorSequenceLength = 7;
 
+static void fsr3FrameInterpolationDebugCheckPrepare(FfxFrameInterpolationContext_Private* context, const FfxFrameInterpolationPrepareDescription* params)
+{
+    
+    static const FfxFloat32x3 zeroVector3D = { 0.f,0.f,0.f };
+    if ((memcmp(params->cameraPosition, zeroVector3D, sizeof(FfxFloat32x3)) == 0) &&
+        (memcmp(params->cameraUp, zeroVector3D, sizeof(FfxFloat32x3)) == 0) &&
+        (memcmp(params->cameraRight, zeroVector3D, sizeof(FfxFloat32x3)) == 0) &&
+        (memcmp(params->cameraForward, zeroVector3D, sizeof(FfxFloat32x3)) == 0))
+    {
+        FFX_PRINT_MESSAGE(FFX_MESSAGE_TYPE_WARNING, L"ffxDispatchDescFrameGenerationPrepareCameraInfo needs to be passed as linked struct. This is a required input to FSR3.1.4 and onwards for best quality.");
+    }
+}
+
 FFX_API FfxErrorCode ffxFrameInterpolationPrepare(FfxFrameInterpolationContext* context,
     const FfxFrameInterpolationPrepareDescription* params)
 {
     FfxFrameInterpolationContext_Private* contextPrivate = (FfxFrameInterpolationContext_Private*)(context);
 
+    if ((contextPrivate->contextDescription.flags & FFX_FRAMEINTERPOLATION_ENABLE_DEBUG_CHECKING) == FFX_FRAMEINTERPOLATION_ENABLE_DEBUG_CHECKING)
+    {
+        fsr3FrameInterpolationDebugCheckPrepare(contextPrivate, params);
+    }
+    
     contextPrivate->constants.renderSize[0]         = params->renderSize.width;
     contextPrivate->constants.renderSize[1]         = params->renderSize.height;
     contextPrivate->constants.jitter[0]             = params->jitterOffset.x;
@@ -1238,4 +1256,10 @@ FFX_API FfxErrorCode ffxFrameInterpolationDispatch(FfxFrameInterpolationContext*
 FFX_API FfxVersionNumber ffxFrameInterpolationGetEffectVersion()
 {
     return FFX_SDK_MAKE_VERSION(FFX_FRAMEINTERPOLATION_VERSION_MAJOR, FFX_FRAMEINTERPOLATION_VERSION_MINOR, FFX_FRAMEINTERPOLATION_VERSION_PATCH);
+}
+
+FFX_API FfxErrorCode ffxFrameInterpolationSetGlobalDebugMessage(ffxMessageCallback fpMessage, uint32_t debugLevel)
+{
+    ffxSetPrintMessageCallback(fpMessage, debugLevel);
+    return FFX_OK;
 }

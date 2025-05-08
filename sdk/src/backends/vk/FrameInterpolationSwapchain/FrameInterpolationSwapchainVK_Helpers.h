@@ -404,3 +404,5 @@ struct SimpleMovingAverage
         updateCount++;
     }
 };
+
+VkResult CreateShaderModule(VkDevice device, size_t codeSize, const uint32_t* pCode, VkShaderModule* pModule, const VkAllocationCallbacks* pAllocator);

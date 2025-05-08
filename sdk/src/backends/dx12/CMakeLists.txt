@@ -32,6 +32,7 @@ set(PRIVATE_SHADERS "")
 
 file(GLOB PRIVATE_SOURCE
     "${FFX_SHARED_PATH}/ffx_assert.cpp"
+	"${FFX_SHARED_PATH}/ffx_message.cpp"
     "${FFX_SHARED_PATH}/ffx_breadcrumbs_list.h"
     "${FFX_SHARED_PATH}/ffx_breadcrumbs_list.cpp"
 	"${FFX_SRC_BACKENDS_PATH}/shared/*.h"

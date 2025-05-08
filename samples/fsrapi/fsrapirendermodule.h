@@ -129,6 +129,13 @@ private:
         Auto
     };
 
+    enum FSRDebugCheckerMode
+    {
+        Disabled = 0,
+        EnabledNoMessageCallback,
+        EnabledWithMessageCallback
+    };
+
     const float cMipBias[static_cast<uint32_t>(FSRScalePreset::Custom)] = {
         std::log2f(1.f / 1.0f) - 1.f + std::numeric_limits<float>::epsilon(),
         std::log2f(1.f / 1.5f) - 1.f + std::numeric_limits<float>::epsilon(),
@@ -198,6 +205,9 @@ private:
     // FFX API Context members
     std::vector<uint64_t> m_FsrVersionIds;
     uint32_t m_FsrVersionIndex = 0;
+    bool        m_overrideVersion = false;
+    uint64_t    m_currentUpscaleContextVersionId = 0;
+    const char* m_currentUpscaleContextVersionName = nullptr;
 
     bool m_ffxBackendInitialized = false;
     ffx::Context m_UpscalingContext = nullptr;
@@ -227,6 +237,7 @@ private:
 
     bool     s_enableSoftwareMotionEstimation = true;
     int32_t  s_uiRenderMode      = 2;
+    int32_t  s_uiRenderModeNextFrame = 2; // needs to be in-sync with s_uiRenderMode after deviating at most 1 frame.
 
     // Surfaces for different UI render modes
     uint32_t                 m_curUiTextureIndex  = 0;
@@ -241,7 +252,11 @@ private:
     //Set Constant Buffer KeyValue via Configure Context KeyValue API. Valid Post Context creation.
     int32_t                  m_UpscalerCBKey = 0;
     float                    m_UpscalerCBValue = 1.f;
+    float                    m_UpscalerCBValueStore[5] = {1.f,1.f,1.f,1.0f/3,-1.0f/3};
     void                     SetUpscaleConstantBuffer(uint64_t key, float value);
+
+    FSRDebugCheckerMode      m_GlobalDebugCheckerMode = FSRDebugCheckerMode::Disabled;
+    void                     SetGlobalDebugCheckerMode(FSRDebugCheckerMode mode, bool recreate);
 
     //Set Swapchain waitcallback via Configure Context KeyValue API
     int32_t                  m_waitCallbackMode = 0;

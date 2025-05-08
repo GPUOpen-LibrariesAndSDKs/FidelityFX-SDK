@@ -177,12 +177,22 @@ namespace cauldron
         const Vec3  GetCameraPos() const { return m_pOwner->GetTransform().getTranslation(); }
 
         /**
+         * @brief   Gets the camera's Up Vector.
+         */
+        const Vec3 GetCameraUp() const { return m_InvViewMatrix.getCol1().getXYZ(); }
+
+        /**
+         * @brief   Gets the camera's Right Vector.
+         */
+        const Vec3 GetCameraRight() const { return m_InvViewMatrix.getCol0().getXYZ(); }
+
+        /**
          * @brief   Gets the camera's direction.
          */
         const Vec4 GetDirection() const { return m_InvViewMatrix.getCol2(); }
 
         /**
-         * @brief   Gets the camera's view matrix.
+         * @brief   Gets the camera's view matrix stored in row major order.
          */
         const Mat4& GetView() const { return m_ViewMatrix; }
 

@@ -83,7 +83,7 @@ typedef struct PacingData
 typedef struct FrameinterpolationPresentInfo
 {
     CRITICAL_SECTION    criticalSectionScheduledFrame;
-    ID3D12Device8*      device    = nullptr;
+    ID3D12Device*       device    = nullptr;
     IDXGISwapChain4*    swapChain = nullptr;
     Dx12CommandPool<8>  commandPool;
 

@@ -36,11 +36,6 @@ struct struct_type<ffxCreateContextDescFrameGeneration> : std::integral_constant
 struct CreateContextDescFrameGeneration : public InitHelper<ffxCreateContextDescFrameGeneration> {};
 
 template<>
-struct struct_type<ffxCreateContextDescFrameGenerationHudless> : std::integral_constant<uint64_t, FFX_API_CREATE_CONTEXT_DESC_TYPE_FRAMEGENERATION_HUDLESS> {};
-
-struct CreateContextDescFrameGenerationHudless : public InitHelper<ffxCreateContextDescFrameGenerationHudless> {};
-
-template<>
 struct struct_type<ffxConfigureDescFrameGeneration> : std::integral_constant<uint64_t, FFX_API_CONFIGURE_DESC_TYPE_FRAMEGENERATION> {};
 
 struct ConfigureDescFrameGeneration : public InitHelper<ffxConfigureDescFrameGeneration> {};
@@ -70,4 +65,13 @@ struct struct_type<ffxConfigureDescFrameGenerationRegisterDistortionFieldResourc
 
 struct ConfigureDescFrameGenerationRegisterDistortionFieldResource : public InitHelper<ffxConfigureDescFrameGenerationRegisterDistortionFieldResource> {};
 
+template<>
+struct struct_type<ffxCreateContextDescFrameGenerationHudless> : std::integral_constant<uint64_t, FFX_API_CREATE_CONTEXT_DESC_TYPE_FRAMEGENERATION_HUDLESS> {};
+
+struct CreateContextDescFrameGenerationHudless : public InitHelper<ffxCreateContextDescFrameGenerationHudless> {};
+
+template<>
+struct struct_type<ffxDispatchDescFrameGenerationPrepareCameraInfo> : std::integral_constant<uint64_t, FFX_API_DISPATCH_DESC_TYPE_FRAMEGENERATION_PREPARE_CAMERAINFO> {};
+
+struct DispatchDescFrameGenerationPrepareCameraInfo : public InitHelper<ffxDispatchDescFrameGenerationPrepareCameraInfo> {};
 }

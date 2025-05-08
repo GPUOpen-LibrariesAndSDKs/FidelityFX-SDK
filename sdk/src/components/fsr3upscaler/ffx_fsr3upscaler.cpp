@@ -185,77 +185,77 @@ static void fsr3upscalerDebugCheckDispatch(FfxFsr3UpscalerContext_Private* conte
 {
     if (params->commandList == nullptr)
     {
-        context->contextDescription.fpMessage(FFX_MESSAGE_TYPE_ERROR, L"commandList is null");
+        FFX_PRINT_MESSAGE(FFX_MESSAGE_TYPE_ERROR, L"commandList is null");
     }
 
     if (params->color.resource == nullptr)
     {
-        context->contextDescription.fpMessage(FFX_MESSAGE_TYPE_ERROR, L"color resource is null");
+        FFX_PRINT_MESSAGE(FFX_MESSAGE_TYPE_ERROR, L"color resource is null");
     }
 
     if (params->depth.resource == nullptr)
     {
-        context->contextDescription.fpMessage(FFX_MESSAGE_TYPE_ERROR, L"depth resource is null");
+        FFX_PRINT_MESSAGE(FFX_MESSAGE_TYPE_ERROR, L"depth resource is null");
     }
 
     if (params->motionVectors.resource == nullptr)
     {
-        context->contextDescription.fpMessage(FFX_MESSAGE_TYPE_ERROR, L"motionVectors resource is null");
+        FFX_PRINT_MESSAGE(FFX_MESSAGE_TYPE_ERROR, L"motionVectors resource is null");
     }
 
     if (params->exposure.resource != nullptr)
     {
         if ((context->contextDescription.flags & FFX_FSR3UPSCALER_ENABLE_AUTO_EXPOSURE) == FFX_FSR3UPSCALER_ENABLE_AUTO_EXPOSURE)
         {
-            context->contextDescription.fpMessage(FFX_MESSAGE_TYPE_WARNING, L"exposure resource provided, however auto exposure flag is present");
+            FFX_PRINT_MESSAGE(FFX_MESSAGE_TYPE_WARNING, L"exposure resource provided, however auto exposure flag is present");
         }
     }
 
     if (params->output.resource == nullptr)
     {
-        context->contextDescription.fpMessage(FFX_MESSAGE_TYPE_ERROR, L"output resource is null");
+        FFX_PRINT_MESSAGE(FFX_MESSAGE_TYPE_ERROR, L"output resource is null");
     }
 
     if (fabs(params->jitterOffset.x) > 1.0f || fabs(params->jitterOffset.y) > 1.0f)
     {
-        context->contextDescription.fpMessage(FFX_MESSAGE_TYPE_WARNING, L"jitterOffset contains value outside of expected range [-1.0, 1.0]");
+        FFX_PRINT_MESSAGE(FFX_MESSAGE_TYPE_WARNING, L"jitterOffset contains value outside of expected range [-1.0, 1.0]");
     }
 
     if ((params->motionVectorScale.x > (float)context->contextDescription.maxRenderSize.width) ||
         (params->motionVectorScale.y > (float)context->contextDescription.maxRenderSize.height))
     {
-        context->contextDescription.fpMessage(FFX_MESSAGE_TYPE_WARNING, L"motionVectorScale contains scale value greater than maxRenderSize");
+        FFX_PRINT_MESSAGE(FFX_MESSAGE_TYPE_WARNING, L"motionVectorScale contains scale value greater than maxRenderSize");
     }
     if ((params->motionVectorScale.x == 0.0f) ||
         (params->motionVectorScale.y == 0.0f))
     {
-        context->contextDescription.fpMessage(FFX_MESSAGE_TYPE_WARNING, L"motionVectorScale contains zero scale value");
+        FFX_PRINT_MESSAGE(FFX_MESSAGE_TYPE_WARNING, L"motionVectorScale contains zero scale value");
     }
 
     if ((params->renderSize.width > context->contextDescription.maxRenderSize.width) ||
         (params->renderSize.height > context->contextDescription.maxRenderSize.height))
     {
-        context->contextDescription.fpMessage(FFX_MESSAGE_TYPE_WARNING, L"renderSize is greater than context maxRenderSize");
+        FFX_PRINT_MESSAGE(FFX_MESSAGE_TYPE_WARNING, L"renderSize is greater than context maxRenderSize");
     }
     if ((params->renderSize.width == 0) ||
         (params->renderSize.height == 0))
     {
-        context->contextDescription.fpMessage(FFX_MESSAGE_TYPE_WARNING, L"renderSize contains zero dimension");
+        FFX_PRINT_MESSAGE(FFX_MESSAGE_TYPE_WARNING, L"renderSize contains zero dimension");
     }
 
     if (params->sharpness < 0.0f || params->sharpness > 1.0f)
     {
-        context->contextDescription.fpMessage(FFX_MESSAGE_TYPE_WARNING, L"sharpness contains value outside of expected range [0.0, 1.0]");
+        FFX_PRINT_MESSAGE(FFX_MESSAGE_TYPE_WARNING, L"sharpness contains value outside of expected range [0.0, 1.0]");
     }
 
     if (params->frameTimeDelta < 1.0f)
     {
-        context->contextDescription.fpMessage(FFX_MESSAGE_TYPE_WARNING, L"frameTimeDelta is less than 1.0f - this value should be milliseconds (~16.6f for 60fps)");
+        FFX_PRINT_MESSAGE(FFX_MESSAGE_TYPE_WARNING, L"frameTimeDelta is less than 1.0f - this value should be milliseconds (~16.6f for 60fps)");
     }
 
     if (params->preExposure == 0.0f)
     {
-        context->contextDescription.fpMessage(FFX_MESSAGE_TYPE_ERROR, L"preExposure provided as 0.0f which is invalid");
+        FFX_PRINT_MESSAGE(FFX_MESSAGE_TYPE_ERROR, L"preExposure provided as 0.0f which is invalid");
     }
 
     bool infiniteDepth = (context->contextDescription.flags & FFX_FSR3UPSCALER_ENABLE_DEPTH_INFINITE) == FFX_FSR3UPSCALER_ENABLE_DEPTH_INFINITE;
@@ -265,20 +265,20 @@ static void fsr3upscalerDebugCheckDispatch(FfxFsr3UpscalerContext_Private* conte
     {
         if (params->cameraNear < params->cameraFar)
         {
-            context->contextDescription.fpMessage(FFX_MESSAGE_TYPE_WARNING,
+            FFX_PRINT_MESSAGE(FFX_MESSAGE_TYPE_WARNING,
                 L"FFX_FSR3UPSCALER_ENABLE_DEPTH_INVERTED flag is present yet cameraNear is less than cameraFar");
         }
         if (infiniteDepth)
         {
             if (params->cameraNear != FLT_MAX)
             {
-                context->contextDescription.fpMessage(FFX_MESSAGE_TYPE_WARNING,
+                FFX_PRINT_MESSAGE(FFX_MESSAGE_TYPE_WARNING,
                     L"FFX_FSR3UPSCALER_ENABLE_DEPTH_INFINITE and FFX_FSR3UPSCALER_ENABLE_DEPTH_INVERTED present, yet cameraNear != FLT_MAX");
             }
         }
         if (params->cameraFar < 0.075f)
         {
-            context->contextDescription.fpMessage(FFX_MESSAGE_TYPE_WARNING,
+            FFX_PRINT_MESSAGE(FFX_MESSAGE_TYPE_WARNING,
                 L"FFX_FSR3UPSCALER_ENABLE_DEPTH_INVERTED present, cameraFar value is very low which may result in depth separation artefacting");
         }
     }
@@ -286,31 +286,31 @@ static void fsr3upscalerDebugCheckDispatch(FfxFsr3UpscalerContext_Private* conte
     {
         if (params->cameraNear > params->cameraFar)
         {
-            context->contextDescription.fpMessage(FFX_MESSAGE_TYPE_WARNING,
+            FFX_PRINT_MESSAGE(FFX_MESSAGE_TYPE_WARNING,
                 L"cameraNear is greater than cameraFar in non-inverted-depth context");
         }
         if (infiniteDepth)
         {
             if (params->cameraFar != FLT_MAX)
             {
-                context->contextDescription.fpMessage(FFX_MESSAGE_TYPE_WARNING,
+                FFX_PRINT_MESSAGE(FFX_MESSAGE_TYPE_WARNING,
                     L"FFX_FSR3UPSCALER_ENABLE_DEPTH_INFINITE present, yet cameraFar != FLT_MAX");
             }
         }
         if (params->cameraNear < 0.075f)
         {
-            context->contextDescription.fpMessage(FFX_MESSAGE_TYPE_WARNING,
+            FFX_PRINT_MESSAGE(FFX_MESSAGE_TYPE_WARNING,
                 L"cameraNear value is very low which may result in depth separation artefacting");
         }
     }
 
     if (params->cameraFovAngleVertical <= 0.0f)
     {
-        context->contextDescription.fpMessage(FFX_MESSAGE_TYPE_ERROR, L"cameraFovAngleVertical is 0.0f - this value should be > 0.0f");
+        FFX_PRINT_MESSAGE(FFX_MESSAGE_TYPE_ERROR, L"cameraFovAngleVertical is 0.0f - this value should be > 0.0f");
     }
     if (params->cameraFovAngleVertical > FFX_PI)
     {
-        context->contextDescription.fpMessage(FFX_MESSAGE_TYPE_ERROR, L"cameraFovAngleVertical is greater than 180 degrees/PI");
+        FFX_PRINT_MESSAGE(FFX_MESSAGE_TYPE_ERROR, L"cameraFovAngleVertical is greater than 180 degrees/PI");
     }
 }
 
@@ -514,7 +514,7 @@ static FfxErrorCode fsr3upscalerCreate(FfxFsr3UpscalerContext_Private* context, 
 
     // Check version info - make sure we are linked with the right backend version
     FfxVersionNumber version = context->contextDescription.backendInterface.fpGetSDKVersion(&context->contextDescription.backendInterface);
-    FFX_RETURN_ON_ERROR(version == FFX_SDK_MAKE_VERSION(1, 1, 2), FFX_ERROR_INVALID_VERSION);
+    FFX_RETURN_ON_ERROR(version == FFX_SDK_MAKE_VERSION(1, 1, 4), FFX_ERROR_INVALID_VERSION);
 
     // Create the context.
     FfxErrorCode errorCode = context->contextDescription.backendInterface.fpCreateBackendContext(&context->contextDescription.backendInterface, FFX_EFFECT_FSR3UPSCALER, nullptr, &context->effectContextId);
@@ -531,6 +531,10 @@ static FfxErrorCode fsr3upscalerCreate(FfxFsr3UpscalerContext_Private* context, 
     context->constants.maxUpscaleSize[0] = contextDescription->maxUpscaleSize.width;
     context->constants.maxUpscaleSize[1] = contextDescription->maxUpscaleSize.height;
     context->constants.velocityFactor = 1.0f;
+    context->constants.reactivenessScale = 1.0f;
+    context->constants.shadingChangeScale = 1.0f;
+    context->constants.accumulationAddedPerFrame = 1.0f/3.0f;
+    context->constants.minDisocclusionAccumulation = -1.0f/3.0f;
 
     // generate the data for the LUT.
     const uint32_t lanczos2LutWidth = 128;
@@ -600,7 +604,7 @@ static FfxErrorCode fsr3upscalerCreate(FfxFsr3UpscalerContext_Private* context, 
         {   FFX_FSR3UPSCALER_RESOURCE_IDENTIFIER_LANCZOS_LUT, L"FSR3UPSCALER_LanczosLutData", FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_READ_ONLY,
             FFX_SURFACE_FORMAT_R16_SNORM, lanczos2LutWidth, 1, 1, FFX_RESOURCE_FLAGS_NONE, {FFX_RESOURCE_INIT_DATA_TYPE_BUFFER, sizeof(lanczos2Weights), lanczos2Weights} },
 
-        {   FFX_FSR3UPSCALER_RESOURCE_IDENTIFIER_INTERNAL_DEFAULT_REACTIVITY, L"FSR3UPSCALER_DefaultReactiviyMask", FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_READ_ONLY,
+        {   FFX_FSR3UPSCALER_RESOURCE_IDENTIFIER_INTERNAL_DEFAULT_REACTIVITY, L"FSR3UPSCALER_DefaultReactivityMask", FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_READ_ONLY,
             FFX_SURFACE_FORMAT_R8_UNORM, 1, 1, 1, FFX_RESOURCE_FLAGS_NONE, FfxResourceInitData::FfxResourceInitValue(sizeof(defaultReactiveMaskData), defaultReactiveMaskData) },
 
         {   FFX_FSR3UPSCALER_RESOURCE_IDENTIFIER_INTERNAL_DEFAULT_EXPOSURE, L"FSR3UPSCALER_DefaultExposure", FFX_RESOURCE_TYPE_TEXTURE2D, FFX_RESOURCE_USAGE_READ_ONLY,
@@ -1452,8 +1456,54 @@ FFX_API FfxErrorCode ffxFsr3UpscalerSetConstant(FfxFsr3UpscalerContext* context,
             contextPrivate->constants.velocityFactor = ffxSaturate(fValue);
             break;
         }
+        case FFX_FSR3UPSCALER_CONFIGURE_UPSCALE_KEY_FREACTIVENESSSCALE:
+        {
+            float fValue = 1.0f;
+            if (valuePtr != nullptr)
+            {
+                fValue = *(static_cast<float*>(valuePtr));
+            }
+            contextPrivate->constants.reactivenessScale = ffxMax(0.f,fValue);
+            break;
+        }
+        case FFX_FSR3UPSCALER_CONFIGURE_UPSCALE_KEY_FSHADINGCHANGESCALE:
+        {
+            float fValue = 1.0f;
+            if (valuePtr != nullptr)
+            {
+                fValue = *(static_cast<float*>(valuePtr));
+            }
+            contextPrivate->constants.shadingChangeScale = ffxMax(0.f,fValue);
+            break;
+        }
+        case FFX_FSR3UPSCALER_CONFIGURE_UPSCALE_KEY_FACCUMULATIONADDEDPERFRAME:
+        {
+            float fValue = 1.0f/3.0f;
+            if (valuePtr != nullptr)
+            {
+                fValue = *(static_cast<float*>(valuePtr));
+            }
+            contextPrivate->constants.accumulationAddedPerFrame = ffxSaturate(fValue);
+            break;
+        }
+        case FFX_FSR3UPSCALER_CONFIGURE_UPSCALE_KEY_FMINDISOCCLUSIONACCUMULATION:
+        {
+            float fValue = -1.0f/3.0f;
+            if (valuePtr != nullptr)
+            {
+                fValue = *(static_cast<float*>(valuePtr));
+            }
+            contextPrivate->constants.minDisocclusionAccumulation = ffxMin(1.0f, ffxMax(-1.0f, fValue));
+            break;
+        }
         default:
             return FFX_ERROR_INVALID_ENUM;
     }
+    return FFX_OK;
+}
+
+FFX_API FfxErrorCode ffxFsr3UpscalerSetGlobalDebugMessage(ffxMessageCallback fpMessage, uint32_t debugLevel)
+{
+    ffxSetPrintMessageCallback(fpMessage, debugLevel);
     return FFX_OK;
 }

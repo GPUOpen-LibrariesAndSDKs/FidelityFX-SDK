@@ -73,6 +73,10 @@ typedef struct Fsr3UpscalerConstants {
     float                       frameIndex;
 
     float                       velocityFactor;
+    float                       reactivenessScale;
+    float                       shadingChangeScale;
+    float                       accumulationAddedPerFrame;
+    float                       minDisocclusionAccumulation;
 } Fsr3UpscalerConstants;
 
 struct FfxFsr3UpscalerContextDescription;

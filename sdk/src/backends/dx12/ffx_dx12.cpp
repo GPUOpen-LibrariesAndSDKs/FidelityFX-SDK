@@ -553,6 +553,8 @@ D3D12_RESOURCE_STATES ffxGetDX12StateFromResourceState(FfxResourceStates state)
             return D3D12_RESOURCE_STATE_COMMON;
         case FFX_RESOURCE_STATE_RENDER_TARGET:
             return D3D12_RESOURCE_STATE_RENDER_TARGET;
+        case FFX_RESOURCE_STATE_DEPTH_ATTACHEMENT:
+            return D3D12_RESOURCE_STATE_DEPTH_WRITE;
         default:
             FFX_ASSERT_MESSAGE(false, "Resource state not yet supported");
             return D3D12_RESOURCE_STATE_COMMON;

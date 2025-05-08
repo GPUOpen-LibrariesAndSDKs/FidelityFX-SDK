@@ -1002,6 +1002,8 @@ VkAccessFlags getVKAccessFlagsFromResourceState(FfxResourceStates state)
         return VK_ACCESS_NONE;
     case FFX_RESOURCE_STATE_RENDER_TARGET:
         return VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+    case FFX_RESOURCE_STATE_DEPTH_ATTACHEMENT:
+        return VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
     default:
         FFX_ASSERT_MESSAGE(false, "State flag not yet supported");
         return VK_ACCESS_SHADER_READ_BIT;
@@ -1028,6 +1030,8 @@ VkPipelineStageFlags getVKPipelineStageFlagsFromResourceState(FfxResourceStates 
         return VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
     case FFX_RESOURCE_STATE_RENDER_TARGET:
         return VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    case FFX_RESOURCE_STATE_DEPTH_ATTACHEMENT:
+        return VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
     default:
         FFX_ASSERT_MESSAGE(false, "Pipeline stage flag not yet supported");
         return VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
@@ -1056,6 +1060,8 @@ VkImageLayout getVKImageLayoutFromResourceState(FfxResourceStates state)
         return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     case FFX_RESOURCE_STATE_RENDER_TARGET:
         return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    case FFX_RESOURCE_STATE_DEPTH_ATTACHEMENT:
+        return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     case FFX_RESOURCE_STATE_INDIRECT_ARGUMENT:
         // this case is for buffers
     default:
@@ -1127,6 +1133,11 @@ void ConvertUTF16ToUTF8(const wchar_t* inputName, char* outputBuffer, size_t out
 
 void beginMarkerVK(BackendContext_VK* backendContext, VkCommandBuffer commandBuffer, const wchar_t* label)
 {
+    if(backendContext->vkFunctionTable.vkCmdBeginDebugUtilsLabelEXT == nullptr)
+    {
+        return;
+    }
+
     constexpr size_t strLen = 64;
     char strLabel[strLen];
     ConvertUTF16ToUTF8(label, strLabel, strLen);
@@ -1146,7 +1157,10 @@ void beginMarkerVK(BackendContext_VK* backendContext, VkCommandBuffer commandBuf
 
 void endMarkerVK(BackendContext_VK* backendContext, VkCommandBuffer commandBuffer)
 {
-    backendContext->vkFunctionTable.vkCmdEndDebugUtilsLabelEXT(commandBuffer);
+    if(backendContext->vkFunctionTable.vkCmdBeginDebugUtilsLabelEXT != nullptr)
+    {
+        backendContext->vkFunctionTable.vkCmdEndDebugUtilsLabelEXT(commandBuffer);
+    }
 }
 
 void addBarrier(BackendContext_VK* backendContext, FfxResourceInternal* resource, FfxResourceStates newState)

@@ -24,6 +24,7 @@
 
 #include "FrameInterpolationSwapchainVK.h"
 #include "FrameInterpolationSwapchainVK_UiComposition.h"
+#include "FrameInterpolationSwapchainVK_DebugPacing.h"
 
 #include <FidelityFX/host/ffx_assert.h>
 
@@ -252,6 +253,8 @@ VkAccessFlags getVKAccessFlagsFromResourceState2(FfxResourceStates state)
         return VK_ACCESS_NONE;
     case FFX_RESOURCE_STATE_RENDER_TARGET:
         return VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+    case FFX_RESOURCE_STATE_DEPTH_ATTACHEMENT:
+        return VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
     default:
         FFX_ASSERT_MESSAGE(false, "State flag not yet supported");
         return VK_ACCESS_SHADER_READ_BIT;
@@ -280,6 +283,8 @@ VkImageLayout getVKImageLayoutFromResourceState2(FfxResourceStates state)
         return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     case FFX_RESOURCE_STATE_RENDER_TARGET:
         return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    case FFX_RESOURCE_STATE_DEPTH_ATTACHEMENT:
+        return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     case FFX_RESOURCE_STATE_INDIRECT_ARGUMENT:
         // this case is for buffers
     default:
@@ -789,6 +794,31 @@ VkResult compositeSwapChainFrame(FrameinterpolationPresentInfo* pPresenter,
     semaphoresToWait.add(pPresenter->interpolationSemaphore, frameInfo.interpolationCompletedSemaphoreValue);
     semaphoresToSignal.add(pPresenter->compositionSemaphore, frameInfo.presentIndex);
 
+    if (pPacingEntry->drawDebugPacingLines)
+    {
+        auto            compositeCommandList   = pPresenter->commandPool.get(pPresenter->device, compositionQueue, "compositeCommandList");
+        VkCommandBuffer compositeCommandBuffer = compositeCommandList->reset();
+
+        FfxPresentCallbackDescription desc{};
+        desc.commandList         = ffxGetCommandListVK(compositeCommandBuffer);
+        desc.device              = pPresenter->device;
+        desc.isInterpolatedFrame = frameType != PacingData::FrameType::Real;
+        desc.outputSwapChainBuffer =
+            ffxGetResourceVK(pPresenter->compositionOutput.image, pPresenter->compositionOutput.description, nullptr, FFX_RESOURCE_STATE_COPY_SRC);
+        desc.currentBackBuffer              = frameInfo.resource;
+        desc.currentUI                      = pPacingEntry->uiSurface;
+        desc.usePremulAlpha                 = pPacingEntry->usePremulAlphaComposite;
+        desc.frameID                        = pPacingEntry->currentFrameID;
+
+        FfxDebugPacingContext debugPacingContext;
+        debugPacingContext.physicalDevice = pPresenter->physicalDevice;
+
+        ffxFrameInterpolationDebugPacing(&desc, &debugPacingContext);
+
+        SubmissionSemaphores toSignalDummy;
+        compositeCommandList->execute(semaphoresToWait, toSignalDummy);
+    }
+
     if (pPacingEntry->presentCallback)
     {
         auto compositeCommandList = pPresenter->commandPool.get(pPresenter->device, compositionQueue, "compositeCommandList");
@@ -945,11 +975,12 @@ DWORD WINAPI copyAndPresent_presenterThread(LPVOID pParam)
                             uint32_t    imageIndex              = 0;
                             VkSemaphore imageAvailableSemaphore = VK_NULL_HANDLE;
                             VkResult    res                     = presenter->acquireNextRealImage(imageIndex, imageAvailableSemaphore);
-                            FFX_ASSERT_MESSAGE_FORMAT(res == VK_SUCCESS || res == VK_SUBOPTIMAL_KHR || res == VK_ERROR_OUT_OF_DATE_KHR, "[copyAndPresent_presenterThread] failed to acquire swapchain image");
+                            FFX_ASSERT_MESSAGE_FORMAT(res == VK_SUCCESS || res == VK_SUBOPTIMAL_KHR || res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_NOT_READY || res == VK_TIMEOUT, "[copyAndPresent_presenterThread] failed to acquire swapchain image");
 
                             SubmissionSemaphores toSignal;
                             SubmissionSemaphores toWait;
                             toWait.add(presenter->compositionSemaphore, frameInfo.presentIndex);  // composition to finish
+                            toSignal.add(presenter->frameRenderedSemaphores[imageIndex]);  // frame ready for present. Not a timeline semaphore
 
                             // no image was acquired, just skip everything and signal the appropriate semaphores
 
@@ -1113,7 +1144,7 @@ DWORD WINAPI composeAndPresent_presenterThread(LPVOID pParam)
                             uint32_t    realSwapchainImageIndex = 0;
                             VkSemaphore acquireSemaphore        = VK_NULL_HANDLE;
                             VkResult    res                     = presenter->acquireNextRealImage(realSwapchainImageIndex, acquireSemaphore);
-                            FFX_ASSERT_MESSAGE_FORMAT(res == VK_SUCCESS || res == VK_SUBOPTIMAL_KHR || res == VK_ERROR_OUT_OF_DATE_KHR, "[composeAndPresent_presenterThread] failed to acquire swapchain image");
+                            FFX_ASSERT_MESSAGE_FORMAT(res == VK_SUCCESS || res == VK_SUBOPTIMAL_KHR || res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_NOT_READY || res == VK_TIMEOUT, "[composeAndPresent_presenterThread] failed to acquire swapchain image");
 
                             if (res == VK_SUCCESS || res == VK_SUBOPTIMAL_KHR)
                             {
@@ -1397,7 +1428,7 @@ VkResult FrameInterpolationSwapChainVK::init(const VkSwapchainCreateInfoKHR* pCr
 
     VkDevice device                         = pFrameInterpolationInfo->device;
     presentInfo.device                      = device;
-    physicalDevice                          = pFrameInterpolationInfo->physicalDevice;
+    presentInfo.physicalDevice              = pFrameInterpolationInfo->physicalDevice;
     const VkAllocationCallbacks* pAllocator = pFrameInterpolationInfo->pAllocator;
 
     DebugNameSetter debugNameSetter(device);
@@ -1486,7 +1517,7 @@ VkResult FrameInterpolationSwapChainVK::init(const VkSwapchainCreateInfoKHR* pCr
     // check the mode
     const uint32_t cMaxQueueFamilyCount = 16;
     uint32_t       queueFamilyCount     = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
+    vkGetPhysicalDeviceQueueFamilyProperties(presentInfo.physicalDevice, &queueFamilyCount, nullptr);
 
     uint32_t maxFamilyIndex = 0;
     maxFamilyIndex          = maxFamilyIndex > presentInfo.presentQueue.familyIndex ? maxFamilyIndex : presentInfo.presentQueue.familyIndex;
@@ -1499,14 +1530,14 @@ VkResult FrameInterpolationSwapChainVK::init(const VkSwapchainCreateInfoKHR* pCr
 
     VkQueueFamilyProperties properties[cMaxQueueFamilyCount];
     queueFamilyCount = maxFamilyIndex + 1;
-    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, properties);
+    vkGetPhysicalDeviceQueueFamilyProperties(presentInfo.physicalDevice, &queueFamilyCount, properties);
 
     if (presentInfo.presentQueue.familyIndex >= queueFamilyCount)
         return VK_ERROR_INITIALIZATION_FAILED;
 
     const VkQueueFamilyProperties presentQueueProperties = properties[presentInfo.presentQueue.familyIndex];
     VkBool32 supportsPresent = VK_FALSE;
-    res = vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, presentInfo.presentQueue.familyIndex, pCreateInfo->surface, &supportsPresent);
+    res = vkGetPhysicalDeviceSurfaceSupportKHR(presentInfo.physicalDevice, presentInfo.presentQueue.familyIndex, pCreateInfo->surface, &supportsPresent);
     EXIT_ON_VKRESULT_NOT_SUCCESS(res);
 
     if (supportsPresent == VK_FALSE)
@@ -1642,7 +1673,7 @@ VkResult FrameInterpolationSwapChainVK::init(const VkSwapchainCreateInfoKHR* pCr
     info.sharingMode       = VK_SHARING_MODE_EXCLUSIVE; // queue family ownership transfer will be handled manually
 
     VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+    vkGetPhysicalDeviceMemoryProperties(presentInfo.physicalDevice, &memProperties);
 
     for (uint32_t i = 0; i < gameBufferCount; ++i)
     {
@@ -1816,7 +1847,10 @@ void FrameInterpolationSwapChainVK::setFrameGenerationConfig(FfxFrameGenerationC
         if ( presentInfo.interpolationQueue.queue != inputInterpolationQueue.queue
             || interpolationEnabled != config->frameGenerationEnabled
             || presentCallback != inputPresentCallback
-            || frameGenerationCallback != config->frameGenerationCallback)
+            || presentCallbackContext != inputPresentCallbackCtx 
+            || frameGenerationCallback != config->frameGenerationCallback
+            || frameGenerationCallbackContext != config->frameGenerationCallbackContext
+            || drawDebugPacingLines != config->drawDebugPacingLines)
         {
             applyChangesNow = true;
         }
@@ -1829,6 +1863,7 @@ void FrameInterpolationSwapChainVK::setFrameGenerationConfig(FfxFrameGenerationC
         currentFrameID          = config->frameID;
         presentInterpolatedOnly = config->onlyPresentInterpolated;
         interpolationRect       = config->interpolationRect;
+        drawDebugPacingLines    = config->drawDebugPacingLines;
 
         if (presentInfo.interpolationQueue.queue != inputInterpolationQueue.queue)
         {
@@ -1877,7 +1912,11 @@ bool FrameInterpolationSwapChainVK::waitForPresents()
     // wait for interpolation to finish
     bool waitRes = waitForSemaphoreValue(presentInfo.device, presentInfo.gameSemaphore, gameSemaphoreValue, UINT64_MAX, presentInfo.waitCallback);
     waitRes &= waitForSemaphoreValue(presentInfo.device, presentInfo.interpolationSemaphore, interpolationSemaphoreValue, UINT64_MAX, presentInfo.waitCallback);
-    waitRes &= waitForSemaphoreValue(presentInfo.device, presentInfo.presentSemaphore, framesSentForPresentation, UINT64_MAX, presentInfo.waitCallback);
+
+    if (framesSentForPresentation > 0)
+    {
+        waitRes &= waitForSemaphoreValue(presentInfo.device, presentInfo.presentSemaphore, framesSentForPresentation, UINT64_MAX, presentInfo.waitCallback);
+    }
 
     FFX_ASSERT(waitRes);
 
@@ -1892,8 +1931,11 @@ bool FrameInterpolationSwapChainVK::waitForPresents()
     if (res == VK_SUCCESS && imageAcquireQueue.queue != VK_NULL_HANDLE)
         res = vkQueueWaitIdle(imageAcquireQueue.queue);
 
-    if (res == VK_SUCCESS)
-        res = vkDeviceWaitIdle(presentInfo.device);
+    if (framesSentForPresentation > 0)
+    {
+        if (res == VK_SUCCESS)
+            res = vkDeviceWaitIdle(presentInfo.device);
+    }
 
     return res == VK_SUCCESS;
 }
@@ -1973,6 +2015,7 @@ void FrameInterpolationSwapChainVK::dispatchInterpolationCommands(uint32_t      
         VkResult res = pRegisteredCommandList->execute(semaphoresToWait, semaphoresToSignal);
         FFX_ASSERT_MESSAGE_FORMAT(res == VK_SUCCESS, "dispatchInterpolationCommands failed with error %d", res);
 
+        frameInterpolationResetCondition = false;
         *pInterpolatedFrame = interpolationOutput();
     }
     else
@@ -2044,7 +2087,11 @@ void FrameInterpolationSwapChainVK::dispatchInterpolationCommands(uint32_t      
             semaphoresToSignal.add(presentInfo.interpolationSemaphore, ++interpolationSemaphoreValue);
 
             VkResult res = interpolationCommandList->execute(semaphoresToWait, semaphoresToSignal);
-            FFX_ASSERT_MESSAGE_FORMAT(res == VK_SUCCESS, "dispatchInterpolationCommands failed wit error %d", res);
+            FFX_ASSERT_MESSAGE_FORMAT(res == VK_SUCCESS, "dispatchInterpolationCommands failed with error %d", res);
+        }
+        else
+        {
+            interpolationCommandList->drop();
         }
 
         // reset condition if at least one frame was interpolated
@@ -2136,6 +2183,7 @@ VkResult FrameInterpolationSwapChainVK::presentInterpolated(const VkPresentInfoK
     PacingData entry{};
     entry.presentCallback                  = presentCallback;
     entry.presentCallbackContext           = presentCallbackContext;
+    entry.drawDebugPacingLines             = drawDebugPacingLines;
     if (presentInfo.uiCompositionFlags & FFX_UI_COMPOSITION_FLAG_ENABLE_INTERNAL_UI_DOUBLE_BUFFERING)
     {
         entry.uiSurface = ffxGetResourceVK(uiReplacementBuffer.image, uiReplacementBuffer.description, nullptr, FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
@@ -2526,8 +2574,10 @@ VkResult FrameinterpolationPresentInfo::acquireNextRealImage(uint32_t& imageInde
     LeaveCriticalSection(&swapchainCriticalSection);
     
     // only increment on success
-    // no need to handle VK_NOT_READY or VK_TIMEOUT as timeout is UINT64_MAX
-    if (res == VK_SUCCESS || res == VK_SUBOPTIMAL_KHR)
+    // VK_NOT_READY shouldn't be returned according to the Vulkan spec, as timeout isn't 0
+    // https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#vkAcquireNextImageKHR
+    // but in practice, it happens...
+    if (res == VK_SUCCESS || res == VK_SUBOPTIMAL_KHR || res == VK_NOT_READY || res == VK_TIMEOUT)
     {
         nextAcquireSemaphoreIndex = (nextAcquireSemaphoreIndex + 1) % FFX_FRAME_INTERPOLATION_SWAP_CHAIN_MAX_ACQUIRE_SEMAPHORE_COUNT;
     }
@@ -2601,7 +2651,7 @@ VkResult FrameInterpolationSwapChainVK::queuePresent(VkQueue queue, const VkPres
         VkSemaphore acquireSemaphore = VK_NULL_HANDLE;
         
         VkResult res = presentInfo.acquireNextRealImage(imageIndex, acquireSemaphore);
-        FFX_ASSERT_MESSAGE_FORMAT(res == VK_SUCCESS || res == VK_SUBOPTIMAL_KHR || res == VK_ERROR_OUT_OF_DATE_KHR, "[queuePresent] acquiring next image failed with error %d", res);
+        FFX_ASSERT_MESSAGE_FORMAT(res == VK_SUCCESS || res == VK_SUBOPTIMAL_KHR || res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_NOT_READY || res == VK_TIMEOUT, "[queuePresent] acquiring next image failed with error %d", res);
         if (res == VK_SUCCESS || res == VK_SUBOPTIMAL_KHR)
         {
             // composition queue should wait until the image is available to render into it
@@ -2833,7 +2883,7 @@ bool FrameInterpolationSwapChainVK::verifyUiDuplicateResource()
             info.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;  // queue family ownership transfer will be handled manually
 
             VkPhysicalDeviceMemoryProperties memProperties;
-            vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+            vkGetPhysicalDeviceMemoryProperties(presentInfo.physicalDevice, &memProperties);
 
             res = createImage(uiReplacementBuffer,
                               info,

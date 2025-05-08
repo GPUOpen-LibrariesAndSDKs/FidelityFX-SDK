@@ -98,6 +98,28 @@ FFX_API_ENTRY ffxReturnCode_t ffxQuery(ffxContext* context, ffxQueryDescHeader* 
         }
     }
 
+    if (auto desc = ffx::DynamicCast<ffxQueryGetProviderVersion>(header))
+    {
+        if (context != nullptr)
+        {
+            auto provider = GetAssociatedProvider(context);
+            if (provider)
+            {
+                desc->versionId   = provider->GetId();
+                desc->versionName = provider->GetVersionName();
+                return FFX_API_RETURN_OK;
+            }
+        }
+        else
+        {
+            return FFX_API_RETURN_ERROR_PARAMETER;
+        }
+
+        desc->versionId   = 0u;
+        desc->versionName = nullptr;
+        return FFX_API_RETURN_NO_PROVIDER;
+    }
+
     return GetAssociatedProvider(context)->Query(context, header);
 }
 

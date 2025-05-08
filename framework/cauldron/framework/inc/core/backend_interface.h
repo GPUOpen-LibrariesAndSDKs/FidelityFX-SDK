@@ -265,6 +265,8 @@ inline cauldron::ResourceState GetFrameworkState(FfxResourceStates state)
         return cauldron::ResourceState::Present;
     case FFX_RESOURCE_STATE_RENDER_TARGET:
         return cauldron::ResourceState::RenderTargetResource;
+    case FFX_RESOURCE_STATE_DEPTH_ATTACHEMENT:
+        return cauldron::ResourceState::DepthWrite;
     default:
         cauldron::CauldronCritical(L"FFXInterface: Cauldron: Unsupported resource state requested. Please implement.");
         return cauldron::ResourceState::CommonResource;

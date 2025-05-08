@@ -100,6 +100,14 @@ struct ffxOverrideVersion
     uint64_t versionId;  ///< Id of version to use. Must be a value returned from a query in ffxQueryDescGetVersions.versionIds array.
 };
 
+#define FFX_API_QUERY_DESC_TYPE_GET_PROVIDER_VERSION 6u
+struct ffxQueryGetProviderVersion
+{
+    ffxQueryDescHeader header;
+    uint64_t versionId;      ///< Id of provider being used for queried context. 0 if invalid.
+    const char* versionName; ///< Version name for display. If nullptr, the query was invalid.
+};
+
 // Memory allocation function. Must return a valid pointer to at least size bytes of memory aligned to hold any type.
 // May return null to indicate failure. Standard library malloc fulfills this requirement.
 typedef void* (*ffxAlloc)(void* pUserData, uint64_t size);

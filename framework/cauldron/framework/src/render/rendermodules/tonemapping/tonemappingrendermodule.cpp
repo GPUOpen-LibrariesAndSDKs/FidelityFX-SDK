@@ -241,12 +241,11 @@ ToneMappingRenderModule::~ToneMappingRenderModule()
 
 void ToneMappingRenderModule::Execute(double deltaTime, CommandList* pCmdList)
 {
-    // If display mode is set to FSHDR_SCRGB or HDR10_SCRGB, the tonemapper will not run
-    // the color target for the duration of the frame will be RGBA16_FLOAT (HDR16Color)
+    // If display mode is set to FSHDR_SCRGB or HDR10_SCRGB, set default "Tone Mapper" GUI option value to "No Tonemapper"
     if (GetFramework()->GetSwapChain()->GetSwapChainDisplayMode() == DisplayMode::DISPLAYMODE_FSHDR_SCRGB ||
         GetFramework()->GetSwapChain()->GetSwapChainDisplayMode() == DisplayMode::DISPLAYMODE_HDR10_SCRGB)
     {
-        return;
+        m_TonemapperConstantData.ToneMapper = 5;// No Tonemapper
     }
 
     {

@@ -21,9 +21,10 @@ format_check:
   needs: []
   script:
   - echo Coming soon!
-    
+
 build_release_sdk_dx12:
   stage: build
+  needs: []
   script:
   - 'cd sdk/'
   - 'mkdir build'
@@ -37,6 +38,7 @@ build_release_sdk_dx12:
 
 build_debug_sdk_dx12:
   stage: build
+  needs: []
   script:
   - 'cd sdk/'
   - 'mkdir build'
@@ -50,6 +52,7 @@ build_debug_sdk_dx12:
     
 build_release_sdk_vk:
   stage: build
+  needs: []
   script:
   - 'cd sdk/'
   - 'mkdir build'
@@ -63,6 +66,7 @@ build_release_sdk_vk:
 
 build_debug_sdk_vk:
   stage: build
+  needs: []
   script:
   - 'cd sdk/'
   - 'mkdir build'
@@ -76,6 +80,7 @@ build_debug_sdk_vk:
 
 build_debug_api_dll_dx12:
   stage: build
+  needs: []
   script:
   - 'cd ffx-api'
   - 'mkdir build'
@@ -89,6 +94,7 @@ build_debug_api_dll_dx12:
 
 build_release_api_dll_dx12:
   stage: build
+  needs: []
   script:
   - 'cd ffx-api'
   - 'mkdir build'
@@ -102,6 +108,7 @@ build_release_api_dll_dx12:
     
 build_debug_api_dll_vk:
   stage: build
+  needs: []
   script:
   - 'cd ffx-api'
   - 'mkdir build'
@@ -115,6 +122,7 @@ build_debug_api_dll_vk:
 
 build_release_api_dll_vk:
   stage: build
+  needs: []
   script:
   - 'cd ffx-api'
   - 'mkdir build'
@@ -185,7 +193,7 @@ build_debug_samples_vk:
     paths:
     - ./bin
     expire_in: 2 weeks
-    
+
 package_release_samples_pc:
   stage: package
   needs:

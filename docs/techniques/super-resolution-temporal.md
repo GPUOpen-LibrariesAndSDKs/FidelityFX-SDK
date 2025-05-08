@@ -1,6 +1,6 @@
-<!-- @page page_techniques_super-resolution-temporal FidelityFX Super Resolution 2.3.2 -->
+<!-- @page page_techniques_super-resolution-temporal FidelityFX Super Resolution 2.3.3 -->
 
-<h1>FidelityFX Super Resolution 2.3.2 (FSR2)</h1>
+<h1>FidelityFX Super Resolution 2.3.3 (FSR2)</h1>
 
 ![Screenshot](media/super-resolution-temporal/fsr2-sample_resized.jpg "A screenshot showcasing the final output of the effect")
 
@@ -505,8 +505,9 @@ Modern GPUs execute collections of threads - called wavefronts - together in a S
 For DirectX(R)12 based applications which are running on RDNA and RDNA2-based GPUs and using the Microsoft Agility SDK, the FSR2 host API will select a 64-wide wavefront width.
 
 <h3>Debug Checker</h3>
+Enable debug checker to validate application supplied inputs at dispatch upscale. This feature can be enabled in any build configuration of the runtime (IE. release binaries from PrebuiltSignedDll folder or debug build). It is recommended this is enabled only in development builds of game.
 
-The context description structure can be provided with a callback function for passing textual warnings from the FSR 2 runtime to the underlying application. The `fpMessage` member of the description is of type `FfxFsr2Message` which is a function pointer for passing string messages of various types. Assigning this variable to a suitable function, and passing the [`FFX_FSR2_ENABLE_DEBUG_CHECKING`](../../sdk/include/FidelityFX/host/ffx_fsr2.h#L139) flag within the flags member of [`FfxFsr2ContextDescription`](../../sdk/include/FidelityFX/host/ffx_fsr2.h#L159) will enable the feature. It is recommended this is enabled only in debug development builds.
+Passing the [`FFX_FSR2_ENABLE_DEBUG_CHECKING`](../../sdk/include/FidelityFX/host/ffx_fsr2.h#L139) flag within the flags member of [`FfxFsr2ContextDescription`](../../sdk/include/FidelityFX/host/ffx_fsr2.h#L159) will output textual warnings from FSR2 to debugger TTY by default. Application can set the callback fuction for runtime to pass the messages to the underlying application. Application can assign `fpMessage` member of [`FfxFsr2ContextDescription`](../../sdk/include/FidelityFX/host/ffx_fsr2.h#L159) to a suitable function. `fpMessage` is of type `FfxFsr2Message` which is a function pointer for passing string messages of various types. If using ffx-api, another way is calling ffx::Configure `fpMessage` in `ffxConfigureDescGlobalDebug1` on the upscaler context.
 
 An example of the kind of output that can occur when the checker observes possible issues is below:
 

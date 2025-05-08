@@ -29,8 +29,8 @@
 #include "FrameInterpolationSwapchainDX12_DebugPacing.h"
 #include "antilag2/ffx_antilag2_dx12.h"
 
-#pragma comment(lib, "winmm.lib")
 #include <timeapi.h>
+#pragma comment(lib, "winmm.lib")
 
 FfxErrorCode ffxRegisterFrameinterpolationUiResourceDX12(FfxSwapchain gameSwapChain, FfxResource uiResource, uint32_t flags)
         {
@@ -238,7 +238,8 @@ FfxErrorCode ffxCreateFrameinterpolationSwapchainForHwndDX12(HWND               
         FrameInterpolationSwapChainDX12* fiSwapchain = new FrameInterpolationSwapChainDX12();
         if (fiSwapchain)
         {
-            if (SUCCEEDED(fiSwapchain->init(hWnd, desc1, fullscreenDesc, queue, dxgiFactory2)))
+            HRESULT hr = fiSwapchain->init(hWnd, desc1, fullscreenDesc, queue, dxgiFactory2);
+            if (SUCCEEDED(hr))
             {
                 outGameSwapChain = ffxGetSwapchainDX12(fiSwapchain);
 
@@ -247,7 +248,10 @@ FfxErrorCode ffxCreateFrameinterpolationSwapchainForHwndDX12(HWND               
             else
             {
                 delete fiSwapchain;
-                err = FFX_ERROR_INVALID_ARGUMENT;
+                if (hr == E_ACCESSDENIED)
+                    err = FFX_ERROR_ACCESS_DENIED;
+                else
+                    err = FFX_ERROR_INVALID_ARGUMENT;
             }
         }
         else
@@ -608,7 +612,7 @@ bool FrameInterpolationSwapChainDX12::verifyBackbufferDuplicateResources()
 {
     HRESULT hr = S_OK;
 
-    ID3D12Device8*  device = nullptr;
+    ID3D12Device*   device = nullptr;
     ID3D12Resource* buffer = nullptr;
     if (SUCCEEDED(real()->GetBuffer(0, IID_PPV_ARGS(&buffer))))
     {
@@ -852,7 +856,7 @@ HRESULT FrameInterpolationSwapChainDX12::shutdown()
             if (presentInfo.interpolationFence)
             {
                 presentInfo.interpolationQueue->Signal(presentInfo.interpolationFence, ++interpolationFenceValue);
-                waitForFenceValue(presentInfo.interpolationFence, interpolationFenceValue, INFINITE, presentInfo.waitCallback, presentInfo.interpolationFence);
+                waitForFenceValue(presentInfo.interpolationFence, interpolationFenceValue, INFINITE, presentInfo.waitCallback);
             }
         }
         
@@ -1394,6 +1398,10 @@ void FrameInterpolationSwapChainDX12::dispatchInterpolationCommands(FfxResource*
 
             presentInfo.interpolationQueue->Signal(presentInfo.interpolationFence, ++interpolationFenceValue);
         }
+        else
+        {
+            interpolationCommandList->drop();
+        }
 
         // reset condition if at least one frame was interpolated
         if (desc.numInterpolatedFrames > 0)
@@ -1484,7 +1492,7 @@ bool FrameInterpolationSwapChainDX12::verifyUiDuplicateResource()
 {
     HRESULT hr = S_OK;
 
-    ID3D12Device8*  device     = nullptr;
+    ID3D12Device*   device     = nullptr;
     ID3D12Resource* uiResource = reinterpret_cast<ID3D12Resource*>(presentInfo.currentUiSurface.resource);
 
     if ((0 == (presentInfo.uiCompositionFlags & FFX_UI_COMPOSITION_FLAG_ENABLE_INTERNAL_UI_DOUBLE_BUFFERING)) || (uiResource == nullptr))
@@ -1601,6 +1609,7 @@ void FrameInterpolationSwapChainDX12::copyUiResource()
     // IDXGISwapChain1
 HRESULT STDMETHODCALLTYPE FrameInterpolationSwapChainDX12::Present(UINT SyncInterval, UINT Flags)
 {
+
     const UINT64 previousFramesSentForPresentation = framesSentForPresentation;
 
     if (Flags & DXGI_PRESENT_TEST)

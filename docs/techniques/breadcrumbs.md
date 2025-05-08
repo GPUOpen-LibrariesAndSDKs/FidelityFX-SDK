@@ -1,6 +1,6 @@
-<!-- @page page_techniques_breadcrumbs FidelityFX Breadcrumbs 1.0 -->
+<!-- @page page_techniques_breadcrumbs FidelityFX Breadcrumbs 1.0.1 -->
 
-<h1>FidelityFX Breadcrumbs 1.0</h1>
+<h1>FidelityFX Breadcrumbs 1.0.1</h1>
 
 Breadcrumbs library aiding with post-mortem GPU crash analysis.
 

@@ -1,6 +1,6 @@
-<!-- @page page_techniques_frame-interpolation FidelityFX Frame Interpolation 1.1.2 -->
+<!-- @page page_techniques_frame-interpolation FidelityFX Frame Interpolation 1.1.3 -->
 
-<h1>FidelityFX Frame Interpolation 1.1.2</h1>
+<h1>FidelityFX Frame Interpolation 1.1.3</h1>
 
 <h2>Table of contents</h2>
 

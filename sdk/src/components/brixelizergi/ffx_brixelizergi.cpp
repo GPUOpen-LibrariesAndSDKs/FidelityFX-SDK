@@ -1569,7 +1569,7 @@ static FfxErrorCode brixelizerGIDispatch(FfxBrixelizerGIContext_Private*        
     uint32_t cascadeOffset = pDispatchDescription->startCascade;
     uint32_t numCascades = pDispatchDescription->endCascade - pDispatchDescription->startCascade;
 
-    passConstants.cascade_idx = cascadeOffset + ffxBrixelizerRawGetCascadeToUpdate(pContext->frameIndex, numCascades);
+    passConstants.cascade_idx    = cascadeOffset + (numCascades > 0 ? ffxBrixelizerRawGetCascadeToUpdate(pContext->frameIndex, numCascades) : 0);
     passConstants.energy_decay_k = pow(float(1.0 - 2.0e-1), float(passConstants.cascade_idx - cascadeOffset));
 
     updateConstantBuffer(pContext, FFX_BRIXELIZER_GI_CONSTANTBUFFER_IDENTIFIER_PASS_CONSTANTS, (void*)&passConstants);

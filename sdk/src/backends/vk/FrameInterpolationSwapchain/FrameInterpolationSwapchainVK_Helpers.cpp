@@ -95,3 +95,14 @@ VkResult VulkanQueue::submit(VkCommandBuffer commandBuffer, VkSemaphore timeline
     return submit(commandBuffer, semaphoresToWait, semaphoresToSignal);
 }
 
+VkResult CreateShaderModule(VkDevice device, size_t codeSize, const uint32_t* pCode, VkShaderModule* pModule, const VkAllocationCallbacks* pAllocator)
+{
+    VkShaderModuleCreateInfo info = {};
+    info.sType                    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    info.pNext                    = nullptr;
+    info.flags                    = 0;
+    info.codeSize                 = codeSize;
+    info.pCode                    = pCode;
+
+    return vkCreateShaderModule(device, &info, pAllocator, pModule);
+}

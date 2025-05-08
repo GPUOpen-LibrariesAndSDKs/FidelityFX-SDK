@@ -17,7 +17,7 @@ All of the FidelityFX SDK samples are written in C++ and use the [Cauldron](../.
 - [FidelityFX Parallel Sort 1.3](parallel-sort.md)
 - [FidelityFX Single Pass Downsampler 2.2](single-pass-downsampler.md)
 - [FidelityFX Stochastic Screen-Space Reflections 1.5](stochastic-screen-space-reflections.md)
-- [FidelityFX Super Resolution 1.2 & 2.3.2 & 3.1.1](super-resolution.md)
+- [FidelityFX Super Resolution 2.3.3 & 3.1.4](super-resolution.md)
 - [FidelityFX Variable Shading 1.2](variable-shading.md)
 
 <!-- - @subpage page_samples_combined-adaptive-compute-ambient-occlusion "Combined Adaptive Compute Ambient Occlusion" -->

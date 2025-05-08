@@ -45,6 +45,28 @@ static FfxFsr2QualityMode ConvertQuality(uint32_t apiMode)
     }
 }
 
+static uint32_t ConvertFlags(uint32_t apiFlags)
+{
+    uint32_t outFlags = 0;
+    if (apiFlags & FFX_UPSCALE_ENABLE_HIGH_DYNAMIC_RANGE)
+        outFlags |= FFX_FSR2_ENABLE_HIGH_DYNAMIC_RANGE;
+    if (apiFlags & FFX_UPSCALE_ENABLE_DISPLAY_RESOLUTION_MOTION_VECTORS)
+        outFlags |= FFX_FSR2_ENABLE_DISPLAY_RESOLUTION_MOTION_VECTORS;
+    if (apiFlags & FFX_UPSCALE_ENABLE_MOTION_VECTORS_JITTER_CANCELLATION)
+        outFlags |= FFX_FSR2_ENABLE_MOTION_VECTORS_JITTER_CANCELLATION;
+    if (apiFlags & FFX_UPSCALE_ENABLE_DEPTH_INVERTED)
+        outFlags |= FFX_FSR2_ENABLE_DEPTH_INVERTED;
+    if (apiFlags & FFX_UPSCALE_ENABLE_DEPTH_INFINITE)
+        outFlags |= FFX_FSR2_ENABLE_DEPTH_INFINITE;
+    if (apiFlags & FFX_UPSCALE_ENABLE_AUTO_EXPOSURE)
+        outFlags |= FFX_FSR2_ENABLE_AUTO_EXPOSURE;
+    if (apiFlags & FFX_UPSCALE_ENABLE_DYNAMIC_RESOLUTION)
+        outFlags |= FFX_FSR2_ENABLE_DYNAMIC_RESOLUTION;
+    if (apiFlags & FFX_UPSCALE_ENABLE_DEBUG_CHECKING)
+        outFlags |= FFX_FSR2_ENABLE_DEBUG_CHECKING;
+    return outFlags;
+}
+
 bool ffxProvider_FSR2::CanProvide(uint64_t type) const
 {
     return (type & FFX_API_EFFECT_MASK) == FFX_API_EFFECT_ID_UPSCALE;
@@ -71,6 +93,7 @@ struct InternalFsr2Context
     FfxInterface backendInterface;
     FfxFsr2Context context;
     ffxApiMessage fpMessage;
+    uint32_t debugLevel;
 };
 
 ffxReturnCode_t ffxProvider_FSR2::CreateContext(ffxContext* context, ffxCreateContextDescHeader* header, Allocator& alloc) const
@@ -92,7 +115,7 @@ ffxReturnCode_t ffxProvider_FSR2::CreateContext(ffxContext* context, ffxCreateCo
         initializationParameters.maxRenderSize.height      = desc->maxRenderSize.height;
         initializationParameters.displaySize.width         = desc->maxUpscaleSize.width;
         initializationParameters.displaySize.height        = desc->maxUpscaleSize.height;
-        initializationParameters.flags                     = desc->flags;
+        initializationParameters.flags                     = ConvertFlags(desc->flags);
         // Calling this casted function is undefined behaviour, but it's probably safe.
         initializationParameters.fpMessage                 = reinterpret_cast<FfxFsr2Message>(desc->fpMessage);
 
@@ -101,6 +124,8 @@ ffxReturnCode_t ffxProvider_FSR2::CreateContext(ffxContext* context, ffxCreateCo
 
         // Create the FSR2 context
         TRY(ffxFsr2ContextCreate(&internal_context->context, &initializationParameters));
+        
+        ffxFsr2SetGlobalDebugMessage(reinterpret_cast<ffxMessageCallback>(desc->fpMessage), 0);
 
         *context = internal_context;
         return FFX_API_RETURN_OK;
@@ -126,9 +151,24 @@ ffxReturnCode_t ffxProvider_FSR2::DestroyContext(ffxContext* context, Allocator&
     return FFX_API_RETURN_OK;
 }
 
-ffxReturnCode_t ffxProvider_FSR2::Configure(ffxContext*, const ffxConfigureDescHeader*) const
+ffxReturnCode_t ffxProvider_FSR2::Configure(ffxContext* context, const ffxConfigureDescHeader* header) const
 {
-    return FFX_API_RETURN_ERROR_PARAMETER;
+    VERIFY(context, FFX_API_RETURN_ERROR_PARAMETER);
+    VERIFY(*context, FFX_API_RETURN_ERROR_PARAMETER);
+    VERIFY(header, FFX_API_RETURN_ERROR_PARAMETER);
+    InternalFsr2Context* internal_context = reinterpret_cast<InternalFsr2Context*>(*context);
+    switch (header->type)
+    {
+        case FFX_API_CONFIGURE_DESC_TYPE_GLOBALDEBUG1:
+        {
+            auto desc = reinterpret_cast<const ffxConfigureDescGlobalDebug1*>(header);
+            TRY2(ffxFsr2SetGlobalDebugMessage( reinterpret_cast<ffxMessageCallback>(desc->fpMessage), desc->debugLevel));
+            internal_context->fpMessage = desc->fpMessage;
+            internal_context->debugLevel = desc->debugLevel;
+        }
+        break;
+    }
+    return FFX_API_RETURN_OK;
 }
 
 ffxReturnCode_t ffxProvider_FSR2::Query(ffxContext* context, ffxQueryDescHeader* header) const

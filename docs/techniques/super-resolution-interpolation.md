@@ -1,28 +1,32 @@
-<!-- @page page_techniques_super-resolution-interpolation FidelityFX Super Resolution 3.1.3 -->
+<!-- @page page_techniques_super-resolution-interpolation FidelityFX Super Resolution 3.1.4 -->
 
-<h1>FidelityFX Super Resolution 3.1.3 (FSR3) - Upscaling and Frame Generation</h1>
+<h1>FidelityFX Super Resolution 3.1.4 (FSR3) - Upscaling and Frame Generation</h1>
 
-![Screenshot](media/super-resolution-temporal/fsr3-sample_resized.jpg "A screenshot showcasing the final output of the effect")
+![Screenshot](media/super-resolution-temporal/fsr3-sample.jpg "A screenshot showcasing the final output of the effect")
 
 <h2>Table of contents</h2>
 
-- [FidelityFX Super Resolution 3.1.0 (FSR3)](#fidelityfx-super-resolution-303-fsr3)
+- [FidelityFX Super Resolution 3.1.4 (FSR3)](#fidelityfx-super-resolution-314-fsr3)
   - [Table of contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Integration guidelines](#integration-guidelines)
     - [Shading language and API requirements](#shading-language-and-api-requirements)
-      - [DirectX 12 + HLSL](#directx-12--hlsl)
-      - [Vulkan + GLSL](#vulkan--glsl)
+      - [DirectX 12](#directx-12)
+      - [Vulkan](#vulkan)
     - [Quick start checklist](#quick-start-checklist)
     - [Walkthrough](#walkthrough)
       - [Add upscaling through FSR3 interface](#add-upscaling-through-fsr3-interface)
-      - [Enable FSR3's proxy frame interpolation swapchain](#enable-fsr3-s-proxy-frame-interpolation-swapchain)
+      - [Get resolution based on settings](#get-resolution-based-on-settings)
+      - [Apply camera jitter](#apply-camera-jitter)
       - [Dispatch Upscaling](#dispatch-upscaling)
+      - [Enable FSR3’s proxy frame generation swapchain](#enable-fsr3-s-proxy-frame-generation-swapchain)
+      - [Create frame generation context](#create-frame-generation-context)
       - [Configure frame interpolation](#configure-frame-interpolation)
       - [UI composition](#ui-composition)
       - [Shutdown](#shutdown)
     - [Thread Safety](#thread-safety)
     - [Resource Lifetime](#resource-lifetime)
+    - [Debug Checker](#debug-checker)
   - [The Technique](#the-technique)
   - [Memory Usage](#memory-usage)
   - [See also](#see-also)
@@ -552,6 +556,16 @@ If `FfxFrameGenerationConfig::allowAsyncWorkloads` is true:
 Frameinterpolation happens on an async compute queue so the `distortionField` texture needs to be double buffered by the application
 If `FfxFrameGenerationConfig:: allowAsyncWorkloads` is false:
 Frameinterpolation happens on the game GFX queue, so app can safely modify `distortionField` texture in the next frame
+
+<h3>Debug Checker</h3>
+Enable debug checker to validate application supplied inputs at dispatch upscale. This feature can be enabled in any build configuration of the runtime IE. release binaries from PrebuiltSignedDll folder or debug build. It is recommended this is enabled only in development builds of game.
+
+Passing 
+`FFX_FRAMEGENERATION_ENABLE_DEBUG_CHECKING` flag within `ffxCreateContextDescFrameGeneration` will output textual warnings from frame generation to debugger TTY by default. ffx::Configure API allow application set callback function to pass the messages to the underlying application. Assign `fpMessage` in `ffxConfigureDescGlobalDebug1` to a suitiable function. 
+
+An example of the kind of output that can occur when debug checker observes possible issues is below:
+
+FSR_API_DEBUG_WARNING: ffxDispatchDescFrameGenerationPrepareCameraInfo needs to be passed as linked struct. This is a required input to FSR3.1.4 and onwards for best quality.
 
 <h2>The Technique</h2>
 

@@ -293,8 +293,8 @@ void BrixelizerGIRenderModule::Init(const json& initData)
     CauldronAssert(ASSERT_CRITICAL, errorCode == FFX_OK, L"Could not initialize the FidelityFX SDK backend");
 
     if (errorCode == FFX_OK) {
-        CauldronAssert(ASSERT_CRITICAL, m_InitializationParameters.backendInterface.fpGetSDKVersion(&m_InitializationParameters.backendInterface) == FFX_SDK_MAKE_VERSION(1, 1, 2),
-                           L"FidelityFX Brixelizer GI sample requires linking with a 1.1.2 version SDK backend.");
+        CauldronAssert(ASSERT_CRITICAL, m_InitializationParameters.backendInterface.fpGetSDKVersion(&m_InitializationParameters.backendInterface) == FFX_SDK_MAKE_VERSION(1, 1, 4),
+                           L"FidelityFX Brixelizer GI sample requires linking with a 1.1.4 version SDK backend.");
     }
 
     CreateBrixelizerContext();
@@ -976,8 +976,8 @@ void BrixelizerGIRenderModule::CreateBrixelizerGIContext()
     CauldronAssert(AssertLevel::ASSERT_ERROR, errorCode == FFX_OK, L"Failed to create Brixelizer GI context.");
 
     if (errorCode == FFX_OK) {
-        CauldronAssert(ASSERT_CRITICAL, ffxBrixelizerGIGetEffectVersion() == FFX_SDK_MAKE_VERSION(1, 0, 0),
-                           L"FidelityFX Brixelizer GI sample requires linking with a 1.0 version Brixelizer GI library.");
+        CauldronAssert(ASSERT_CRITICAL, ffxBrixelizerGIGetEffectVersion() == FFX_SDK_MAKE_VERSION(1, 0, 1),
+                           L"FidelityFX Brixelizer GI sample requires linking with a 1.0.1 version Brixelizer GI library.");
     }
 }
 

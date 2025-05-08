@@ -47,17 +47,6 @@ VkDescriptorSet       s_uiCompositionDescriptorSets[c_uiCompositionRingBufferSiz
 VkImageView           s_uiCompositionImageViews[c_uiCompositionTotalViewCount];
 VkFramebuffer         s_uiCompositionFramebuffers[c_uiCompositionRingBufferSize];
 
-VkResult CreateShaderModule(VkDevice device, size_t codeSize, const uint32_t* pCode, VkShaderModule* pModule, const VkAllocationCallbacks* pAllocator)
-{
-    VkShaderModuleCreateInfo info = {};
-    info.sType                    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    info.pNext                    = nullptr;
-    info.flags                    = 0;
-    info.codeSize                 = codeSize;
-    info.pCode                    = pCode;
-
-    return vkCreateShaderModule(device, &info, pAllocator, pModule);
-}
 
 #define FFX_BACKEND_API_ERROR_ON_VK_ERROR(res) if (res != VK_SUCCESS) return FFX_ERROR_BACKEND_API_ERROR;
 
@@ -348,7 +337,7 @@ VkResult CreateUiCompositionPipeline(VkDevice device, VkFormat fmt, const VkAllo
         info.pStages                      = shaderStageCreateInfos;
         info.pVertexInputState            = &vertexInputStateCreateInfo;
         info.pInputAssemblyState          = &inputAssemblyStateCreateInfo;
-        info.pTessellationState           = nullptr;  // TODO: can this be nullptr?
+        info.pTessellationState           = nullptr;
         info.pViewportState               = &viewportStateCreateInfo;
         info.pRasterizationState          = &rasterizationStateCreateInfo;
         info.pMultisampleState            = &multisampleStateCreateInfo;
@@ -504,7 +493,7 @@ FFX_API FfxErrorCode ffxFrameInterpolationUiComposition(const FfxPresentCallback
     FFX_ASSERT(device != VK_NULL_HANDLE);
     FFX_ASSERT(renderTargetImage != VK_NULL_HANDLE);
 
-    // blit backbuffer and composit UI using a VS/PS pass
+    // blit backbuffer and composite UI using a VS/PS pass
     FfxErrorCode res = verifyUiBlitGpuResources(device, ffxGetVkFormatFromSurfaceFormat(params->outputSwapChainBuffer.description.format), pAllocator);
     if (res != FFX_OK)
         return res;

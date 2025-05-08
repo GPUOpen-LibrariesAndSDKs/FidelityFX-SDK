@@ -2,9 +2,9 @@
 
 <h1>FidelityFX Super Resolution</h1>
 
-![alt text](media/super-resolution/fsr-sample_resized.jpg "A screenshot of the FSR sample.")
+![alt text](media/super-resolution/fsr3-sample.jpg "A screenshot of the FSR sample.")
 
-This sample demonstrates the use of FidelityFX Super Resolution 3.1.3 for upscaling and frame generation.
+This sample demonstrates the use of FidelityFX Super Resolution 3.1.4 for upscaling and frame generation.
 
 For details on the underlying algorithms you can refer to the per-technique documentation for [FSR3 upscaling](../techniques/super-resolution-upscaler.md) and [frame interpolation](../techniques/frame-interpolation.md).
 
@@ -22,7 +22,7 @@ The sample contains various UI elements to help you explore the techniques it de
 | -------------|-------|-------------|
 | **Particle animation** | `Checked, Unchecked` | Enables or disables particle emission which is used to demonstrate the use of the Reactive mask. |
 | **Method** | `Native, FSR` | Used to select the method of upscaling, either native resolution with no upscaling or upscaling using FSR. |
-| **FSR Version** | `3.1.0` | Select the FSR upscaler version to use. |
+| **FSR Version** | `3.1.4`, `2.3.3` | Select the FSR upscaler version to use. |
 | **Scale Preset** | `Native AA (1.0x), Quality (1.5x), Balanced (1.7x), Performance (2x), Ultra Performance (3x), Custom` | Select upscaling preset which represents the scaling factor per dimension from render resolution to display resolution. |
 | **Mip LOD Bias** | `-5.0..0.0` | Used for choosing the amount of mipmap biasing applied for sampling textures during the G-Buffer pass.  |
 | **Custom Scale** | `1.0..3.0` | Allows to set a custom scaling factor when Scale Preset is set to 'Custom'. |
@@ -33,11 +33,16 @@ The sample contains various UI elements to help you explore the techniques it de
 | **Use Transparency and Composition Mask** | `Checked, Unchecked` | Toggles the use of the Transparency and Composition Mask. |
 | **RCAS Sharpening** | `Checked, Unchecked` | Toggles the use of RCAS sharpening. |
 | **Sharpness** | `0.0..1.0` | Changes the amount of sharpening applied if RCAS is enabled. |
+| **Upscaler CB Key** | `fVelocity, fReactivenessScale, fShadingChangeScale, fAccumulationAddedPerFrame, fMinDisocclusionAccumulation` | Select the upscaler tuning knob exposed in KeyValue API|
+| **Upscaler CB Value** | `-1.0..2.0` | Calls KeyValue API to set upscaler tuning knob with this value when changed|
+| **Debug Checker** | `Disabled`, `Enabled. Set nullptr message callback`, `Enabled. Set Cauldron message callback` | Select between debug checker behaviors for all ffx-api contexts. Whether debug checker is disabled, enabled and output message to debugger TTY, or enabled and output message to application's callback. Will recreate context when flag bit FFX_FSR3UPSCALER_ENABLE_DEBUG_CHECKING or FFX_FRAMEGENERATION_ENABLE_DEBUG_CHECKING changes. |
 | **Frame Interpolation** | `Checked, Unchecked` | Toggles frame generation. |
 | **Support Async Compute** | `Checked, Unchecked` | Toggles async compute flag set during context creation. |
 | **Allow async compute** | `Checked, Unchecked` | Toggles use of async compute queue. |
 | **Use callback** | `Checked, Unchecked` | Toggles use frame generation callback. |
+| **Use Distortion Field Input** | `Checked, Unchecked` | Toggles use `distortionField` texture. |
 | **Draw frame generation tear lines** | `Checked, Unchecked` | Toggles tearing indicators on the left and right sides of the window. |
+| **Draw frame generation pacing lines** | `Checked, Unchecked` | Toggles 2 vertical lines on the left of the window. Left most line alternate between green & magenta. The other line alternate between black & white. If the pacing is done properly, user should see two grey lines. |
 | **Draw frame generation reset indicators** | `Checked, Unchecked` | Toggles reset indicators at the top side of the window. |
 | **Draw frame generation debug view** | `Checked, Unchecked` | Toggles frame generation debug view. See the explanation below. |
 | **Present interpolated only** | `Checked, Unchecked` | When enabled, only interpolated frames are shown. |
@@ -45,18 +50,26 @@ The sample contains various UI elements to help you explore the techniques it de
 | **Simulate present skip** | | When clicked, simulates skipping presentation of one frame by incrementing the frame ID by two. |
 | **UI Composition mode** | `No UI handling (not recommended), UiTexture, UiCallback, Pre-Ui Backbuffer` | Select method for rendering the user interface for generated frames. |
 | **DoubleBuffer UI resource in swapchain** | `Checked, Unchecked` | Toggles double-buffering of UI resource in the swapchain context. |
+| **Waitcallback Mode** | `nullptr, CAUDRON_LOG_DEBUG(waitCallback)` | If enabled, frame interpolation swapchain will call waitcallback at select places. For example, when resize window takes longer than 1ms. |
+| **Frame Pacing safetyMarginInMs** | `0.0..1.0` | Changes frame interpolation swapchain pacing tuning `safetyMarginInMs` value. |
+| **Frame Pacing varianceFactor** | `0.0..1.0` | Changes frame interpolation swapchain pacing tuning `varianceFactor` value. |
+| **Frame Pacing allowHybridSpin** | `Checked, Unchecked` | Toggles whether frame interpolation swapchain presenterthread will hybrid spin instead of busy spin when waiting for target QPC of before present the frame. |
+| **Frame Pacing hybridSpinTime in timer resolution units** | `0.0..10.0` | Changes interpolation swapchain presenterthread sleep amount between checking if reached target QPC of completed frame. |
+| **Frame Pacing allowWiatForSingleObjectOnFence** | `Checked, Unchecked` | Toggles whether frame interpolation swapchain interpolationThread will use WaitForSingleObject instead of busy spin waiting for interpolationFence |
+
+
 
 <h3>Upscaler debug view</h3>
 
 When the upscaler debug view is enabled, the following will be shown:
 
-![Upscaler debug overlay](../techniques/media/super-resolution-upscaler/upscaler-debug-overlay.svg "A diagram showing the debug overlay")
+![Upscaler debug overlay](media/super-resolution/upscaler-debug-overlay.svg "A diagram showing the debug overlay")
 
 <h3>Frame generation debug view and markers</h3>
 
 When the frame generation debug view is enabled, the following will be shown:
 
-![Frame interpolation debug overlay](../techniques/media/frame-interpolation/frame-interpolation-debug-overlay.svg "A diagram showing the debug overlay")
+![Frame interpolation debug overlay](media/super-resolution/frame-interpolation-debug-overlay.svg "A diagram showing the debug overlay")
 
 In addition to the debug view, several markers can be enabled that may appear at the sides and top of the window.
 

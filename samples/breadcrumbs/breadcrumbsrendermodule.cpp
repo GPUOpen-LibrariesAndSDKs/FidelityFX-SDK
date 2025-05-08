@@ -77,10 +77,10 @@ void BreadcrumbsRenderModule::Init(const json& initData)
     FfxErrorCode errorCode = SDKWrapper::ffxGetInterface(&contextDesc.backendInterface, GetDevice(),
         m_BackendScratchBuffer, scratchBufferSize, FFX_BREADCRUMBS_CONTEXT_COUNT);
     CAULDRON_ASSERT(errorCode == FFX_OK);
-    CauldronAssert(ASSERT_CRITICAL, contextDesc.backendInterface.fpGetSDKVersion(&contextDesc.backendInterface) == FFX_SDK_MAKE_VERSION(1, 1, 2),
-        L"FidelityFX Breadcrumbs 1.0 sample requires linking with a 1.1.2 version SDK backend");
-    CauldronAssert(ASSERT_CRITICAL, ffxBreadcrumbsGetEffectVersion() == FFX_SDK_MAKE_VERSION(1, 0, 0),
-                       L"FidelityFX Breadcrumbs 1.0 sample requires linking with a 1.0 version FidelityFX Breadcrumbs library");
+    CauldronAssert(ASSERT_CRITICAL, contextDesc.backendInterface.fpGetSDKVersion(&contextDesc.backendInterface) == FFX_SDK_MAKE_VERSION(1, 1, 4),
+        L"FidelityFX Breadcrumbs 1.0 sample requires linking with a 1.1.4 version SDK backend");
+    CauldronAssert(ASSERT_CRITICAL, ffxBreadcrumbsGetEffectVersion() == FFX_SDK_MAKE_VERSION(1, 0, 1),
+                       L"FidelityFX Breadcrumbs 1.0 sample requires linking with a 1.0.1 version FidelityFX Breadcrumbs library");
                        
     contextDesc.backendInterface.fpRegisterConstantBufferAllocator(&contextDesc.backendInterface, SDKWrapper::ffxAllocateConstantBuffer);
 
@@ -120,7 +120,7 @@ void BreadcrumbsRenderModule::Init(const json& initData)
     FfxBreadcrumbsPipelineStateDescription pipelineDesc = {};
     pipelineDesc.pipeline = SDKWrapper::ffxGetPipeline(m_pPipeline);
     pipelineDesc.name = { "Basic pipeline", true };
-    pipelineDesc.vertexShader = { "EndlessLoopVS", true };
+    pipelineDesc.vertexShader = { "EndlessLoopVS", false };
     pipelineDesc.pixelShader = { "SolidColorPS", true };
     errorCode = ffxBreadcrumbsRegisterPipeline(&m_BreadContext, &pipelineDesc);
     CAULDRON_ASSERT(errorCode == FFX_OK);
@@ -156,19 +156,19 @@ void BreadcrumbsRenderModule::Execute(double deltaTime, cauldron::CommandList* p
     FfxBreadcrumbsCommandListDescription listDesc = {};
     listDesc.commandList = SDKWrapper::ffxGetCommandList(pCmdList);
     listDesc.queueType = m_GpuQueue;
-    listDesc.name = { "Sample command list", true };
+    listDesc.name = { "Sample command list", false };
     listDesc.pipeline = nullptr;
     listDesc.submissionIndex = 0;
     errorCode = ffxBreadcrumbsRegisterCommandList(&m_BreadContext, &listDesc);
     CAULDRON_ASSERT(errorCode == FFX_OK);
 
     // Create tag for main part of rendering
-    const FfxBreadcrumbsNameTag mainTag = { "Main rendering", true };
+    const FfxBreadcrumbsNameTag mainTag = { "Main rendering", false };
     errorCode = ffxBreadcrumbsBeginMarker(&m_BreadContext, SDKWrapper::ffxGetCommandList(pCmdList), FFX_BREADCRUMBS_MARKER_PASS, &mainTag);
     CAULDRON_ASSERT(errorCode == FFX_OK);
     {
         // Perform simple clear
-        const FfxBreadcrumbsNameTag clearTag = { "Reset current backbuffer contents", true };
+        const FfxBreadcrumbsNameTag clearTag = { "Reset current backbuffer contents", false };
         errorCode = ffxBreadcrumbsBeginMarker(&m_BreadContext, SDKWrapper::ffxGetCommandList(pCmdList), FFX_BREADCRUMBS_MARKER_CLEAR_RENDER_TARGET, &clearTag);
         CAULDRON_ASSERT(errorCode == FFX_OK);
         {

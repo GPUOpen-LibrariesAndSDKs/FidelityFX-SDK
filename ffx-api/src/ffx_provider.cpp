@@ -136,19 +136,65 @@ const ffxProvider* GetffxProvider(ffxStructType_t descType, uint64_t overrideId,
     // check driver-side providers
     GetExternalProviders(reinterpret_cast<ID3D12Device*>(device), descType);
 
-    for (const auto& provider : externalProviders)
+    // If we are overriding, do not make the best provider choice decision
+    if (overrideId)
     {
-        if (provider.has_value())
+        for (const auto& provider : externalProviders)
         {
-            if (provider->GetId() == overrideId || (overrideId == 0 && provider->CanProvide(descType)))
-                return &*provider;
+            if (provider.has_value())
+            {
+                if (provider->GetId() == overrideId && provider->CanProvide(descType))
+                    return &*provider;
+            }
         }
-    }
 
-    for (size_t i = 0; i < providerCount; ++i)
+        for (size_t i = 0; i < providerCount; ++i)
+        {
+            if (providers[i]->GetId() == overrideId && providers[i]->CanProvide(descType))
+                return providers[i];
+        }
+
+    }
+    else
     {
-        if (providers[i]->GetId() == overrideId || (overrideId == 0 && providers[i]->CanProvide(descType)))
-            return providers[i];
+        const ffxProvider* bestExternalProvider = nullptr;
+        const ffxProvider* bestInternalProvider = nullptr;
+
+        for (const auto& provider : externalProviders)
+        {
+            if (provider.has_value())
+            {
+                if (provider->CanProvide(descType))
+                {
+                    bestExternalProvider = &*provider;
+                    break;
+                }
+            }
+        }
+
+        for (size_t i = 0; i < providerCount; ++i)
+        {
+            if (providers[i]->CanProvide(descType))
+            {
+                bestInternalProvider = providers[i];
+                break;
+            }
+        }
+
+        if ((bestExternalProvider != nullptr) && (bestInternalProvider != nullptr))
+        {
+            // Do a version check, and take the newest version.
+            // Id()s have lowest 31b valid - bit32 is reserved for "driver override" indication
+            uint64_t extId = bestExternalProvider->GetId() & (0x7FFFFFFFu);
+            uint64_t intId = bestInternalProvider->GetId() & (0x7FFFFFFFu);
+
+            if (extId > intId)
+            {
+                return bestExternalProvider;
+            }
+        }
+
+        return bestInternalProvider;
     }
 
     return nullptr;

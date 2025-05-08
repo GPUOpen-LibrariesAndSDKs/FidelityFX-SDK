@@ -12,15 +12,15 @@ The FidelityFX SDK is a collection of heavily optimized, open source effects (sh
 - [Parallel Sort 1.3](../techniques/parallel-sort.md)
 - [Single Pass Downsampler 2.2](../techniques/single-pass-downsampler.md)
 - [Stochastic Screen-Space Reflections 1.5](../techniques/stochastic-screen-space-reflections.md)
-- [Super Resolution 1.2](../techniques/super-resolution-spatial.md)
-- [Super Resolution 2.3.2](../techniques/super-resolution-temporal.md)
-- [Super Resolution 3.1.3](../techniques/super-resolution-interpolation.md)
-- [Super Resolution 3.1.3 Upscaler](../techniques/super-resolution-upscaler.md)
+- [Super Resolution 1.2 Spatial Upscaler](../techniques/super-resolution-spatial.md)
+- [Super Resolution 2.3.3 Upscaler](../techniques/super-resolution-temporal.md)
+- [Super Resolution 3.1.4 Upscaler and Frame Generation](../techniques/super-resolution-interpolation.md)
+- [Super Resolution 3.1.4 Upscaler](../techniques/super-resolution-upscaler.md)
 - [Variable Shading 1.2](../techniques/variable-shading.md)
 - [Blur 1.1](../techniques/blur.md)
 - [Depth of Field 1.1](../techniques/depth-of-field.md)
 - [Lens 1.1](../techniques/lens.md)
-- [Breadcrumbs 1.0](../techniques/breadcrumbs.md)
+- [Breadcrumbs 1.0.1](../techniques/breadcrumbs.md)
 
 <h2>Supported ecosystems</h2>
 
@@ -41,7 +41,7 @@ All samples are written in C++, and use the [FidelityFX Cauldron Framework](../.
 
 AMD FidelityFX SDK is open source, and distributed under the MIT license.
 
-For more information on the license terms please refer to the [license](../license.md).
+For more information on the license terms please refer to the [license](license.md).
 
 <h2>Support</h2>
 

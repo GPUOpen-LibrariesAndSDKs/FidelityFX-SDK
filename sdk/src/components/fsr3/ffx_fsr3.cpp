@@ -311,7 +311,7 @@ FfxErrorCode ffxFsr3DispatchFrameGeneration(const FfxFrameGenerationDispatchDesc
 
     // Frame interpolation
     {
-        FfxFrameInterpolationDispatchDescription fiDispatchDesc{};
+        FfxFrameInterpolationDispatchDescription fiDispatchDesc{0};
 
         // don't dispatch interpolation async for now: use the same commandlist for copy and interpolate
         fiDispatchDesc.commandList = callbackDesc->commandList;
@@ -442,7 +442,7 @@ FfxErrorCode ffxFsr3ContextDispatchFrameGenerationPrepare(FfxFsr3Context* contex
 
     FfxUInt32 sharedResourceIndexUpscaling = dispatchParams->frameID % contextPrivate->sharedResourceCount;
 
-    FfxFrameInterpolationPrepareDescription fiPrepareParams = {};
+    FfxFrameInterpolationPrepareDescription fiPrepareParams = {0};
     fiPrepareParams.commandList = dispatchParams->commandList;
     fiPrepareParams.renderSize = dispatchParams->renderSize;
     fiPrepareParams.depth = dispatchParams->depth;

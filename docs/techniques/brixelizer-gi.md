@@ -1,6 +1,6 @@
-<!-- @page page_techniques_brixelizer_gi FidelityFX Brixelizer GI 1.0 -->
+<!-- @page page_techniques_brixelizer_gi FidelityFX Brixelizer GI 1.0.1 -->
 
-<h1>FidelityFX Brixelizer GI 1.0</h1>
+<h1>FidelityFX Brixelizer GI 1.0.1</h1>
 
 **FidelityFX Brixelizer GI** is a compute-based, highly-optimized global illumination technique implemented in HLSL.
 
