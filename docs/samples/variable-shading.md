@@ -24,13 +24,14 @@ The sample contains various UI elements to help you explore the techniques it de
 | **PerDraw VRS** | `1x1, 1x2, 2x1, 2x2` | Shading rate value. Additional shading rates are 2x4, 4x2, 4x4. |
 | **ShadingRateImage Enabled** | `Checked/Unchecked` | Enable/Disable Tier 2 VRS control image. |
 | **ShadingRateImage Combiner** | `Checked/Unchecked` | The options for each combiner are: passthrough the previous state (i.e. disable the current stage), override (ignore previous stages), min, max and sum. |
+| **VRS Algorithm** | `Luminance and Motion Vectors, Foveated Rendering, Combined (Max)` | The technique used to generate the shading rate image. |
 | **VRS variance Threshold** | `0.0 - 1.0` | Defines a value against which luminance variance gets compared in the compute shader generating the VRS image. |
 | **VRS Motion Factor** | `0.0 - 1.0` |  Sets a factor by which the motion of the pixel since the last frame gets scaled to modify the shading rate. |
 | **ShadingRateImage Overlay** | `Checked/Unchecked` | Enable/Disable ShadingRateImage overlay, a debug image over the rendered scene. |
 
 <h2>Setting up Variable Shading</h2>
 
-The Variable Shading compute shader takes as input the linear color buffer produced by the geometry rendering passes, and motion vectors buffer produced before geometry rendering passes. Final VRS control image is written to output buffer passed from setup. 
+The Variable Shading compute shader takes as input the linear color buffer produced by the geometry rendering passes, and motion vectors buffer produced before geometry rendering passes. It also takes as input the center and radii for the foveated rendering regions. Final VRS control image is written to output buffer passed from setup. 
 
 Include the interface for the backend of the VRS API.
 

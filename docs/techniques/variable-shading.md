@@ -12,6 +12,8 @@ FidelityFX Variable Shading (VRS) provides a similar way to reduce the number of
 
 One way to think about how VRS works is to think of MSAA: if a 4K frame is rendered with 2x2 VRS for everything, the required computational power and the final quality of the image would be comparable to rendering a 1080p image with 4x MSAA enabled. However, VRS provides additional features to enable more fine-grained control over which parts of the frame should get rendered with lower resolution.
 
+FidelityFX Variable Shading (VRS) also gives the option to implement Foveated Rendering by significanly reducing the number of pixel shading executions at the outer periphery of where the user is looking, taking advantage of the user not noticing the loss of visual quality in such regions. This can thus be paired with an eye tracker, whether built in a VR headset, a dedicated hardware or a webcam based software.
+
 <h2>Implementing Variable Shading</h2>
 
 <h3>Cases allowing VRS</h3>
@@ -24,8 +26,9 @@ image:
 - Some objects may get distorted or blurred by being behind haze or semi-transparent objects like water or frosted glass.
 - Some objects might be known to have little detail variance (such as rendering for toon shaded games) or due to being in very dark parts of the scene (e.g. the unlit or shadowed parts of objects in scenes with little ambient light).
 - In fast moving scenes, high framerate and low input lag are important, but small details are less likely to get noticed by the player, so aggressively using VRS can help to achieve the performance goals.
+- When using an eye tracking device, one can establish where the user is looking, and can decrease the visual quality away from that area without being noticeable.
 
-In addition to the cases mentioned above, some pixels might be known to be of little interest to the player, either through eye-tracking (foveated rendering) or other systems, or because the game design aims to steer the focus of the player to certain parts of the screen. As an example, the game might choose to reduce the shading rate on the background geometry but make sure all enemies are rendered at highest quality.
+In addition to the cases mentioned above, some pixels might be known to be of little interest to the player, either through eye-tracking or other systems, or because the game design aims to steer the focus of the player to certain parts of the screen. As an example, the game might choose to reduce the shading rate on the background geometry but make sure all enemies are rendered at highest quality.
 
 Due to saving computational power by focusing usage of GPU resources where it matters most, VRS can be used to make sure target frame times are achieved (similar to dynamic resolution scaling but with more fine-grained control over where detail needs to be preserved), as well as for power saving on portable devices without noticeably sacrificing image quality.
 

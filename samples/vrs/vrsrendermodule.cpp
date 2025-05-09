@@ -299,6 +299,21 @@ void VRSRenderModule::BuildUI()
             }
         );
 
+        const char* algorithmOptions[] = {"Luminance and Motion Vectors", "Foveated Rendering", "Combined (Max)"};
+        comboOptions.clear();
+        for (int32_t i = 0; i < _countof(algorithmOptions); ++i)
+        {
+            comboOptions.push_back(algorithmOptions[i]);
+        }
+
+        uiSection->RegisterUIElement<UICombo>(
+            "VRS Algorithm",
+            (int32_t&)m_ShadingRateImageAlgorithmIndex,
+            std::move(comboOptions),
+            m_ShadingRateImageEnabled,
+            [this](int32_t cur, int32_t old) {}
+        );
+
         uiSection->RegisterUIElement<UISlider<float>>("VRS variance Threshold", m_VRSThreshold, 0.f, 0.1f, m_ShadingRateImageEnabled);
         uiSection->RegisterUIElement<UISlider<float>>("VRS Motion Factor", m_VRSMotionFactor, 0.f, 0.1f, m_ShadingRateImageEnabled);
 
@@ -691,8 +706,17 @@ void VRSRenderModule::ExecuteVRSImageGen(double deltaTime, cauldron::CommandList
     uint32_t width  = GetFramework()->GetResolutionInfo().RenderWidth;
     uint32_t height = GetFramework()->GetResolutionInfo().RenderHeight;
 
+    uint32_t vrsAlgorithm;
+    if (m_ShadingRateImageAlgorithmIndex == 0)
+        vrsAlgorithm = FFX_VARIABLESHADING_IMAGE_ALGORITHM_LUMINANCE_AND_MOTION_VECTORS;
+    else if (m_ShadingRateImageAlgorithmIndex == 1)
+        vrsAlgorithm = FFX_VARIABLESHADING_IMAGE_ALGORITHM_FOVEATED;
+    else
+        vrsAlgorithm = FFX_VARIABLESHADING_IMAGE_ALGORITHM_LUMINANCE_AND_MOTION_VECTORS | FFX_VARIABLESHADING_IMAGE_ALGORITHM_FOVEATED;
+
     FfxVrsDispatchDescription dispatchParameters = {};
     dispatchParameters.commandList               = SDKWrapper::ffxGetCommandList(pCmdList);
+    dispatchParameters.vrsAlgorithm              = vrsAlgorithm;
     dispatchParameters.output                    = SDKWrapper::ffxGetResource(m_pVRSTexture->GetResource(), L"VRSImage", FFX_RESOURCE_STATE_UNORDERED_ACCESS);
     dispatchParameters.historyColor        = SDKWrapper::ffxGetResource(m_pHistoryColorBuffer->GetResource(), L"HistoryColorBuffer", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
     dispatchParameters.motionVectors       = SDKWrapper::ffxGetResource(m_pMotionVectors->GetResource(), L"VRSMotionVectorsTarget", FFX_RESOURCE_STATE_PIXEL_COMPUTE_READ);
@@ -702,6 +726,12 @@ void VRSRenderModule::ExecuteVRSImageGen(double deltaTime, cauldron::CommandList
     dispatchParameters.renderSize          = {width, height};
     dispatchParameters.motionVectorScale.x = -1.f;
     dispatchParameters.motionVectorScale.y = -1.f;
+    dispatchParameters.foveationCenter.x   = m_VRSFoveationCenter.x * width;
+    dispatchParameters.foveationCenter.y   = m_VRSFoveationCenter.y * height;
+    dispatchParameters.foveationRadiiSquared.radius1x1 = (m_VRSFovRadii.radius1x1 * width) * (m_VRSFovRadii.radius1x1 * width);
+    dispatchParameters.foveationRadiiSquared.radius1x2 = (m_VRSFovRadii.radius1x2 * width) * (m_VRSFovRadii.radius1x2 * width);
+    dispatchParameters.foveationRadiiSquared.radius2x2 = (m_VRSFovRadii.radius2x2 * width) * (m_VRSFovRadii.radius2x2 * width);
+    dispatchParameters.foveationRadiiSquared.radius2x4 = (m_VRSFovRadii.radius2x4 * width) * (m_VRSFovRadii.radius2x4 * width);
 
     // Disabled until remaining things are fixes
     FfxErrorCode errorCode = ffxVrsContextDispatch(&m_VRSContext, &dispatchParameters);

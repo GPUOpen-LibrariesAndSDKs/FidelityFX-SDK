@@ -140,10 +140,13 @@ private:
     uint32_t m_ShadingRateIndex            = 0;
     uint32_t m_ShadingRateCombinerIndex    = 0;
     bool     m_EnableShadingRateImage      = false;
+    uint32_t m_ShadingRateImageAlgorithmIndex   = 0;
     bool     m_AllowAdditionalShadingRates = false;
     uint32_t m_VRSTierSupported            = 0;
     float    m_VRSThreshold                = 0.015f;
     float    m_VRSMotionFactor             = 0.01f;
+    FfxFloatCoords2D m_VRSFoveationCenter{0.5f, 0.5f};
+    FfxVrsFovRadii   m_VRSFovRadii{0.2f, 0.3f, 0.4f, 0.5f};
 
     bool m_VariableShadingEnabled  = false;
     bool m_ShadingRateImageEnabled = false;
