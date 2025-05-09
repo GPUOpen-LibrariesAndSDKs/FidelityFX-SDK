@@ -2054,7 +2054,7 @@ void FrameInterpolationSwapChainVK::dispatchInterpolationCommands(uint32_t      
             {
                 compositionQueueFamily = presentInfo.presentQueue.familyIndex;
             }
-            else if (presentInfo.compositionMode == FGSwapchainCompositionMode::eComposeOnPresentQueue)
+            else if (presentInfo.compositionMode == FGSwapchainCompositionMode::eComposeOnGameQueue)
             {
                 compositionQueueFamily = presentInfo.gameQueue.familyIndex;
             }
