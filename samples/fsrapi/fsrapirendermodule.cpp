@@ -617,10 +617,11 @@ void FSRRenderModule::InitUI(UISection* pUISection)
         [this](float, float) {
 #if defined(FFX_API_DX12)
             ffx::ConfigureDescFrameGenerationSwapChainKeyValueDX12 m_swapchainKeyValueConfig{};
+            m_swapchainKeyValueConfig.key = FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_FRAMEPACINGTUNING;
 #elif defined(FFX_API_VK)
             ffx::ConfigureDescFrameGenerationSwapChainKeyValueVK m_swapchainKeyValueConfig{};
+            m_swapchainKeyValueConfig.key = FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_FRAMEPACINGTUNING_VK;
 #endif
-            m_swapchainKeyValueConfig.key = FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_FRAMEPACINGTUNING;
             m_swapchainKeyValueConfig.ptr = &framePacingTuning;
 
             framePacingTuning.safetyMarginInMs = m_SafetyMarginInMs;
@@ -636,10 +637,11 @@ void FSRRenderModule::InitUI(UISection* pUISection)
         [this](float, float) {
 #if defined(FFX_API_DX12)
             ffx::ConfigureDescFrameGenerationSwapChainKeyValueDX12 m_swapchainKeyValueConfig{};
+            m_swapchainKeyValueConfig.key = FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_FRAMEPACINGTUNING;
 #elif defined(FFX_API_VK)
             ffx::ConfigureDescFrameGenerationSwapChainKeyValueVK m_swapchainKeyValueConfig{};
+            m_swapchainKeyValueConfig.key = FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_FRAMEPACINGTUNING_VK;
 #endif
-            m_swapchainKeyValueConfig.key = FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_FRAMEPACINGTUNING;
             m_swapchainKeyValueConfig.ptr = &framePacingTuning;
 
             framePacingTuning.varianceFactor = m_VarianceFactor;
@@ -654,10 +656,11 @@ void FSRRenderModule::InitUI(UISection* pUISection)
         [this](bool, bool) {
 #if defined(FFX_API_DX12)
             ffx::ConfigureDescFrameGenerationSwapChainKeyValueDX12 m_swapchainKeyValueConfig{};
+            m_swapchainKeyValueConfig.key = FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_FRAMEPACINGTUNING;
 #elif defined(FFX_API_VK)
             ffx::ConfigureDescFrameGenerationSwapChainKeyValueVK m_swapchainKeyValueConfig{};
+            m_swapchainKeyValueConfig.key = FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_FRAMEPACINGTUNING_VK;
 #endif
-            m_swapchainKeyValueConfig.key = FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_FRAMEPACINGTUNING;
             m_swapchainKeyValueConfig.ptr = &framePacingTuning;
 
             framePacingTuning.allowHybridSpin = m_AllowHybridSpin;
@@ -672,10 +675,11 @@ void FSRRenderModule::InitUI(UISection* pUISection)
         [this](int32_t, int32_t) {
 #if defined(FFX_API_DX12)
             ffx::ConfigureDescFrameGenerationSwapChainKeyValueDX12 m_swapchainKeyValueConfig{};
+            m_swapchainKeyValueConfig.key = FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_FRAMEPACINGTUNING;
 #elif defined(FFX_API_VK)
             ffx::ConfigureDescFrameGenerationSwapChainKeyValueVK m_swapchainKeyValueConfig{};
+            m_swapchainKeyValueConfig.key = FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_FRAMEPACINGTUNING_VK;
 #endif
-            m_swapchainKeyValueConfig.key = FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_FRAMEPACINGTUNING;
             m_swapchainKeyValueConfig.ptr = &framePacingTuning;
 
             framePacingTuning.hybridSpinTime = m_HybridSpinTime;
@@ -690,10 +694,11 @@ void FSRRenderModule::InitUI(UISection* pUISection)
         [this](bool, bool) {
 #if defined(FFX_API_DX12)
             ffx::ConfigureDescFrameGenerationSwapChainKeyValueDX12 m_swapchainKeyValueConfig{};
+            m_swapchainKeyValueConfig.key = FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_FRAMEPACINGTUNING;
 #elif defined(FFX_API_VK)
             ffx::ConfigureDescFrameGenerationSwapChainKeyValueVK m_swapchainKeyValueConfig{};
+            m_swapchainKeyValueConfig.key = FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_FRAMEPACINGTUNING_VK;
 #endif
-            m_swapchainKeyValueConfig.key = FFX_API_CONFIGURE_FG_SWAPCHAIN_KEY_FRAMEPACINGTUNING;
             m_swapchainKeyValueConfig.ptr = &framePacingTuning;
 
             framePacingTuning.allowWaitForSingleObjectOnFence = m_AllowWaitForSingleObjectOnFence;
