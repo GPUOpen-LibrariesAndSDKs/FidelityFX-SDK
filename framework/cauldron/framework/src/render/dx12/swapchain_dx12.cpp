@@ -220,6 +220,9 @@ namespace cauldron
         CD3DX12_TEXTURE_COPY_LOCATION copySrc(m_pRenderTarget->GetCurrentResource()->GetImpl()->DX12Resource(), 0);
         pCmdList->GetImpl()->DX12CmdList()->CopyTextureRegion(&copyDest, 0, 0, 0, &copySrc, nullptr);
 
+        barrier = Barrier::Transition(m_pRenderTarget->GetCurrentResource(), ResourceState::CopySource, ResourceState::Present);
+        ResourceBarrier(pCmdList, 1, &barrier);
+
         ID3D12Fence* pFence;
         CauldronThrowOnFail(GetDevice()->GetImpl()->DX12Device()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&pFence)));
         CauldronThrowOnFail(GetDevice()->GetImpl()->DX12CmdQueue(CommandQueue::Graphics)->Signal(pFence, 1));
