@@ -1,0 +1,70 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="3rd Party Files">
+      <UniqueIdentifier>{52cebeca-7fee-48d4-ae6f-6ab70d7973aa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="3rd Party Files\MD5">
+      <UniqueIdentifier>{4db7a5b3-9542-49f6-aaaa-c3fe29144955}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="3rd Party Files\Tiny-Process-Library">
+      <UniqueIdentifier>{7c6156ac-6f72-4753-81c6-ecf7eae8137c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="sources\compiler.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sources\DXBCChecksum.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sources\hlsl_compiler.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sources\pch.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sources\utils.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\OpenSource\MD5\md5_loc.h">
+      <Filter>3rd Party Files\MD5</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\OpenSource\MD5\md5.h">
+      <Filter>3rd Party Files\MD5</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\OpenSource\tiny-process-library\process.hpp">
+      <Filter>3rd Party Files\Tiny-Process-Library</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="sources\DXBCChecksum.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\ffx_sc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\hlsl_compiler.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\pch.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\utils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\OpenSource\MD5\md5.cpp">
+      <Filter>3rd Party Files\MD5</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\OpenSource\tiny-process-library\process_win.cpp">
+      <Filter>3rd Party Files\Tiny-Process-Library</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\OpenSource\tiny-process-library\process.cpp">
+      <Filter>3rd Party Files\Tiny-Process-Library</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

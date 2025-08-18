@@ -1,0 +1,642 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="api">
+      <UniqueIdentifier>{18fdb75f-c14f-48e8-9330-f923a79ed8af}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="api\include">
+      <UniqueIdentifier>{bc91e84f-91e9-4dec-b892-a127a9394de5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="api\include\dx12">
+      <UniqueIdentifier>{0545dc67-490b-4815-be36-c327851ca0a1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="api\internal">
+      <UniqueIdentifier>{a6229b8f-292d-4c16-b96f-5013089df3f5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="api\internal\dx12">
+      <UniqueIdentifier>{06b3914f-8b0f-4c5a-955c-c0a74a08208a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="api\internal\gpu">
+      <UniqueIdentifier>{b7c70eac-9f1d-4a31-8d9f-1620da8ed770}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="backend">
+      <UniqueIdentifier>{579cb1af-1ce4-4b87-9d4a-0e3e3e1bca3d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers">
+      <UniqueIdentifier>{dc20074c-eebf-47b9-a01d-525d52416dc2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\dx12">
+      <UniqueIdentifier>{48116626-10bc-4ec4-ae48-c13771d10034}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\dx12\resource">
+      <UniqueIdentifier>{30bbce66-be9b-4e47-b356-442aacee3184}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\fsr3">
+      <UniqueIdentifier>{5e0a1ef5-7aaf-43f8-a251-6be691fca4ad}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\fsr4">
+      <UniqueIdentifier>{74703184-3593-435a-915e-8c0293450bb8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\include">
+      <UniqueIdentifier>{834177ab-7c14-4c61-98e5-ca84fd92b5a2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\fsr4\dx12">
+      <UniqueIdentifier>{347e6be2-0374-4eb1-8154-b690c1dedad8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\fsr3\dx12">
+      <UniqueIdentifier>{39f6b808-8088-4970-a8cb-1af5ed0114a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\fsr4\dx12\ml2code_runtime">
+      <UniqueIdentifier>{95595ea9-a8db-480c-8c71-8de2428fe6ad}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\fsr3\include">
+      <UniqueIdentifier>{3439fc15-c557-4ff8-b01e-1b029d9c826d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\fsr3\include\gpu">
+      <UniqueIdentifier>{1e707fba-87e7-43d1-8b0a-3ce3666d2045}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\fsr3\include\gpu\fsr1">
+      <UniqueIdentifier>{a3788c7f-4fb9-4cee-963d-f7cee9096e42}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\fsr4\include">
+      <UniqueIdentifier>{1db1943c-dc38-4675-82d5-424b8d498f4a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\fsr4\include\gpu">
+      <UniqueIdentifier>{b52fe266-547e-43fb-baca-0fc0c1dfb6c8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\fsr4\include\gpu\fsr1">
+      <UniqueIdentifier>{cfd1ec03-d7ca-411c-a3c6-706b1d9ba0b7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\fsr3\internal">
+      <UniqueIdentifier>{033475d2-fd00-47eb-a337-63ec2f132db5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\fsr3\include\gpu\fsr2">
+      <UniqueIdentifier>{7dc59496-3b67-4165-af67-e331f018fddf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\fsr3\internal\shaders">
+      <UniqueIdentifier>{b20424c7-3536-4fc5-ada2-95cd1b24e61f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\fsr3\include\gpu\fsr3">
+      <UniqueIdentifier>{d379edfb-20cb-4de9-ae10-1bf379f7d435}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\fsr3\include\gpu\fsr3upscaler">
+      <UniqueIdentifier>{21164eaf-e844-4bea-b150-0ccb51b029eb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\fsr3\include\gpu\spd">
+      <UniqueIdentifier>{ea75f5cf-48aa-4b09-8df1-9c09a8014ab9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\fsr4\include\gpu\fsr4">
+      <UniqueIdentifier>{99ea72a8-5e72-4040-9080-96eb6734f58d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\fsr4\include\gpu\spd">
+      <UniqueIdentifier>{a320a378-67d5-469d-b934-ab46ba784105}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\fsr4\internal">
+      <UniqueIdentifier>{a8fb0fad-84a0-4d8d-b1ed-75039b134960}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\fsr4\internal\shaders">
+      <UniqueIdentifier>{cb44f2f4-d304-456e-90d9-a4beaba6a37d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="api\internal\dx12\AmdExtD3D">
+      <UniqueIdentifier>{aa7eb7c5-d315-4e6f-9205-627286f6e56f}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="resource\ffx_upscaler_api_dll.rc">
+      <Filter>upscalers\dx12\resource</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource\resource.h">
+      <Filter>upscalers\dx12\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\gpu\ffx_common_types.h">
+      <Filter>api\internal\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\gpu\ffx_core.h">
+      <Filter>api\internal\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\gpu\ffx_core_cpu.h">
+      <Filter>api\internal\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\gpu\ffx_core_gpu_common.h">
+      <Filter>api\internal\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\gpu\ffx_core_gpu_common_half.h">
+      <Filter>api\internal\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\gpu\ffx_core_hlsl.h">
+      <Filter>api\internal\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\gpu\ffx_core_portability.h">
+      <Filter>api\internal\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\gpu\ffx_shader_writer.h">
+      <Filter>api\internal\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\gpu\ffx_shader_writer_letter_macro_end.h">
+      <Filter>api\internal\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\gpu\ffx_shader_writer_letter_macro_start.h">
+      <Filter>api\internal\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\gpu\ffx_shader_writer_templated.h">
+      <Filter>api\internal\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\ffx_assert.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\ffx_backends.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\ffx_error.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\ffx_interface.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\ffx_internal_types.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\ffx_message.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\ffx_object_management.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\ffx_provider.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\ffx_provider_external.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\ffx_util.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\ffx_watermark.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\git_hash_branch.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\include\dx12\ffx_api_dx12.h">
+      <Filter>api\include\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\include\dx12\ffx_api_dx12.hpp">
+      <Filter>api\include\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\include\ffx_api.h">
+      <Filter>api\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\include\ffx_api.hpp">
+      <Filter>api\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\include\ffx_api_types.h">
+      <Filter>api\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\include\ffx_api_loader.h">
+      <Filter>api\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\backend\dx12\d3dx12.h">
+      <Filter>backend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\backend\dx12\ffx_dx12.h">
+      <Filter>backend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr1\ffx_fsr1.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr1</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr4\include\gpu\fsr1\ffx_fsr1.h">
+      <Filter>upscalers\fsr4\include\gpu\fsr1</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\ffx_fsr2.h">
+      <Filter>upscalers\fsr3\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_lock.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_accumulate.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_callbacks_hlsl.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_common.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_compute_luminance_pyramid.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_depth_clip.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\internal\ffx_fsr2_maximum_bias.h">
+      <Filter>upscalers\fsr3\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_postprocess_lock_status.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\internal\ffx_fsr2_private.h">
+      <Filter>upscalers\fsr3\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_rcas.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_sample.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_reconstruct_dilated_velocity_and_previous_depth.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_reproject.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_resources.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\internal\ffx_fsr2_shaderblobs.h">
+      <Filter>upscalers\fsr3\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_upsample.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_tcr_autogen.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\internal\ffx_fsr3_private.h">
+      <Filter>upscalers\fsr3\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr3\ffx_fsr3_callbacks_hlsl.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr3\ffx_fsr3_common.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr3\ffx_fsr3_resources.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\ffx_fsr3upscaler.h">
+      <Filter>upscalers\fsr3\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_prepare_reactivity.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr3upscaler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_accumulate.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr3upscaler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_callbacks_hlsl.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr3upscaler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_common.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr3upscaler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_debug_view.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr3upscaler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_luma_instability.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr3upscaler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_luma_pyramid.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr3upscaler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_prepare_inputs.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr3upscaler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\internal\ffx_fsr3upscaler_private.h">
+      <Filter>upscalers\fsr3\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_sample.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr3upscaler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_rcas.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr3upscaler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_reproject.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr3upscaler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_resources.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr3upscaler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\internal\ffx_fsr3upscaler_shaderblobs.h">
+      <Filter>upscalers\fsr3\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_upsample.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr3upscaler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_shading_change.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr3upscaler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_shading_change_pyramid.h">
+      <Filter>upscalers\fsr3\include\gpu\fsr3upscaler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\ffx_provider_fsr2.h">
+      <Filter>upscalers\fsr3\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\ffx_provider_fsr3upscale.h">
+      <Filter>upscalers\fsr3\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\spd\ffx_spd.h">
+      <Filter>upscalers\fsr3\include\gpu\spd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\ffx_spd.h">
+      <Filter>upscalers\fsr3\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\ffx_upscale.hpp">
+      <Filter>upscalers\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\ffx_upscale.h">
+      <Filter>upscalers\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr4\include\gpu\fsr4\ffx_fsr4upscaler_resources.h">
+      <Filter>upscalers\fsr4\include\gpu\fsr4</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr4\include\gpu\fsr4\ffx_fsr4_common_types.h">
+      <Filter>upscalers\fsr4\include\gpu\fsr4</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr4\include\gpu\fsr4\ffx_fsr4_gpu_colorspace_common.h">
+      <Filter>upscalers\fsr4\include\gpu\fsr4</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr4\include\gpu\fsr4\ffx_fsr4_upscale_resources.h">
+      <Filter>upscalers\fsr4\include\gpu\fsr4</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr4\include\ffx_provider_fsr4.h">
+      <Filter>upscalers\fsr4\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr4\include\gpu\spd\ffx_spd.h">
+      <Filter>upscalers\fsr4\include\gpu\spd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr4\internal\fsr4_permutations.h">
+      <Filter>upscalers\fsr4\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr4\internal\shader_selector.h">
+      <Filter>upscalers\fsr4\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtAntiLagApi.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3D.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DCommandListApi.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DCommandListMarkerApi.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DCreateDeviceApi.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DCreateDeviceAppRegApi.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DCreateResource.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DDeviceApi.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DDirectCaptureApi.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderAnalyzerApi.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderIntrinsics.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderIntrinsicsApi.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DWorkTiling.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtDXGIFactory.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtDXGISwapChain.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtFfxApi.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtGpaInterface.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtGpaInterfaceApi.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\api\internal\dx12\amd_extensions.cpp">
+      <Filter>api\internal\dx12</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\api\internal\ffx_api.cpp">
+      <Filter>api\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\api\internal\ffx_assert.cpp">
+      <Filter>api\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\api\internal\ffx_message.cpp">
+      <Filter>api\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\api\internal\ffx_object_management.cpp">
+      <Filter>api\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\api\internal\ffx_watermark.cpp">
+      <Filter>api\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\backend\dx12\ffx_dx12.cpp">
+      <Filter>backend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\backend\dx12\ffx_backends_dx12.cpp">
+      <Filter>backend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\fsr3\internal\ffx_fsr2.cpp">
+      <Filter>upscalers\fsr3\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="..\fsr3\internal\ffx_fsr2_shaderblobs.cpp">
+      <Filter>upscalers\fsr3\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="..\fsr3\internal\ffx_fsr3upscaler.cpp">
+      <Filter>upscalers\fsr3\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="..\fsr3\internal\ffx_fsr3upscaler_shaderblobs.cpp">
+      <Filter>upscalers\fsr3\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="..\fsr3\internal\ffx_provider_fsr2.cpp">
+      <Filter>upscalers\fsr3\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="..\fsr3\internal\ffx_provider_fsr3upscale.cpp">
+      <Filter>upscalers\fsr3\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="ffx_upscaler_provider_dx12.cpp">
+      <Filter>upscalers\dx12</Filter>
+    </ClCompile>
+    <ClCompile Include="..\fsr4\dx12\ffx_provider_fsr4_dx12.cpp">
+      <Filter>upscalers\fsr4\dx12</Filter>
+    </ClCompile>
+    <ClCompile Include="..\fsr4\internal\shader_selector.cpp">
+      <Filter>upscalers\fsr4\internal</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\api\internal\gpu\ffx_watermark.hlsl">
+      <Filter>api\internal\gpu</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr2_accumulate_pass.hlsl">
+      <Filter>upscalers\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr2_autogen_reactive_pass.hlsl">
+      <Filter>upscalers\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr2_compute_luminance_pyramid_pass.hlsl">
+      <Filter>upscalers\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr2_debug_blit.hlsl">
+      <Filter>upscalers\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr2_depth_clip_pass.hlsl">
+      <Filter>upscalers\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr2_lock_pass.hlsl">
+      <Filter>upscalers\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr2_rcas_pass.hlsl">
+      <Filter>upscalers\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr2_reconstruct_previous_depth_pass.hlsl">
+      <Filter>upscalers\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr2_tcr_autogen_pass.hlsl">
+      <Filter>upscalers\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr3upscaler_accumulate_pass.hlsl">
+      <Filter>upscalers\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr3upscaler_autogen_reactive_pass.hlsl">
+      <Filter>upscalers\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr3upscaler_debug_view_pass.hlsl">
+      <Filter>upscalers\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr3upscaler_luma_instability_pass.hlsl">
+      <Filter>upscalers\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr3upscaler_luma_pyramid_pass.hlsl">
+      <Filter>upscalers\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr3upscaler_prepare_inputs_pass.hlsl">
+      <Filter>upscalers\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr3upscaler_prepare_reactivity_pass.hlsl">
+      <Filter>upscalers\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr3upscaler_rcas_pass.hlsl">
+      <Filter>upscalers\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr3upscaler_shading_change_pass.hlsl">
+      <Filter>upscalers\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr3upscaler_shading_change_pyramid_pass.hlsl">
+      <Filter>upscalers\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr4\internal\shaders\fsr4_model_v07_fp8_no_scale_passes_1080.hlsl">
+      <Filter>upscalers\fsr4\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr4\internal\shaders\fsr4_model_v07_fp8_no_scale_passes_2160.hlsl">
+      <Filter>upscalers\fsr4\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr4\internal\shaders\fsr4_model_v07_fp8_no_scale_passes_4320.hlsl">
+      <Filter>upscalers\fsr4\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr4\internal\shaders\post_wmma.hlsl">
+      <Filter>upscalers\fsr4\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr4\internal\shaders\pre_wmma.hlsl">
+      <Filter>upscalers\fsr4\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr4\internal\shaders\rcas.hlsl">
+      <Filter>upscalers\fsr4\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr4\internal\shaders\spd_auto_exposure.hlsl">
+      <Filter>upscalers\fsr4\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr4\internal\shaders\debug_view.hlsl">
+      <Filter>upscalers\fsr4\internal\shaders</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\api\internal\make_git_info_header.bat">
+      <Filter>api\internal</Filter>
+    </None>
+    <None Include="..\fsr3\dx12\BuildFSR2Shaders.bat">
+      <Filter>upscalers\fsr3\dx12</Filter>
+    </None>
+    <None Include="..\fsr3\dx12\BuildFSR3UpscalerShaders.bat">
+      <Filter>upscalers\fsr3\dx12</Filter>
+    </None>
+    <None Include="..\fsr4\dx12\BuildFSR4UpscalerShaders.bat">
+      <Filter>upscalers\fsr4\dx12</Filter>
+    </None>
+    <None Include="..\fsr4\dx12\ml2code_runtime\config.hlsli">
+      <Filter>upscalers\fsr4\dx12\ml2code_runtime</Filter>
+    </None>
+    <None Include="..\fsr4\include\gpu\fsr4\mlsr_optimized_includes.hlsli">
+      <Filter>upscalers\fsr4\include\gpu\fsr4</Filter>
+    </None>
+    <None Include="..\fsr4\include\gpu\fsr4\post_common.hlsli">
+      <Filter>upscalers\fsr4\include\gpu\fsr4</Filter>
+    </None>
+    <None Include="..\fsr4\include\gpu\fsr4\pre_common.hlsli">
+      <Filter>upscalers\fsr4\include\gpu\fsr4</Filter>
+    </None>
+    <None Include="..\fsr4\dx12\ml2code_runtime\globals.hlsli">
+      <Filter>upscalers\fsr4\dx12\ml2code_runtime</Filter>
+    </None>
+    <None Include="..\fsr4\dx12\ml2code_runtime\padding.hlsli">
+      <Filter>upscalers\fsr4\dx12\ml2code_runtime</Filter>
+    </None>
+    <None Include="..\fsr4\dx12\ml2code_runtime\scalar_functions.hlsli">
+      <Filter>upscalers\fsr4\dx12\ml2code_runtime</Filter>
+    </None>
+    <None Include="..\fsr4\dx12\ml2code_runtime\storage.hlsli">
+      <Filter>upscalers\fsr4\dx12\ml2code_runtime</Filter>
+    </None>
+    <None Include="..\fsr4\dx12\ml2code_runtime\tensor_float8.hlsli">
+      <Filter>upscalers\fsr4\dx12\ml2code_runtime</Filter>
+    </None>
+    <None Include="..\fsr4\dx12\ml2code_runtime\tensor_float16.hlsli">
+      <Filter>upscalers\fsr4\dx12\ml2code_runtime</Filter>
+    </None>
+    <None Include="..\fsr4\dx12\ml2code_runtime\tensor_float32.hlsli">
+      <Filter>upscalers\fsr4\dx12\ml2code_runtime</Filter>
+    </None>
+    <None Include="..\fsr4\dx12\ml2code_runtime\tensor_int8.hlsli">
+      <Filter>upscalers\fsr4\dx12\ml2code_runtime</Filter>
+    </None>
+    <None Include="..\fsr4\dx12\ml2code_runtime\tensor_int32.hlsli">
+      <Filter>upscalers\fsr4\dx12\ml2code_runtime</Filter>
+    </None>
+    <None Include="..\fsr4\dx12\ml2code_runtime\tensor_uint8.hlsli">
+      <Filter>upscalers\fsr4\dx12\ml2code_runtime</Filter>
+    </None>
+    <None Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderIntrinsicsAtomicOps.hlsl">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </None>
+    <None Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderIntrinsicsMatrixOps.hlsl">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </None>
+    <None Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderIntrinsicsMatrixOpsHelper.hlsl">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </None>
+    <None Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderIntrinsicsRT.hlsl">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </None>
+    <None Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderIntrinsicsWaveOps.hlsl">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </None>
+    <None Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderIntrinsics.hlsl">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </None>
+  </ItemGroup>
+</Project>

@@ -31,12 +31,26 @@ bld/
 [Bb]uild/
 [Oo]bj/
 [Ll]og/
+[Mm]edia-cache/
+cauldronmedia/
 PrecompiledShadersDXIL/
+[Dd]irectXTK12/
+vcpkg_installed/
+Gaming.Desktop.x64/
+Gaming.Xbox.Scarlett.x64/
+Gaming.Xbox.XboxOne.x64/
+
+# Override build targets we want to monitor
+!Kits/FidelityFX/tools/ffx_sc/bin/
+!Kits/FidelityFX/signedbin/
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
 # Uncomment if you have tasks that create the project's static files in wwwroot
 #wwwroot/
+
+#Generated git hash information
+git_hash_branch.h
 
 # Visual Studio Code
 .vscode
@@ -101,6 +115,10 @@ StyleCopReport.xml
 *.pidb
 *.svclog
 *.scc
+
+# Override build targets we want to keep
+!Kits/FidelityFX/bin/*.pdb
+!Kits/FidelityFX/signedbin/*.pdb
 
 # Chutzpah Test files
 _Chutzpah*
@@ -357,19 +375,3 @@ healthchecksdb
 
 # Backup folder for Package Reference Convert tool in Visual Studio 2017
 MigrationBackup/
-
-# Folders created by the media delivery tool
-/media/
-/media-cache/
-
-sdk/src/components/frameinterpolation/FrameInterpolation_GDK/Gaming.Xbox.Scarlett.x64/
-
-sdk/src/components/fsr1/FSR1_GDK/Gaming.Xbox.Scarlett.x64/
-
-sdk/src/components/fsr2/FSR2_GDK/Gaming.Xbox.Scarlett.x64/
-
-sdk/src/components/fsr3/FSR3_GDK/Gaming.Xbox.Scarlett.x64/
-
-sdk/src/components/fsr3upscaler/FSR3Upscaler_GDK/Gaming.Xbox.Scarlett.x64/
-
-sdk/src/components/opticalflow/OpticalFlow_GDK/Gaming.Xbox.Scarlett.x64/

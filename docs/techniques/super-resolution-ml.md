@@ -1,0 +1,378 @@
+<!-- @page page_techniques_super-resolution-upscaler FidelityFX Super Resolution 4.0.2 Upscaler -->
+
+<h1>FidelityFX Super Resolution 4.0.2 (FSR4) - Upscaler</h1>
+
+![Screenshot](media/super-resolution-ml/fsr4-sample.jpg "A screenshot showcasing the final output of the effect")
+
+AMD FidelityFX Super Resolution 4 is an advanced upscaling solution that leverages state-of-the-art machine learning algorithms to generate high-quality, high-resolution frames from lower-resolution inputs.
+
+<h2>Table of contents</h2>
+
+- [Introduction](#introduction)
+- [Integration guidelines](#integration-guidelines)
+    - [Scaling modes](#scaling-modes)
+    - [Performance](#performance)
+    - [Memory requirements](#memory-requirements)
+    - [Input resources](#input-resources)
+    - [Depth buffer configurations](#depth-buffer-configurations)
+    - [Providing motion vectors](#providing-motion-vectors)
+    - [Optional resources](#optional-resources)
+    - [Exposure](#exposure)
+    - [Placement in the frame](#placement-in-the-frame)
+    - [Temporal Antialiasing](#temporal-antialiasing)
+    - [Camera jitter](#camera-jitter)
+    - [Camera jump cuts](#camera-jump-cuts)
+    - [Mipmap biasing](#mipmap-biasing)
+    - [Frame Time Delta Input](#frame-time-delta-input)
+    - [HDR support](#hdr-support)
+    - [Non-linear Color](#non-linear-color)
+    - [Debug Checker](#debug-checker)
+    - [Debug view](#debug-view)
+- [Building the sample](#building-the-sample)
+- [Limitations](#limitations)
+- [Version history](#version-history)
+- [References](#references)
+- [See also](#see-also)
+
+<h2>Introduction</h2>
+
+**FidelityFX Super Resolution 4** (or **FSR 4** for short) is a cutting-edge upscaling technique for games that leverages machine learning to upscale lower-resolution frames to higher resolutions. The algorithm reconstructs detail and improves image quality by analyzing temporal and spatial information from multiple frames. This approach helps developers achieve higher perceived resolution and visual fidelity without a significant performance cost, making it suitable for real-time applications where both quality and efficiency are important.
+
+<h2>Shading language requirements</h2>
+
+- `HLSL`
+  - `CS_6_4`
+
+<h2>Integration guidelines</h2>
+
+FidelityFX Super Resolution 4 requires integration using the [FidelityFX API](../getting-started/ffx-api.md) and use of the signed binary distribution.
+
+For general integration guidelines please refer to [FidelityFX Super Resolution 3](super-resolution-upscaler.md) documentation. The following are specific recomendations for FSR4.
+
+As stated in the [Input resources](#input-resources) section, it's important to make sure the input color given to FSR is in LINEAR COLORSPACE. In case where this is not possible, the FSR API allows the [`FFX_UPSCALE_ENABLE_NON_LINEAR_COLORSPACE`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L50) flag to be set at context creation time. Image quality might be improved in these scenarios.
+
+<h3>Scaling modes</h3>
+For the convenience of end users, the FSR API provides a number of preset scaling ratios which are named.
+
+| Quality           | Per-dimension scaling factor |
+|-------------------|------------------------------|
+| NativeAA          | 1.0x                         |
+| Quality           | 1.5x                         |
+| Balanced          | 1.7x                         |
+| Performance       | 2.0x                         |
+| Ultra performance | 3.0x                         |
+
+We strongly recommend that applications adopt consistent naming and scaling ratios in their user interface. This is to ensure that user experience is consistent for your application's users which may have experience of other applications using FSR.
+
+<h3>Performance</h3>
+Depending on your target hardware and operating configuration FSR will operate at different performance levels. Below you can find reference performance numbers for a RX 9070XT running FSR4 in performance mode. Upscaling from a lower resolution is slightly faster than upscaling from a higher one, but performance is mostly bound by the target resolution FSR upscales to.
+
+| Target Resolution | Microseconds (us)|
+| -----------       |------------------|
+| 3840x2160         |  1316us          |
+| 1920x1080         |   352us          |
+
+<h3>Memory requirements</h3>
+Using FSR requires some additional GPU local memory to be allocated for consumption by the GPU. When using the FSR API, this memory is allocated when the FSR context is created, and is done so via the series of callbacks which comprise the backend interface. This memory is used to store intermediate surfaces which are computed by the FSR algorithm as well as surfaces which are persistent across many frames of the application. The table below includes the amount of memory used by FSR under various operating conditions.
+
+| Resolution | Working set (MB) |
+| -----------|------------------|
+| 7680x4320  | 1274MB           |
+| 3840x2160  |  318MB           |
+| 1920x1080  |   81MB           |
+
+Figures are approximations, rounded to nearest MB using an RX 9070XT GPU, and are subject to change.
+
+
+An application can get amount of GPU local memory required by FSR after context creation by calling [`ffxQuery`](../../Kits/FidelityFX/api/include/ffx_api.h#L150) with the valid context and [`ffxQueryDescUpscaleGetGPUMemoryUsage`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L181).
+
+An application can get GPU local memory required by default FSR version before context creation by calling [`ffxQuery`](../../Kits/FidelityFX/api/include/ffx_api.h#L150) with `NULL` context and filling out [`ffxQueryDescUpscaleGetGPUMemoryUsageV2`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L188). To get the memory requirement info for a different upscaler version, additionally link [`ffxOverrideVersion`](../../Kits/FidelityFX/api/include/ffx_api.h#L99). 
+
+See code examples how to call [Query](../getting-started/ffx-api.md#Query).
+
+
+<h3>Input resources</h3>
+The following table enumerates the core set of inputs required by FSR.
+
+The resolution column indicates if the data should be at 'rendered' resolution or 'presentation' resolution. 'Rendered' resolution indicates that the resource should match the resolution at which the application is performing its rendering. Conversely, 'presentation' indicates that the resolution of the target should match that which is to be presented to the user. All resources are from the current rendered frame, for DirectX(R)12 applications all input resources should be transitioned to [`D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE`](https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_resource_states) before calling [`ffxDispatchDescUpscale`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L82).
+
+| Name            | Resolution                   |  Format                            | Type      | Notes                                          |
+| ----------------|------------------------------|------------------------------------|-----------|------------------------------------------------|
+| Color buffer    | Render                       | `APPLICATION SPECIFIED`            | Texture   | The render resolution color buffer for the current frame provided by the application. The contents of the color buffer should always be in Linear Colorspace, in the case where this is not possible, then the [`FFX_UPSCALE_ENABLE_NON_LINEAR_COLORSPACE`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L50) flag should be set in  the [`flags`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L75) field of the [`ffxCreateContextDescUpscale`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L72) structure. |
+| Depth buffer    | Render                       | `APPLICATION SPECIFIED (1x FLOAT)` | Texture   | The render resolution depth buffer for the current frame provided by the application. The data should be provided as a single floating point value, the precision of which is under the application's control. The configuration of the depth should be communicated to FSR via the [`flags`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L75) field of the [`ffxCreateContextDescUpscale`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L72) structure. You should set the [`FFX_UPSCALE_ENABLE_DEPTH_INVERTED`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L45) flag if your depth buffer is inverted (that is [1..0] range). |
+| Motion vectors  | Render or presentation       | `APPLICATION SPECIFIED (2x FLOAT)` | Texture   | The 2D motion vectors for the current frame provided by the application in **[<-width, -height> ... <width, height>]** range. If your application renders motion vectors with a different range, you may use the [`motionVectorScale`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L94) field of the [`ffxDispatchDescUpscale`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L82) structure to adjust them to match the expected range for FSR. Internally, FSR uses 16-bit quantities to represent motion vectors in many cases, which means that while motion vectors with greater precision can be provided, FSR will not benefit from the increased precision. The resolution of the motion vector buffer should be equal to the render resolution, unless the [`FFX_UPSCALE_ENABLE_DISPLAY_RESOLUTION_MOTION_VECTORS`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L43) flag is set in the [`flags`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L75) field of the [`ffxCreateContextDescUpscale`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L72) structure, in which case it should be equal to the presentation resolution. |
+| Exposure        | 1x1                          | `R32_FLOAT`                        | Texture   | A 1x1 texture containing the exposure value computed for the current frame. This resource is optional, and may be omitted if the [`FFX_UPSCALE_ENABLE_AUTO_EXPOSURE`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L47) flag is set in the [`flags`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L75) field of the [`ffxCreateContextDescUpscale`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L72) structure.  |
+
+All inputs that are provided at Render Resolution, except for motion vectors, should be rendered with jitter. Motion vectors should not have jitter applied, unless the `FFX_UPSCALE_ENABLE_MOTION_VECTORS_JITTER_CANCELLATION` flag is present.
+
+<h3>Depth buffer configurations</h3>
+
+It is strongly recommended that an inverted depth buffer is used with FSR. However, alternative depth buffer configurations are supported. An application should inform the FSR API of its depth buffer configuration by setting the appropriate flags during the creation of the [`ffxCreateContextDescUpscale`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L72). The table below contains the appropriate flags.
+
+| FSR flag                         | Note                                                                                       |
+|----------------------------------|--------------------------------------------------------------------------------------------|
+| [`FFX_UPSCALE_ENABLE_DEPTH_INVERTED`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L45) | A bit indicating that the input depth buffer data provided is inverted [max..0].           |
+| [`FFX_UPSCALE_ENABLE_DEPTH_INFINITE`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L46) | A bit indicating that the input depth buffer data provided is using an infinite far plane. |
+
+
+<h3>Providing motion vectors</h3>
+
+<h4>Space</h4>
+
+A key part of a temporal algorithm (be it antialiasing or upscaling) is the provision of motion vectors. FSR accepts motion vectors in 2D which encode the motion from a pixel in the current frame to the position of that same pixel in the previous frame. FSR expects that motion vectors are provided by the application in [**<-width, -height>**..**<width, height>**] range; this matches screenspace. For example, a motion vector for a pixel in the upper-left corner of the screen with a value of **<width, height>** would represent a motion that traversed the full width and height of the input surfaces, originating from the bottom-right corner.
+
+![alt text](media/super-resolution-temporal/motion-vectors.svg "A diagram showing a 2D motion vector.")
+
+If your application computes motion vectors in another space - for example normalized device coordinate space - then you may use the [`motionVectorScale`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L94) field of the [`ffxDispatchDescUpscale`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L82) structure to instruct FSR to adjust them to match the expected range for FSR. The code examples below illustrate how motion vectors may be scaled to screen space. The example HLSL and C++ code below illustrates how NDC-space motion vectors can be scaled using the FSR host API.
+
+```HLSL
+// GPU: Example of application NDC motion vector computation
+float2 motionVector = (previousPosition.xy / previousPosition.w) - (currentPosition.xy / currentPosition.w);
+
+// CPU: Matching FSR motionVectorScale configuration
+dispatchParameters.motionVectorScale.x = (float)renderWidth;
+dispatchParameters.motionVectorScale.y = (float)renderHeight;
+```
+
+<h4>Precision & resolution </h4>
+
+Internally, FSR uses 16-bit quantities to represent motion vectors in many cases, which means that while motion vectors with greater precision can be provided, FSR will not currently benefit from the increased precision. The resolution of the motion vector buffer should be equal to the render resolution, unless the [`FFX_UPSCALE_ENABLE_DISPLAY_RESOLUTION_MOTION_VECTORS`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L43) flag is set in the [`flags`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L75) field of the [`ffxCreateContextDescUpscale`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L72) structure when creating the [`ffxContext`](../../Kits/FidelityFX/api/include/ffx_api.h#L132), in which case it should be equal to the presentation resolution.
+
+<h4>Coverage</h4>
+
+FSR will perform better quality upscaling when more objects provide their motion vectors. It is therefore advised that all opaque, alpha-tested and alpha-blended objects should write their motion vectors for all covered pixels. If vertex shader effects are applied - such as scrolling UVs - these calculations should also be factored into the calculation of motion for the best results.
+
+<h3>Optional resources</h3>
+
+FSR4 no longer requires the title to generate either a Reactive mask or a Transparency and Composition mask, though they may still be provided to FSR4. To make it easier to integrate FSR4 in titles that also wish to offer earlier versions of FSR as options a new [`ffxQuery`](../../Kits/FidelityFX/api/include/ffx_api.h#L150) has been added. By using [`ffxQueryDescUpscaleGetResourceRequirements`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L209) as the query structure, specifying [`FFX_API_QUERY_DESC_TYPE_UPSCALE_GET_RESOURCE_REQUIREMENTS`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L208) as the query identifier, the caller will receive a bitmap specifying which resources defined in [`FfxApiQueryResourceIdentifiers`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L198) are required and one for resources that are optional. This allows the caller to identify when the additional work to generate the masks should be performed and when it can be omitted, thereby reducing the performance overhead for FSR4. Calling [`ffxQuery`](../../Kits/FidelityFX/api/include/ffx_api.h#L150) with valid `context` for this query structure will return the resource requirement info for the passed context version. To get the resource requirement info for a different upscaler version or before upscaler context creation, call [`ffxQuery`](../../Kits/FidelityFX/api/include/ffx_api.h#L150) with `NULL` context and linking a [`ffxOverrideVersion`](../../Kits/FidelityFX/api/include/ffx_api.h#L99). See code examples how to call [Query](../getting-started/ffx-api.md#Query).
+
+<h3>Exposure</h3>
+
+FSR provides two values which control the exposure used when performing upscaling. They are as follows:
+
+1. **Pre-exposure** a value by which we divide the input signal to get back to the original signal produced by the game before any packing into lower precision render targets.
+2. **Exposure** a value which is multiplied against the result of the pre-exposed color value.
+
+The exposure value should match that which the application uses during any subsequent tonemapping passes performed by the application. This means FSR will operate consistently with what is likely to be visible in the final tonemapped image.
+
+> In various stages of the FSR algorithm described in this document, FSR will compute its own exposure value for internal use. It is worth noting that all outputs from FSR will have this internal tonemapping reversed before the final output is written. Meaning that FSR returns results in the same domain as the original input signal.
+
+Poorly selected exposure values can have a drastic impact on the final quality of FSR's upscaling. Therefore, it is recommended that [`FFX_UPSCALE_ENABLE_AUTO_EXPOSURE`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L47) is used by the application, unless there is a particular reason not to. When [`FFX_UPSCALE_ENABLE_AUTO_EXPOSURE`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L47) is set in the [`flags`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L75) field of the [`ffxCreateContextDescUpscale`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L72) structure, the exposure calculation shown in the HLSL code below is used to compute the exposure value, which matches the exposure response of ISO 100 film stock.
+
+```HLSL
+float ComputeAutoExposureFromAverageLog(float averageLogLuminance)
+{
+	const float averageLuminance = exp(averageLogLuminance);
+	const float S = 100.0f; // ISO arithmetic speed
+	const float K = 12.5f;
+	const float exposureIso100 = log2((averageLuminance * S) / K);
+	const float q = 0.65f;
+	const float luminanceMax = (78.0f / (q * S)) * pow(2.0f, exposureIso100);
+	return 1 / luminanceMax;
+}
+```
+
+<h3>Placement in the frame</h3>
+
+The primary goal of FSR is to improve application rendering performance by using a temporal upscaling algorithm relying on a number of inputs. Therefore, its placement in the pipeline is key to ensuring the right balance between the highest quality visual quality and great performance.
+
+![alt text](media/super-resolution-ml/pipeline-placement.svg "A diagram showing the placement of temporal FidelityFX Super Resolution in the wider rendering pipeline.")
+
+With any image upscaling approach is it important to understand how to place other image-space algorithms with respect to the upscaling algorithm. Placing these other image-space effects before the upscaling has the advantage that they run at a lower resolution, which of course confers a performance advantage onto the application. However, it may not be appropriate for some classes of image-space techniques. For example, many applications may introduce noise or grain into the final image, perhaps to simulate a physical camera. Doing so before an upscaler might cause the upscaler to amplify the noise, causing undesirable artifacts in the resulting upscaled image. The following table divides common real-time image-space techniques into two columns. 'Post processing A' contains all the techniques which typically would run before FSR's upscaling, meaning they would all run at render resolution. Conversely, the 'Post processing B' column contains all the techniques which are recommend to run after FSR, meaning they would run at the larger, presentation resolution.
+
+| Post processing A              | Post processing B    |
+|--------------------------------|----------------------|
+| Screenspace reflections        | Film grain           |
+| Screenspace ambient occlusion  | Chromatic aberration |
+| Denoisers (shadow, reflections)| Vignette             |
+| Exposure (optional)            | Tonemapping          |
+|                                | Bloom                |
+|                                | Depth of field       |
+|                                | Motion blur          |
+
+Please note that the recommendations here are for guidance purposes only and depend on the precise characteristics of your application's implementation.
+
+<h3>Temporal Antialiasing</h3>
+
+Temporal antialiasing (TAA) is a technique which uses the output of previous frames to construct a higher quality output from the current frame. As FSR has a similar goal - albeit with the additional goal of also increasing the resolution of the rendered image - there is no longer any need to include a separate TAA pass in your application.
+
+<h3>Camera jitter</h3>
+
+FSR relies on the application to apply sub-pixel jittering while rendering - this is typically included in the projection matrix of the camera. To make the application of camera jitter simple, the FSR API provides a small set of utility function which computes the sub-pixel jitter offset for a particular frame within a sequence of separate jitter offsets.
+
+Internally, these function implement a Halton[2,3] sequence [[Halton](#references)]. The goal of the Halton sequence is to provide spatially separated points, which cover the available space.
+
+![alt text](media/super-resolution-temporal/jitter-space.svg "A diagram showing how to map sub-pixel jitter offsets to projection offsets.")
+
+It is important to understand that the values returned from the [`ffxQueryDescUpscaleGetJitterOffset`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L138) are in unit pixel space, and in order to composite this correctly into a projection matrix we must convert them into projection offsets. The diagram above shows a single pixel in unit pixel space, and in projection space. The code listing below shows how to correctly composite the sub-pixel jitter offset value into a projection matrix.
+
+``` CPP
+ffx::ReturnCode                     retCode;
+int32_t                             jitterPhaseCount;
+ffx::QueryDescUpscaleGetJitterPhaseCount getJitterPhaseDesc{};
+getJitterPhaseDesc.displayWidth   = displayWidth;
+getJitterPhaseDesc.renderWidth    = renderWidth;
+getJitterPhaseDesc.pOutPhaseCount = &jitterPhaseCount;
+retCode = ffx::Query(fsrContext, getJitterPhaseDesc);
+
+ffx::QueryDescUpscaleGetJitterOffset getJitterOffsetDesc{};
+getJitterOffsetDesc.index                              = jitterIndex;
+getJitterOffsetDesc.phaseCount                         = jitterPhaseCount;
+getJitterOffsetDesc.pOutX                              = &jitterX;
+getJitterOffsetDesc.pOutY                              = &jitterY;
+retCode = ffx::Query(fsrContext, getJitterOffsetDesc);
+
+// Calculate the jittered projection matrix.
+const float jitterX = 2.0f * jitterX / (float)renderWidth;
+const float jitterY = -2.0f * jitterY / (float)renderHeight;
+const Matrix4 jitterTranslationMatrix = translateMatrix(Matrix3::identity, Vector3(jitterX, jitterY, 0));
+const Matrix4 jitteredProjectionMatrix = jitterTranslationMatrix * projectionMatrix;
+```
+
+Jitter should be applied to *all* rendering. This includes opaque, alpha transparent, and raytraced objects. For rasterized objects, the sub-pixel jittering values calculated by the [`ffxQueryDescUpscaleGetJitterOffset`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L138) function can be applied to the camera projection matrix which is ultimately used to perform transformations during vertex shading. For raytraced rendering, the sub-pixel jitter should be applied to the ray's origin - often the camera's position.
+
+Whether you elect to use the recommended [`ffxQueryDescUpscaleGetJitterOffset`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L138) query or your own sequence generator, you must set the [`jitterOffset`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L93) field of the [`ffxDispatchDescUpscale`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L82) structure to inform FSR of the jitter offset that has been applied in order to render each frame. Moreover, if not using the recommended [`ffxQueryDescUpscaleGetJitterOffset`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L138) query, care should be taken that your jitter sequence never generates a null vector; that is value of 0 in both the X and Y dimensions.
+
+The table below shows the jitter sequence length for each of the default quality modes.
+
+ | Quality mode      | Scaling factor          | Sequence length |
+ |-------------------|-------------------------|-----------------|
+ | Quality           | 1.5x (per dimension)    | 18              |
+ | Balanced          | 1.7x (per dimension)    | 23              |
+ | Performance       | 2.0x (per dimension)    | 32              |
+ | Ultra performance | 3.0x (per dimension)    | 72              |
+ | Custom            | [1..n]x (per dimension) | `ceil(8 * n^2)` |
+
+<h3>Camera jump cuts</h3>
+
+Most applications with real-time rendering have a large degree of temporal consistency between any two consecutive frames. However, there are cases where a change to a camera's transformation might cause an abrupt change in what is rendered. In such cases, FSR is unlikely to be able to reuse any data it has accumulated from previous frames, and should clear this data such to exclude it from consideration in the compositing process. In order to indicate to FSR that a jump cut has occurred with the camera you should set the [`reset`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L101) field of the [`ffxDispatchDescUpscale`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L82) structure to `true` for the first frame of the discontinuous camera transformation.
+
+Rendering performance may be slightly less than typical frame-to-frame operation when using the reset flag, as FSR will clear some additional internal resources.
+
+<h3>Mipmap biasing</h3>
+
+Applying a negative mipmap biasing will typically generate an upscaled image with better texture detail. We recommend applying the following formula to your Mipmap bias:
+
+``` CPP
+mipBias = log2(renderResolution/displayResolution) - 1.0;
+```
+
+It is suggested that applications adjust the MIP bias for specific high-frequency texture content which is susceptible to showing temporal aliasing issues.
+
+The following table illustrates the mipmap biasing factor which results from evaluating the above pseudocode for the scaling ratios matching the suggested quality modes that applications should expose to end users.
+
+ | Quality mode      | Scaling factor        | Mipmap bias |
+ |-------------------|-----------------------|-------------|
+ | Quality           | 1.5X (per dimension)  | -1.58       |
+ | Balanced          | 1.7X (per dimension)  | -1.76       |
+ | Performance       | 2.0X (per dimension)  | -2.0        |
+ | Ultra performance | 3.0X (per dimension)  | -2.58       |
+
+<h3>Frame Time Delta Input</h3>
+
+The FSR API requires [`frameTimeDelta`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L99) be provided by the application through the [`ffxDispatchDescUpscale`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L82) structure. This value is in __milliseconds__: if running at 60fps, the value passed should be around __16.6f__.
+
+The value is used within the temporal component of the FSR auto-exposure feature.
+
+<h3>HDR support</h3>
+
+High dynamic range images are supported in FSR. To enable this, you should set the [`FFX_UPSCALE_ENABLE_HIGH_DYNAMIC_RANGE`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L42) bit in the [`flags`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L75) field of the [`ffxCreateContextDescUpscale`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L72) structure. For best results, images should be provided to FSR in linear color space.
+
+<h3>Non-linear Color</h3>
+
+For applications that cannot provide images in linear color space the [`FFX_UPSCALE_ENABLE_NON_LINEAR_COLORSPACE`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L50) flag should be set in the [`flags`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L75) field of the [`ffxCreateContextDescUpscale`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L72) structure.
+
+In addition, two optional flags have been added to [`FfxApiDispatchFsrUpscaleFlags`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L54) to specify the specific colorspace in use.
+
+These flags are mutually exclusive and are set in the [`flags`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L106) field of the [`ffxDispatchDescUpscale`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L82) struct and then inform FSR4 of the colorspace used for the input image. This may improve visual quality in some circumstances above and beyond specifying [`FFX_UPSCALE_ENABLE_NON_LINEAR_COLORSPACE`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L50) alone. 
+
+
+| Flag                                                                                                  | Description                                                              |
+|-------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|
+| [`FFX_UPSCALE_FLAG_NON_LINEAR_COLOR_SRGB`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L57) | Indicates that the input color resource contains perceptual sRGB colors. |
+| [`FFX_UPSCALE_FLAG_NON_LINEAR_COLOR_PQ`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L58)   | Indicates that the input color resource contains perceptual PQ colors. |
+
+
+> Support for additional color spaces might be provided in a future revision of FSR.
+
+<h3>Debug Checker</h3>
+Enable debug checker to validate application supplied inputs at dispatch upscale. This feature can be enabled in any build configuration of the runtime (IE. release binaries from PrebuiltSignedDll folder or debug build). It is recommended this is enabled only in development builds of game.
+
+Passing the [`FFX_UPSCALE_ENABLE_DEBUG_CHECKING`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L49) flag within the flags member of [`ffxCreateContextDescUpscale`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L72) will output textual warning messages from upscaler to debugger TTY by default. Application can set the callback fuction for runtime to pass the messages to the underlying application. Application can assign `fpMessage` from [`ffxCreateContextDescUpscale`](../../Kits/FidelityFX/upscalers/include/ffx_upscale.h#L72) to suitable function. `fpMessage` is of type `ffxApiMessage` which is a function pointer for passing string messages of various types.
+
+An example of the kind of output that can occur when the checker observes possible issues is below:
+
+```
+FSR_API_DEBUG_WARNING: FFX_FSR_ENABLE_DEPTH_INFINITE and FFX_FSR_ENABLE_DEPTH_INVERTED present, cameraFar value is very low which may result in depth separation artefacting
+FSR_API_DEBUG_WARNING: frameTimeDelta is less than 1.0f - this value should be milliseconds (~16.6f for 60fps)
+```
+
+<h3>Debug view</h3>
+
+When `FFX_UPSCALE_FLAG_DRAW_DEBUG_VIEW` is set in the flags attribute of `ffxDispatchDescUpscale`, an additional debug output pass will be executed to render debug data from internal surfaces onto the upscaled frame. On the top left motion vectors are displayed, this could be used to make sure your animated objects report motion correctly to FSR. On the top right you can inspect the blend factor computed by FSR, the bright purple parts highlight areas of low blend factor with history texture, signaling a detected reactivity area.
+
+![Frame interpolation debug overlay](media/super-resolution-upscaler/upscaler-debug-fsr4.png "A diagram showing the debug overlay")
+
+<h2>Building the sample</h2>
+
+To build the FSR sample, please follow the following instructions:
+
+1. Download and install the following software developer tool minimum versions:
+    - [Visual Studio 2022](https://visualstudio.microsoft.com/downloads/) (Install ```vcpkg package manager``` as part of the install process)
+    - [Windows 10 SDK 10.0.18362.0](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk)
+
+ 2. Open the Visual Studio solution:
+
+    ```bash
+    > <installation path>\Samples\FidelityFX_FSR\dx12\FidelityFX_FSR_2022.sln
+    ```
+
+ 3. First time vcpkg installation
+
+   - If vcpkg has not previously been initialized in Visual Studio, please do so with the following:
+     - From the menu, select ``Tools`` and then ``Visual Studio Command Prompt`` to bring up the terminal.
+     - Type ``vcpkg integrate install`` and hit ``enter`` key.
+     - Close and re-open the solution.
+
+<h3>Building the project</h3>
+
+The Visual Studio solution file (.sln) will contain all projects needed to build the effect sample. To build the projects in the solution, you should click on ``Build`` and then ``Build solution`` from the menu at the top of Visual Studio. This will build all dependencies of the sample (such as the FidelityFX Cauldron Framework), then build the sample application.
+
+<h3>Running the project</h3>
+
+To run a project from Visual Studio:
+
+ 1. If not already highlighted, select the sample project in the solution explorer.
+
+ 2. Right-click the project and select `Set as Start-up project`.
+
+ 3. Right-click the project and select `Properties`
+
+ 4. Under `Configuration Properties`, click on the `Debugging` entry.
+
+ 5. Set `Working Directory` to `$(TargetDir)` for all configurations (`Debug` and `Release`).
+
+ 6. Click `Apply` then `OK` to close the properties panel.
+
+ 7. Click on the `Build` menu item from the toolstrip, and then click on `Run`.
+
+<h2>Limitations</h2>
+
+FSR4 requires an AMD 9000 series GPU or later.
+
+<h2>Version history</h2>
+
+| Version        | Date              |
+| ---------------|-------------------|
+| **4.0.2**      | Not published     |
+
+Refer to changelog for more detail on versions.
+
+<h2>References</h2>
+
+[**Halton**] Halton sequence, <strong>"Halton sequence"</strong>, [https://en.wikipedia.org/wiki/Halton_sequence](https://en.wikipedia.org/wiki/Halton_sequence)
+
+<h2>See also</h2>
+
+- [FidelityFX Super Resolution](../samples/super-resolution.md)
+- [FidelityFX Naming guidelines](../getting-started/naming-guidelines.md)

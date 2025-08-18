@@ -4,15 +4,14 @@
 
 ![alt text](media/super-resolution/fsr3-sample.jpg "A screenshot of the FSR sample.")
 
-This sample demonstrates the use of FidelityFX Super Resolution 3.1.4 for upscaling and frame generation.
+This sample demonstrates the use of FidelityFX Super Resolution 4.0.2 (and 3.1.5 & 2.3.4) for upscaling and FidelityFX Frame Generation 3.1.5.
 
-For details on the underlying algorithms you can refer to the per-technique documentation for [FSR3 upscaling](../techniques/super-resolution-upscaler.md) and [frame interpolation](../techniques/frame-interpolation.md).
+For details on the underlying algorithms you can refer to the per-technique documentation for [FSR4 upscaling](../techniques/super-resolution-ml.md) and [frame interpolation](../techniques/frame-interpolation.md).
 
 <h2>Requirements</h2>
 
  - Windows
  - DirectX(R)12
- - Vulkan(R)
 
 <h2>UI elements</h2>
 
@@ -87,5 +86,5 @@ For sample controls, configuration, and FidelityFX Cauldron Framework UI element
 
 <h2>See also</h2>
 
-- [FidelityFX Super Resolution 3](../techniques/super-resolution-upscaler.md)
+- [FidelityFX Super Resolution 4](../techniques/super-resolution-ml.md)
 - [FidelityFX Frame Interpolation](../techniques/frame-interpolation.md)

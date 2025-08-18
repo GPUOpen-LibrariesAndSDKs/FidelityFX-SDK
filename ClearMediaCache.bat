@@ -1,6 +1,6 @@
 :: This file is part of the FidelityFX SDK.
 ::
-:: Copyright (C) 2024 Advanced Micro Devices, Inc.
+:: Copyright (C) 2025 Advanced Micro Devices, Inc.
 :: 
 :: Permission is hereby granted, free of charge, to any person obtaining a copy
 :: of this software and associated documentation files(the "Software"), to deal
@@ -24,8 +24,10 @@
 
 SET ffx_sdk_root="%~dp0"
 
+SET media_path="./media/cauldronmedia"
+
 echo Clearing media delivery cache for SDK root: %ffx_sdk_root%
 
 pushd %ffx_sdk_root%
-.\sdk\tools\media_delivery\MediaDelivery.exe --clear-cache
+.\tools\media_delivery\MediaDelivery.exe --media-sub-dir %media_path% --clear-cache
 popd

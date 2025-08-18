@@ -12,211 +12,217 @@ default:
   - amd64
 
 stages:
-  - format-check
+  - preflight
   - build
+  - smoketest
   - package
+  
 
-format_check:
-  stage: format-check
-  needs: []
-  script:
-  - echo Coming soon!
-
-build_release_sdk_dx12:
+build_release_fidelityfx_loader_dll_dx12:
   stage: build
-  needs: []
   script:
-  - 'cd sdk/'
-  - 'mkdir build'
-  - 'cd build'
-  - 'cmake .. -DFFX_API_BACKEND=DX12_X64 -DFFX_ALL=ON -DFFX_AUTO_COMPILE_SHADERS=1'
-  - 'cmake --build ./ --config Release %CMAKE_BUILD_DRIVER%'
+  - '"C:/Program Files\Microsoft Visual Studio/2022/Professional/MSBuild/Current/Bin/MSBuild.exe" ./Kits/FidelityFX/api/dx12/amd_fidelityfx_loader_dx12_2022.sln /p:Configuration=Release /p:Platform=x64'
   artifacts:
     paths:
-    - ./sdk/bin
-    expire_in: 2 weeks
+    - ./Kits/FidelityFX/bin/amd_fidelityfx_loader_dx12.dll
+    - ./Kits/FidelityFX/bin/amd_fidelityfx_loader_dx12.pdb
+    - ./Kits/FidelityFX/bin/amd_fidelityfx_loader_dx12.lib
+    expire_in: 1 week
 
-build_debug_sdk_dx12:
+build_fidelityfx_sc:
   stage: build
-  needs: []
+  tags:
+  - vcpkg
   script:
-  - 'cd sdk/'
-  - 'mkdir build'
-  - 'cd build'
-  - 'cmake .. -DFFX_API_BACKEND=DX12_X64 -DFFX_ALL=ON -DFFX_AUTO_COMPILE_SHADERS=1'
-  - 'cmake --build ./ --config Debug %CMAKE_BUILD_DRIVER%'
+  - '"C:/Program Files\Microsoft Visual Studio/2022/Professional/MSBuild/Current/Bin/MSBuild.exe" ./Kits/FidelityFX/tools/ffx_sc/FidelityFX_SC_vs2022.sln /p:Configuration=Release /p:Platform=x64'
   artifacts:
     paths:
-    - ./sdk/bin
-    expire_in: 2 weeks
-    
-build_release_sdk_vk:
-  stage: build
-  needs: []
-  script:
-  - 'cd sdk/'
-  - 'mkdir build'
-  - 'cd build'
-  - 'cmake .. -DFFX_API_BACKEND=VK_X64 -DFFX_ALL=ON -DFFX_AUTO_COMPILE_SHADERS=1'
-  - 'cmake --build ./ --config Release %CMAKE_BUILD_DRIVER%'
-  artifacts:
-    paths:
-    - ./sdk/bin
-    expire_in: 2 weeks
+    - ./Kits/FidelityFX/tools/ffx_sc/bin/dxcompiler.dll
+    - ./Kits/FidelityFX/tools/ffx_sc/bin/dxil.lib
+    - ./Kits/FidelityFX/tools/ffx_sc/bin/FidelityFX_SC.exe
+    expire_in: 1 week  
 
-build_debug_sdk_vk:
+build_release_fidelityfx_framegeneration_dll_dx12:
   stage: build
-  needs: []
-  script:
-  - 'cd sdk/'
-  - 'mkdir build'
-  - 'cd build'
-  - 'cmake .. -DFFX_API_BACKEND=VK_X64 -DFFX_ALL=ON -DFFX_AUTO_COMPILE_SHADERS=1'
-  - 'cmake --build ./ --config Debug %CMAKE_BUILD_DRIVER%'
-  artifacts:
-    paths:
-    - ./sdk/bin
-    expire_in: 2 weeks
-
-build_debug_api_dll_dx12:
-  stage: build
-  needs: []
-  script:
-  - 'cd ffx-api'
-  - 'mkdir build'
-  - 'cd build'
-  - 'cmake -A x64 .. -DFFX_API_BACKEND=DX12_X64'
-  - 'cmake --build ./ --config Debug %CMAKE_BUILD_DRIVER%'
-  artifacts:
-    paths:
-    - ./ffx-api/bin
-    expire_in: 2 weeks
-
-build_release_api_dll_dx12:
-  stage: build
-  needs: []
-  script:
-  - 'cd ffx-api'
-  - 'mkdir build'
-  - 'cd build'
-  - 'cmake -A x64 .. -DFFX_API_BACKEND=DX12_X64'
-  - 'cmake --build ./ --config Release %CMAKE_BUILD_DRIVER%'
-  artifacts:
-    paths:
-    - ./ffx-api/bin/amd_fidelityfx_dx12.dll
-    - ./ffx-api/bin/amd_fidelityfx_dx12.lib
-    
-build_debug_api_dll_vk:
-  stage: build
-  needs: []
-  script:
-  - 'cd ffx-api'
-  - 'mkdir build'
-  - 'cd build'
-  - 'cmake -A x64 .. -DFFX_API_BACKEND=VK_X64'
-  - 'cmake --build ./ --config Debug %CMAKE_BUILD_DRIVER%'
-  artifacts:
-    paths:
-    - ./ffx-api/bin
-    expire_in: 2 weeks
-
-build_release_api_dll_vk:
-  stage: build
-  needs: []
-  script:
-  - 'cd ffx-api'
-  - 'mkdir build'
-  - 'cd build'
-  - 'cmake -A x64 .. -DFFX_API_BACKEND=VK_X64'
-  - 'cmake --build ./ --config Release %CMAKE_BUILD_DRIVER%'
-  artifacts:
-    paths:
-    - ./ffx-api/bin/amd_fidelityfx_vk.dll
-    - ./ffx-api/bin/amd_fidelityfx_vk.lib
-
-build_release_samples_dx12:
-  stage: build
+  tags:
+  - vcpkg
   needs:
-  - job: build_release_sdk_dx12
-  - job: build_release_api_dll_dx12
+  - job: build_fidelityfx_sc
   script:
-  - 'mkdir build'
-  - 'cd build'
-  - 'cmake -A x64 .. -DBUILD_TYPE=SAMPLES_DX12 -DFFX_ALL=ON'
-  - 'cmake --build . --config ReleaseDX12 %CMAKE_BUILD_DRIVER%'
+  - '"C:/Program Files\Microsoft Visual Studio/2022/Professional/MSBuild/Current/Bin/MSBuild.exe" ./Kits/FidelityFX/framegeneration/dx12/amd_fidelityfx_framegeneration_dx12_2022.sln /p:Configuration=Release /p:Platform=x64'
   artifacts:
     paths:
-    - ./bin
-    expire_in: 2 weeks
+    - ./Kits/FidelityFX/bin/amd_fidelityfx_framegeneration_dx12.dll
+    - ./Kits/FidelityFX/bin/amd_fidelityfx_framegeneration_dx12.pdb
+    - ./Kits/FidelityFX/bin/amd_fidelityfx_framegeneration_dx12.lib
+    expire_in: 1 week
 
-build_release_samples_vk:
+build_release_fidelityfx_upscaler_dll_dx12:
   stage: build
+  tags:
+  - vcpkg
   needs:
-  - job: build_release_sdk_vk
-  - job: build_release_api_dll_vk
+  - job: build_fidelityfx_sc
   script:
-  - 'mkdir build'
-  - 'cd build'
-  - 'cmake -A x64 .. -DBUILD_TYPE=SAMPLES_VK -DFFX_ALL=ON'
-  - 'cmake --build . --config ReleaseVK %CMAKE_BUILD_DRIVER%'
+  - '"C:/Program Files\Microsoft Visual Studio/2022/Professional/MSBuild/Current/Bin/MSBuild.exe" ./Kits/FidelityFX/upscalers/dx12/amd_fidelityfx_upscaler_dx12_2022.sln /p:Configuration=Release /p:Platform=x64'
   artifacts:
     paths:
-    - ./bin
-    expire_in: 2 weeks
+    - ./Kits/FidelityFX/bin/amd_fidelityfx_upscaler_dx12.dll
+    - ./Kits/FidelityFX/bin/amd_fidelityfx_upscaler_dx12.pdb
+    - ./Kits/FidelityFX/bin/amd_fidelityfx_upscaler_dx12.lib
+    expire_in: 1 week
 
-build_debug_samples_dx12:
+build_release_fsr_cauldron2_dx12:
   stage: build
+  tags:
+  - vcpkg
   needs:
-  - job: build_debug_sdk_dx12
-  - job: build_debug_api_dll_dx12
+  - job: build_release_fidelityfx_loader_dll_dx12
+  - job: build_release_fidelityfx_framegeneration_dll_dx12
+  - job: build_release_fidelityfx_upscaler_dll_dx12
   script:
-  - 'mkdir build'
-  - 'cd build'
-  - 'cmake -A x64 .. -DBUILD_TYPE=SAMPLES_DX12 -DFFX_ALL=ON'
-  - 'cmake --build . --config DebugDX12 %CMAKE_BUILD_DRIVER%'
+  - '"C:/Program Files\Microsoft Visual Studio/2022/Professional/MSBuild/Current/Bin/MSBuild.exe" ./Samples/Upscalers/FidelityFX_FSR/dx12/FidelityFX_FSR_2022.sln /p:Configuration=Release /p:Platform=x64'
   artifacts:
     paths:
-    - ./bin
-    expire_in: 2 weeks
+    - ./Samples/Upscalers/FidelityFX_FSR/dx12/x64/Release
+    expire_in: 1 week
 
-build_debug_samples_vk:
-  stage: build
+# Run smoke tests for SDK
+test_ffx_api:
+  stage: smoketest
   needs:
-  - job: build_debug_sdk_vk
-  - job: build_debug_api_dll_vk
+  - job: build_release_fidelityfx_loader_dll_dx12
+  - job: build_release_fidelityfx_upscaler_dll_dx12
+  dependencies:
+    - build_release_fidelityfx_loader_dll_dx12
+    - build_release_fidelityfx_upscaler_dll_dx12
   script:
-  - 'mkdir build'
-  - 'cd build'
-  - 'cmake -A x64 .. -DBUILD_TYPE=SAMPLES_VK -DFFX_ALL=ON'
-  - 'cmake --build . --config DebugVK %CMAKE_BUILD_DRIVER%'
+    - 'call "C:/Program Files/Microsoft Visual Studio/2022/Professional/Common7/Tools/VsDevCmd.bat" -arch=x64 -host_arch=x64'
+    - 'xcopy "Kits\\FidelityFX\\bin\\amd_fidelityfx_loader_dx12.dll" "Kits\\FidelityFX\\api\\test\\"'
+    - 'xcopy "Kits\\FidelityFX\\bin\\amd_fidelityfx_upscaler_dx12.dll" "Kits\\FidelityFX\\api\\test\\"'
+    - 'cd Kits/FidelityFX/api/test'
+    - 'runtests.bat'
   artifacts:
-    paths:
-    - ./bin
-    expire_in: 2 weeks
+    when: always
+    reports:
+      junit: Kits/FidelityFX/api/test/ffx-api-test_abi_report.xml
+      junit: Kits/FidelityFX/api/test/ffx-api-runtime_tests_report.xml
+      junit: Kits/FidelityFX/api/test/ffx-api-runtime_tests_externalprovider_report.xml
 
-package_release_samples_pc:
+test_ffx_api_dx12:
+  stage: smoketest
+  needs:
+  - job: build_release_fidelityfx_loader_dll_dx12
+  script:
+    - 'call "C:/Program Files/Microsoft Visual Studio/2022/Professional/Common7/Tools/VsDevCmd.bat" -arch=x64 -host_arch=x64'
+    - 'cd Kits/FidelityFX/api/dx12/test'
+    - 'runtests.bat'
+  artifacts:
+    when: always
+    reports:
+      junit: Kits/FidelityFX/api/dx12/test/ffx-api-test_abi_dx12_report.xml
+
+test_ffx_api_upscale:
+  stage: smoketest
+  needs:
+  - job: build_release_fidelityfx_loader_dll_dx12
+  - job: build_release_fidelityfx_upscaler_dll_dx12
+  script:
+    - 'call "C:/Program Files/Microsoft Visual Studio/2022/Professional/Common7/Tools/VsDevCmd.bat" -arch=x64 -host_arch=x64'
+    - 'xcopy "Kits\\FidelityFX\\bin\\amd_fidelityfx_loader_dx12.dll" "Kits\\FidelityFX\\upscalers\\test\\"'
+    - 'xcopy "Kits\\FidelityFX\\bin\\amd_fidelityfx_upscaler_dx12.dll" "Kits\\FidelityFX\\upscalers\\test\\"'
+    - 'cd Kits/FidelityFX/upscalers/test'
+    - 'runtests.bat'
+  artifacts:
+    when: always
+    reports:
+      junit: Kits/FidelityFX/upscalers/test/ffx-api-test_abi_upscale_report.xml
+      junit: Kits/FidelityFX/upscalers/test/ffx-api-runtime_tests_upscale_no_ctx_report.xml
+
+test_ffx_api_framegeneration:
+  stage: smoketest
+  needs:
+  - job: build_release_fidelityfx_framegeneration_dll_dx12
+  script:
+    - 'call "C:/Program Files/Microsoft Visual Studio/2022/Professional/Common7/Tools/VsDevCmd.bat" -arch=x64 -host_arch=x64'
+    - 'cd Kits/FidelityFX/framegeneration/test'
+    - 'runtests.bat'
+  artifacts:
+    when: always
+    reports:
+      junit: Kits/FidelityFX/framegeneration/test/ffx-api-test_abi_framegeneration_report.xml
+      
+test_ffx_api_framegeneration_dx12:
+  stage: smoketest
+  needs:
+  - job: build_release_fidelityfx_framegeneration_dll_dx12
+  script:
+    - 'call "C:/Program Files/Microsoft Visual Studio/2022/Professional/Common7/Tools/VsDevCmd.bat" -arch=x64 -host_arch=x64'
+    - 'cd Kits/FidelityFX/framegeneration/dx12/test'
+    - 'runtests.bat'
+  artifacts:
+    when: always
+    reports:
+      junit: Kits/FidelityFX/framegeneration/dx12/test/ffx-api-test_abi_framegeneration_dx12_report.xml
+
+# package SDK public repo seed
+package_release_sdk_samples:
   stage: package
   needs:
-  - job: build_release_api_dll_dx12
-  - job: build_release_api_dll_vk
-  - job: build_release_samples_dx12
-  - job: build_release_samples_vk  
+  - job: build_release_fidelityfx_loader_dll_dx12
+  - job: build_release_fidelityfx_framegeneration_dll_dx12
+  - job: build_release_fidelityfx_upscaler_dll_dx12
+  - job: build_release_fsr_cauldron2_dx12
+  - test_ffx_api
+  - test_ffx_api_dx12
+  - test_ffx_api_framegeneration
+  - test_ffx_api_framegeneration_dx12
+  - test_ffx_api_upscale
   script:
   - echo "Packaging FidelityFX SDK Samples"
-  - 'copy %VULKAN_SDK%\Bin\glslc.exe .\bin'
   artifacts:
-    name: "FIDELITYFX-SDK-SAMPLES-$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
+    name: "FIDELITYFX-SDK2.0-$CI_COMMIT_SHORT_SHA$"
     paths:
-    - ./bin
-    - ./docs
-    - ./ffx-api
-    - ./framework
-    - ./PrebuiltSignedDLL
-    - ./samples
-    - ./sdk
     - ./*.bat
-    - ./CMakeLists.txt
-    - ./common.cmake
-    - ./sdk/LICENSE.txt
     - ./readme.md
-    - ./sample.cmake
+    - ./docs
+    - ./Kits/Cauldron2
+    - ./Kits/FidelityFX/api/include/*.*
+    - ./Kits/FidelityFX/api/include/dx12
+    - ./Kits/FidelityFX/api/internal/*.*
+    - ./Kits/FidelityFX/api/internal/gpu
+    - ./Kits/FidelityFX/backend/dx12
+    - ./Kits/FidelityFX/framegeneration/fsr3/dx12
+    - ./Kits/FidelityFX/framegeneration/fsr3/include
+    - ./Kits/FidelityFX/framegeneration/fsr3/internal
+    - ./Kits/FidelityFX/framegeneration/include/dx12
+    - ./Kits/FidelityFX/framegeneration/include/*.*
+    - ./Kits/FidelityFX/bin/*.dll
+    - ./Kits/FidelityFX/bin/*.pdb
+    - ./Kits/FidelityFX/bin/*.lib
+    - ./Kits/FidelityFX/signedbin/amd_fidelityfx_loader_dx12.*
+    - ./Kits/FidelityFX/signedbin/amd_fidelityfx_framegeneration_dx12.*
+    - ./Kits/FidelityFX/signedbin/amd_fidelityfx_upscaler_dx12.*
+    - ./Kits/FidelityFX/upscalers/fsr3/dx12
+    - ./Kits/FidelityFX/upscalers/fsr3/include
+    - ./Kits/FidelityFX/upscalers/fsr3/internal
+    - ./Kits/FidelityFX/upscalers/include
+    - ./Kits/OpenSource/imgui
+    - ./Kits/OpenSource/nlohmann
+    - ./Kits/OpenSource/stb
+    - ./Kits/OpenSource/vectormath
+    - ./Samples/Upscalers/FidelityFX_FSR/dx12/*.*
+    - ./Samples/Upscalers/FidelityFX_FSR/dx12/config
+    - ./Samples/Upscalers/FidelityFX_FSR/dx12/resources
+    - ./Tools
+    expire_in: 1 week
+    exclude:
+    - ./Kits/FidelityFX/api/internal/ffx_api_loader.cpp
+    - ./Kits/FidelityFX/api/internal/ffx_watermark.*
+    - ./Kits/FidelityFX/api/internal/git_hash_branch.h
+    - ./Kits/FidelityFX/api/internal/make_git_info_header.bat
+    - ./Kits/FidelityFX/api/internal/gpu/ffx_shader_writer.h
+    - ./Kits/FidelityFX/api/internal/gpu/ffx_shader_writer_letter_macro_end.h
+    - ./Kits/FidelityFX/api/internal/gpu/ffx_shader_writer_letter_macro_start.h
+    - ./Kits/FidelityFX/api/internal/gpu/ffx_shader_writer_templated.h
+    - ./Kits/FidelityFX/api/internal/gpu/ffx_watermark.hlsl

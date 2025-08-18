@@ -1,0 +1,95 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\internal\ffx_api_loader.cpp">
+      <Filter>api\internal</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource\resource.h">
+      <Filter>api\dx12\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\ffx_api.h">
+      <Filter>api\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\ffx_api.hpp">
+      <Filter>api\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\ffx_api_loader.h">
+      <Filter>api\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\ffx_api_types.h">
+      <Filter>api\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\dx12\ffx_api_dx12.h">
+      <Filter>api\include\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\dx12\ffx_api_dx12.hpp">
+      <Filter>api\include\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\internal\ffx_provider.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\internal\ffx_backends.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\internal\ffx_error.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\internal\ffx_internal_types.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\internal\ffx_provider_external.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\framegeneration\include\ffx_framegeneration.hpp">
+      <Filter>framegeneration\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\framegeneration\include\dx12\ffx_api_framegeneration_dx12.hpp">
+      <Filter>framegeneration\include\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\upscalers\include\ffx_upscale.hpp">
+      <Filter>upscalers\include</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="api">
+      <UniqueIdentifier>{e07d7113-48db-4640-9b0e-561c35c9d473}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="api\dx12">
+      <UniqueIdentifier>{dd0db3b9-f75e-4f12-8062-07d1ebc44813}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="api\dx12\resource">
+      <UniqueIdentifier>{ca633996-9a21-4f7e-bf81-d6d091b10114}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="api\include">
+      <UniqueIdentifier>{75fb835d-5e45-4289-b3f1-50118c65d2bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="api\include\dx12">
+      <UniqueIdentifier>{d98cc1b3-22c2-4092-8a76-b71d5e0d675e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="api\internal">
+      <UniqueIdentifier>{cd086180-408b-4f46-816b-4838f5f21fda}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="framegeneration">
+      <UniqueIdentifier>{ac221e19-8295-42f5-b406-34cede6f3ca6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="framegeneration\include">
+      <UniqueIdentifier>{d3f713e2-24a5-43f3-990a-cd702a259b38}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="framegeneration\include\dx12">
+      <UniqueIdentifier>{93e2b4fe-0ab6-4415-9b7c-702949494f9f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers">
+      <UniqueIdentifier>{766808b6-a42f-4393-b36a-5bce756ebc6b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\include">
+      <UniqueIdentifier>{5fa0775c-9868-4b58-873d-a34b3aa0ecc7}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="resource\ffx_api_dll.rc">
+      <Filter>api\dx12\resource</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>

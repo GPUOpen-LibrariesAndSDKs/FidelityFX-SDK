@@ -1,0 +1,749 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="resource\ffx_upscaler_api_dll.rc">
+      <PreprocessorDefinitions>
+        CI_PIPELINE_ID=$(CI_PIPELINE_ID);
+        %(PreprocessorDefinitions)
+      </PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\api\include\dx12\ffx_api_dx12.h" />
+    <ClInclude Include="..\..\api\include\dx12\ffx_api_dx12.hpp" />
+    <ClInclude Include="..\..\api\include\ffx_api.h" />
+    <ClInclude Include="..\..\api\include\ffx_api.hpp" />
+    <ClInclude Include="..\..\api\include\ffx_api_loader.h" />
+    <ClInclude Include="..\..\api\include\ffx_api_types.h" />
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtAntiLagApi.h" />
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3D.h" />
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DCommandListApi.h" />
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DCommandListMarkerApi.h" />
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DCreateDeviceApi.h" />
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DCreateDeviceAppRegApi.h" />
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DCreateResource.h" />
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DDeviceApi.h" />
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DDirectCaptureApi.h" />
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderAnalyzerApi.h" />
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderIntrinsics.h" />
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderIntrinsicsApi.h" />
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DWorkTiling.h" />
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtDXGIFactory.h" />
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtDXGISwapChain.h" />
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtFfxApi.h" />
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtGpaInterface.h" />
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtGpaInterfaceApi.h" />
+    <ClInclude Include="..\..\api\internal\ffx_assert.h" />
+    <ClInclude Include="..\..\api\internal\ffx_backends.h" />
+    <ClInclude Include="..\..\api\internal\ffx_error.h" />
+    <ClInclude Include="..\..\api\internal\ffx_interface.h" />
+    <ClInclude Include="..\..\api\internal\ffx_internal_types.h" />
+    <ClInclude Include="..\..\api\internal\ffx_message.h" />
+    <ClInclude Include="..\..\api\internal\ffx_object_management.h" />
+    <ClInclude Include="..\..\api\internal\ffx_provider.h" />
+    <ClInclude Include="..\..\api\internal\ffx_provider_external.h" />
+    <ClInclude Include="..\..\api\internal\ffx_util.h" />
+    <ClInclude Include="..\..\api\internal\ffx_watermark.h" />
+    <ClInclude Include="..\..\api\internal\git_hash_branch.h" />
+    <ClInclude Include="..\..\api\internal\gpu\ffx_common_types.h" />
+    <ClInclude Include="..\..\api\internal\gpu\ffx_core.h" />
+    <ClInclude Include="..\..\api\internal\gpu\ffx_core_cpu.h" />
+    <ClInclude Include="..\..\api\internal\gpu\ffx_core_gpu_common.h" />
+    <ClInclude Include="..\..\api\internal\gpu\ffx_core_gpu_common_half.h" />
+    <ClInclude Include="..\..\api\internal\gpu\ffx_core_hlsl.h" />
+    <ClInclude Include="..\..\api\internal\gpu\ffx_core_portability.h" />
+    <ClInclude Include="..\..\api\internal\gpu\ffx_shader_writer.h" />
+    <ClInclude Include="..\..\api\internal\gpu\ffx_shader_writer_letter_macro_end.h" />
+    <ClInclude Include="..\..\api\internal\gpu\ffx_shader_writer_letter_macro_start.h" />
+    <ClInclude Include="..\..\api\internal\gpu\ffx_shader_writer_templated.h" />
+    <ClInclude Include="..\..\backend\dx12\d3dx12.h" />
+    <ClInclude Include="..\..\backend\dx12\ffx_dx12.h" />
+    <ClInclude Include="..\fsr3\include\ffx_fsr2.h" />
+    <ClInclude Include="..\fsr3\include\ffx_fsr3upscaler.h" />
+    <ClInclude Include="..\fsr3\include\ffx_provider_fsr2.h" />
+    <ClInclude Include="..\fsr3\include\ffx_provider_fsr3upscale.h" />
+    <ClInclude Include="..\fsr3\include\ffx_spd.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr1\ffx_fsr1.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_accumulate.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_callbacks_hlsl.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_common.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_compute_luminance_pyramid.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_depth_clip.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_lock.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_postprocess_lock_status.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_rcas.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_reconstruct_dilated_velocity_and_previous_depth.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_reproject.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_resources.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_sample.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_tcr_autogen.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr2\ffx_fsr2_upsample.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_accumulate.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_callbacks_hlsl.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_common.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_debug_view.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_luma_instability.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_luma_pyramid.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_prepare_inputs.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_prepare_reactivity.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_rcas.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_reproject.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_resources.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_sample.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_shading_change.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_shading_change_pyramid.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr3upscaler\ffx_fsr3upscaler_upsample.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr3\ffx_fsr3_callbacks_hlsl.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr3\ffx_fsr3_common.h" />
+    <ClInclude Include="..\fsr3\include\gpu\fsr3\ffx_fsr3_resources.h" />
+    <ClInclude Include="..\fsr3\include\gpu\spd\ffx_spd.h" />
+    <ClInclude Include="..\fsr3\internal\ffx_fsr2_maximum_bias.h" />
+    <ClInclude Include="..\fsr3\internal\ffx_fsr2_private.h" />
+    <ClInclude Include="..\fsr3\internal\ffx_fsr2_shaderblobs.h" />
+    <ClInclude Include="..\fsr3\internal\ffx_fsr3upscaler_private.h" />
+    <ClInclude Include="..\fsr3\internal\ffx_fsr3upscaler_shaderblobs.h" />
+    <ClInclude Include="..\fsr3\internal\ffx_fsr3_private.h" />
+    <ClInclude Include="..\fsr4\include\ffx_provider_fsr4.h" />
+    <ClInclude Include="..\fsr4\include\gpu\fsr1\ffx_fsr1.h" />
+    <ClInclude Include="..\fsr4\include\gpu\fsr4\ffx_fsr4upscaler_resources.h" />
+    <ClInclude Include="..\fsr4\include\gpu\fsr4\ffx_fsr4_common_types.h" />
+    <ClInclude Include="..\fsr4\include\gpu\fsr4\ffx_fsr4_gpu_colorspace_common.h" />
+    <ClInclude Include="..\fsr4\include\gpu\fsr4\ffx_fsr4_upscale_resources.h" />
+    <ClInclude Include="..\fsr4\include\gpu\spd\ffx_spd.h" />
+    <ClInclude Include="..\fsr4\internal\fsr4_permutations.h" />
+    <ClInclude Include="..\fsr4\internal\shader_selector.h" />
+    <ClInclude Include="..\include\ffx_upscale.h" />
+    <ClInclude Include="..\include\ffx_upscale.hpp" />
+    <ClInclude Include="resource\resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\api\internal\dx12\amd_extensions.cpp" />
+    <ClCompile Include="..\..\api\internal\ffx_api.cpp" />
+    <ClCompile Include="..\..\api\internal\ffx_assert.cpp" />
+    <ClCompile Include="..\..\api\internal\ffx_message.cpp" />
+    <ClCompile Include="..\..\api\internal\ffx_object_management.cpp" />
+    <ClCompile Include="..\..\api\internal\ffx_watermark.cpp" />
+    <ClCompile Include="..\..\backend\dx12\ffx_backends_dx12.cpp" />
+    <ClCompile Include="..\..\backend\dx12\ffx_dx12.cpp" />
+    <ClCompile Include="..\fsr3\internal\ffx_fsr2.cpp" />
+    <ClCompile Include="..\fsr3\internal\ffx_fsr2_shaderblobs.cpp" />
+    <ClCompile Include="..\fsr3\internal\ffx_fsr3upscaler.cpp" />
+    <ClCompile Include="..\fsr3\internal\ffx_fsr3upscaler_shaderblobs.cpp" />
+    <ClCompile Include="..\fsr3\internal\ffx_provider_fsr2.cpp" />
+    <ClCompile Include="..\fsr3\internal\ffx_provider_fsr3upscale.cpp" />
+    <ClCompile Include="..\fsr4\dx12\ffx_provider_fsr4_dx12.cpp" />
+    <ClCompile Include="..\fsr4\internal\shader_selector.cpp" />
+    <ClCompile Include="ffx_upscaler_provider_dx12.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\api\internal\make_git_info_header.bat" />
+    <None Include="..\fsr3\dx12\BuildFSR2Shaders.bat" />
+    <None Include="..\fsr3\dx12\BuildFSR3UpscalerShaders.bat" />
+    <None Include="..\fsr4\dx12\BuildFSR4UpscalerShaders.bat" />
+    <None Include="..\fsr4\dx12\ml2code_runtime\config.hlsli" />
+    <None Include="..\fsr4\dx12\ml2code_runtime\globals.hlsli" />
+    <None Include="..\fsr4\dx12\ml2code_runtime\padding.hlsli" />
+    <None Include="..\fsr4\dx12\ml2code_runtime\scalar_functions.hlsli" />
+    <None Include="..\fsr4\dx12\ml2code_runtime\storage.hlsli" />
+    <None Include="..\fsr4\dx12\ml2code_runtime\tensor_float16.hlsli" />
+    <None Include="..\fsr4\dx12\ml2code_runtime\tensor_float32.hlsli" />
+    <None Include="..\fsr4\dx12\ml2code_runtime\tensor_float8.hlsli" />
+    <None Include="..\fsr4\dx12\ml2code_runtime\tensor_int32.hlsli" />
+    <None Include="..\fsr4\dx12\ml2code_runtime\tensor_int8.hlsli" />
+    <None Include="..\fsr4\dx12\ml2code_runtime\tensor_uint8.hlsli" />
+    <None Include="..\fsr4\include\gpu\fsr4\mlsr_optimized_includes.hlsli" />
+    <None Include="..\fsr4\include\gpu\fsr4\post_common.hlsli" />
+    <None Include="..\fsr4\include\gpu\fsr4\pre_common.hlsli" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\api\internal\gpu\ffx_watermark.hlsl">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(ProjectDir)..\..\tools\ffx_sc\bin\FidelityFX_SC.exe" -name=ffx_watermark -output="$(OutDir)ffx_sc_output" -E main -deps=gcc -enable-16bit-types -HV 2021 -O3 -T cs_6_4 -DFFX_GPU=1 -Wno-for-redefinition -Wno-ambig-lit-shift -DFFX_HLSL=1 -reflection "%(FullPath)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) Permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\ffx_watermark_permutations.h</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(ProjectDir)..\..\tools\ffx_sc\bin\FidelityFX_SC.exe" -name=ffx_watermark -output="$(OutDir)ffx_sc_output" -E main -deps=gcc -enable-16bit-types -HV 2021 -O3 -T cs_6_4 -DFFX_GPU=1 -Wno-for-redefinition -Wno-ambig-lit-shift -DFFX_HLSL=1 -reflection "%(FullPath)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) Permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\ffx_watermark_permutations.h</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr2_accumulate_pass.hlsl">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr2Shaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr2Shaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr2_autogen_reactive_pass.hlsl">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr2Shaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr2Shaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr2_compute_luminance_pyramid_pass.hlsl">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr2Shaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr2Shaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr2_debug_blit.hlsl">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr2Shaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr2Shaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr2_depth_clip_pass.hlsl">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr2Shaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr2Shaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr2_lock_pass.hlsl">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr2Shaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr2Shaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr2_rcas_pass.hlsl">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr2Shaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr2Shaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr2_reconstruct_previous_depth_pass.hlsl">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr2Shaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr2Shaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr2_tcr_autogen_pass.hlsl">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr2Shaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr2Shaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr3upscaler_accumulate_pass.hlsl">
+      <FileType>Document</FileType>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr3UpscalerShaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr3UpscalerShaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr3upscaler_autogen_reactive_pass.hlsl">
+      <FileType>Document</FileType>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr3UpscalerShaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr3UpscalerShaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr3upscaler_debug_view_pass.hlsl">
+      <FileType>Document</FileType>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr3UpscalerShaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr3UpscalerShaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr3upscaler_luma_instability_pass.hlsl">
+      <FileType>Document</FileType>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr3UpscalerShaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr3UpscalerShaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr3upscaler_luma_pyramid_pass.hlsl">
+      <FileType>Document</FileType>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr3UpscalerShaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr3UpscalerShaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr3upscaler_prepare_inputs_pass.hlsl">
+      <FileType>Document</FileType>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr3UpscalerShaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr3UpscalerShaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr3upscaler_prepare_reactivity_pass.hlsl">
+      <FileType>Document</FileType>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr3UpscalerShaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr3UpscalerShaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr3upscaler_rcas_pass.hlsl">
+      <FileType>Document</FileType>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr3UpscalerShaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr3UpscalerShaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr3upscaler_shading_change_pass.hlsl">
+      <FileType>Document</FileType>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr3UpscalerShaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr3UpscalerShaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_fsr3upscaler_shading_change_pyramid_pass.hlsl">
+      <FileType>Document</FileType>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr3UpscalerShaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)..\fsr3\dx12\BuildFsr3UpscalerShaders.bat" "$(ProjectDir)" "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_16bit_permutations.h;$(IntDir)ffx_sc_output\%(FileName)_wave64_16bit_permutations.h;%(Outputs)</Outputs>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\fsr4\internal\shaders\fsr4_model_v07_fp8_no_scale_passes_1080.hlsl">
+      <FileType>Document</FileType>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)..\fsr4\dx12\BuildFsr4UpscalerShaders.bat" "1080" "$(ProjectDir)" "..\.." "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_1_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_2_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_3_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_4_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_5_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_6_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_7_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_8_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_9_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_10_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_11_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_12_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_0_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_1_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_2_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_3_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_4_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_5_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_6_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_7_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_8_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_9_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_10_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_11_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_12_post_permutations.h</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)..\fsr4\dx12\BuildFsr4UpscalerShaders.bat" "1080" "$(ProjectDir)" "..\.." "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_1_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_2_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_3_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_4_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_5_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_6_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_7_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_8_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_9_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_10_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_11_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_12_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_0_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_1_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_2_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_3_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_4_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_5_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_6_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_7_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_8_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_9_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_10_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_11_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_1080_12_post_permutations.h</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr4\internal\shaders\fsr4_model_v07_fp8_no_scale_passes_2160.hlsl">
+      <FileType>Document</FileType>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)..\fsr4\dx12\BuildFsr4UpscalerShaders.bat" "2160" "$(ProjectDir)" "..\.." "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_1_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_2_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_3_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_4_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_5_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_6_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_7_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_8_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_9_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_10_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_11_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_12_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_0_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_1_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_2_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_3_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_4_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_5_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_6_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_7_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_8_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_9_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_10_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_11_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_12_post_permutations.h</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)..\fsr4\dx12\BuildFsr4UpscalerShaders.bat" "2160" "$(ProjectDir)" "..\.." "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_1_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_2_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_3_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_4_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_5_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_6_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_7_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_8_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_9_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_10_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_11_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_12_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_0_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_1_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_2_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_3_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_4_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_5_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_6_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_7_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_8_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_9_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_10_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_11_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_2160_12_post_permutations.h</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr4\internal\shaders\fsr4_model_v07_fp8_no_scale_passes_4320.hlsl">
+      <FileType>Document</FileType>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)..\fsr4\dx12\BuildFsr4UpscalerShaders.bat" "4320" "$(ProjectDir)" "..\.." "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_1_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_2_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_3_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_4_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_5_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_6_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_7_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_8_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_9_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_10_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_11_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_12_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_0_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_1_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_2_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_3_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_4_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_5_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_6_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_7_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_8_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_9_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_10_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_11_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_12_post_permutations.h</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)..\fsr4\dx12\BuildFsr4UpscalerShaders.bat" "4320" "$(ProjectDir)" "..\.." "$(OutDir)" "%(FileName)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_1_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_2_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_3_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_4_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_5_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_6_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_7_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_8_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_9_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_10_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_11_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_12_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_0_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_1_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_2_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_3_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_4_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_5_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_6_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_7_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_8_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_9_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_10_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_11_post_permutations.h;$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_4320_12_post_permutations.h</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr4\internal\shaders\post_wmma.hlsl">
+      <FileType>Document</FileType>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(ProjectDir)..\..\tools\ffx_sc\bin\FidelityFX_SC.exe" -name=fsr4_model_v07_fp8_no_scale_13 -output="$(OutDir)ffx_sc_output" -E fsr4_model_v07_fp8_no_scale_postpass -DNUM_MODEL_CHANNELS=7 -DRFM_CHANNELS=4 -DFILTER_CHANNELS=4 -DRFM_ACTIVATION=RfmActivation_Sigmoid -DWMMA_ENABLED=1 -DFFX_MLSR_COLORSPACE={0,1,2,3} -DFFX_MLSR_AUTOEXPOSURE_ENABLED={0,1} -DFFX_MLSR_RESOLUTION={0,1,2} -DFFX_DEBUG_VISUALIZE={0,1} -deps=gcc -enable-16bit-types -HV 2021 -O3 -T cs_6_4 -no-warnings -embed-arguments -reflection -I "$(ProjectDir)..\..\api\internal\dx12" -I "$(ProjectDir)..\fsr4\dx12" -I "$(ProjectDir)..\fsr4\include\gpu\fsr4" "%(FullPath)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_13_permutations.h;</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(ProjectDir)..\..\tools\ffx_sc\bin\FidelityFX_SC.exe" -name=fsr4_model_v07_fp8_no_scale_13 -output="$(OutDir)ffx_sc_output" -E fsr4_model_v07_fp8_no_scale_postpass -DNUM_MODEL_CHANNELS=7 -DRFM_CHANNELS=4 -DFILTER_CHANNELS=4 -DRFM_ACTIVATION=RfmActivation_Sigmoid -DWMMA_ENABLED=1 -DFFX_MLSR_COLORSPACE={0,1,2,3} -DFFX_MLSR_AUTOEXPOSURE_ENABLED={0,1} -DFFX_MLSR_RESOLUTION={0,1,2} -DFFX_DEBUG_VISUALIZE={0,1} -deps=gcc -enable-16bit-types -HV 2021 -O3 -T cs_6_4 -no-warnings -embed-arguments -reflection -I "$(ProjectDir)..\..\api\internal\dx12" -I "$(ProjectDir)..\fsr4\dx12" -I "$(ProjectDir)..\fsr4\include\gpu\fsr4" "%(FullPath)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_13_permutations.h;</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr4\internal\shaders\pre_wmma.hlsl">
+      <FileType>Document</FileType>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(ProjectDir)..\..\tools\ffx_sc\bin\FidelityFX_SC.exe" -name=fsr4_model_v07_fp8_no_scale_0 -output="$(OutDir)ffx_sc_output" -E fsr4_model_v07_fp8_no_scale_prepass -DNUM_MODEL_CHANNELS=7 -DRFM_CHANNELS=4 -DFILTER_CHANNELS=4 -DRFM_ACTIVATION=RfmActivation_Sigmoid -DNETWORK_DATA_TYPE=float16_t -DCHANNEL_ORDER=1 -DWMMA_ENABLED=1 -DFFX_MLSR_DEPTH_INVERTED={0,1} -DFFX_MLSR_LOW_RES_MV={0,1} -DFFX_MLSR_AUTOEXPOSURE_ENABLED={0,1} -DFFX_MLSR_COLORSPACE={0,1,2,3} -DFFX_MLSR_JITTERED_MOTION_VECTORS={0,1} -DFFX_MLSR_RESOLUTION={0,1,2} -deps=gcc -enable-16bit-types -HV 2021 -O3 -T cs_6_4 -no-warnings -embed-arguments -reflection -I "$(ProjectDir)..\..\api\internal\dx12" -I "$(ProjectDir)..\fsr4\dx12" -I "$(ProjectDir)..\fsr4\include\gpu\fsr4" "%(FullPath)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_0_permutations.h;</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(ProjectDir)..\..\tools\ffx_sc\bin\FidelityFX_SC.exe" -name=fsr4_model_v07_fp8_no_scale_0 -output="$(OutDir)ffx_sc_output" -E fsr4_model_v07_fp8_no_scale_prepass -DNUM_MODEL_CHANNELS=7 -DRFM_CHANNELS=4 -DFILTER_CHANNELS=4 -DRFM_ACTIVATION=RfmActivation_Sigmoid -DNETWORK_DATA_TYPE=float16_t -DCHANNEL_ORDER=1 -DWMMA_ENABLED=1 -DFFX_MLSR_DEPTH_INVERTED={0,1} -DFFX_MLSR_LOW_RES_MV={0,1} -DFFX_MLSR_AUTOEXPOSURE_ENABLED={0,1} -DFFX_MLSR_COLORSPACE={0,1,2,3} -DFFX_MLSR_JITTERED_MOTION_VECTORS={0,1} -DFFX_MLSR_RESOLUTION={0,1,2} -deps=gcc -enable-16bit-types -HV 2021 -O3 -T cs_6_4 -no-warnings -embed-arguments -reflection -I "$(ProjectDir)..\..\api\internal\dx12" -I "$(ProjectDir)..\fsr4\dx12" -I "$(ProjectDir)..\fsr4\include\gpu\fsr4" "%(FullPath)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_0_permutations.h;</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr4\internal\shaders\rcas.hlsl">
+      <FileType>Document</FileType>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(ProjectDir)..\..\tools\ffx_sc\bin\FidelityFX_SC.exe" -name=rcas -output="$(OutDir)ffx_sc_output" -E main -deps=gcc -enable-16bit-types -HV 2021 -O3 -T cs_6_4 -no-warnings -embed-arguments -reflection -I "$(ProjectDir)..\..\api\internal\gpu" -I "$(ProjectDir)..\fsr4\include\gpu" -DFFX_MLSR_COLORSPACE={0,1,2,3} -DFFX_MLSR_AUTOEXPOSURE_ENABLED={0,1} "%(FullPath)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) Permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(ProjectDir)..\..\tools\ffx_sc\bin\FidelityFX_SC.exe" -name=rcas -output="$(OutDir)ffx_sc_output" -E main -deps=gcc -enable-16bit-types -HV 2021 -O3 -T cs_6_4 -no-warnings -embed-arguments -reflection -I "$(ProjectDir)..\..\api\internal\gpu" -I "$(ProjectDir)..\fsr4\include\gpu" -DFFX_MLSR_COLORSPACE={0,1,2,3} -DFFX_MLSR_AUTOEXPOSURE_ENABLED={0,1} "%(FullPath)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) Permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr4\internal\shaders\spd_auto_exposure.hlsl">
+      <FileType>Document</FileType>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(ProjectDir)..\..\tools\ffx_sc\bin\FidelityFX_SC.exe" -name=spd_auto_exposure -output="$(OutDir)ffx_sc_output" -E main -deps=gcc -enable-16bit-types -HV 2021 -O3 -T cs_6_4 -DFFX_GPU=1 -Wno-for-redefinition -Wno-ambig-lit-shift -DFFX_HLSL=1 -reflection -I "$(ProjectDir)..\..\api\internal\gpu" -I "$(ProjectDir)..\fsr4\include\gpu" "%(FullPath)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) Permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(ProjectDir)..\..\tools\ffx_sc\bin\FidelityFX_SC.exe" -name=spd_auto_exposure -output="$(OutDir)ffx_sc_output" -E main -deps=gcc -enable-16bit-types -HV 2021 -O3 -T cs_6_4 -DFFX_GPU=1 -Wno-for-redefinition -Wno-ambig-lit-shift -DFFX_HLSL=1 -reflection -I "$(ProjectDir)..\..\api\internal\gpu" -I "$(ProjectDir)..\fsr4\include\gpu" "%(FullPath)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) Permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\%(FileName)_permutations.h;</Outputs>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\fsr4\internal\shaders\debug_view.hlsl">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(ProjectDir)..\..\tools\ffx_sc\bin\FidelityFX_SC.exe" -name=debug_view -output="$(OutDir)ffx_sc_output" -E main -deps=gcc -enable-16bit-types -HV 2021 -O3 -T cs_6_4 -no-warnings -embed-arguments -reflection -I "$(ProjectDir)..\fsr4\dx12" -I "$(ProjectDir)..\fsr4\include\gpu\fsr4" -DFFX_GPU=1 -DFFX_HLSL=1 -DFFX_DEBUG_VISUALIZE=1 -DFFX_MLSR_JITTERED_MOTION_VECTORS={0,1} "%(FullPath)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FileName) Permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ffx_sc_output\debug_view_permutations.h;</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(ProjectDir)..\..\tools\ffx_sc\bin\FidelityFX_SC.exe" -name=debug_view -output="$(OutDir)ffx_sc_output" -E main -deps=gcc -enable-16bit-types -HV 2021 -O3 -T cs_6_4 -no-warnings -embed-arguments -reflection -I "$(ProjectDir)..\fsr4\dx12" -I "$(ProjectDir)..\fsr4\include\gpu\fsr4" -DFFX_GPU=1 -DFFX_HLSL=1 -DFFX_DEBUG_VISUALIZE=1 -DFFX_MLSR_JITTERED_MOTION_VECTORS={0,1} "%(FullPath)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FileName) Permutations</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ffx_sc_output\debug_view_permutations.h;</Outputs>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderIntrinsics.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderIntrinsicsAtomicOps.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderIntrinsicsMatrixOps.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderIntrinsicsMatrixOpsHelper.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderIntrinsicsRT.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderIntrinsicsWaveOps.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{0c64f236-7031-4000-8034-573afe7d036f}</ProjectGuid>
+    <RootNamespace>amdfidelityfxupscalerdx12</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>amd_fidelityfx_upscaler_dx12</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <TargetName>$(ProjectName)d</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Label="Vcpkg">
+    <VcpkgEnableManifest>true</VcpkgEnableManifest>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;AMDFIDELITYFXUPSCALERDX12_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;AMDFIDELITYFXUPSCALERDX12_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;AMDFIDELITYFXUPSCALERDX12_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions);NOMINMAX;_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR;FFX_UPSCALER;FFX_BACKEND_DX12</PreprocessorDefinitions>
+      <ConformanceMode>Default</ConformanceMode>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\fsr4\dx12\$(PlatformName)\$(Configuration)\ffx_sc_output;$(IntDir)ffx_sc_output;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <UseFullPaths>false</UseFullPaths>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+      <AdditionalDependencies>$(CoreLibraryDependencies);DXGI.lib;D3D12.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS</PreprocessorDefinitions>
+    </ResourceCompile>
+    <PreBuildEvent>
+      <Command>call "$(ProjectDir)..\..\api\internal\make_git_info_header.bat" "$(ProjectDir)..\..\api\internal\"</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>Generating git_hash_branch.h file</Message>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;AMDFIDELITYFXUPSCALERDX12_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions);NOMINMAX;_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR;FFX_UPSCALER;FFX_BACKEND_DX12</PreprocessorDefinitions>
+      <ConformanceMode>Default</ConformanceMode>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\fsr4\dx12\$(PlatformName)\$(Configuration)\ffx_sc_output;$(IntDir)ffx_sc_output;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+      <UseFullPaths>false</UseFullPaths>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+      <AdditionalDependencies>$(CoreLibraryDependencies);DXGI.lib;D3D12.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS</PreprocessorDefinitions>
+    </ResourceCompile>
+    <PreBuildEvent>
+      <Command>call "$(ProjectDir)..\..\api\internal\make_git_info_header.bat" "$(ProjectDir)..\..\api\internal\"</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>Generating git_hash_branch.h file</Message>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+  <Target Name="FfxUpscalerShaderOutputClean" AfterTargets="Clean">
+    <RemoveDir Directories="$(IntDir)ffx_sc_output;" />
+  </Target>
+  <Target Name="FfxGitHeaderOutputClean" AfterTargets="Clean">
+    <Delete Files="$(ProjectDir)..\..\api\internal\git_hash_branch.h" />
+  </Target>
+  <Target Name="FfxUpscalerCopyDLLs" AfterTargets="Build">
+    <ItemGroup>
+      <FFXBuildBinaries Include="$(OutDir)\amd_fidelityfx_upscaler_dx12*.dll" />
+      <FFXBuildBinaries Include="$(OutDir)\amd_fidelityfx_upscaler_dx12*.lib" />
+      <FFXBuildBinaries Include="$(OutDir)\amd_fidelityfx_upscaler_dx12*.pdb" />
+    </ItemGroup>
+    <Copy SkipUnchangedFiles="true" SourceFiles="@(FFXBuildBinaries)" DestinationFolder="$(ProjectDir)..\..\bin\" />
+  </Target>
+</Project>

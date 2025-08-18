@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35312.102
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FidelityFX_SC", "FidelityFX_SC_vs2022.vcxproj", "{E8FDD7AD-E812-4695-9954-91E3A8BE15E9}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E8FDD7AD-E812-4695-9954-91E3A8BE15E9}.Debug|x64.ActiveCfg = Debug|x64
+		{E8FDD7AD-E812-4695-9954-91E3A8BE15E9}.Debug|x64.Build.0 = Debug|x64
+		{E8FDD7AD-E812-4695-9954-91E3A8BE15E9}.Release|x64.ActiveCfg = Release|x64
+		{E8FDD7AD-E812-4695-9954-91E3A8BE15E9}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {66CA965B-4BFA-410E-BF6B-E253F9DFF93C}
+	EndGlobalSection
+EndGlobal

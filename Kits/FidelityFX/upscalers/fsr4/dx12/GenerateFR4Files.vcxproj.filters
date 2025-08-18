@@ -1,0 +1,54 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Initializers">
+      <UniqueIdentifier>{b62715fb-21e4-4e36-9029-ae20ebef4d96}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Initializers\fsr4_model_v07_fp8_no_scale_balanced">
+      <UniqueIdentifier>{7528431c-32de-4b39-b2cd-cc5d564cecec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Initializers\fsr4_model_v07_fp8_no_scale_drs">
+      <UniqueIdentifier>{0cc8a90b-f2da-4134-9fce-61b89661c5b9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Initializers\fsr4_model_v07_fp8_no_scale_native">
+      <UniqueIdentifier>{92110808-a2ce-4d73-8974-16e1d7e82369}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Initializers\fsr4_model_v07_fp8_no_scale_performance">
+      <UniqueIdentifier>{0e5c1b87-8f36-4368-bf02-be2134aab05d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Initializers\fsr4_model_v07_fp8_no_scale_quality">
+      <UniqueIdentifier>{78dd8593-fc97-4548-aee4-b34d214e22ba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Initializers\fsr4_model_v07_fp8_no_scale_ultraperf">
+      <UniqueIdentifier>{037ffc6e-0875-4168-8ce9-d6f2397d83bb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dx12">
+      <UniqueIdentifier>{2490e89a-2be9-473d-a8dd-76a7d347cfd3}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="BuildFSR4Initializers.bat">
+      <Filter>dx12</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\internal\shaders\fsr4_model_v07_fp8_no_scale_balanced\initializers.bin">
+      <Filter>Initializers\fsr4_model_v07_fp8_no_scale_balanced</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\internal\shaders\fsr4_model_v07_fp8_no_scale_drs\initializers.bin">
+      <Filter>Initializers\fsr4_model_v07_fp8_no_scale_drs</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\internal\shaders\fsr4_model_v07_fp8_no_scale_native\initializers.bin">
+      <Filter>Initializers\fsr4_model_v07_fp8_no_scale_native</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\internal\shaders\fsr4_model_v07_fp8_no_scale_performance\initializers.bin">
+      <Filter>Initializers\fsr4_model_v07_fp8_no_scale_performance</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\internal\shaders\fsr4_model_v07_fp8_no_scale_quality\initializers.bin">
+      <Filter>Initializers\fsr4_model_v07_fp8_no_scale_quality</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\internal\shaders\fsr4_model_v07_fp8_no_scale_ultraperf\initializers.bin">
+      <Filter>Initializers\fsr4_model_v07_fp8_no_scale_ultraperf</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>

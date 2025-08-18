@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35312.102
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FidelityFX_FSR", "FidelityFX_FSR_2022.vcxproj", "{B6C9A3A7-4380-44BA-87D4-E5FAD84CA609}"
+	ProjectSection(ProjectDependencies) = postProject
+		{DF7F1F18-B66E-4EFE-9084-BB62830A4F03} = {DF7F1F18-B66E-4EFE-9084-BB62830A4F03}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Cauldron", "..\..\..\..\Kits\Cauldron2\dx12\Cauldron_vs2022.vcxproj", "{DF7F1F18-B66E-4EFE-9084-BB62830A4F03}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DF7F1F18-B66E-4EFE-9084-BB62830A4F03}.Debug|x64.ActiveCfg = Debug|x64
+		{DF7F1F18-B66E-4EFE-9084-BB62830A4F03}.Debug|x64.Build.0 = Debug|x64
+		{DF7F1F18-B66E-4EFE-9084-BB62830A4F03}.Release|x64.ActiveCfg = Release|x64
+		{DF7F1F18-B66E-4EFE-9084-BB62830A4F03}.Release|x64.Build.0 = Release|x64
+		{B6C9A3A7-4380-44BA-87D4-E5FAD84CA609}.Debug|x64.ActiveCfg = Debug|x64
+		{B6C9A3A7-4380-44BA-87D4-E5FAD84CA609}.Debug|x64.Build.0 = Debug|x64
+		{B6C9A3A7-4380-44BA-87D4-E5FAD84CA609}.Release|x64.ActiveCfg = Release|x64
+		{B6C9A3A7-4380-44BA-87D4-E5FAD84CA609}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {2C872218-65DB-44E9-AD1C-FEE6A8399D8A}
+	EndGlobalSection
+EndGlobal

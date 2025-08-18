@@ -2,7 +2,6 @@
 
 <h1>Tools</h1>
 
-- [FidelityFX Shader Compiler](ffx-sc.md)
 - [FidelityFX SDK Media Delivery System](media-delivery.md)
 
 <!--

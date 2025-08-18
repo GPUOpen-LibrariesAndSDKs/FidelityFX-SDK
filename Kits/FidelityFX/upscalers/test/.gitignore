@@ -1,0 +1,4 @@
+*.exe
+*.obj
+*.xml
+amd_fidelityfx_*.dll

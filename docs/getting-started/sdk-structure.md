@@ -15,37 +15,34 @@ The SDK contains everything needed to ship all of our FidelityFX effects in your
 - Host side includes and source for all of our effect components, which represent the pre-built easy to use library for easier effect integration.
 - A collection of HLSL and GLSL shaders and associated assets, which would ultimately ship in your application.
 
-<h3>Components</h3>
+<h3>Libraries and DLLs</h3>
 
-A collection of pre-built runtime components to automate the usage of the FidelityFX SDK and make integration as simple as possible.
-
-<h3>Tools</h3>
-
-The FidelityFX Shader Compiler tool which enables the pre-generation of all shader variants needed for each FidelityFX effect, plus the media downloader tool.
+A collection of pre-built runtime libraries to automate the usage of the FidelityFX SDK and make integration as simple as possible.
 
 <h2>Docs</h2>
 
-A collection of detailed markdown and doxygen-generated documents.
+A collection of detailed markdown documents.
 
 <h2>Samples</h2>
 
 The FidelityFX SDK comes complete with numerous examples which demonstrate use of the effects implemented by the SDK. 
 
-The SDK features a collection of sample applications in the effects sub-folder which are dependent on the **SDK** effect components. Each sample application demonstrates how a technique (or techniques) should be integrated into your application. The samples present lots of options to allow you to evaluate and explore the technique before undertaking an integration.
+The SDK features a collection of sample applications in the **Samples** sub-folder which are dependent on the **SDK** headers and DLLs. Each sample application demonstrates how a technique (or techniques) should be integrated into your application. The samples present lots of options to allow you to evaluate and explore the technique before undertaking an integration.
 
 <h3>Dependencies</h3>
 
-The SDK samples are dependent upon our backing FidelityFX Cauldron Framework, various common render modules, and a custom SDK backend implementation that wraps our graphics framework. 
+The SDK samples are dependent upon our backing FidelityFX Cauldron Framework and various common render modules. 
 
-The **Samples** location is also where the custom Cauldron SDK backend (**ffx_cauldron**) can be found as well as our updated graphics framework, **Cauldron**, and a number of render modules for commonly used rendering features (**rendermodules**).
+The **./Kits/Cauldron2** location is where out Cauldron framework can be found as well as a number of render modules for commonly used rendering features (**rendermodules**).
 
 The architecture of the AMD FidelityFX SDK implies a set of dependencies between the components. The image below shows which components depend on which other components, and which you might ultimately depend upon in your application.
 
-![alt text](media/component-dependencies.png "A diagram of AMD FidelityFX component dependencies.")
+![image](media/component-dependencies-dark.png#gh-dark-mode-only)
+![image](media/component-dependencies.png#gh-light-mode-only)
 
 <h3>Media</h3>
 
-Media delivery for the AMD FidelityFX SDK is handled via remote download into the SDK folder.
+Media delivery for the AMD FidelityFX SDK is handled via remote download into the Media/cauldronmedia subfolder.
 
 Simply run the ```UpdateMedia.bat``` file in the root directory to fetch the latest version of the FidelityFX SDK content.
 

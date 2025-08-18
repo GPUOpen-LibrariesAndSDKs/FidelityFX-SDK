@@ -179,7 +179,7 @@ The following is a list of configuration groups and options that can be overload
 	"ParticleSpawners": [
 	  {
 		"Name": "FSRSpawner",
-		"AtlasPath": "media/particles/atlas.dds",
+		"AtlasPath": "media/cauldronmedia/particles/atlas.dds",
 		"Position": [ 0.0, 0.0, 0.0 ],
 		"Sort": true,
 		"Emitters": [
@@ -204,12 +204,12 @@ The following is a list of configuration groups and options that can be overload
 	  }
 	],
 	"Scenes": [
-	  "../media/Chess/scene.gltf"
+	  "../media/cauldronmedia/Chess/scene.gltf"
 	],
 	"Camera": "Camera_1",
-    "DiffuseIBL": "../media/IBL/mud_road_puresky_Diffuse.dds",
-    "SpecularIBL": "../media/IBL/mud_road_puresky_Specular.dds",
-	"SkyMap": "../media/IBL/mud_road_puresky_Specular.dds",
+    "DiffuseIBL": "../media/cauldronmedia/IBL/mud_road_puresky_Diffuse.dds",
+    "SpecularIBL": "../media/cauldronmedia/IBL/mud_road_puresky_Specular.dds",
+	"SkyMap": "../media/cauldronmedia/IBL/mud_road_puresky_Specular.dds",
     "SceneExposure": 1.355
   }
   ```

@@ -1,6 +1,6 @@
 :: This file is part of the FidelityFX SDK.
 ::
-:: Copyright (C) 2024 Advanced Micro Devices, Inc.
+:: Copyright (C) 2025 Advanced Micro Devices, Inc.
 :: 
 :: Permission is hereby granted, free of charge, to any person obtaining a copy
 :: of this software and associated documentation files(the "Software"), to deal
@@ -23,9 +23,11 @@
 @echo off
 
 :: Known bundle SHA256 hash to attempt to download
-SET default_bundle_sha256=7c82a9704f11c082ad12115eadb944e7884a73cb678bb51e8c7486a3190c7f98
+SET default_bundle_sha256=76e5016a04a5842b521c33d780e225b28c40526fee9fd56f6e7c06b76778b4ea
 
 SET ffx_sdk_root="%~dp0"
+
+SET media_path="./media/cauldronmedia"
 
 SET ARG=%1
 IF DEFINED ARG (
@@ -33,7 +35,7 @@ IF DEFINED ARG (
     echo.
 
     pushd %ffx_sdk_root%
-    .\sdk\tools\media_delivery\MediaDelivery.exe %*
+    .\tools\media_delivery\MediaDelivery.exe --media-sub-dir %media_path% %*
     popd
 
     GOTO :eof
@@ -44,5 +46,5 @@ echo SDK root: %ffx_sdk_root%
 echo.
 
 pushd %ffx_sdk_root%
-.\sdk\tools\media_delivery\MediaDelivery.exe --target-sha256=%default_bundle_sha256%
+.\tools\media_delivery\MediaDelivery.exe --media-sub-dir %media_path% --target-sha256=%default_bundle_sha256%
 popd

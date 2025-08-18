@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{b6c9a3a7-4380-44ba-87d4-e5fad84ca609}</ProjectGuid>
+    <RootNamespace>FidelityFXFSRDev</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>FidelityFX_FSR</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_WINDOWS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\Kits\Cauldron2\dx12\vcpkg_installed\x64-windows\x64-windows\include;$(ProjectDir)..\..\..\..\Kits\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>%(AdditionalDependencies);"$(SolutionDir)..\..\..\..\Kits\Cauldron2\dx12\$(Platform)\$(Configuration)\cauldron.lib";"$(SolutionDir)..\..\..\..\Kits\Cauldron2\dx12\framework\libs\acs\amd_acs_x64.lib";"$(SolutionDir)..\..\..\..\Kits\Cauldron2\dx12\framework\libs\ags\amd_ags_x64.lib";"$(SolutionDir)..\..\..\..\Kits\Cauldron2\dx12\vcpkg_installed\x64-windows\x64-windows\lib\WinPixEventRuntime.lib";"$(SolutionDir)..\..\..\..\Kits\FidelityFX\signedbin\amd_fidelityfx_loader_dx12.lib";Xinput.lib;Shcore.lib;d3dcompiler.lib;DXGI.lib;D3D12.lib</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>xcopy /y $(ProjectDir)config\fsrapiconfig.json $(OutDir)configs\
+xcopy /y $(ProjectDir)..\..\..\..\Kits\FidelityFX\signedbin\amd_fidelityfx_loader_dx12.dll $(OutDir)
+xcopy /y $(ProjectDir)..\..\..\..\Kits\FidelityFX\signedbin\amd_fidelityfx_loader_dx12.pdb $(OutDir)
+xcopy /y $(ProjectDir)..\..\..\..\Kits\FidelityFX\signedbin\amd_fidelityfx_upscaler_dx12.dll $(OutDir)
+xcopy /y $(ProjectDir)..\..\..\..\Kits\FidelityFX\signedbin\amd_fidelityfx_upscaler_dx12.pdb $(OutDir)
+xcopy /y $(ProjectDir)..\..\..\..\Kits\FidelityFX\signedbin\amd_fidelityfx_framegeneration_dx12.dll $(OutDir)
+xcopy /y $(ProjectDir)..\..\..\..\Kits\FidelityFX\signedbin\amd_fidelityfx_framegeneration_dx12.pdb $(OutDir)
+xcopy /y $(ProjectDir)..\..\..\..\Kits\Cauldron2\dx12\vcpkg_installed\x64-windows\x64-windows\bin $(OutDir)</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Copying required sample files</Message>
+    </PostBuildEvent>
+    <Manifest>
+      <AdditionalManifestFiles>$(SolutionDir)dpiawarescaling.manifest %(AdditionalManifestFiles)</AdditionalManifestFiles>
+    </Manifest>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_WINDOWS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\Kits\Cauldron2\dx12\vcpkg_installed\x64-windows\x64-windows\include;$(ProjectDir)..\..\..\..\Kits\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>%(AdditionalDependencies);"$(SolutionDir)..\..\..\..\Kits\Cauldron2\dx12\$(Platform)\$(Configuration)\cauldron.lib";"$(SolutionDir)..\..\..\..\Kits\Cauldron2\dx12\framework\libs\acs\amd_acs_x64.lib";"$(SolutionDir)..\..\..\..\Kits\Cauldron2\dx12\framework\libs\ags\amd_ags_x64.lib";"$(SolutionDir)..\..\..\..\Kits\Cauldron2\dx12\vcpkg_installed\x64-windows\x64-windows\lib\WinPixEventRuntime.lib";"$(SolutionDir)..\..\..\..\Kits\FidelityFX\signedbin\amd_fidelityfx_loader_dx12.lib";Xinput.lib;Shcore.lib;d3dcompiler.lib;DXGI.lib;D3D12.lib</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>xcopy /y $(ProjectDir)config\fsrapiconfig.json $(OutDir)configs\
+xcopy /y $(ProjectDir)..\..\..\..\Kits\FidelityFX\signedbin\amd_fidelityfx_loader_dx12.dll $(OutDir)
+xcopy /y $(ProjectDir)..\..\..\..\Kits\FidelityFX\signedbin\amd_fidelityfx_loader_dx12.pdb $(OutDir)
+xcopy /y $(ProjectDir)..\..\..\..\Kits\FidelityFX\signedbin\amd_fidelityfx_upscaler_dx12.dll $(OutDir)
+xcopy /y $(ProjectDir)..\..\..\..\Kits\FidelityFX\signedbin\amd_fidelityfx_upscaler_dx12.pdb $(OutDir)
+xcopy /y $(ProjectDir)..\..\..\..\Kits\FidelityFX\signedbin\amd_fidelityfx_framegeneration_dx12.dll $(OutDir)
+xcopy /y $(ProjectDir)..\..\..\..\Kits\FidelityFX\signedbin\amd_fidelityfx_framegeneration_dx12.pdb $(OutDir)
+xcopy /y $(ProjectDir)..\..\..\..\Kits\Cauldron2\dx12\vcpkg_installed\x64-windows\x64-windows\bin $(OutDir)</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Copying required sample files</Message>
+    </PostBuildEvent>
+    <Manifest>
+      <AdditionalManifestFiles>$(SolutionDir)dpiawarescaling.manifest %(AdditionalManifestFiles)</AdditionalManifestFiles>
+    </Manifest>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="fsrapirendermodule.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="sample.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="fsrapirendermodule.h" />
+    <ClInclude Include="resources\resource.h" />
+    <ClInclude Include="sample.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="resources\cauldron.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="resources\GPUOpenChip.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="config\fsrapiconfig.json" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

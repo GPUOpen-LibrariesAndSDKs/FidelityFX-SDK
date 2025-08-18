@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RelWithDebInfo|x64">
+      <Configuration>RelWithDebInfo</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\internal\shaders\fsr4_model_v07_fp8_no_scale_balanced\initializers.bin">
+      <FileType>Document</FileType>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FullPath) initializer data</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FullPath) initializer data</Message>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)BuildFsr4Initializers.bat" "$(ProjectDir)" "$(OutDir)" "fsr4_model_v07_fp8_no_scale_balanced"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)BuildFsr4Initializers.bat" "$(ProjectDir)" "$(OutDir)" "fsr4_model_v07_fp8_no_scale_balanced"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_balanced.h;$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_balanced.cpp</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_balanced.h;$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_balanced.cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">call "$(ProjectDir)BuildFsr4Initializers.bat" "$(ProjectDir)" "$(OutDir)" "fsr4_model_v07_fp8_no_scale_balanced"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building %(FullPath) initializer data</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_balanced.h;$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_balanced.cpp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</BuildInParallel>
+    </CustomBuild>
+    <CustomBuild Include="..\internal\shaders\fsr4_model_v07_fp8_no_scale_drs\initializers.bin">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)BuildFsr4Initializers.bat" "$(ProjectDir)" "$(OutDir)" "fsr4_model_v07_fp8_no_scale_drs"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)BuildFsr4Initializers.bat" "$(ProjectDir)" "$(OutDir)" "fsr4_model_v07_fp8_no_scale_drs"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FullPath) initializer data</Message>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FullPath) initializer data</Message>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_drs.h;$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_drs.cpp</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_drs.h;$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_drs.cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">call "$(ProjectDir)BuildFsr4Initializers.bat" "$(ProjectDir)" "$(OutDir)" "fsr4_model_v07_fp8_no_scale_drs"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building %(FullPath) initializer data</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_drs.h;$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_drs.cpp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</BuildInParallel>
+    </CustomBuild>
+    <CustomBuild Include="..\internal\shaders\fsr4_model_v07_fp8_no_scale_native\initializers.bin">
+      <FileType>Document</FileType>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FullPath) initializer data</Message>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FullPath) initializer data</Message>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_native.h;$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_native.cpp</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_native.h;$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_native.cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)BuildFsr4Initializers.bat" "$(ProjectDir)" "$(OutDir)" "fsr4_model_v07_fp8_no_scale_native"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)BuildFsr4Initializers.bat" "$(ProjectDir)" "$(OutDir)" "fsr4_model_v07_fp8_no_scale_native"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">call "$(ProjectDir)BuildFsr4Initializers.bat" "$(ProjectDir)" "$(OutDir)" "fsr4_model_v07_fp8_no_scale_native"</Command>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</BuildInParallel>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building %(FullPath) initializer data</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_native.h;$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_native.cpp</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\internal\shaders\fsr4_model_v07_fp8_no_scale_performance\initializers.bin">
+      <FileType>Document</FileType>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FullPath) initializer data</Message>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FullPath) initializer data</Message>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_performance.h;$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_performance.cpp</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_performance.h;$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_performance.cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)BuildFsr4Initializers.bat" "$(ProjectDir)" "$(OutDir)" "fsr4_model_v07_fp8_no_scale_performance"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)BuildFsr4Initializers.bat" "$(ProjectDir)" "$(OutDir)" "fsr4_model_v07_fp8_no_scale_performance"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">call "$(ProjectDir)BuildFsr4Initializers.bat" "$(ProjectDir)" "$(OutDir)" "fsr4_model_v07_fp8_no_scale_performance"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building %(FullPath) initializer data</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_performance.h;$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_performance.cpp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</BuildInParallel>
+    </CustomBuild>
+    <CustomBuild Include="..\internal\shaders\fsr4_model_v07_fp8_no_scale_quality\initializers.bin">
+      <FileType>Document</FileType>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FullPath) initializer data</Message>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FullPath) initializer data</Message>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_quality.h;$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_quality.cpp</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_quality.h;$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_quality.cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)BuildFsr4Initializers.bat" "$(ProjectDir)" "$(OutDir)" "fsr4_model_v07_fp8_no_scale_quality"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)BuildFsr4Initializers.bat" "$(ProjectDir)" "$(OutDir)" "fsr4_model_v07_fp8_no_scale_quality"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">call "$(ProjectDir)BuildFsr4Initializers.bat" "$(ProjectDir)" "$(OutDir)" "fsr4_model_v07_fp8_no_scale_quality"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building %(FullPath) initializer data</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_quality.h;$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_quality.cpp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</BuildInParallel>
+    </CustomBuild>
+    <CustomBuild Include="..\internal\shaders\fsr4_model_v07_fp8_no_scale_ultraperf\initializers.bin">
+      <FileType>Document</FileType>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building %(FullPath) initializer data</Message>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building %(FullPath) initializer data</Message>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_ultraperf.h;$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_ultraperf.cpp</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_ultraperf.h;$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_ultraperf.cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">call "$(ProjectDir)BuildFsr4Initializers.bat" "$(ProjectDir)" "$(OutDir)" "fsr4_model_v07_fp8_no_scale_ultraperf"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">call "$(ProjectDir)BuildFsr4Initializers.bat" "$(ProjectDir)" "$(OutDir)" "fsr4_model_v07_fp8_no_scale_ultraperf"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">call "$(ProjectDir)BuildFsr4Initializers.bat" "$(ProjectDir)" "$(OutDir)" "fsr4_model_v07_fp8_no_scale_ultraperf"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building %(FullPath) initializer data</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_ultraperf.h;$(ProjectDir)$(OutDir)ffx_sc_output\fsr4_model_v07_fp8_no_scale_ultraperf.cpp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</BuildInParallel>
+    </CustomBuild>
+    <None Include="BuildFSR4Initializers.bat" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{e503b1c9-f8a0-4fe4-a061-e2526350efb7}</ProjectGuid>
+    <RootNamespace>GenerateFR4Files</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>GenerateFSR4Files</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(Platform)\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(Platform)\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
+    <OutDir>$(Platform)\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+  <Target Name="GeneratedOutputClean" AfterTargets="Clean">
+    <RemoveDir Directories="$(IntDir)ffx_sc_output;" />
+  </Target>
+</Project>

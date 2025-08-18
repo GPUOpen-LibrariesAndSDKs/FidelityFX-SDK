@@ -1,0 +1,525 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="api">
+      <UniqueIdentifier>{c7d2acb0-9906-448c-8e92-2113e8d82337}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="api\include">
+      <UniqueIdentifier>{a0127f2b-41d5-4576-b851-9cd1164cecdf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="api\include\dx12">
+      <UniqueIdentifier>{9936de89-41ea-4709-bc42-4fcc5506b809}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="api\internal">
+      <UniqueIdentifier>{748742c6-91f4-4597-9593-76ab829227e9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="api\internal\gpu">
+      <UniqueIdentifier>{93ed9a00-43b7-4ba5-8c75-647bab3a5637}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="backend">
+      <UniqueIdentifier>{5d118178-ce5c-45a0-9de4-4b1293bacf2c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="framegeneration">
+      <UniqueIdentifier>{f21425e0-a86c-4233-8f49-ed9b4c54c58d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="framegeneration\fsr3">
+      <UniqueIdentifier>{755ff037-c3ea-4093-97bf-fc81074726f8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="framegeneration\fsr3\dx12">
+      <UniqueIdentifier>{16f788ad-ef3a-4337-aacd-4010cfc80f84}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="api\internal\dx12">
+      <UniqueIdentifier>{dcc1f1cb-5b1e-4810-b9b5-67991cd12270}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="framegeneration\fsr3\dx12\antilag2">
+      <UniqueIdentifier>{7eb45be2-3f21-4ec4-ba03-536c81ec833c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="framegeneration\include">
+      <UniqueIdentifier>{e2b61c78-56f8-4ce5-8d85-c54a4ef22630}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="framegeneration\include\dx12">
+      <UniqueIdentifier>{82d7748a-d05c-4814-a7de-8a1630858488}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="framegeneration\dx12">
+      <UniqueIdentifier>{682b82a7-688b-426a-a970-a85436b3f884}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="framegeneration\dx12\resource">
+      <UniqueIdentifier>{67f418b9-860e-4be7-b525-a59b74517fa1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="framegeneration\fsr3\internal">
+      <UniqueIdentifier>{0535998c-f262-4d54-8246-fc0d8e63655b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="framegeneration\fsr3\include">
+      <UniqueIdentifier>{cb13201b-123c-4faf-816b-8310c1f2ac33}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="framegeneration\fsr3\include\gpu">
+      <UniqueIdentifier>{bbddf0e4-3ca9-49fd-abf1-36971b0761f6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="framegeneration\fsr3\include\gpu\frameinterpolation">
+      <UniqueIdentifier>{51fee942-7427-45a6-90b8-9ef9a6083116}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="framegeneration\fsr3\internal\shaders">
+      <UniqueIdentifier>{246e7a2a-f56a-406a-9bc6-5191519c1402}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="framegeneration\fsr3\include\gpu\opticalflow">
+      <UniqueIdentifier>{c34334fd-082a-43f4-a748-4f07c60310ea}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="framegeneration\fsr3\include\gpu\spd">
+      <UniqueIdentifier>{a002d79a-7aac-4f1a-bc28-1d7ef1886ed4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="api\internal\dx12\AmdExtD3D">
+      <UniqueIdentifier>{63639b44-8789-4f4d-88f3-71bad5e012cf}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="resource\ffx_framegeneration_api_dll.rc">
+      <Filter>framegeneration\dx12\resource</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource\resource.h">
+      <Filter>framegeneration\dx12\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\include\dx12\ffx_api_dx12.h">
+      <Filter>api\include\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\include\dx12\ffx_api_dx12.hpp">
+      <Filter>api\include\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\include\ffx_api.h">
+      <Filter>api\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\include\ffx_api.hpp">
+      <Filter>api\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\include\ffx_api_types.h">
+      <Filter>api\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\ffx_assert.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\ffx_backends.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\ffx_error.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\ffx_interface.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\ffx_internal_types.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\ffx_message.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\ffx_object_management.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\ffx_provider.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\ffx_provider_external.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\ffx_util.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\ffx_watermark.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\gpu\ffx_common_types.h">
+      <Filter>api\internal\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\gpu\ffx_core.h">
+      <Filter>api\internal\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\gpu\ffx_core_cpu.h">
+      <Filter>api\internal\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\gpu\ffx_core_gpu_common.h">
+      <Filter>api\internal\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\gpu\ffx_core_gpu_common_half.h">
+      <Filter>api\internal\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\gpu\ffx_core_hlsl.h">
+      <Filter>api\internal\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\gpu\ffx_core_portability.h">
+      <Filter>api\internal\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\gpu\ffx_shader_writer.h">
+      <Filter>api\internal\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\gpu\ffx_shader_writer_letter_macro_end.h">
+      <Filter>api\internal\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\gpu\ffx_shader_writer_letter_macro_start.h">
+      <Filter>api\internal\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\gpu\ffx_shader_writer_templated.h">
+      <Filter>api\internal\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\git_hash_branch.h">
+      <Filter>api\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\include\ffx_api_loader.h">
+      <Filter>api\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\backend\dx12\ffx_dx12.h">
+      <Filter>backend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\backend\dx12\d3dx12.h">
+      <Filter>backend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\dx12\antilag2\ffx_antilag2_dx12.h">
+      <Filter>framegeneration\fsr3\dx12\antilag2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\dx12\ffx_api_framegeneration_dx12.h">
+      <Filter>framegeneration\include\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\dx12\ffx_api_framegeneration_dx12.hpp">
+      <Filter>framegeneration\include\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\ffx_framegeneration_api_types.h">
+      <Filter>framegeneration\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\ffx_framegeneration.h">
+      <Filter>framegeneration\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\ffx_framegeneration.hpp">
+      <Filter>framegeneration\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\frameinterpolation\ffx_frameinterpolation.h">
+      <Filter>framegeneration\fsr3\include\gpu\frameinterpolation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\ffx_frameinterpolation.h">
+      <Filter>framegeneration\fsr3\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\frameinterpolation\ffx_frameinterpolation_callbacks_hlsl.h">
+      <Filter>framegeneration\fsr3\include\gpu\frameinterpolation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\frameinterpolation\ffx_frameinterpolation_common.h">
+      <Filter>framegeneration\fsr3\include\gpu\frameinterpolation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\frameinterpolation\ffx_frameinterpolation_compute_game_vector_field_inpainting_pyramid.h">
+      <Filter>framegeneration\fsr3\include\gpu\frameinterpolation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\opticalflow\ffx_opticalflow_callbacks_hlsl.h">
+      <Filter>framegeneration\fsr3\internal\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\frameinterpolation\ffx_frameinterpolation_optical_flow_vector_field.h">
+      <Filter>framegeneration\fsr3\include\gpu\frameinterpolation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\frameinterpolation\ffx_frameinterpolation_compute_inpainting_pyramid.h">
+      <Filter>framegeneration\fsr3\include\gpu\frameinterpolation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\frameinterpolation\ffx_frameinterpolation_debug_view.h">
+      <Filter>framegeneration\fsr3\include\gpu\frameinterpolation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\frameinterpolation\ffx_frameinterpolation_disocclusion_mask.h">
+      <Filter>framegeneration\fsr3\include\gpu\frameinterpolation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\frameinterpolation\ffx_frameinterpolation_game_motion_vector_field.h">
+      <Filter>framegeneration\fsr3\include\gpu\frameinterpolation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\frameinterpolation\ffx_frameinterpolation_inpainting.h">
+      <Filter>framegeneration\fsr3\include\gpu\frameinterpolation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\internal\ffx_frameinterpolation_private.h">
+      <Filter>framegeneration\fsr3\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\frameinterpolation\ffx_frameinterpolation_setup.h">
+      <Filter>framegeneration\fsr3\include\gpu\frameinterpolation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\frameinterpolation\ffx_frameinterpolation_reconstruct_dilated_velocity_and_previous_depth.h">
+      <Filter>framegeneration\fsr3\include\gpu\frameinterpolation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\frameinterpolation\ffx_frameinterpolation_reconstruct_previous_depth.h">
+      <Filter>framegeneration\fsr3\include\gpu\frameinterpolation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\frameinterpolation\ffx_frameinterpolation_resources.h">
+      <Filter>framegeneration\fsr3\include\gpu\frameinterpolation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\internal\ffx_frameinterpolation_shaderblobs.h">
+      <Filter>framegeneration\fsr3\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\ffx_opticalflow.h">
+      <Filter>framegeneration\fsr3\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\opticalflow\ffx_opticalflow_common.h">
+      <Filter>framegeneration\fsr3\include\gpu\opticalflow</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\opticalflow\ffx_opticalflow_prepare_luma.h">
+      <Filter>framegeneration\fsr3\include\gpu\opticalflow</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\opticalflow\ffx_opticalflow_compute_luminance_pyramid.h">
+      <Filter>framegeneration\fsr3\include\gpu\opticalflow</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\opticalflow\ffx_opticalflow_compute_optical_flow_v5.h">
+      <Filter>framegeneration\fsr3\include\gpu\opticalflow</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\opticalflow\ffx_opticalflow_compute_scd_divergence.h">
+      <Filter>framegeneration\fsr3\include\gpu\opticalflow</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\opticalflow\ffx_opticalflow_filter_optical_flow_v5.h">
+      <Filter>framegeneration\fsr3\include\gpu\opticalflow</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\opticalflow\ffx_opticalflow_generate_scd_histogram.h">
+      <Filter>framegeneration\fsr3\include\gpu\opticalflow</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\internal\ffx_opticalflow_private.h">
+      <Filter>framegeneration\fsr3\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\opticalflow\ffx_opticalflow_resources.h">
+      <Filter>framegeneration\fsr3\include\gpu\opticalflow</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\opticalflow\ffx_opticalflow_scale_optical_flow_advanced_v5.h">
+      <Filter>framegeneration\fsr3\include\gpu\opticalflow</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\internal\ffx_opticalflow_shaderblobs.h">
+      <Filter>framegeneration\fsr3\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\ffx_provider_fsr3framegenerationswapchain.h">
+      <Filter>framegeneration\fsr3\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\ffx_provider_fsr3framegeneration.h">
+      <Filter>framegeneration\fsr3\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\include\gpu\spd\ffx_spd.h">
+      <Filter>framegeneration\fsr3\include\gpu\spd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\dx12\FrameInterpolationSwapchainDebugPacingPS.h">
+      <Filter>framegeneration\fsr3\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\dx12\FrameInterpolationSwapchainDebugPacingVS.h">
+      <Filter>framegeneration\fsr3\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\dx12\FrameInterpolationSwapchainDX12.h">
+      <Filter>framegeneration\fsr3\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\dx12\FrameInterpolationSwapchainDX12_DebugPacing.h">
+      <Filter>framegeneration\fsr3\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\dx12\FrameInterpolationSwapchainDX12_Helpers.h">
+      <Filter>framegeneration\fsr3\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\dx12\FrameInterpolationSwapchainDX12_UiComposition.h">
+      <Filter>framegeneration\fsr3\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\dx12\FrameInterpolationSwapchainUiCompositionPremulPS.h">
+      <Filter>framegeneration\fsr3\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\dx12\FrameInterpolationSwapchainUiCompositionPremulVS.h">
+      <Filter>framegeneration\fsr3\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\dx12\FrameInterpolationSwapchainUiCompositionPS.h">
+      <Filter>framegeneration\fsr3\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fsr3\dx12\FrameInterpolationSwapchainUiCompositionVS.h">
+      <Filter>framegeneration\fsr3\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtAntiLagApi.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3D.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DCommandListApi.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DCommandListMarkerApi.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DCreateDeviceApi.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DCreateDeviceAppRegApi.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DCreateResource.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DDeviceApi.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DDirectCaptureApi.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderAnalyzerApi.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderIntrinsics.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderIntrinsicsApi.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DWorkTiling.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtDXGIFactory.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtDXGISwapChain.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtFfxApi.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtGpaInterface.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtGpaInterfaceApi.h">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\api\internal\ffx_api.cpp">
+      <Filter>api\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\api\internal\ffx_assert.cpp">
+      <Filter>api\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\api\internal\ffx_message.cpp">
+      <Filter>api\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\api\internal\ffx_object_management.cpp">
+      <Filter>api\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\api\internal\ffx_watermark.cpp">
+      <Filter>api\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\backend\dx12\ffx_dx12.cpp">
+      <Filter>backend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\backend\dx12\ffx_backends_dx12.cpp">
+      <Filter>backend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\api\internal\dx12\amd_extensions.cpp">
+      <Filter>api\internal\dx12</Filter>
+    </ClCompile>
+    <ClCompile Include="ffx_framegeneration_provider_dx12.cpp">
+      <Filter>framegeneration\dx12</Filter>
+    </ClCompile>
+    <ClCompile Include="..\fsr3\internal\ffx_frameinterpolation.cpp">
+      <Filter>framegeneration\fsr3\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="..\fsr3\internal\ffx_opticalflow.cpp">
+      <Filter>framegeneration\fsr3\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="..\fsr3\internal\ffx_frameinterpolation_shaderblobs.cpp">
+      <Filter>framegeneration\fsr3\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="..\fsr3\internal\ffx_provider_fsr3framegeneration.cpp">
+      <Filter>framegeneration\fsr3\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="..\fsr3\internal\ffx_opticalflow_shaderblobs.cpp">
+      <Filter>framegeneration\fsr3\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="..\fsr3\dx12\ffx_provider_fsr3framegenerationswapchain_dx12.cpp">
+      <Filter>framegeneration\fsr3\dx12</Filter>
+    </ClCompile>
+    <ClCompile Include="..\fsr3\dx12\FrameInterpolationSwapchainDX12.cpp">
+      <Filter>framegeneration\fsr3\dx12</Filter>
+    </ClCompile>
+    <ClCompile Include="..\fsr3\dx12\FrameInterpolationSwapchainDX12_DebugPacing.cpp">
+      <Filter>framegeneration\fsr3\dx12</Filter>
+    </ClCompile>
+    <ClCompile Include="..\fsr3\dx12\FrameInterpolationSwapchainDX12_Helpers.cpp">
+      <Filter>framegeneration\fsr3\dx12</Filter>
+    </ClCompile>
+    <ClCompile Include="..\fsr3\dx12\FrameInterpolationSwapchainDX12_UiComposition.cpp">
+      <Filter>framegeneration\fsr3\dx12</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\api\internal\make_git_info_header.bat">
+      <Filter>api\internal</Filter>
+    </None>
+    <None Include="..\fsr3\dx12\BuildFrameInterpolationShaders.bat">
+      <Filter>framegeneration\fsr3\dx12</Filter>
+    </None>
+    <None Include="..\fsr3\dx12\BuildOpticalFlowShaders.bat">
+      <Filter>framegeneration\fsr3\dx12</Filter>
+    </None>
+    <None Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderIntrinsics.hlsl">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </None>
+    <None Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderIntrinsicsAtomicOps.hlsl">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </None>
+    <None Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderIntrinsicsMatrixOps.hlsl">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </None>
+    <None Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderIntrinsicsMatrixOpsHelper.hlsl">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </None>
+    <None Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderIntrinsicsRT.hlsl">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </None>
+    <None Include="..\..\api\internal\dx12\AmdExtD3D\AmdExtD3DShaderIntrinsicsWaveOps.hlsl">
+      <Filter>api\internal\dx12\AmdExtD3D</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_frameinterpolation_compute_game_vector_field_inpainting_pyramid_pass.hlsl">
+      <Filter>framegeneration\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_frameinterpolation_compute_inpainting_pyramid_pass.hlsl">
+      <Filter>framegeneration\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_frameinterpolation_debug_view_pass.hlsl">
+      <Filter>framegeneration\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_frameinterpolation_disocclusion_mask_pass.hlsl">
+      <Filter>framegeneration\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_frameinterpolation_game_motion_vector_field_pass.hlsl">
+      <Filter>framegeneration\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_frameinterpolation_inpainting_pass.hlsl">
+      <Filter>framegeneration\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_frameinterpolation_optical_flow_vector_field_pass.hlsl">
+      <Filter>framegeneration\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_frameinterpolation_pass.hlsl">
+      <Filter>framegeneration\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_frameinterpolation_reconstruct_and_dilate_pass.hlsl">
+      <Filter>framegeneration\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_frameinterpolation_reconstruct_previous_depth_pass.hlsl">
+      <Filter>framegeneration\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_frameinterpolation_setup_pass.hlsl">
+      <Filter>framegeneration\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_opticalflow_compute_luminance_pyramid_pass.hlsl">
+      <Filter>framegeneration\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_opticalflow_compute_optical_flow_advanced_pass_v5.hlsl">
+      <Filter>framegeneration\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_opticalflow_compute_scd_divergence_pass.hlsl">
+      <Filter>framegeneration\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_opticalflow_filter_optical_flow_pass_v5.hlsl">
+      <Filter>framegeneration\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_opticalflow_generate_scd_histogram_pass.hlsl">
+      <Filter>framegeneration\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_opticalflow_prepare_luma_pass.hlsl">
+      <Filter>framegeneration\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\fsr3\internal\shaders\ffx_opticalflow_scale_optical_flow_advanced_pass_v5.hlsl">
+      <Filter>framegeneration\fsr3\internal\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\api\internal\gpu\ffx_watermark.hlsl">
+      <Filter>api\internal\gpu</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>
