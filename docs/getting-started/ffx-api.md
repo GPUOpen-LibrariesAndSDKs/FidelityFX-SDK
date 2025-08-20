@@ -2,7 +2,7 @@
 
 <h1>Introduction to FidelityFX API</h1>
 
-The FidelityFX API is a simple API created for small ABI surface and forwards-compatibility. It is delivered in Dynamic Link Library form and consists of 5 functions, declared in [`ffx_api.h`](../../ffx-api/include/ffx_api/ffx_api.h):
+The FidelityFX API is a simple API created for small ABI surface and forwards-compatibility. It is delivered in Dynamic Link Library form and consists of 5 functions, declared in [`ffx_api.h`](../../Kits/FidelityFX/api/include/ffx_api.h):
 
 * `ffxCreateContext`
 * `ffxDestroyContext`
@@ -14,11 +14,21 @@ Arguments are provided in a linked list of structs, each having a header with a 
 
 An application using the FidelityFX API must use one of the provided signed DLLs. This can be loaded at runtime with `LoadLibrary` and `GetProcAddress` (this is recommended) or at application startup using the dynamic linker via the .lib file.
 
-Backend-specific functionality (for DirectX 12 or Vulkan) is only supported with the respective DLL.
-Linking to both within the same application is not possible due to name resolution conflicts.
+Backend-specific functionality (currently only for DirectX 12) is only supported with the respective DLL.
 
 For convenience in C++ applications, helpers for initializing struct types correctly and linking headers are provided. Simply use the `.hpp` version of each header and replace the `ffx` prefix with the `ffx::` namespace.
 Note that the helper functions wrapping API functions only work when linking using the .lib file. Using them with runtime loading will result in linker errors.
+
+<h2>DLLs structure</h2>
+Starting with AMD FidelityFX™ SDK 2.0.0 the effects, previously combined in amd_fidelityfx_dx12.dll, are split into multiple DLLs based on effect type:
+
+* amd_fidelityfx_loader_dx12.dll: A small loader DLL, not containing any effect code. This DLL only manages the loading of effect type DLLs to provide the effects to the calling application. It is compatible in interface and behaviour to amd_fidelityfx_dx12.dll.
+* amd_fidelityfx_framegeneration_dx12.dll: This DLL contains [FidelityFX Frame Generation](../techniques/super-resolution-interpolation.md#enable-fsr3-s-proxy-frame-generation-swapchain) related providers, i.e. [Frame Interpolation](../techniques/frame-interpolation.md) effects and [Frame Interpolation Swapchain](../techniques/frame-interpolation-swap-chain.md).
+* amd_fidelityfx_upscaler_dx12.dll: This DLL contains providers for latest FidelityFX Super Resolution technique ([FSR4](../techniques/super-resolution-ml.md )) as well as legacy ones ([FSR2](../techniques/super-resolution-temporal.md) and [FSR3.1 upscaler](../techniques/super-resolution-upscaler.md)).
+
+The benefit of this split is, that applications can ship with only supported AMD FidelityFX™ effect types.
+
+Applications previously loading amd_fidelityfx_dx12.dll (or linking with amd_fidelityfx_dx12.lib) need to load amd_fidelityfx_loader_dx12.dll (or link to amd_fidelityfx_loader_dx12.lib) instead.
 
 <h2>Descriptor structs</h2>
 
@@ -89,9 +99,57 @@ To query information or resources from an effect, use `ffxQuery`:
 ffxReturnCode_t ffxQuery(ffxContext* context, ffxQueryDescHeader* desc);
 ```
 
-The context must be a valid context created by `ffxCreateContext`, unless documentation for a specific query states otherwise.
-
 Output values will be returned by writing through pointers passed in the query description.
+
+Some query descriptor types require passing valid context created by `ffxCreateContext`. 
+
+
+Example query version of effect after context creation with default version from the SDK sample: 
+```C
+struct ffxQueryGetProviderVersion getVersion = {0};
+getVersion.header.type = FFX_API_QUERY_DESC_TYPE_GET_PROVIDER_VERSION;
+
+ffxReturnCode_t retCode_t = ffxQuery(&m_UpscalingContext, &getVersion.header);
+```
+
+Queries of descriptor types with `NULL` context, require providing more input information like device, flags, and resolution.
+
+
+Example query for GPU memory usage of upscaler with default version before creating context from the SDK sample. 
+
+```C
+struct FfxApiEffectMemoryUsage gpuMemoryUsageUpscaler = {0};
+struct ffxQueryDescUpscaleGetGPUMemoryUsageV2 upscalerGetGPUMemoryUsageV2 = {0};
+upscalerGetGPUMemoryUsageV2.header.type = FFX_API_QUERY_DESC_TYPE_UPSCALE_GPU_MEMORY_USAGE_V2;
+upscalerGetGPUMemoryUsageV2.device = GetDevice()->GetImpl()->DX12Device();
+upscalerGetGPUMemoryUsageV2.maxRenderSize = { resInfo.RenderWidth, resInfo.RenderHeight };
+upscalerGetGPUMemoryUsageV2.maxUpscaleSize = { resInfo.UpscaleWidth, resInfo.UpscaleHeight };
+upscalerGetGPUMemoryUsageV2.flags = FFX_UPSCALE_ENABLE_AUTO_EXPOSURE | FFX_UPSCALE_ENABLE_HIGH_DYNAMIC_RANGE;
+upscalerGetGPUMemoryUsageV2.gpuMemoryUsageUpscaler = &gpuMemoryUsageUpscaler;
+
+ffxReturnCode_t retCode_t = ffxQuery(nullptr, &upscalerGetGPUMemoryUsageV2.header);
+
+CAUDRON_LOG_INFO(L"Default Upscaler Query GPUMemoryUsageV2 totalUsageInBytes %f ", gpuMemoryUsageUpscaler.totalUsageInBytes / 1048576.f);
+```
+
+If using C++ helper, need to omit the context argument if context is `NULL`.
+```C++
+//this ffx:Query call is equivalent to above ffxQuery call
+ffx::ReturnCode retCode = ffx::Query(upscalerGetGPUMemoryUsageV2);
+```
+To query a specific version of the effect, attach a struct of type `ffxOverrideVersion` in the `pNext` field of the main struct header. 
+
+Continuing from example above, query the GPU memory usage of upscaler at a specific version:
+
+```C++
+struct ffxOverrideVersion versionOverride = {0};
+versionOverride.header.type = FFX_API_DESC_TYPE_OVERRIDE_VERSION;
+versionOverride.versionId = m_FsrVersionIds[m_FsrVersionIndex];
+upscalerGetGPUMemoryUsageV2.header.pNext = &versionOverride.header;
+
+ffxReturnCode_t retCode_t = ffxQuery(nullptr, &upscalerGetGPUMemoryUsageV2.header);
+```
+
 
 <h2>Configure</h2>
 
@@ -145,11 +203,12 @@ FidelityFX API supports overriding the version of each effect on context creatio
 * Do not hard-code version IDs
 * If calling `ffxQuery` without a context (`NULL` parameter), use the same version override as with `ffxCreateContext`
 * The choice of version should either be left to the default behavior (no override) or the user (displayed in options UI)
+* Versions reported by a version query may change based on the parameters. Do not query version names and ids separately, as their order may change.
 
-Example version query using the C++ helpers:
+Example version query:
 
-```C++
-ffx::QueryDescGetVersions versionQuery{};
+```C
+struct ffxQueryDescGetVersions versionQuery = {0};
 versionQuery.createDescType = FFX_API_CREATE_CONTEXT_DESC_TYPE_UPSCALE;
 versionQuery.device = GetDX12Device(); // only for DirectX 12 applications
 uint64_t versionCount = 0;
@@ -166,6 +225,23 @@ versionQuery.versionNames = versionNames.data();
 // fill version ids and names arrays.
 ffxQuery(nullptr, &versionQuery.header);
 ```
+
+To override the version during context creation, attach a struct of type `ffxOverrideVersion` in the `pNext` field of the main struct header.
+
+Example context creation with version override from the SDK sample, using C++ helpers:
+
+```C++
+ffx::ReturnCode retCode;
+// lifetime of this must last until after CreateContext call
+ffx::CreateContextDescOverrideVersion versionOverride{};
+if (m_FsrVersionIndex < m_FsrVersionIds.size() && m_overrideVersion)
+{
+    versionOverride.versionId = m_FsrVersionIds[m_FsrVersionIndex];
+    retCode = ffx::CreateContext(m_UpscalingContext, nullptr, createFsr, backendDesc, versionOverride);
+}
+```
+
+You can query the version of any created context using `ffxQuery` with the `ffxQueryGetProviderVersion` struct.
 
 <h2>Error handling</h2>
 

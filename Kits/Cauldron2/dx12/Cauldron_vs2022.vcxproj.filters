@@ -1,0 +1,939 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Source Files\Framework">
+      <UniqueIdentifier>{3c39c3ac-0084-402e-be2d-bb120fdba7ec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\MemoryAllocator">
+      <UniqueIdentifier>{836a9e46-2eba-4d4b-81ec-bf50c1841e07}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Rendermodules">
+      <UniqueIdentifier>{6f3be406-94d9-40ac-939e-80a7e9f1b4ec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Config">
+      <UniqueIdentifier>{fae30952-db42-4351-bb3c-e9b86db23677}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ImGUI">
+      <UniqueIdentifier>{b3daa272-861d-4573-993b-639c2da079c5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Rendermodules\AnimatedTextures">
+      <UniqueIdentifier>{9aaf5af7-3273-40c2-929f-a3657aa755fd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Rendermodules\GBuffer">
+      <UniqueIdentifier>{c2bc6acc-29f7-4a58-8398-ba171ec04e72}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Rendermodules\GPUParticle">
+      <UniqueIdentifier>{108cf596-3a98-4c37-aedb-0c3ab32ca483}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Rendermodules\Lighting">
+      <UniqueIdentifier>{4bc9effe-5d8d-4cd9-a33a-f0d129d3846a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Rendermodules\RasterShadows">
+      <UniqueIdentifier>{a0a5225d-103f-49df-9677-b0b084c9e33e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Rendermodules\Skydome">
+      <UniqueIdentifier>{d6d4c20d-a2d2-47cc-9178-4cd470a38797}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Rendermodules\TAA">
+      <UniqueIdentifier>{d281a87c-587e-42d4-bee4-17092f57d0c1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Rendermodules\Translucency">
+      <UniqueIdentifier>{7096d542-f9f1-4071-b644-8f5fc8990ff3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Rendermodules\AnimatedTextures\Shaders">
+      <UniqueIdentifier>{8a626029-d6fc-46bf-9425-7a9d2f00ff62}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Rendermodules\GBuffer\Config">
+      <UniqueIdentifier>{9382051d-1f33-4d0d-a574-0527f4569f5e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Rendermodules\GBuffer\Shaders">
+      <UniqueIdentifier>{9bd0c428-9aae-4d1c-84f3-8157a3c29e5d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Rendermodules\GPUParticle\Shaders">
+      <UniqueIdentifier>{e5717194-0a08-44cd-9719-eda5747df1be}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Rendermodules\Lighting\Shaders">
+      <UniqueIdentifier>{d0481bb7-aacc-4f60-992c-feddfa1587ae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Rendermodules\RasterShadows\Config">
+      <UniqueIdentifier>{adc0e023-c6db-494f-ac5f-6649a9c6401f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Rendermodules\RasterShadows\Shaders">
+      <UniqueIdentifier>{5f40ba7d-af38-4dae-9fbd-a6652b6cdc28}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Rendermodules\Skydome\Config">
+      <UniqueIdentifier>{1f4ce486-c2af-4b5c-8aac-2cc5b9a18568}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Rendermodules\Skydome\Shaders">
+      <UniqueIdentifier>{61771f8f-7d78-4c05-bf41-b89f5ec10397}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Rendermodules\TAA\Config">
+      <UniqueIdentifier>{75e27ca0-7a97-49fc-9f00-1c134aff5b32}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Rendermodules\TAA\Shaders">
+      <UniqueIdentifier>{f5254c24-1bae-428b-a128-f2b06415c43b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Rendermodules\Translucency\Config">
+      <UniqueIdentifier>{08d3f0bd-a1fd-44e2-9267-2866a405e6ea}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Rendermodules\Translucency\Shaders">
+      <UniqueIdentifier>{81296d5c-153a-440c-a211-3e5dcb80a395}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Framework\Core">
+      <UniqueIdentifier>{3b6d7572-3e2d-4300-9798-531dcf50a27e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Framework\Misc">
+      <UniqueIdentifier>{5346c5ee-d1dc-4862-b86b-b78bf594a629}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Framework\Render">
+      <UniqueIdentifier>{a72e4f29-728e-4f7d-93be-3a8eea2e69ce}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Framework\Shaders">
+      <UniqueIdentifier>{979f4d50-e13d-440b-a9d4-012ab12bf9c7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Framework\Core\Components">
+      <UniqueIdentifier>{0bdcb276-9a3d-4f20-a9d8-2edff8c847fc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Framework\Core\Loaders">
+      <UniqueIdentifier>{f9cb390b-1856-40ec-9b88-1cea242a3df5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Framework\Render\Rendermodules">
+      <UniqueIdentifier>{0782349a-4a0a-4878-8022-618a3ef3cded}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ImGUI\backends">
+      <UniqueIdentifier>{6769d843-a242-46b1-942e-f1ad6a5968fe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Framework\Shaders\fidelityfx">
+      <UniqueIdentifier>{b35702d4-f47b-4afc-8de4-cf4cb7253a80}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Framework\Shaders\fidelityfx\parallelsort">
+      <UniqueIdentifier>{e8560560-9c3f-45e8-a610-49f945d35e30}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Framework\Shaders\fidelityfx\spd">
+      <UniqueIdentifier>{389c072d-472c-4ade-abbf-18c1d40ed7e4}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="framework\libs\memoryallocator\D3D12MemAlloc.cpp">
+      <Filter>Source Files\MemoryAllocator</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\libs\imgui\imgui.cpp">
+      <Filter>Source Files\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\libs\imgui\imgui_demo.cpp">
+      <Filter>Source Files\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\libs\imgui\imgui_draw.cpp">
+      <Filter>Source Files\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\libs\imgui\imgui_tables.cpp">
+      <Filter>Source Files\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\libs\imgui\imgui_widgets.cpp">
+      <Filter>Source Files\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="rendermodules\rendermoduleregistry.cpp">
+      <Filter>Source Files\Rendermodules</Filter>
+    </ClCompile>
+    <ClCompile Include="rendermodules\animatedtextures\animatedtexturesrendermodule.cpp">
+      <Filter>Source Files\Rendermodules\AnimatedTextures</Filter>
+    </ClCompile>
+    <ClCompile Include="rendermodules\gbuffer\gbufferrendermodule.cpp">
+      <Filter>Source Files\Rendermodules\GBuffer</Filter>
+    </ClCompile>
+    <ClCompile Include="rendermodules\gpuparticle\gpuparticlerendermodule.cpp">
+      <Filter>Source Files\Rendermodules\GPUParticle</Filter>
+    </ClCompile>
+    <ClCompile Include="rendermodules\gpuparticle\parallelsort.cpp">
+      <Filter>Source Files\Rendermodules\GPUParticle</Filter>
+    </ClCompile>
+    <ClCompile Include="rendermodules\lighting\lightingrendermodule.cpp">
+      <Filter>Source Files\Rendermodules\Lighting</Filter>
+    </ClCompile>
+    <ClCompile Include="rendermodules\rastershadow\rastershadowrendermodule.cpp">
+      <Filter>Source Files\Rendermodules\RasterShadows</Filter>
+    </ClCompile>
+    <ClCompile Include="rendermodules\skydome\skydomerendermodule.cpp">
+      <Filter>Source Files\Rendermodules\Skydome</Filter>
+    </ClCompile>
+    <ClCompile Include="rendermodules\taa\taarendermodule.cpp">
+      <Filter>Source Files\Rendermodules\TAA</Filter>
+    </ClCompile>
+    <ClCompile Include="rendermodules\translucency\translucencyrendermodule.cpp">
+      <Filter>Source Files\Rendermodules\Translucency</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\core\component.cpp">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\core\contentmanager.cpp">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\core\entity.cpp">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\core\framework.cpp">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\core\inputmanager.cpp">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\core\scene.cpp">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\core\taskmanager.cpp">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\core\uibackend.cpp">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\core\uimanager.cpp">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\core\components\animationcomponent.cpp">
+      <Filter>Source Files\Framework\Core\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\core\components\cameracomponent.cpp">
+      <Filter>Source Files\Framework\Core\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\core\components\lightcomponent.cpp">
+      <Filter>Source Files\Framework\Core\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\core\components\meshcomponent.cpp">
+      <Filter>Source Files\Framework\Core\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\core\components\particlespawnercomponent.cpp">
+      <Filter>Source Files\Framework\Core\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\core\win\framework_win.cpp">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\core\win\inputmanager_win.cpp">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\core\win\uibackend_win.cpp">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\core\loaders\gltfloader.cpp">
+      <Filter>Source Files\Framework\Core\Loaders</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\core\loaders\particleloader.cpp">
+      <Filter>Source Files\Framework\Core\Loaders</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\core\loaders\textureloader.cpp">
+      <Filter>Source Files\Framework\Core\Loaders</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\misc\corecounts.cpp">
+      <Filter>Source Files\Framework\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\misc\fileio.cpp">
+      <Filter>Source Files\Framework\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\misc\log.cpp">
+      <Filter>Source Files\Framework\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\misc\math.cpp">
+      <Filter>Source Files\Framework\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\animation.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\buffer.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\color_conversion.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\commandlist.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\copyresource.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\device.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\dynamicbufferpool.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\dynamicresourcepool.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\gpuresource.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\material.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\mesh.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\parameterset.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\particle.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\pipelinedesc.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\profiler.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\rasterview.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\rendermodule.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\resourceresizedlistener.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\resourceview.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\resourceviewallocator.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\rootsignaturedesc.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\shaderbuilderhelper.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\shadowmapresourcepool.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\swapchain.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\texture.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\uploadheap.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\dx12\buffer_dx12.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\dx12\commandlist_dx12.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\dx12\copyresource_dx12.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\dx12\device_dx12.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\dx12\dynamicbufferpool_dx12.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\dx12\gpuresource_dx12.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\dx12\indirectworkload_dx12.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\dx12\parameterset_dx12.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\dx12\pipelinedesc_dx12.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\dx12\pipelineobject_dx12.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\dx12\profiler_dx12.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\dx12\resourceview_dx12.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\dx12\resourceviewallocator_dx12.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\dx12\rootsignature_dx12.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\dx12\rootsignaturedesc_dx12.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\dx12\rtresources_dx12.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\dx12\sampler_dx12.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\dx12\swapchain_dx12.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\dx12\texture_dx12.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\dx12\uploadheap_dx12.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\win\shaderbuilder_win.cpp">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\rendermodules\ui\uirendermodule.cpp">
+      <Filter>Source Files\Framework\Render\Rendermodules</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\rendermodules\tonemapping\tonemappingrendermodule.cpp">
+      <Filter>Source Files\Framework\Render\Rendermodules</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\rendermodules\swapchain\swapchainrendermodule.cpp">
+      <Filter>Source Files\Framework\Render\Rendermodules</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\rendermodules\skinning\skinningrendermodule.cpp">
+      <Filter>Source Files\Framework\Render\Rendermodules</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\rendermodules\raytracing\raytracingrendermodule.cpp">
+      <Filter>Source Files\Framework\Render\Rendermodules</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\render\rendermodules\fpslimiter\fpslimiterrendermodule.cpp">
+      <Filter>Source Files\Framework\Render\Rendermodules</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\libs\imgui\backends\imgui_impl_win32.cpp">
+      <Filter>Source Files\ImGUI\backends</Filter>
+    </ClCompile>
+    <ClCompile Include="framework\core\backend_implementations\backend_interface_dx12.cpp">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="framework\libs\memoryallocator\D3D12MemAlloc.h">
+      <Filter>Source Files\MemoryAllocator</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\libs\imgui\imconfig.h">
+      <Filter>Source Files\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\libs\imgui\imgui.h">
+      <Filter>Source Files\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\libs\imgui\imgui_internal.h">
+      <Filter>Source Files\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\libs\imgui\imstb_rectpack.h">
+      <Filter>Source Files\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\libs\imgui\imstb_textedit.h">
+      <Filter>Source Files\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\libs\imgui\imstb_truetype.h">
+      <Filter>Source Files\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="rendermodules\rendermoduleregistry.h">
+      <Filter>Source Files\Rendermodules</Filter>
+    </ClInclude>
+    <ClInclude Include="rendermodules\animatedtextures\animatedtexturesrendermodule.h">
+      <Filter>Source Files\Rendermodules\AnimatedTextures</Filter>
+    </ClInclude>
+    <ClInclude Include="rendermodules\gbuffer\gbufferrendermodule.h">
+      <Filter>Source Files\Rendermodules\GBuffer</Filter>
+    </ClInclude>
+    <ClInclude Include="rendermodules\gpuparticle\gpuparticlerendermodule.h">
+      <Filter>Source Files\Rendermodules\GPUParticle</Filter>
+    </ClInclude>
+    <ClInclude Include="rendermodules\gpuparticle\parallelsort.h">
+      <Filter>Source Files\Rendermodules\GPUParticle</Filter>
+    </ClInclude>
+    <ClInclude Include="rendermodules\gpuparticle\shaders\parallelsort_common_ffx.h">
+      <Filter>Source Files\Rendermodules\GPUParticle\Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="rendermodules\gpuparticle\shaders\particlesimulationcommon.h">
+      <Filter>Source Files\Rendermodules\GPUParticle\Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="rendermodules\gpuparticle\shaders\simulationbindings.h">
+      <Filter>Source Files\Rendermodules\GPUParticle\Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="rendermodules\lighting\lightingrendermodule.h">
+      <Filter>Source Files\Rendermodules\Lighting</Filter>
+    </ClInclude>
+    <ClInclude Include="rendermodules\rastershadow\rastershadowrendermodule.h">
+      <Filter>Source Files\Rendermodules\RasterShadows</Filter>
+    </ClInclude>
+    <ClInclude Include="rendermodules\skydome\skydomerendermodule.h">
+      <Filter>Source Files\Rendermodules\Skydome</Filter>
+    </ClInclude>
+    <ClInclude Include="rendermodules\skydome\shaders\skydomecommon.h">
+      <Filter>Source Files\Rendermodules\Skydome\Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="rendermodules\taa\taarendermodule.h">
+      <Filter>Source Files\Rendermodules\TAA</Filter>
+    </ClInclude>
+    <ClInclude Include="rendermodules\taa\shaders\taacommon.h">
+      <Filter>Source Files\Rendermodules\TAA\Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="rendermodules\translucency\translucencyrendermodule.h">
+      <Filter>Source Files\Rendermodules\Translucency</Filter>
+    </ClInclude>
+    <ClInclude Include="rendermodules\translucency\shaders\particlerendercommon.h">
+      <Filter>Source Files\Rendermodules\Translucency\Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\core\component.h">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\core\contentloader.h">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\core\contentmanager.h">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\core\entity.h">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\core\framework.h">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\core\inputmanager.h">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\core\scene.h">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\core\taskmanager.h">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\core\uibackend.h">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\core\uimanager.h">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\core\components\animationcomponent.h">
+      <Filter>Source Files\Framework\Core\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\core\components\cameracomponent.h">
+      <Filter>Source Files\Framework\Core\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\core\components\lightcomponent.h">
+      <Filter>Source Files\Framework\Core\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\core\components\meshcomponent.h">
+      <Filter>Source Files\Framework\Core\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\core\components\particlespawnercomponent.h">
+      <Filter>Source Files\Framework\Core\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\core\win\framework_win.h">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\core\win\inputmanager_win.h">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\core\win\uibackend_win.h">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\core\loaders\gltfloader.h">
+      <Filter>Source Files\Framework\Core\Loaders</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\core\loaders\particleloader.h">
+      <Filter>Source Files\Framework\Core\Loaders</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\core\loaders\textureloader.h">
+      <Filter>Source Files\Framework\Core\Loaders</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\misc\assert.h">
+      <Filter>Source Files\Framework\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\misc\corecounts.h">
+      <Filter>Source Files\Framework\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\misc\fileio.h">
+      <Filter>Source Files\Framework\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\misc\helpers.h">
+      <Filter>Source Files\Framework\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\misc\log.h">
+      <Filter>Source Files\Framework\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\misc\math.h">
+      <Filter>Source Files\Framework\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\misc\sync.h">
+      <Filter>Source Files\Framework\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\misc\threadsafe_queue.h">
+      <Filter>Source Files\Framework\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\misc\threadsafe_ringbuffer.h">
+      <Filter>Source Files\Framework\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\animation.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\buffer.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\color_conversion.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\commandlist.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\copyresource.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\device.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\dynamicbufferpool.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\dynamicresourcepool.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\gpuresource.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\indirectworkload.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\material.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\mesh.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\parameterset.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\particle.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\pipelinedesc.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\pipelineobject.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\profiler.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\rasterview.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\renderdefines.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\rendermodule.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\resourceresizedlistener.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\resourceview.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\resourceviewallocator.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\rootsignature.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\rootsignaturedesc.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\rtresources.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\sampler.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\shaderbuilder.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\shaderbuilderhelper.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\shadowmapresourcepool.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\swapchain.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\texture.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\uploadheap.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\dx12\buffer_dx12.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\dx12\commandlist_dx12.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\dx12\copyresource_dx12.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\dx12\defines_dx12.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\dx12\device_dx12.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\dx12\dynamicbufferpool_dx12.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\dx12\gpuresource_dx12.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\dx12\indirectworkload_dx12.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\dx12\parameterset_dx12.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\dx12\pipelinedesc_dx12.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\dx12\pipelineobject_dx12.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\dx12\profiler_dx12.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\dx12\resourceview_dx12.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\dx12\resourceviewallocator_dx12.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\dx12\rootsignature_dx12.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\dx12\rootsignaturedesc_dx12.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\dx12\rtresources_dx12.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\dx12\sampler_dx12.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\dx12\swapchain_dx12.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\dx12\texture_dx12.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\dx12\uploadheap_dx12.h">
+      <Filter>Source Files\Framework\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\rendermodules\ui\uirendermodule.h">
+      <Filter>Source Files\Framework\Render\Rendermodules</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\rendermodules\tonemapping\tonemappingrendermodule.h">
+      <Filter>Source Files\Framework\Render\Rendermodules</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\rendermodules\swapchain\swapchainrendermodule.h">
+      <Filter>Source Files\Framework\Render\Rendermodules</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\rendermodules\skinning\skinningrendermodule.h">
+      <Filter>Source Files\Framework\Render\Rendermodules</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\rendermodules\raytracing\raytracingrendermodule.h">
+      <Filter>Source Files\Framework\Render\Rendermodules</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\render\rendermodules\fpslimiter\fpslimiterrendermodule.h">
+      <Filter>Source Files\Framework\Render\Rendermodules</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\libs\imgui\backends\imgui_impl_win32.h">
+      <Filter>Source Files\ImGUI\backends</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\shaders\fidelityfx\ffx_common_types.h">
+      <Filter>Source Files\Framework\Shaders\fidelityfx</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\shaders\fidelityfx\ffx_core.h">
+      <Filter>Source Files\Framework\Shaders\fidelityfx</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\shaders\fidelityfx\ffx_core_cpu.h">
+      <Filter>Source Files\Framework\Shaders\fidelityfx</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\shaders\fidelityfx\ffx_core_gpu_common.h">
+      <Filter>Source Files\Framework\Shaders\fidelityfx</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\shaders\fidelityfx\ffx_core_gpu_common_half.h">
+      <Filter>Source Files\Framework\Shaders\fidelityfx</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\shaders\fidelityfx\ffx_core_hlsl.h">
+      <Filter>Source Files\Framework\Shaders\fidelityfx</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\shaders\fidelityfx\ffx_core_portability.h">
+      <Filter>Source Files\Framework\Shaders\fidelityfx</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\shaders\fidelityfx\parallelsort\ffx_parallelsort.h">
+      <Filter>Source Files\Framework\Shaders\fidelityfx\parallelsort</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\shaders\fidelityfx\parallelsort\ffx_parallelsort_common.h">
+      <Filter>Source Files\Framework\Shaders\fidelityfx\parallelsort</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\shaders\fidelityfx\spd\ffx_spd.h">
+      <Filter>Source Files\Framework\Shaders\fidelityfx\spd</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\core\backend_interface.h">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\core\backend_implementations\backend_interface_dx12.h">
+      <Filter>Source Files\Framework\Core</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="rendermodules\translucency\shaders\translucencyps.hlsl">
+      <Filter>Source Files\Rendermodules\Translucency\Shaders</Filter>
+    </Text>
+    <Text Include="rendermodules\translucency\shaders\particlerender.hlsl">
+      <Filter>Source Files\Rendermodules\Translucency\Shaders</Filter>
+    </Text>
+    <Text Include="rendermodules\translucency\config\translucencyrendermodule.json">
+      <Filter>Source Files\Rendermodules\Translucency\Config</Filter>
+    </Text>
+    <Text Include="rendermodules\taa\shaders\taaPost.hlsl">
+      <Filter>Source Files\Rendermodules\TAA\Shaders</Filter>
+    </Text>
+    <Text Include="rendermodules\taa\shaders\taa.hlsl">
+      <Filter>Source Files\Rendermodules\TAA\Shaders</Filter>
+    </Text>
+    <Text Include="rendermodules\taa\config\taarendermodule.json">
+      <Filter>Source Files\Rendermodules\TAA\Config</Filter>
+    </Text>
+    <Text Include="rendermodules\skydome\shaders\skydomeproc.hlsl">
+      <Filter>Source Files\Rendermodules\Skydome\Shaders</Filter>
+    </Text>
+    <Text Include="rendermodules\skydome\shaders\skydome.hlsl">
+      <Filter>Source Files\Rendermodules\Skydome\Shaders</Filter>
+    </Text>
+    <Text Include="rendermodules\skydome\config\skydomerendermodule.json">
+      <Filter>Source Files\Rendermodules\Skydome\Config</Filter>
+    </Text>
+    <Text Include="rendermodules\rastershadow\shaders\rastershadowps.hlsl">
+      <Filter>Source Files\Rendermodules\RasterShadows\Shaders</Filter>
+    </Text>
+    <Text Include="rendermodules\rastershadow\config\rastershadowrendermodule.json">
+      <Filter>Source Files\Rendermodules\RasterShadows\Config</Filter>
+    </Text>
+    <Text Include="rendermodules\lighting\shaders\lighting.hlsl">
+      <Filter>Source Files\Rendermodules\Lighting\Shaders</Filter>
+    </Text>
+    <Text Include="rendermodules\gpuparticle\shaders\parallelsort_reduce_pass.hlsl">
+      <Filter>Source Files\Rendermodules\GPUParticle\Shaders</Filter>
+    </Text>
+    <Text Include="rendermodules\gpuparticle\shaders\parallelsort_scan_add_pass.hlsl">
+      <Filter>Source Files\Rendermodules\GPUParticle\Shaders</Filter>
+    </Text>
+    <Text Include="rendermodules\gpuparticle\shaders\parallelsort_scan_pass.hlsl">
+      <Filter>Source Files\Rendermodules\GPUParticle\Shaders</Filter>
+    </Text>
+    <Text Include="rendermodules\gpuparticle\shaders\parallelsort_scatter_pass.hlsl">
+      <Filter>Source Files\Rendermodules\GPUParticle\Shaders</Filter>
+    </Text>
+    <Text Include="rendermodules\gpuparticle\shaders\parallelsort_setup_indirect_args.hlsl">
+      <Filter>Source Files\Rendermodules\GPUParticle\Shaders</Filter>
+    </Text>
+    <Text Include="rendermodules\gpuparticle\shaders\parallelsort_sum_pass.hlsl">
+      <Filter>Source Files\Rendermodules\GPUParticle\Shaders</Filter>
+    </Text>
+    <Text Include="rendermodules\gpuparticle\shaders\particleemit.hlsl">
+      <Filter>Source Files\Rendermodules\GPUParticle\Shaders</Filter>
+    </Text>
+    <Text Include="rendermodules\gpuparticle\shaders\particlesimulation.hlsl">
+      <Filter>Source Files\Rendermodules\GPUParticle\Shaders</Filter>
+    </Text>
+    <Text Include="rendermodules\gbuffer\shaders\gbufferps.hlsl">
+      <Filter>Source Files\Rendermodules\GBuffer\Shaders</Filter>
+    </Text>
+    <Text Include="rendermodules\gbuffer\config\gbufferrendermodule.json">
+      <Filter>Source Files\Rendermodules\GBuffer\Config</Filter>
+    </Text>
+    <Text Include="rendermodules\animatedtextures\shaders\AnimatedTexture.hlsl">
+      <Filter>Source Files\Rendermodules\AnimatedTextures\Shaders</Filter>
+    </Text>
+    <Text Include="framework\config\cauldronconfig.json">
+      <Filter>Source Files\Config</Filter>
+    </Text>
+    <Text Include="framework\shaders\autoexposure.hlsl">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+    <Text Include="framework\shaders\builddistortionfield.hlsl">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+    <Text Include="framework\shaders\commonintersect.hlsl">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+    <Text Include="framework\shaders\computeskinning.hlsl">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+    <Text Include="framework\shaders\copytexture.hlsl">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+    <Text Include="framework\shaders\fpslimiter.hlsl">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+    <Text Include="framework\shaders\fullscreen.hlsl">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+    <Text Include="framework\shaders\hudlessblit.hlsl">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+    <Text Include="framework\shaders\lensdistortion.h">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+    <Text Include="framework\shaders\lightfunctionscommon.hlsl">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+    <Text Include="framework\shaders\lightingcommon.h">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+    <Text Include="framework\shaders\particlecommon.h">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+    <Text Include="framework\shaders\rasterlightfunctions.hlsl">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+    <Text Include="framework\shaders\raytracingcommon.hlsl">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+    <Text Include="framework\shaders\raytracinglightfunctions.hlsl">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+    <Text Include="framework\shaders\shadercommon.h">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+    <Text Include="framework\shaders\shadowFiltering.h">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+    <Text Include="framework\shaders\surfacerendercommon.h">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+    <Text Include="framework\shaders\tonemappercommon.h">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+    <Text Include="framework\shaders\tonemappers.hlsl">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+    <Text Include="framework\shaders\tonemapping.hlsl">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+    <Text Include="framework\shaders\transferFunction.h">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+    <Text Include="framework\shaders\transformVS.hlsl">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+    <Text Include="framework\shaders\ui.hlsl">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+    <Text Include="framework\shaders\uicommon.h">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+    <Text Include="framework\shaders\upscaler.h">
+      <Filter>Source Files\Framework\Shaders</Filter>
+    </Text>
+  </ItemGroup>
+</Project>
