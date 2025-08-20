@@ -220,20 +220,14 @@ namespace cauldron
         CD3DX12_TEXTURE_COPY_LOCATION copySrc(m_pRenderTarget->GetCurrentResource()->GetImpl()->DX12Resource(), 0);
         pCmdList->GetImpl()->DX12CmdList()->CopyTextureRegion(&copyDest, 0, 0, 0, &copySrc, nullptr);
 
-        ID3D12Fence* pFence;
-        CauldronThrowOnFail(GetDevice()->GetImpl()->DX12Device()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&pFence)));
-        CauldronThrowOnFail(GetDevice()->GetImpl()->DX12CmdQueue(CommandQueue::Graphics)->Signal(pFence, 1));
+        barrier = Barrier::Transition(m_pRenderTarget->GetCurrentResource(), ResourceState::CopySource, ResourceState::Present);
+        ResourceBarrier(pCmdList, 1, &barrier);
+
         CauldronThrowOnFail(pCmdList->GetImpl()->DX12CmdList()->Close());
 
-        ID3D12CommandList* CmdListList[] = { pCmdList->GetImpl()->DX12CmdList() };
-        GetDevice()->GetImpl()->DX12CmdQueue(CommandQueue::Graphics)->ExecuteCommandLists(1, CmdListList);
-
-        // Wait for fence
-        HANDLE mHandleFenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-        pFence->SetEventOnCompletion(1, mHandleFenceEvent);
-        WaitForSingleObject(mHandleFenceEvent, INFINITE);
-        CloseHandle(mHandleFenceEvent);
-        pFence->Release();
+        std::vector<CommandList*> lists(1);
+        lists[0] = pCmdList;
+        GetDevice()->ExecuteCommandListsImmediate(lists, CommandQueue::Graphics);
 
         UINT64* pTimingsBuffer = NULL;
         D3D12_RANGE range;
@@ -242,8 +236,6 @@ namespace cauldron
         pResourceReadBack->Map(0, &range, reinterpret_cast<void**>(&pTimingsBuffer));
         stbi_write_jpg(WStringToString(filePath.c_str()).c_str(), (int)fromDesc.Width, (int)fromDesc.Height, 4, pTimingsBuffer, 100);
         pResourceReadBack->Unmap(0, NULL);
-
-        GetDevice()->FlushAllCommandQueues();
 
         // Release
         pResourceReadBack->Release();
