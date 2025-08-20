@@ -23,7 +23,7 @@
 #pragma once
 #include "ffx_provider.h"
 #include <ffx_api/ffx_api.hpp>
-#include <FidelityFx/host/ffx_interface.h>
+#include <FidelityFX/host/ffx_interface.h>
 
 ffxReturnCode_t CreateBackend(const ffxCreateContextDescHeader* desc, bool& backendFound, FfxInterface* iface, size_t contexts, Allocator& alloc);
 
