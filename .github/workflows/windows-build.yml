@@ -1,0 +1,48 @@
+name: Build FFX Sample (Windows)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Integrate vcpkg (fallback if needed)
+        shell: cmd
+        run: |
+          where vcpkg || ^
+          "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\Enterprise\Common7\IDE\CommonExtensions\Microsoft\VCPkg\vcpkg.exe" integrate install || ^
+          vcpkg integrate install
+
+      - name: Fetch media
+        shell: cmd
+        run: |
+          call UpdateMedia.bat
+
+      - name: Build sample (Release x64)
+        shell: cmd
+        working-directory: Samples\Upscalers\FidelityFX_FSR\dx12
+        run: |
+          msbuild FidelityFX_FSR_2022.sln /t:Build /p:Configuration=Release /p:Platform=x64 /m
+
+      - name: Collect artifacts
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Path artifacts | Out-Null
+          Copy-Item -Recurse Samples\Upscalers\FidelityFX_FSR\dx12\x64\Release\* artifacts\
+          if (Test-Path media) { Copy-Item -Recurse media artifacts\media }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ffx-fsr-sample-win64
+          path: artifacts

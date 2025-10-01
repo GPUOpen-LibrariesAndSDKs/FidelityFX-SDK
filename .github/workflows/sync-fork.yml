@@ -1,0 +1,26 @@
+name: Keep fork in sync
+
+on:
+  schedule:
+    - cron: "11 */6 * * *"   # co 6 godzin (UTC)
+  workflow_dispatch:          # przycisk "Run workflow" w razie potrzeby
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync from upstream
+        uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.1
+        with:
+          target_sync_branch: main
+          target_repo_token: ${{ secrets.GITHUB_TOKEN }}
+          upstream_sync_repo: GPUOpen-LibrariesAndSDKs/FidelityFX-SDK
+          upstream_sync_branch: main
