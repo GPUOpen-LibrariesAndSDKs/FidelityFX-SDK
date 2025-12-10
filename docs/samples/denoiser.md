@@ -6,7 +6,7 @@
 
 This [sample](../../Samples/Denoisers/FidelityFX_Denoiser/dx12/FidelityFX_Denoiser_Sample_2022.sln) demonstrates how to integrate and experiment with FSR™ Ray Regeneration 1.0.0, a real-time ray-tracing denoising solution designed to improve the stability and visual quality of ray-traced lighting signals.
 
-For details on the underlying algorithm, refer to the [FSR™ Ray Regeneration](../../kits/FidelityFX/docs/techniques/denoising.md) technique documentation.
+For details on the underlying algorithm, refer to the [FSR™ Ray Regeneration](../../Kits/FidelityFX/docs/techniques/denoising.md) technique documentation.
 
 ## Table of contents
 
@@ -39,27 +39,27 @@ The tables below summarize the UI elements and what they control within the samp
 
 | **Element name** | **Values** | **Description** |
 | -----------------|------------|-----------------|
-| **Version** | `1.0.0` | Dropdown for specifying the denoiser context version number. The newest context appears first in the list.<br><br>Sets the [`version`](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h#L55) member of the [`ffxCreateContextDescDenoiser`](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h#L52) context creation description. |
-| **Mode** | 4 Signals,<br>2 Signals,<br>1 Signal<br> | Dropdown for specifying the number of signals to denoise.<br><br>Sets the [`mode`](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h#L58) member of the [`ffxCreateContextDescDenoiser`](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h#L52) context creation description. |
-| **Denoise dominant light visibility** | Checked,<br>Unchecked<br> | Checkbox for specifying whether the dominant light visibility should be denoised (as an additional separate signal).<br><br>Sets the [`FFX_DENOISER_ENABLE_DOMINANT_LIGHT`](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h#L41) flag to the [`flags`](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h#L59) member of the [`ffxCreateContextDescDenoiser`](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h#L52) context creation description. |
-| **Enable debugging** | Checked,<br>Unchecked<br> | Checkbox for specifying whether debugging should be enabled.<br><br>Sets the [`FFX_DENOISER_ENABLE_DEBUGGING`](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h#L40) flag to the [`flags`](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h#L59) member of the [`ffxCreateContextDescDenoiser`](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h#L52) context creation description. |
+| **Version** | `1.0.0` | Dropdown for specifying the denoiser context version number. The newest context appears first in the list.<br><br>Sets the [`version`](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h#L55) member of the [`ffxCreateContextDescDenoiser`](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h#L52) context creation description. |
+| **Mode** | 4 Signals,<br>2 Signals,<br>1 Signal<br> | Dropdown for specifying the number of signals to denoise.<br><br>Sets the [`mode`](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h#L58) member of the [`ffxCreateContextDescDenoiser`](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h#L52) context creation description. |
+| **Denoise dominant light visibility** | Checked,<br>Unchecked<br> | Checkbox for specifying whether the dominant light visibility should be denoised (as an additional separate signal).<br><br>Sets the [`FFX_DENOISER_ENABLE_DOMINANT_LIGHT`](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h#L41) flag to the [`flags`](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h#L59) member of the [`ffxCreateContextDescDenoiser`](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h#L52) context creation description. |
+| **Enable debugging** | Checked,<br>Unchecked<br> | Checkbox for specifying whether debugging should be enabled.<br><br>Sets the [`FFX_DENOISER_ENABLE_DEBUGGING`](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h#L40) flag to the [`flags`](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h#L59) member of the [`ffxCreateContextDescDenoiser`](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h#L52) context creation description. |
 
 ### Configure
 
 | **Element name** | **Values** | **Description** |
 | -----------------|------------|-----------------|
-| **History rejection strength** | [0.0, 1.0] | Sets the [`historyRejectionStrength`](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h#L78) member of the [`FfxApiDenoiserSettings`](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h#L76) configuration description. |
-| **Cross bilateral normal strength** | [0.0, 1.0] | Sets the [`crossBilateralNormalStrength`](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h#L79) member of the [`FfxApiDenoiserSettings`](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h#L76) configuration description. |
-| **Stability bias** | [0.0, 1.0] | Sets the [`stabilityBias`](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h#L80) member of the [`FfxApiDenoiserSettings`](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h#L76) configuration description. |
-| **Max radiance** | [0.0, 100000.0] | Sets the [`maxRadiance`](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h#L81) member of the [`FfxApiDenoiserSettings`](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h#L76) configuration description. |
-| **Radiance std clip** | [0.0, 100000.0] | Sets the [`radianceClipStdK`](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h#L82) member of the [`FfxApiDenoiserSettings`](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h#L76) configuration description. |
-| **Gaussian kernel relaxation** | [0.0, 1.0] | Sets the [`gaussianKernelRelaxation`](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h#L83) member of the [`FfxApiDenoiserSettings`](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h#L76) configuration description. |
+| **History rejection strength** | [0.0, 1.0] | Sets the [`historyRejectionStrength`](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h#L78) member of the [`FfxApiDenoiserSettings`](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h#L76) configuration description. |
+| **Cross bilateral normal strength** | [0.0, 1.0] | Sets the [`crossBilateralNormalStrength`](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h#L79) member of the [`FfxApiDenoiserSettings`](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h#L76) configuration description. |
+| **Stability bias** | [0.0, 1.0] | Sets the [`stabilityBias`](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h#L80) member of the [`FfxApiDenoiserSettings`](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h#L76) configuration description. |
+| **Max radiance** | [0.0, 100000.0] | Sets the [`maxRadiance`](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h#L81) member of the [`FfxApiDenoiserSettings`](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h#L76) configuration description. |
+| **Radiance std clip** | [0.0, 100000.0] | Sets the [`radianceClipStdK`](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h#L82) member of the [`FfxApiDenoiserSettings`](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h#L76) configuration description. |
+| **Gaussian kernel relaxation** | [0.0, 1.0] | Sets the [`gaussianKernelRelaxation`](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h#L83) member of the [`FfxApiDenoiserSettings`](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h#L76) configuration description. |
 
 ### Dispatch
 
 | **Element name** | **Values** | **Description** |
 | -----------------|------------|-----------------|
-| **Reset** | NA | Button for resetting the history accumulation.<br><br>Sets the [`FFX_DENOISER_DISPATCH_RESET`](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h#L64) flag on the [`flags`](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h#L116) member of the [`ffxDispatchDescDenoiser`](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h#L89) dispatch description. |
+| **Reset** | NA | Button for resetting the history accumulation.<br><br>Sets the [`FFX_DENOISER_DISPATCH_RESET`](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h#L64) flag on the [`flags`](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h#L116) member of the [`ffxDispatchDescDenoiser`](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h#L89) dispatch description. |
 
 ### Display
 
@@ -70,7 +70,7 @@ The tables below summarize the UI elements and what they control within the samp
 
 ## Setting up FSR™ Ray Regeneration
 
-The sample includes a [dedicated Render Module for FSR™ Ray Regeneration](../../Samples/Denoisers/FidelityFX_Denoiser/dx12/denoiserrendermodule.h) which creates the context and manages its lifetime. See the [FSR™ Ray Regeneration](../../kits/FidelityFX/docs/techniques/denoising.md) technique documentation for more details.
+The sample includes a [dedicated Render Module for FSR™ Ray Regeneration](../../Samples/Denoisers/FidelityFX_Denoiser/dx12/denoiserrendermodule.h) which creates the context and manages its lifetime. See the [FSR™ Ray Regeneration](../../Kits/FidelityFX/docs/techniques/denoising.md) technique documentation for more details.
 
 ## Sample controls and configurations
 
@@ -78,5 +78,5 @@ For information on sample controls, configuration options, and Cauldron Framewor
 
 ## See also
 
-- [FSR™ Ray Regeneration API](../../kits/FidelityFX/denoisers/include/ffx_denoiser.h)
-- [FSR™ Ray Regeneration technique documentation](../../kits/FidelityFX/docs/techniques/denoising.md)
+- [FSR™ Ray Regeneration API](../../Kits/FidelityFX/denoisers/include/ffx_denoiser.h)
+- [FSR™ Ray Regeneration technique documentation](../../Kits/FidelityFX/docs/techniques/denoising.md)
