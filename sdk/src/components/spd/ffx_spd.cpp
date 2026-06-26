@@ -348,7 +348,7 @@ static FfxErrorCode spdCreate(FfxSpdContext_Private* context, const FfxSpdContex
     // Create the atomic buffer resource used as a counter in SPD
     uint32_t atomicInitData[6] = { 0U, 0U, 0U, 0U, 0U, 0U };
     const FfxInternalResourceDescription internalSurfaceDesc = { FFX_SPD_RESOURCE_IDENTIFIER_INTERNAL_GLOBAL_ATOMIC, L"SPD_AtomicCounter", FFX_RESOURCE_TYPE_BUFFER, FFX_RESOURCE_USAGE_UAV,
-            FFX_SURFACE_FORMAT_UNKNOWN, 6 * sizeof(uint32_t), sizeof(uint32_t), 1, FFX_RESOURCE_FLAGS_NONE, sizeof(atomicInitData),& atomicInitData};
+            FFX_SURFACE_FORMAT_UNKNOWN, 6 * sizeof(uint32_t), 6 * sizeof(uint32_t), 1, FFX_RESOURCE_FLAGS_NONE, sizeof(atomicInitData),& atomicInitData};
 
     // Clear the SRV resources to NULL.
     memset(context->srvResources, 0, sizeof(context->srvResources));
