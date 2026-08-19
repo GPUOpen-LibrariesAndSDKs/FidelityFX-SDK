@@ -71,7 +71,7 @@ FFX_API_ENTRY ffxReturnCode_t ffxCreateContext(ffxContext* context, ffxCreateCon
 
 FFX_API_ENTRY ffxReturnCode_t ffxDestroyContext(ffxContext* context, const ffxAllocationCallbacks* memCb)
 {
-    VERIFY(context != nullptr, FFX_API_RETURN_ERROR_PARAMETER);
+    VERIFY(context != nullptr && *context != nullptr, FFX_API_RETURN_ERROR_PARAMETER);
 
     Allocator alloc{memCb};
     ffxProvider* provider = GetAssociatedProvider(*context);
@@ -103,7 +103,7 @@ FFX_API_ENTRY ffxReturnCode_t ffxConfigure(ffxContext* context, const ffxConfigu
     }
     else
     {
-        VERIFY(context != nullptr, FFX_API_RETURN_ERROR_PARAMETER);
+        VERIFY(context != nullptr && *context != nullptr, FFX_API_RETURN_ERROR_PARAMETER);
 
         return GetAssociatedProvider(*context)->Configure(context, header);
     }
@@ -112,6 +112,7 @@ FFX_API_ENTRY ffxReturnCode_t ffxConfigure(ffxContext* context, const ffxConfigu
 FFX_API_ENTRY ffxReturnCode_t ffxQuery(ffxContext* context, ffxQueryDescHeader* header)
 {
     VERIFY(header != nullptr, FFX_API_RETURN_ERROR_PARAMETER);
+    VERIFY(context == nullptr || *context != nullptr, FFX_API_RETURN_ERROR_PARAMETER);
 
     ffxReturnCode_t retCode;
     std::optional<ffxProviderExternal> extProviderSlot;
@@ -161,15 +162,7 @@ FFX_API_ENTRY ffxReturnCode_t ffxQuery(ffxContext* context, ffxQueryDescHeader* 
     }
     else
     {
-        auto provider = GetAssociatedProvider(*context);
-        if (provider)
-        {
-            retCode = provider->Query(context, header);
-        }
-        else
-        {
-            retCode = FFX_API_RETURN_NO_PROVIDER;
-        }
+        retCode = GetAssociatedProvider(*context)->Query(context, header);
     }
 
     return ffxQueryFallback(context, header, retCode);
@@ -178,7 +171,7 @@ FFX_API_ENTRY ffxReturnCode_t ffxQuery(ffxContext* context, ffxQueryDescHeader* 
 FFX_API_ENTRY ffxReturnCode_t ffxDispatch(ffxContext* context, const ffxDispatchDescHeader* desc)
 {
     VERIFY(desc != nullptr, FFX_API_RETURN_ERROR_PARAMETER);
-    VERIFY(context != nullptr, FFX_API_RETURN_ERROR_PARAMETER);
+    VERIFY(context != nullptr && *context != nullptr, FFX_API_RETURN_ERROR_PARAMETER);
 
     return GetAssociatedProvider(*context)->Dispatch(context, desc);
 }
