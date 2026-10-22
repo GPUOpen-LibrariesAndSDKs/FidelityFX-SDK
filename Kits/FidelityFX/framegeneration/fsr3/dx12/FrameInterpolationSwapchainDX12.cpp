@@ -911,7 +911,12 @@ DWORD WINAPI waitableSignalThread(LPVOID param)
 
     while (!presenter->shutdownWaitableSignalThread)
     {
-        SignalObjectAndWait(presenter->waitableObjectSemaphoreHandle, presenter->frameDoneEventHandle, INFINITE, false);
+        // if the semaphore is already at its maximum count (the game does not wait on it every frame) the release fails
+        // and SignalObjectAndWait returns without waiting: drop the token and wait for the next frame instead of spinning
+        if (SignalObjectAndWait(presenter->waitableObjectSemaphoreHandle, presenter->frameDoneEventHandle, INFINITE, false) == WAIT_FAILED)
+        {
+            WaitForSingleObject(presenter->frameDoneEventHandle, INFINITE);
+        }
     }
 
     // this code only is reached when swapchain gets destroyed
