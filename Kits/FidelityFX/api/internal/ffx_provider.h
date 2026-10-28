@@ -93,36 +93,28 @@ inline ffxProvider* GetAssociatedProvider(ffxContext context)
     return reinterpret_cast<InternalContextHeader*>(context)->provider;
 }
 
-#if FFX_BACKEND_DX12
-#include "../../amdinternal/api/internal/dx12/ffx_provider_external.h"
-#else
-typedef char ffxProviderExternal; // fallback type definition for backends without external providers
-#endif
-
 ffxProvider* GetProvider(ffxStructType_t descType, uint64_t overrideId, void* device, std::optional<ffxProviderExternal>& extProviderSlot);
 
 inline ffxProvider* GetProvider(ffxStructType_t descType, uint64_t overrideId, void* device, std::optional<ffxProviderExternal>& extProviderSlot, std::span<ffxProvider* const> providers)
 {
-#if FFX_BACKEND_DX12
+#if defined(FFX_BACKEND_DX12) || defined(FFX_BACKEND_VK)
     // check driver-side provider
-    extProviderSlot.emplace(reinterpret_cast<ID3D12Device*>(device), descType);
+    extProviderSlot.emplace(device, descType);
 #else
     // Unreferenced parameter
     (void)extProviderSlot;
-#endif
+#endif // defined(FFX_BACKEND_DX12) || defined(FFX_BACKEND_VK)
 
     // If we are overriding, do not make the best provider choice decision.
     // Also assume that the version id comes from a previous version enumeration call, meaning assume IsSupported returns true on this device.
     // This is necessary to support queries with a null-context, where device will be null (none of those currently have a device feature requirement).
     if (overrideId)
     {
-#if FFX_BACKEND_DX12
         if (extProviderSlot && extProviderSlot->Valid())
         {
             if (extProviderSlot->GetId() == overrideId && extProviderSlot->CanProvide(descType) && extProviderSlot->IsSupported(device))
                 return &*extProviderSlot;
         }
-#endif
 
         for (auto provider : providers)
         {
@@ -142,7 +134,6 @@ inline ffxProvider* GetProvider(ffxStructType_t descType, uint64_t overrideId, v
             }
         }
 
-#if FFX_BACKEND_DX12
         // we assume that external providers are vetted for hardware support by the driver, so no call to IsSupported.
         if (extProviderSlot && extProviderSlot->Valid() && extProviderSlot->CanProvide(descType) && extProviderSlot->IsSupported(device))
         {
@@ -163,7 +154,6 @@ inline ffxProvider* GetProvider(ffxStructType_t descType, uint64_t overrideId, v
                 return &*extProviderSlot;
             }
         }
-#endif
 
         return bestInternalProvider;
     }
@@ -177,10 +167,16 @@ inline uint64_t GetProviderVersions(ffxStructType_t descType, void* device, uint
 {
     uint64_t count = 0;
 
-#if FFX_BACKEND_DX12
     // check driver-side provider
-    extProviderSlot.emplace(reinterpret_cast<ID3D12Device*>(device), descType);
-    static char extProviderName[64];
+#if defined(FFX_BACKEND_DX12) || defined(FFX_BACKEND_VK)
+    // check driver-side provider
+    extProviderSlot.emplace(device, descType);
+#else
+    // Unreferenced parameter
+    (void)extProviderSlot;
+#endif // defined(FFX_BACKEND_DX12) || defined(FFX_BACKEND_VK)
+
+    static char extProviderNames[FFX_API_EFFECT_COUNT][64] = {};
 
     // In order to eliminate redundant driver versions of each effect, first gather what is in the Game SDK
     uint64_t* sdk_versions = (uint64_t*)alloca(providers.size() * sizeof(uint64_t));
@@ -233,16 +229,14 @@ inline uint64_t GetProviderVersions(ffxStructType_t descType, void* device, uint
                 if (versionNames)
                 {
                     // this needs to be copied. points into dll, which may not outlive the caller.
-                    strncpy_s(extProviderName, extProviderSlot->GetVersionName(), sizeof(extProviderName));
+                    const uint32_t effectIndex = ((descType & FFX_API_EFFECT_MASK) >> 16u) - 1u;
+                    char* extProviderName = extProviderNames[effectIndex];
+                    strncpy_s(extProviderName, sizeof(extProviderNames[effectIndex]), extProviderSlot->GetVersionName(), _TRUNCATE);
                     versionNames[index] = extProviderName;
                 }
             }
         }
     }
-#else
-    // Unreferenced parameter
-    (void)extProviderSlot;
-#endif
 
     for (auto provider : providers)
     {

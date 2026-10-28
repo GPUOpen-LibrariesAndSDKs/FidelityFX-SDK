@@ -22,10 +22,6 @@
 
 #pragma once
 #include "../include/gpu/fsr3upscaler/ffx_fsr3upscaler_resources.h"
-#ifndef _GAMING_XBOX
-#include "../../../amdinternal/api/internal/ffx_watermark.h"
-#include <optional>
-#endif
 
 /// An enumeration of all the permutations that can be passed to the FSR3 Upscaler algorithm.
 ///
@@ -120,9 +116,6 @@ typedef struct FfxFsr3UpscalerContext_Private {
     float                               preExposure;
     float                               previousFramePreExposure;
 
-#ifndef _GAMING_XBOX
-    std::optional<FfxWatermark>         watermark;
-#endif
 } FfxFsr3UpscalerContext_Private;
 
 // declare fsr3UpscalerCreate so it can be used from fsr3

@@ -44,7 +44,7 @@
 #include "../../../api/internal/gpu/ffx_core.h"
 #include "../../../api/internal/ffx_object_management.h"
 #if !defined(_GAMING_XBOX)
-#include "../../../amdinternal/api/internal/git_hash_branch.h"
+#include "git_hash_branch.h"
 #endif // !defined(_GAMING_XBOX)
 #include "../include/gpu/fsr1/ffx_fsr1.h"
 #include "../include/gpu/spd/ffx_spd.h"
@@ -192,8 +192,6 @@ static float halton(int32_t index, int32_t base)
 
     return result;
 }
-
-#ifndef BUILD_AMDXCFFX //exclude FSR3 code when building driver DLL to reduce dependencies
 
 static void fsr3upscalerDebugCheckDispatch(FfxFsr3UpscalerContext_Private* context, const FfxFsr3UpscalerDispatchDescription* params)
 {
@@ -595,15 +593,6 @@ static FfxErrorCode fsr3upscalerCreate(FfxFsr3UpscalerContext_Private* context, 
     FfxErrorCode errorCode = context->contextDescription.backendInterface.fpCreateBackendContext(&context->contextDescription.backendInterface, FFX_EFFECT_FSR3UPSCALER, nullptr, &context->effectContextId);
     FFX_RETURN_ON_ERROR(errorCode == FFX_OK, errorCode);
 
-#ifndef _GAMING_XBOX
-    size_t envVarExists = 0;
-    getenv_s(&envVarExists, nullptr, 0, "MLSR-WATERMARK");
-    if (envVarExists)
-    {
-        context->watermark.emplace(&context->contextDescription.backendInterface, context->effectContextId);
-    }
-#endif
-
     // call out for device caps.
     errorCode = context->contextDescription.backendInterface.fpGetDeviceCapabilities(&context->contextDescription.backendInterface, &context->deviceCapabilities);
     FFX_RETURN_ON_ERROR(errorCode == FFX_OK, errorCode);
@@ -684,9 +673,6 @@ static FfxErrorCode fsr3upscalerRelease(FfxFsr3UpscalerContext_Private* context)
     ffxSafeReleasePipeline(&context->contextDescription.backendInterface, &context->pipelineShadingChangePyramid, context->effectContextId);
     ffxSafeReleasePipeline(&context->contextDescription.backendInterface, &context->pipelineLumaInstability, context->effectContextId);
     ffxSafeReleasePipeline(&context->contextDescription.backendInterface, &context->pipelineDebugView, context->effectContextId);
-#ifndef _GAMING_XBOX
-    context->watermark = std::nullopt; // calls destructor
-#endif
 
     // Unregister external resources
     context->srvResources[FFX_FSR3UPSCALER_RESOURCE_IDENTIFIER_INPUT_TRANSPARENCY_AND_COMPOSITION_MASK] = { FFX_FSR3UPSCALER_RESOURCE_IDENTIFIER_NULL };
@@ -1187,25 +1173,6 @@ static FfxErrorCode fsr3upscalerDispatch(FfxFsr3UpscalerContext_Private* context
         scheduleDispatch(context, params, &context->pipelineDebugView, dispatchDstX, dispatchDstY);
     }
 
-#ifndef _GAMING_XBOX
-    if (context->watermark)
-    {
-#if defined(AMDXCFFX64)
-        const char* source = "Driver";
-#else
-        const char* source = "Local";
-#endif
-        const char* colorspace = (context->contextDescription.flags & FFX_FSR3UPSCALER_ENABLE_HIGH_DYNAMIC_RANGE) ? "LINEAR" : "NON-LINEAR";
-
-        char message[512];
-        snprintf(message, sizeof(message),
-            "FSR3 Upscale - Source: %s\nBuild Time: %s %s\nGit branch: %s  commit: %s\nColorspace: %s",
-            source, __DATE__, __TIME__, GIT_COMMIT_SUBJECT, GIT_HASH, colorspace);
-
-        context->watermark->Dispatch(context->uavResources[FFX_FSR3UPSCALER_RESOURCE_IDENTIFIER_UPSCALED_OUTPUT], message);
-    }
-#endif
-
     context->resourceFrameIndex = (context->resourceFrameIndex + 1) % FSR3UPSCALER_MAX_QUEUED_FRAMES;
 
     // Fsr3UpscalerMaxQueuedFrames must be an even number.
@@ -1233,7 +1200,6 @@ FFX_API FfxErrorCode ffxFsr3UpscalerContextCreate(FfxFsr3UpscalerContext* contex
         FFX_ERROR_INVALID_POINTER);
 
     // validate that all callbacks are set for the interface
-    FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpGetSDKVersion, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpGetDeviceCapabilities, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpCreateBackendContext, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpDestroyBackendContext, FFX_ERROR_INCOMPLETE_INTERFACE);
@@ -1381,7 +1347,6 @@ FfxErrorCode ffxFsr3UpscalerContextDispatch(FfxFsr3UpscalerContext* context, con
     const FfxErrorCode errorCode = fsr3upscalerDispatch(contextPrivate, dispatchParams);
     return errorCode;
 }
-#endif // #ifndef BUILD_AMDXCFFX
 
 FFX_API float ffxFsr3UpscalerGetUpscaleRatioFromQualityMode(FfxApiUpscaleQualityMode qualityMode)
 {

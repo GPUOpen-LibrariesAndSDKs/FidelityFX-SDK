@@ -1,4 +1,4 @@
-<!-- @page page_getting-started_sdk-structure FSR™ SDK Structure -->
+<!-- @page page_getting-started_sdk-structure AMD FSR™ SDK Structure -->
 
 <h1>FSR™ SDK Structure</h1>
 
@@ -17,7 +17,7 @@ The SDK contains everything needed to ship all of our FSR™ effects in your app
 
 <h3>Libraries and DLLs</h3>
 
-A collection of pre-built runtime libraries to automate the usage of the FSR™ SDK and make integration as simple as possible.
+A collection of pre-built runtime libraries to automate the usage of the AMD FSR™ SDK and make integration as simple as possible.
 
 <h2>Docs</h2>
 

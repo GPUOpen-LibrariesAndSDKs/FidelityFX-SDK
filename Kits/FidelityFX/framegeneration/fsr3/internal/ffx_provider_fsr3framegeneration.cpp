@@ -38,6 +38,9 @@ bool ffxProvider_Fsr3FrameGeneration::CanProvide(uint64_t type) const
 
 const uint32_t MAX_QUEUED_FRAMES = 2;
 
+#pragma FFX_PRAGMA_WARNING_PUSH
+#pragma FFX_PRAGMA_WARNING_DISABLE_DEPRECATIONS
+
 struct InternalFgContext
 {
     InternalContextHeader header;
@@ -73,6 +76,8 @@ struct InternalFgContext
     uint32_t debugLevel;
 
 };
+
+#pragma FFX_PRAGMA_WARNING_POP
 
 #define STRINGIFY_(X) #X
 #define STRINGIFY(X) STRINGIFY_(X) 
@@ -240,7 +245,13 @@ ffxReturnCode_t ffxProvider_Fsr3FrameGeneration::Configure(ffxContext* context, 
         // Skip setting up the callback if no swapchain context notification is requested, this will avoid ABI checks and allow for run configure without swapchain
         if (!(config.flags & FFX_FRAMEGENERATION_FLAG_NO_SWAPCHAIN_CONTEXT_NOTIFY))
         {
+        #ifdef FFX_BACKEND_VK
+            FfxABIVersion version = FFX_ABI_VALID;
+        #elif FFX_BACKEND_XBOX
+            FfxABIVersion version = FFX_ABI_VALID; // No override ability on xbox yet
+        #else
             FfxABIVersion version = internal_context->backendInterfaceFi.fpGetSwapchainABI(desc->swapChain);
+        #endif
             VERIFY(version != FfxABIVersion::FFX_ABI_INVALID && version != FfxABIVersion::FFX_ABI_OLD, FFX_API_RETURN_ERROR_RUNTIME_ERROR);
 
             config.frameGenerationCallback = nullptr;
@@ -471,6 +482,18 @@ ffxReturnCode_t ffxProvider_Fsr3FrameGeneration::Configure(ffxContext* context, 
 
         return FFX_API_RETURN_OK;
     }
+    if (auto desc = ffx::DynamicCast<ffxConfigureDescGlobalDebug>(header))
+    {
+        TRY2(ffxFrameInterpolationSetGlobalDebugMessage(reinterpret_cast<ffxMessageCallback>(desc->fpMessage), desc->debugLevel));
+
+        // Grab this fp for use in extensions later
+        internal_context->fpMessage = desc->fpMessage;
+        internal_context->debugLevel = desc->debugLevel;
+
+        return FFX_API_RETURN_OK;
+    }
+    #pragma FFX_PRAGMA_WARNING_PUSH
+    #pragma FFX_PRAGMA_WARNING_DISABLE_DEPRECATIONS
     if (auto desc = ffx::DynamicCast<ffxConfigureDescGlobalDebug1>(header))
     {
         TRY2(ffxFrameInterpolationSetGlobalDebugMessage( reinterpret_cast<ffxMessageCallback>(desc->fpMessage),
@@ -482,6 +505,7 @@ ffxReturnCode_t ffxProvider_Fsr3FrameGeneration::Configure(ffxContext* context, 
 
         return FFX_API_RETURN_OK;
     }
+    #pragma FFX_PRAGMA_WARNING_POP
     else
     {
         return FFX_API_RETURN_ERROR_PARAMETER;
@@ -548,6 +572,8 @@ ffxReturnCode_t ffxProvider_Fsr3FrameGeneration::Query(ffxContext* context, ffxQ
     }
 }
 
+#pragma FFX_PRAGMA_WARNING_PUSH
+#pragma FFX_PRAGMA_WARNING_DISABLE_DEPRECATIONS
 ffxReturnCode_t ffxProvider_Fsr3FrameGeneration::Dispatch(ffxContext* context, const ffxDispatchDescHeader* header) const
 {
     VERIFY(context, FFX_API_RETURN_ERROR_PARAMETER);
@@ -624,12 +650,12 @@ ffxReturnCode_t ffxProvider_Fsr3FrameGeneration::Dispatch(ffxContext* context, c
             }
             else
             {
-                fiDispatchDesc.interpolationRect.top    = desc->generationRect.top;
                 fiDispatchDesc.interpolationRect.left   = desc->generationRect.left;
+                fiDispatchDesc.interpolationRect.top    = desc->generationRect.top;
                 fiDispatchDesc.interpolationRect.width  = desc->generationRect.width;
                 fiDispatchDesc.interpolationRect.height = desc->generationRect.height;
             }
-            
+
             if (internal_context->frameGenFlags & FFX_FRAMEGENERATION_FLAG_DRAW_DEBUG_TEAR_LINES)
             {
                 fiDispatchDesc.flags |= FFX_FRAMEINTERPOLATION_DISPATCH_DRAW_DEBUG_TEAR_LINES;
@@ -673,57 +699,78 @@ ffxReturnCode_t ffxProvider_Fsr3FrameGeneration::Dispatch(ffxContext* context, c
         break;
     }
 
-#pragma FFX_PRAGMA_WARNING_PUSH
-#pragma FFX_PRAGMA_WARNING_DISABLE_DEPRECATIONS
-
     case FFX_API_DISPATCH_DESC_TYPE_FRAMEGENERATION_PREPARE:
     case FFX_API_DISPATCH_DESC_TYPE_FRAMEGENERATION_PREPARE_V2:
     {
-        ffxDispatchDescFrameGenerationPrepareV2* desc;
-        if (header->type == FFX_API_DISPATCH_DESC_TYPE_FRAMEGENERATION_PREPARE)
+        ffxDispatchDescFrameGenerationPrepareV2* desc = {};
+        constexpr size_t startOffset = sizeof(ffxDispatchDescHeader);
+        constexpr size_t copySize = sizeof(ffxDispatchDescFrameGenerationPrepare) - startOffset;
+
+        float cameraPosition[3] = {0};
+        float cameraUp[3]       = {0};
+        float cameraRight[3]    = {0};
+        float cameraForward[3]  = {0};
+
         {
-            const ffxDispatchDescFrameGenerationPrepare* desc_v1 = reinterpret_cast<const ffxDispatchDescFrameGenerationPrepare*>(header);
-
-            desc = &internal_context->prepareDescriptions[desc_v1->frameID % MAX_QUEUED_FRAMES];
-
-            memcpy(desc, desc_v1, sizeof(ffxDispatchDescFrameGenerationPrepare));
-            desc->reset = false;
-
-            bool bCameraInfoPresent = false;
-            for (auto it = header; it; it = it->pNext)
+            if (header->type == FFX_API_DISPATCH_DESC_TYPE_FRAMEGENERATION_PREPARE)
             {
-                if (auto cameraInfoDesc = ffx::DynamicCast<ffxDispatchDescFrameGenerationPrepareCameraInfo>(it))
+                const ffxDispatchDescFrameGenerationPrepare* desc_v1 = reinterpret_cast<const ffxDispatchDescFrameGenerationPrepare*>(header);
+                desc                                                 = &internal_context->prepareDescriptions[desc_v1->frameID % MAX_QUEUED_FRAMES];
+
+                memcpy(reinterpret_cast<char*>(desc) + startOffset, reinterpret_cast<const char*>(desc_v1) + startOffset, copySize);
+                desc->reset = false;
+
+                bool bCameraInfoPresent = false;
+                for (auto it = header; it; it = it->pNext)
                 {
-                        memcpy(desc->cameraPosition, &cameraInfoDesc->cameraPosition, sizeof(FfxFloat32x3));
-                        memcpy(desc->cameraUp, &cameraInfoDesc->cameraUp, sizeof(FfxFloat32x3));
-                        memcpy(desc->cameraRight, &cameraInfoDesc->cameraRight, sizeof(FfxFloat32x3));
-                        memcpy(desc->cameraForward, &cameraInfoDesc->cameraForward, sizeof(FfxFloat32x3));
+                    if (auto cameraInfoDesc = ffx::DynamicCast<ffxDispatchDescFrameGenerationPrepareCameraInfo>(it))
+                    {
+                        memcpy(cameraPosition, &cameraInfoDesc->cameraPosition, sizeof(FfxFloat32x3));
+                        memcpy(cameraUp, &cameraInfoDesc->cameraUp, sizeof(FfxFloat32x3));
+                        memcpy(cameraRight, &cameraInfoDesc->cameraRight, sizeof(FfxFloat32x3));
+                        memcpy(cameraForward, &cameraInfoDesc->cameraForward, sizeof(FfxFloat32x3));
                         bCameraInfoPresent = true;
+                    }
                 }
+
+                if (internal_context->debugCheckEnabled)
+                {
+                    FFX_PRINT_MESSAGE_ONCE(FFX_API_MESSAGE_TYPE_WARNING, L"ffxDispatchDescFrameGenerationPrepare is deprecated, update to ffxDispatchDescFrameGeneration" FFX_FRAMEGENERATION_PREPARE_REPLACEMENT_SUFFIX L".");
+
+                    if (desc_v1->unused_reset)
+                    {
+                        FFX_PRINT_MESSAGE(FFX_API_MESSAGE_TYPE_WARNING, L"ffxDispatchDescFrameGenerationPrepare::unused_reset was never implemented and will be ignored, update to ffxDispatchDescFrameGeneration" FFX_FRAMEGENERATION_PREPARE_REPLACEMENT_SUFFIX L"::reset.");
+                    }
+                    if (!bCameraInfoPresent)
+                    {
+                        FFX_PRINT_MESSAGE(FFX_API_MESSAGE_TYPE_WARNING, L"ffxDispatchDescFrameGenerationPrepareCameraInfo is not linked to ffxDispatchDescFrameGenerationPrepare. Camera view matrix data is a prerequisite for MLFI provider enablement.");
+                    }
+                }
+            } 
+            else 
+            {
+                const ffxDispatchDescFrameGenerationPrepareV2* desc_v2 = reinterpret_cast<const ffxDispatchDescFrameGenerationPrepareV2*>(header);
+                desc                                                   = &internal_context->prepareDescriptions[desc_v2->frameID % MAX_QUEUED_FRAMES];
+                memcpy(desc, desc_v2, sizeof(*desc));
+
+                memcpy(cameraPosition, &desc_v2->cameraPosition, sizeof(FfxFloat32x3));
+                memcpy(cameraUp, &desc_v2->cameraUp, sizeof(FfxFloat32x3));
+                memcpy(cameraRight, &desc_v2->cameraRight, sizeof(FfxFloat32x3));
+                memcpy(cameraForward, &desc_v2->cameraForward, sizeof(FfxFloat32x3));
+
             }
 
             if (internal_context->debugCheckEnabled)
             {
-                FFX_PRINT_MESSAGE_ONCE(FFX_API_MESSAGE_TYPE_WARNING, L"ffxDispatchDescFrameGenerationPrepare is deprecated, update to ffxDispatchDescFrameGenerationPrepareV2.");
-
-                if (desc_v1->unused_reset)
+                static const FfxFloat32x3 zeroVector3D = {0.f, 0.f, 0.f};
+                if ((memcmp(cameraPosition, zeroVector3D, sizeof(FfxFloat32x3)) == 0) &&
+                    (memcmp(cameraUp,       zeroVector3D, sizeof(FfxFloat32x3)) == 0) &&
+                    (memcmp(cameraRight,    zeroVector3D, sizeof(FfxFloat32x3)) == 0) &&
+                    (memcmp(cameraForward,  zeroVector3D, sizeof(FfxFloat32x3)) == 0))
                 {
-                    FFX_PRINT_MESSAGE(FFX_API_MESSAGE_TYPE_WARNING, L"ffxDispatchDescFrameGenerationPrepare::unused_reset was never implemented and will be ignored, update to ffxDispatchDescFrameGenerationPrepareV2::reset.");
-                }
-                if (!bCameraInfoPresent)
-                {
-                    FFX_PRINT_MESSAGE(FFX_API_MESSAGE_TYPE_WARNING, L"ffxDispatchDescFrameGenerationPrepareCameraInfo is not linked to ffxDispatchDescFrameGenerationPrepare. Camera view matrix data is a prerequisite for MLFI provider enablement.");
+                    FFX_PRINT_MESSAGE(FFX_API_MESSAGE_TYPE_WARNING, L"Camera view matrix parameters (cameraPosition, cameraUp, cameraRight, cameraForward) are all zero vectors, indicating they remain at their default initialized values. These parameters must be properly set by the application for optimal MLFI quality.");
                 }
             }
-
-#pragma FFX_PRAGMA_WARNING_POP
-
-        }
-        else   
-        {
-            const ffxDispatchDescFrameGenerationPrepareV2* desc_v2 = reinterpret_cast<const ffxDispatchDescFrameGenerationPrepareV2*>(header);
-            memcpy(&internal_context->prepareDescriptions[desc_v2->frameID % MAX_QUEUED_FRAMES], desc_v2, sizeof(ffxDispatchDescFrameGenerationPrepareV2));
-            desc = &internal_context->prepareDescriptions[desc_v2->frameID % MAX_QUEUED_FRAMES];
         }
 
         internal_context->sharedResoureFrameToggle = (internal_context->sharedResoureFrameToggle + 1) & 1;
@@ -750,23 +797,6 @@ ffxReturnCode_t ffxProvider_Fsr3FrameGeneration::Dispatch(ffxContext* context, c
         dispatchDesc.dilatedMotionVectors = internal_context->backendInterfaceShared.fpGetResource( &internal_context->backendInterfaceShared, internal_context->sharedResources[FFX_FSR3_RESOURCE_IDENTIFIER_DILATED_MOTION_VECTORS_0 + (internal_context->sharedResoureFrameToggle * FFX_FSR3_RESOURCE_IDENTIFIER_UPSCALED_COUNT)]);
         dispatchDesc.reconstructedPrevDepth = internal_context->backendInterfaceShared.fpGetResource( &internal_context->backendInterfaceShared, internal_context->sharedResources[FFX_FSR3_RESOURCE_IDENTIFIER_RECONSTRUCTED_PREVIOUS_NEAREST_DEPTH_0 + (internal_context->sharedResoureFrameToggle * FFX_FSR3_RESOURCE_IDENTIFIER_UPSCALED_COUNT)]);
 
-        memcpy(dispatchDesc.cameraPosition, &desc->cameraPosition, sizeof(FfxFloat32x3));
-        memcpy(dispatchDesc.cameraUp, &desc->cameraUp, sizeof(FfxFloat32x3));
-        memcpy(dispatchDesc.cameraRight, &desc->cameraRight, sizeof(FfxFloat32x3));
-        memcpy(dispatchDesc.cameraForward, &desc->cameraForward, sizeof(FfxFloat32x3));
-
-        if (internal_context->debugCheckEnabled)
-        {
-            static const FfxFloat32x3 zeroVector3D = { 0.f,0.f,0.f };
-            if ((memcmp(desc->cameraPosition, zeroVector3D, sizeof(FfxFloat32x3)) == 0) &&
-                (memcmp(desc->cameraUp, zeroVector3D, sizeof(FfxFloat32x3)) == 0) &&
-                (memcmp(desc->cameraRight, zeroVector3D, sizeof(FfxFloat32x3)) == 0) &&
-                (memcmp(desc->cameraForward, zeroVector3D, sizeof(FfxFloat32x3)) == 0))
-            {
-                FFX_PRINT_MESSAGE(FFX_API_MESSAGE_TYPE_WARNING, L"Camera view matrix parameters (cameraPosition, cameraUp, cameraRight, cameraForward) are all zero vectors, indicating they remain at their default initialized values. These parameters must be properly set by the application for optimal MLFI quality.");
-            }
-        }
-
         TRY2(ffxFrameInterpolationPrepare(&internal_context->fiContext, &dispatchDesc));
 
         break;
@@ -779,6 +809,8 @@ ffxReturnCode_t ffxProvider_Fsr3FrameGeneration::Dispatch(ffxContext* context, c
 
     return FFX_API_RETURN_OK;
 }
+
+#pragma FFX_PRAGMA_WARNING_POP
 
 ffxProvider_Fsr3FrameGeneration& ffxProvider_Fsr3FrameGeneration::GetInstance()
 {

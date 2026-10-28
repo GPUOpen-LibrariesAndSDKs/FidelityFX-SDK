@@ -24,5 +24,5 @@ None.
 
 <h2>Deprecated components</h2>
 
-AMD FidelityFX™ Cauldron Framework 1.x is now deprecated and has been replaced with a re-architected Cauldron 2, which now lives directly in the SDK under the [`framework`](../../../Cauldron2/dx12/framework) folder.
+AMD FidelityFX™ Cauldron Framework 1.x is now deprecated and has been replaced with a re-architected Cauldron 2, which now lives directly in the SDK under the [`framework`](../../../Cauldron2/framework) folder.
 

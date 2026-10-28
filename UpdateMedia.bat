@@ -23,7 +23,7 @@
 @echo off
 
 :: Known bundle SHA256 hash to attempt to download
-SET default_bundle_sha256=48cfdbd0b65a2429b1078d820e4ad9bc115c356afda705325a94494cf6cf8e01
+SET default_bundle_sha256=b4719284d65a4a936d608eb470402f5cd6676328ea65862556516bb653f2a1aa
 
 SET ffx_sdk_root="%~dp0"
 

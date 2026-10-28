@@ -59,7 +59,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_WINDOWS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;_WINDOWS;_DX12;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\Kits\Cauldron2\dx12\vcpkg_installed\x64-windows\x64-windows\include;$(ProjectDir)..\..\..\..\Kits\FidelityFX\api\include;$(ProjectDir)..\..\..\..\Kits\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -82,7 +82,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_WINDOWS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;_WINDOWS;_DX12;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\Kits\Cauldron2\dx12\vcpkg_installed\x64-windows\x64-windows\include;$(ProjectDir)..\..\..\..\Kits\FidelityFX\api\include;$(ProjectDir)..\..\..\..\Kits\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -103,23 +103,50 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="debugoverlayrendermodule.cpp" />
-    <ClCompile Include="fsrapirendermodule.cpp" />
-    <ClCompile Include="main.cpp" />
     <ClCompile Include="denoiserrendermodule.cpp" />
+    <ClCompile Include="denoisersettingshandler.cpp" />
+    <ClCompile Include="fsrapirendermodule.cpp" />
+    <ClCompile Include="fsrsettingshandler.cpp" />
+    <ClCompile Include="main.cpp" />
     <ClCompile Include="pathtracingrendermodule.cpp" />
     <ClCompile Include="sample.cpp" />
+    <ClCompile Include="sampleautomation.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="debugoverlayrendermodule.h" />
     <ClInclude Include="denoiserrendermodule.h" />
+    <ClInclude Include="denoisersettingshandler.h" />
     <ClInclude Include="fsrapirendermodule.h" />
+    <ClInclude Include="fsrsettingshandler.h" />
     <ClInclude Include="pathtracingrendermodule.h" />
     <ClInclude Include="resources\resource.h" />
     <ClInclude Include="sample.h" />
-    <None Include="shaders\geometry.hlsl">
-      <FileType>Document</FileType>
-    </None>
-    <None Include="shaders\shared.h" />
+    <ClInclude Include="sampleautomation.h" />
+    <ClInclude Include="shaders\DenoisingData.h" />
+    <ClInclude Include="shaders\PackedData.h" />
+    <ClInclude Include="shaders\PathTracingData.h" />
+    <ClInclude Include="shaders\DebugOverlayData.h" />
+    <ClInclude Include="shaders\Types.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\Basis.hlsli" />
+    <None Include="shaders\Bindings.hlsli" />
+    <None Include="shaders\Color.hlsli" />
+    <None Include="shaders\DebugOverlay.cs.hlsl" />
+    <None Include="shaders\DenoisingCompose.cs.hlsl" />
+    <None Include="shaders\DenoisingPrepare.cs.hlsl" />
+    <None Include="shaders\Dispatch.hlsli" />
+    <None Include="shaders\Geometry.hlsli" />
+    <None Include="shaders\Lighting.hlsli" />
+    <None Include="shaders\Material.hlsli" />
+    <None Include="shaders\Numeric.hlsli" />
+    <None Include="shaders\PathTracing.cs.hlsl" />
+    <None Include="shaders\PathTracing.hlsli" />
+    <None Include="shaders\Random.hlsli" />
+    <None Include="shaders\Sampling.hlsli" />
+    <None Include="shaders\Shadow.hlsli" />
+    <None Include="shaders\Transformation.hlsli" />
+    <None Include="shaders\UnitVector.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <None Include="config\denoiserconfig.json" />
@@ -131,40 +158,6 @@
   <ItemGroup>
     <Image Include="resources\GPUOpenChip.ico" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="shaders\common.hlsl">
-      <FileType>Document</FileType>
-    </None>
-    <None Include="shaders\importance_sampling.hlsl">
-      <FileType>Document</FileType>
-    </None>
-    <None Include="shaders\material.hlsl">
-      <FileType>Document</FileType>
-    </None>
-    <None Include="shaders\denoiser_compose.hlsl">
-      <FileType>Document</FileType>
-    </None>
-    <None Include="shaders\denoiser_prepass.hlsl">
-      <FileType>Document</FileType>
-    </None>
-    <None Include="shaders\trace_rays_denoiser.hlsl">
-      <FileType>Document</FileType>
-    </None>
-    <None Include="shaders\random.hlsl">
-      <FileType>Document</FileType>
-    </None>
-    <None Include="shaders\raytracing_common.hlsl">
-      <FileType>Document</FileType>
-    </None>
-    <None Include="shaders\types.hlsl">
-      <FileType>Document</FileType>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="shaders\debug_overlay.hlsl">
-      <FileType>Document</FileType>
-    </None>
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(SolutionDir)packages\WinPixEventRuntime.1.0.240308001\build\WinPixEventRuntime.targets" Condition="Exists('$(SolutionDir)packages\WinPixEventRuntime.1.0.240308001\build\WinPixEventRuntime.targets')" />
@@ -173,40 +166,33 @@
   </ImportGroup>
   <Target Name="CopyRequiredDlls" AfterTargets="Build">
     <Message Importance="high" Text="Copying required FidelityFX DLLs..." />
-    
     <!-- Copy config file -->
     <MakeDir Directories="$(OutDir)configs" />
     <Copy SourceFiles="$(ProjectDir)config\denoiserconfig.json" DestinationFolder="$(OutDir)configs\" />
-    
     <!-- Copy shaders directory -->
     <MakeDir Directories="$(OutDir)shaders" />
     <ItemGroup>
       <ShaderFiles Include="$(ProjectDir)shaders\*" />
     </ItemGroup>
     <Copy SourceFiles="@(ShaderFiles)" DestinationFolder="$(OutDir)shaders\" />
-    
     <!-- Copy Loader DLLs -->
     <Copy SourceFiles="$(FfxDllPathLoader)amd_fidelityfx_loader_dx12.dll" DestinationFolder="$(OutDir)" />
     <Copy SourceFiles="$(FfxDllPathLoader)amd_fidelityfx_loader_dx12.pdb" DestinationFolder="$(OutDir)" Condition="Exists('$(FfxDllPathLoader)amd_fidelityfx_loader_dx12.pdb')" />
-    
     <!-- Copy Upscaler DLLs -->
     <Copy SourceFiles="$(FfxDllPathUpscaler)amd_fidelityfx_upscaler_dx12.dll" DestinationFolder="$(OutDir)" />
     <Copy SourceFiles="$(FfxDllPathUpscaler)amd_fidelityfx_upscaler_dx12.pdb" DestinationFolder="$(OutDir)" Condition="Exists('$(FfxDllPathUpscaler)amd_fidelityfx_upscaler_dx12.pdb')" />
-    
     <!-- Copy Denoiser DLLs -->
     <Copy SourceFiles="$(FfxDllPathDenoiser)amd_fidelityfx_denoiser_dx12.dll" DestinationFolder="$(OutDir)" />
     <Copy SourceFiles="$(FfxDllPathDenoiser)amd_fidelityfx_denoiser_dx12.pdb" DestinationFolder="$(OutDir)" Condition="Exists('$(FfxDllPathDenoiser)amd_fidelityfx_denoiser_dx12.pdb')" />
-    
     <!-- Copy AMD library DLLs -->
     <Copy SourceFiles="$(ProjectDir)..\..\..\..\Kits\OpenSource\amd\acs\amd_acs_x64.dll" DestinationFolder="$(OutDir)" />
     <Copy SourceFiles="$(ProjectDir)..\..\..\..\Kits\OpenSource\amd\ags\amd_ags_x64.dll" DestinationFolder="$(OutDir)" />
-    
     <!-- Copy vcpkg runtime dependencies -->
     <ItemGroup>
       <VcpkgBinFiles Include="$(ProjectDir)..\..\..\..\Kits\Cauldron2\dx12\vcpkg_installed\x64-windows\x64-windows\bin\*" />
     </ItemGroup>
     <Copy SourceFiles="@(VcpkgBinFiles)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
-    
     <Message Importance="high" Text="Successfully copied all required DLLs" />
+
   </Target>
 </Project>

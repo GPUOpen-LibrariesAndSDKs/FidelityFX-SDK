@@ -1,4 +1,4 @@
-﻿<!-- @page page_techniques_frame-interpolation AMD FidelityFX™ Super Resolution Frame Interpolation 3.1.6 -->
+﻿<!-- @page page_techniques_frame-interpolation AMD FidelityFX™ Super Resolution Frame Generation 3.1.6 -->
 
 <h1>AMD FidelityFX™ Super Resolution Frame Generation 3.1.6</h1>
 
@@ -59,7 +59,8 @@ Refer to changelog for more detail on versions.
 <h2>See also</h2>
 
 - [AMD FSR™ Frame Generation API](frame-interpolation-api.md)
-- [AMD FSR™ Frame Generation 4.0.1](frame-interpolation-ml.md)
-- [AMD FidelityFX™ Super Resolution Frame Generation Swapchain 3.1.7](frame-interpolation-swap-chain.md)
+- [AMD FSR™ Frame Generation 4.0.2](frame-interpolation-ml.md)
+- [AMD FidelityFX™ Super Resolution Frame Generation (Swapchain) 3.1.7](frame-interpolation-swap-chain.md)
+- [AMD FSR™ Frame Generation (Swapchain) 4.0.0](frame-interpolation-swap-chain.md)
 - [AMD FSR™ Upscaling and Frame Generation Sample](../../../../docs/samples/super-resolution.md)
 - [AMD FSR™ Naming guidelines](../getting-started/naming-guidelines.md)

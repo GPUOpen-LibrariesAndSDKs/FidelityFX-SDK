@@ -38,3 +38,5 @@ inline ffxReturnCode_t MustCreateBackend(const ffxCreateContextDescHeader* desc,
 void* GetDevice(const ffxApiHeader* desc);
 
 FfxErrorCode GetResourceSizeFromDescription(FfxDevice device, const FfxCreateResourceDescription* createResourceDescription, uint64_t* sizeInBytes, uint64_t* alignment = nullptr);
+
+FfxErrorCode GetBackendContextGpuMemoryUsage(FfxDevice device, size_t contextCount, uint64_t* byteCount);

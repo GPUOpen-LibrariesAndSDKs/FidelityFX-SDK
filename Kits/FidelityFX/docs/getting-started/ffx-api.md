@@ -14,23 +14,32 @@ Arguments are passed via a linked list of descriptor structs. Each struct contai
 
 An application using the AMD FSR™ API must use one of the provided signed DLLs. This can be loaded at runtime with `LoadLibrary` and `GetProcAddress` (this is recommended) or at application startup using the dynamic linker via the .lib file.
 
-Backend-specific functionality (currently only for DirectX 12) is only supported through the corresponding DLL.
-
 For convenience in C++ applications, helpers for initializing struct types correctly and linking headers are provided. Simply use the `.hpp` version of each header and replace the `ffx` prefix with the `ffx::` namespace.
 Note that the helper functions wrapping API functions only work when linking using the .lib file. Using them with runtime loading will result in linker errors.
 
 <h2>DLLs structure</h2>
-Starting with AMD FSR™ SDK 2.0.0, the effects previously combined in amd_fidelityfx_dx12.dll are split into multiple DLLs based on effect type:
 
-* amd_fidelityfx_loader_dx12.dll: A small loader DLL, not containing any effect code. This DLL only manages the loading of effect type DLLs to provide the effects to the calling application. It is interface- and behavior-compatible with amd_fidelityfx_dx12.dll.
-* amd_fidelityfx_framegeneration_dx12.dll: This DLL contains providers for the latest AMD FSR™ Frame Generation techniques, [AMD FSR™ Frame Generation 4](../techniques/frame-interpolation-ml.md) and [AMD FSR™ Frame Generation Swapchain 4](../techniques/frame-interpolation-swap-chain.md), as well as legacy ones, [AMD FidelityFX™ Super Resolution Frame Generation 3](../techniques/frame-interpolation.md) and [AMD FidelityFX™ Super Resolution Frame Generation Swapchain 3](../techniques/frame-interpolation-swap-chain.md).
-* amd_fidelityfx_upscaler_dx12.dll: This DLL contains providers for the latest AMD FSR™ Upscaling technique ([AMD FSR™ Upscaling 4](../techniques/super-resolution-ml.md)) as well as legacy ones ([AMD FidelityFX™ Super Resolution 3](../techniques/super-resolution-upscaler.md) and [AMD FidelityFX™ Super Resolution 2](../techniques/super-resolution-temporal.md)).
+Starting with AMD FSR™ SDK 2.0.0, the effects previously combined in amd_fidelityfx_dx12(vk).dll are split into multiple DLLs based on effect type:
+
+* amd_fidelityfx_loader_dx12(vk).dll: A small loader DLL, not containing any effect code. This DLL only manages the loading of effect type DLLs to provide the effects to the calling application. It is interface- and behavior-compatible with amd_fidelityfx_dx12(vk).dll.
+* amd_fidelityfx_framegeneration_dx12(vk).dll: This DLL contains providers for the latest AMD FSR™ Frame Generation techniques, [AMD FSR™ Frame Generation 4](../techniques/frame-interpolation-ml.md) and [AMD FSR™ Frame Generation (Swapchain) 4](../techniques/frame-interpolation-swap-chain.md), as well as legacy ones, [AMD FidelityFX™ Super Resolution Frame Generation 3](../techniques/frame-interpolation.md) and [AMD FidelityFX™ Super Resolution Frame Generation Swapchain 3](../techniques/frame-interpolation-swap-chain.md).
+* amd_fidelityfx_upscaler_dx12(vk).dll: This DLL contains providers for the latest AMD FSR™ Upscaling technique ([AMD FSR™ Upscaling 4](../techniques/super-resolution-ml.md)) as well as legacy ones ([AMD FidelityFX™ Super Resolution 3](../techniques/super-resolution-upscaler.md) and [AMD FidelityFX™ Super Resolution 2](../techniques/super-resolution-temporal.md)).
 * amd_fidelityfx_denoiser_dx12.dll: This DLL contains the provider for the latest AMD FSR™ Ray Regeneration technique [AMD FSR™ Ray Regeneration 1](../techniques/denoising.md).
 * amd_fidelityfx_radiancecache_dx12.dll: This DLL contains the provider for the latest AMD FSR™ Radiance Caching technique [AMD FSR™ Radiance Caching (Preview)](../techniques/radiance-cache.md).
 
 This split allows applications to ship only the AMD FSR™ effect types they use.
 
-Applications previously loading amd_fidelityfx_dx12.dll (or linking with amd_fidelityfx_dx12.lib) must now load amd_fidelityfx_loader_dx12.dll (or link to amd_fidelityfx_loader_dx12.lib) instead.
+Applications previously loading amd_fidelityfx_dx12(vk).dll (or linking with amd_fidelityfx_dx12(vk).lib) must now load amd_fidelityfx_loader_dx12(vk).dll (or link to amd_fidelityfx_loader_dx12(vk).lib) instead.
+
+<h3>Effect DLL lookup</h3>
+
+The loader DLL resolves each effect DLL in the following order:
+
+1. A module of that name already loaded into the process is reused, regardless of where it was loaded from;
+2. The folder containing the application executable;
+3. The folder containing the loader DLL itself.
+
+The last step allows the loader and the effect DLLs to be shipped together in a subfolder, for example as part of a plugin, without placing them next to the application executable.
 
 <h2>Descriptor structs</h2>
 
@@ -61,8 +70,38 @@ The `context` should be initialized to `NULL` before the call. Note that the sec
 
 Example call:
 
+**DirectX® 12**
+
 ```C
-struct ffxCreateBackendDX12Desc createBackend = /*...*/;
+struct ffxCreateBackendDX12Desc createBackend = { 0 };
+createBackend.header.type = FFX_API_CREATE_CONTEXT_DESC_TYPE_BACKEND_DX12;
+createBackend.device = pD3D12Device;
+
+struct ffxCreateContextDescUpscale createUpscale = { 0 };
+createUpscale.header.type = FFX_API_CREATE_CONTEXT_DESC_TYPE_UPSCALE;
+
+// fill struct ...
+
+createUpscale.header.pNext = &createBackend.header;
+
+ffxContext upscaleContext = NULL;
+ffxReturnCode_t retCode = ffxCreateContext(&upscaleContext, &createUpscale.header, NULL);
+// handle errors
+```
+
+**Vulkan®**
+
+`deviceContext` is a [`VkDeviceContext`](../../api/include/vk/ffx_api_vk.h#L51):
+
+```C
+struct VkDeviceContext deviceContext = { 0 };
+deviceContext.vkDevice = vkDevice;
+deviceContext.vkPhysicalDevice = vkPhysicalDevice;
+deviceContext.vkDeviceProcAddr = vkGetDeviceProcAddr;
+
+struct ffxCreateBackendVKDesc createBackend = { 0 };
+createBackend.header.type = FFX_API_CREATE_CONTEXT_DESC_TYPE_BACKEND_VK;
+createBackend.deviceContext = deviceContext;
 
 struct ffxCreateContextDescUpscale createUpscale = { 0 };
 createUpscale.header.type = FFX_API_CREATE_CONTEXT_DESC_TYPE_UPSCALE;
@@ -116,6 +155,7 @@ Only some query descriptor types support `ffxQuery(nullptr, ...)`. The currently
 * `ffxQueryDescDenoiserGetVersion`
 * `ffxQueryDescFrameGenerationGetGPUMemoryUsageV2`
 * `ffxQueryFrameGenerationSwapChainGetGPUMemoryUsageDX12V2`
+* `ffxQueryFrameGenerationSwapChainGetGPUMemoryUsageVKV2`
 
 All other query descriptor types require a valid context created by `ffxCreateContext`. 
 
@@ -130,9 +170,13 @@ ffxReturnCode_t retCode_t = ffxQuery(&m_UpscalingContext, &getVersion.header);
 
 Queries using a `NULL` context require additional input information like device, flags, and resolution.
 
-For null-context queries that don't embed a `device` field directly (e.g. `ffxQueryDescUpscaleGetUpscaleRatioFromQualityMode`), the device must be provided by chaining an `ffxCreateBackendDX12Desc` struct via `header.pNext`. This is necessary for the query to be routed to a driver/external provider. Without it, `ffxQuery` will return `FFX_API_RETURN_NO_PROVIDER` (4) and emit a debug error message.
+For null-context queries that don't embed a `device` field directly (e.g. `ffxQueryDescUpscaleGetUpscaleRatioFromQualityMode`), the device must be provided by chaining a backend creation struct via `header.pNext`. This is necessary for the query to be routed to effect providers embedded in the driver or requiring certain device capabilities. Without it, `ffxQuery` will return `FFX_API_RETURN_NO_PROVIDER` (4) and emit a debug error message.
 
-Example chaining `ffxCreateBackendDX12Desc` for a null-context query:
+Note that there is an additional performance cost for `NULL` context queries compared to queries on a created context: they require checking for a driver-provided version and checking device compatibility before the query is executed.
+
+Example chaining a backend description for a null-context query:
+
+**DirectX 12**
 
 ```C
 ffxQueryDescUpscaleGetUpscaleRatioFromQualityMode ratioDesc = {0};
@@ -148,15 +192,49 @@ ratioDesc.header.pNext = &backendDesc.header;
 ffxReturnCode_t retCode = ffxQuery(nullptr, &ratioDesc.header);
 ```
 
+**Vulkan**
+
+```C
+ffxQueryDescUpscaleGetUpscaleRatioFromQualityMode ratioDesc = {0};
+ratioDesc.header.type = FFX_API_QUERY_DESC_TYPE_UPSCALE_GETUPSCALERATIOFROMQUALITYMODE;
+ratioDesc.qualityMode = FFX_UPSCALE_QUALITY_MODE_QUALITY;
+ratioDesc.pOutUpscaleRatio = &outRatio;
+
+struct VkDeviceContext deviceContext = {0};
+deviceContext.vkDevice = vkDevice;
+deviceContext.vkPhysicalDevice = vkPhysicalDevice;
+deviceContext.vkDeviceProcAddr = vkGetDeviceProcAddr;
+
+struct ffxCreateBackendVKDesc backendDesc = {0};
+backendDesc.header.type = FFX_API_CREATE_CONTEXT_DESC_TYPE_BACKEND_VK;
+backendDesc.deviceContext = deviceContext;
+ratioDesc.header.pNext = &backendDesc.header;
+
+ffxReturnCode_t retCode = ffxQuery(nullptr, &ratioDesc.header);
+```
+
 Null-context query structs that already embed a `device` field (e.g. `ffxQueryDescUpscaleGetGPUMemoryUsageV2`, `ffxQueryDescGetVersions`) do not need this extra chaining.
 
 Example query for GPU memory usage of upscaler with default version before creating context from the SDK sample. 
+
+`device` is an `ID3D12Device*` on DirectX® 12. On Vulkan® it is a pointer to [`VkDeviceContext`](../../api/include/vk/ffx_api_vk.h#L51).
 
 ```C
 struct FfxApiEffectMemoryUsage gpuMemoryUsageUpscaler = {0};
 struct ffxQueryDescUpscaleGetGPUMemoryUsageV2 upscalerGetGPUMemoryUsageV2 = {0};
 upscalerGetGPUMemoryUsageV2.header.type = FFX_API_QUERY_DESC_TYPE_UPSCALE_GPU_MEMORY_USAGE_V2;
-upscalerGetGPUMemoryUsageV2.device = GetDevice()->GetImpl()->DX12Device();
+
+void* device = NULL;
+#if defined(_DX12)
+device = GetDevice()->GetImpl()->DX12Device();
+#elif defined(_VK)
+struct VkDeviceContext deviceContext = {0};
+deviceContext.vkDevice = vkDevice;
+deviceContext.vkPhysicalDevice = vkPhysicalDevice;
+deviceContext.vkDeviceProcAddr = vkGetDeviceProcAddr;
+device = &deviceContext;
+#endif
+upscalerGetGPUMemoryUsageV2.device = device;
 upscalerGetGPUMemoryUsageV2.maxRenderSize = { resInfo.RenderWidth, resInfo.RenderHeight };
 upscalerGetGPUMemoryUsageV2.maxUpscaleSize = { resInfo.UpscaleWidth, resInfo.UpscaleHeight };
 upscalerGetGPUMemoryUsageV2.flags = FFX_UPSCALE_ENABLE_AUTO_EXPOSURE | FFX_UPSCALE_ENABLE_HIGH_DYNAMIC_RANGE;
@@ -167,22 +245,46 @@ ffxReturnCode_t retCode_t = ffxQuery(nullptr, &upscalerGetGPUMemoryUsageV2.heade
 CAULDRON_LOG_INFO(L"Default Upscaler Query GPUMemoryUsageV2 totalUsageInBytes %f ", gpuMemoryUsageUpscaler.totalUsageInBytes / 1048576.f);
 ```
 
-If using C++ helper, need to omit the context argument if context is `NULL`.
+If using the C++ helper, you need to omit the context argument if the context is `NULL`.
+
 ```C++
 // This ffx::Query call is equivalent to the ffxQuery call above
 ffx::ReturnCode retCode = ffx::Query(upscalerGetGPUMemoryUsageV2);
 ```
-To query a specific version of the effect, attach a struct of type `ffxOverrideVersion` in the `pNext` field of the main struct header. 
+
+To query a specific version of the effect, attach a struct of type `ffxOverrideVersion` in the `pNext` field of the main struct header,
+and as stated above, attach a backend creation struct if the query struct itself does not specify the device.
 
 Continuing from example above, query the GPU memory usage of upscaler at a specific version:
 
 ```C++
-struct ffxOverrideVersion versionOverride = {0};
-versionOverride.header.type = FFX_API_DESC_TYPE_OVERRIDE_VERSION;
+ffx::OverrideVersion versionOverride{};
 versionOverride.versionId = m_FsrVersionIds[m_FsrVersionIndex];
-upscalerGetGPUMemoryUsageV2.header.pNext = &versionOverride.header;
+ffx::ReturnCode retCode = ffx::Query(upscalerGetGPUMemoryUsageV2, versionOverride);
+```
 
-ffxReturnCode_t retCode_t = ffxQuery(nullptr, &upscalerGetGPUMemoryUsageV2.header);
+Example for querying resource requirements of a specific version:
+
+DirectX 12:
+
+```C++
+ffx::QueryDescUpscaleGetResourceRequirements queryResourceRequirements{};
+ffx::OverrideVersion versionOverride{};
+ffx::CreateBackendDX12Desc backendDesc{};
+backendDesc.device = pD3D12Device;
+versionOverride.versionId = selectedVersion;
+ffx::ReturnCode retCode = ffx::Query(queryResourceRequirements, versionOverride, backendDesc);
+```
+
+Vulkan:
+
+```C++
+ffx::QueryDescUpscaleGetResourceRequirements queryResourceRequirements{};
+ffx::OverrideVersion versionOverride{};
+ffx::CreateBackendVKDesc backendDesc{};
+backendDesc.deviceContext = deviceContext;
+versionOverride.versionId = selectedVersion;
+ffx::ReturnCode retCode = ffx::Query(queryResourceRequirements, versionOverride, backendDesc);
 ```
 
 
@@ -228,7 +330,7 @@ CPU dispatches will usually execute their function synchronously and immediately
 
 Resources like textures and buffers are passed to the AMD FSR™ API using the `FfxApiResource` structure.
 
-For C++ applications, the backend headers define helper functions for constructing this from a native resource handle.
+For C++ applications, the backend headers define helper functions for constructing this from a native resource handle. On DirectX® 12, [`ffxApiGetResourceDX12`](../../api/include/dx12/ffx_api_dx12.h#L204) takes an `ID3D12Resource`. On Vulkan®, build an `FfxApiResourceDescription` with [`ffxApiGetImageResourceDescriptionVK`](../../api/include/vk/ffx_api_vk.h#L238) or [`ffxApiGetBufferResourceDescriptionVK`](../../api/include/vk/ffx_api_vk.h#L207), then pass that description and the `VkImage` or `VkBuffer` to [`ffxApiGetResourceVK`](../../api/include/vk/ffx_api_vk.h#L298). Surface formats are converted with [`ffxApiGetSurfaceFormatDX12`](../../api/include/dx12/ffx_api_dx12.h#L68) and [`ffxApiGetSurfaceFormatVK`](../../api/include/vk/ffx_api_vk.h#L87).
 
 <h2>Version selection</h2>
 
@@ -244,10 +346,20 @@ Due to a previous bug, some version names are stored in global memory and may be
 
 Example version query:
 
+`device` is an `ID3D12Device*` on DirectX® 12 and a pointer to [`VkDeviceContext`](../../api/include/vk/ffx_api_vk.h#L51) on Vulkan®. The same pointer is passed to frame-generation version queries.
+
 ```C
 struct ffxQueryDescGetVersions versionQuery = {0};
 versionQuery.createDescType = FFX_API_CREATE_CONTEXT_DESC_TYPE_UPSCALE;
-versionQuery.device = GetDX12Device(); // only for DirectX 12 applications
+#if defined(_DX12)
+versionQuery.device = GetDX12Device();
+#elif defined(_VK)
+struct VkDeviceContext deviceContext = {0};
+deviceContext.vkDevice = vkDevice;
+deviceContext.vkPhysicalDevice = vkPhysicalDevice;
+deviceContext.vkDeviceProcAddr = vkGetDeviceProcAddr;
+versionQuery.device = &deviceContext;
+#endif
 uint64_t versionCount = 0;
 versionQuery.outputCount = &versionCount;
 // get number of versions for allocation
@@ -280,13 +392,32 @@ if (m_FsrVersionIndex < m_FsrVersionIds.size() && m_overrideVersion)
 
 You can query the version of any created context using `ffxQuery` with the `ffxQueryGetProviderVersion` struct.
 
+<h3>Driver-provided versions</h3>
+
+In addition to the versions shipped with the application, the AMD display driver can provide newer implementations of an effect. These driver-provided versions are returned by `ffxQueryDescGetVersions` alongside the versions built into the application, and can be identified in two ways:
+
+* Their version name carries a trailing ` *`, for example `FSR 4.1.2 *`;
+* Bit 31 of their version id is set. The remaining bits carry the effect version, so `versionId & 0x7FFFFFFF` can be compared against the ids of versions shipped with the application. This encoding may change in a future release, so prefer the version name where either can be used;
+
+An application can pin an effect to a specific version by supplying an effect version override, as described above. **Supplying `ffxOverrideVersion` disables automatic selection.** The requested version id is matched exactly, so overriding with the id of a version shipped with the application pins the application to its own implementation and opts that context out of driver-provided versions.
+
+When no effect version override is supplied, the AMD FSR™ API selects the newest available implementation, preferring a driver-provided version only when its version is strictly higher than the newest version shipped with the application. This is the default behavior, and it is what allows users to benefit from effect improvements delivered through driver updates.
+
+Applications that expose effect version selection in their options UI should therefore:
+
+* List the driver-provided entries returned by the version query rather than filtering them out, so that users can still select them;
+* Preserve the ` *` suffix, or render an equivalent indicator, so that users can tell driver-provided versions apart from the versions shipped with the application;
+* Offer a default option that applies no application-side version override, so that automatic selection remains available.
+
+Whether driver-provided versions are offered for a given effect is additionally controlled by the driver itself, so they may not be present on every system even when a newer implementation exists.
+
 <h2>Error handling</h2>
 
 All calls to the AMD FSR™ API return a value of type `ffxReturnCode_t`. If using the C++ wrapper, this is replaced by `ffx::ReturnCode`.
 
 A successful operation will return `FFX_API_RETURN_OK`. All other return codes are errors. Future versions may add new return codes not yet present in the headers.
 
-Applications should be able to handle errors gracefully, even if it is unrecoverable.
+Applications should be able to handle errors gracefully, even if they are unrecoverable.
 
 <h2>Memory allocation</h2>
 

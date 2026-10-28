@@ -162,6 +162,7 @@ struct FrameinterpolationPresentInfoExt : public TFrameInterpolationPresentInfo<
     HANDLE frameDoneEventHandle                 = 0;  // event to notify the semaphore
     HANDLE waitableThreadHandle                 = 0;  // thread to update semaphore when event gets triggered by GPU
     volatile bool shutdownWaitableSignalThread  = false;
+
 };
 
 typedef struct ReplacementResource

@@ -22,26 +22,51 @@
 
 #pragma once
 
-#include <cauldron2/dx12/framework/core/framework.h>
+#include <cauldron2/framework/core/framework.h>
 
-class Sample : public cauldron::Framework
+//------------------------------------------------------------------------------
+// Sample Declarations
+//------------------------------------------------------------------------------
+
+namespace rr
 {
-public:
-    Sample(const cauldron::FrameworkInitParams* pInitParams)
-        : cauldron::Framework(pInitParams)
+    //--------------------------------------------------------------------------
+    // Sample
+    //--------------------------------------------------------------------------
+    
+    class Sample : public cauldron::Framework
     {
-    }
-    virtual ~Sample() = default;
 
-    // Overrides
-    virtual void ParseSampleConfig() override;
-    virtual void ParseSampleCmdLine(const wchar_t* cmdLine) override;
-    virtual void RegisterSampleModules() override;
+    public:
 
-    virtual void DoSampleInit() override;
-    virtual void DoSampleUpdates(double deltaTime) override;
-    virtual void DoSampleResize(const cauldron::ResolutionInfo& resInfo) override;
-    virtual void DoSampleShutdown() override
-    {
-    }
-};
+        //----------------------------------------------------------------------
+        // Member Methods: Constructors and Destructors
+        //----------------------------------------------------------------------
+        
+        [[nodiscard]]
+        explicit Sample(const cauldron::FrameworkInitParams* pInitParams);
+
+        ~Sample() override;
+
+        //----------------------------------------------------------------------
+        // Member Methods
+        //----------------------------------------------------------------------
+
+        // Overrides
+        virtual void ParseSampleConfig() override;
+        virtual void ParseSampleCmdLine(const wchar_t* cmdLine) override;
+        virtual void RegisterSampleModules() override;
+
+        virtual void DoSampleInit() override;
+        virtual void DoSampleUpdates(double deltaTime) override;
+        virtual void DoSampleResize(const cauldron::ResolutionInfo& resInfo) override;
+        virtual void DoSampleShutdown() override;
+
+    private:
+
+        //----------------------------------------------------------------------
+        // Member Variables
+        //----------------------------------------------------------------------
+    
+    };
+} // namespace rr

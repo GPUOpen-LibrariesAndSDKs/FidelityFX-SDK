@@ -57,8 +57,8 @@
 #define FFX_DENOISER_VERSION_MAJOR 1
 /// Denoiser minor version number
 #define FFX_DENOISER_VERSION_MINOR 2
-/// Denoiser pinor version number
-#define FFX_DENOISER_VERSION_PATCH 0
+/// Denoiser patch version number
+#define FFX_DENOISER_VERSION_PATCH 1
 
 #define FFX_DENOISER_MAKE_VERSION(major, minor, patch) (((major) << 22) | ((minor) << 12) | (patch))
 /// Denoiser combined version number
@@ -144,7 +144,7 @@ typedef struct FfxApiDenoiserSignal
     /// In a checkerboard pattern, only half the pixels are traced per frame, alternating as follows:
     ///
     /// @code
-    ///   x=0  x=1  x=2  x=3
+    ///      x=0  x=1  x=2  x=3
     /// y=0:  0    1    0    1
     /// y=1:  1    0    1    0
     /// y=2:  0    1    0    1
@@ -194,20 +194,55 @@ typedef struct ffxDispatchDescDenoiser
     /// Channels:
     /// * RG:  Octahedrally encoded normals
     /// * B:   Linear Roughness
-    /// * A:   Material Type - See docs for more info,
+    /// * A:   Material Type - See docs for more info.
     struct FfxApiResource normals;
 
     /// @brief The specular albedo.
     ///
     /// Channels:
-    /// * RGB: Specular albedo - sqrt encoding assumed unless @c FFX_DENOISER_DISPATCH_NON_GAMMA_ALBEDO is provided. @code sqrt(SpecularAlbedo) @endcode
+    /// * RGB: Specular albedo. The denoiser expects a software encoding chosen by the
+    ///        application: @code sqrt(SpecularAlbedo) @endcode by default, or the
+    ///        raw @code SpecularAlbedo @endcode (identity function) when
+    ///        @c FFX_DENOISER_DISPATCH_NON_ENCODED_ALBEDO is provided. This software
+    ///        encoding is a convention between the application and the denoiser
+    ///        and is orthogonal to the resource format: if a hardware sRGB format is
+    ///        used, the sampled value is already sRGB-decoded to linear by the hardware,
+    ///        and the software encoding above is then applied on top of that linear value.
+    /// @note The default @code sqrt @endcode encoding is a perceptual transfer function:
+    ///       it allocates more precision to darker values, matching human perception and
+    ///       reducing banding when the albedo is stored in a low-bit-depth format. For this
+    ///       reason, apply only one transfer function, not both: either use a hardware sRGB
+    ///       format together with @c FFX_DENOISER_DISPATCH_NON_ENCODED_ALBEDO (so the
+    ///       software step is the identity function), or store into a linear format and use the default
+    ///       software @code sqrt @endcode encoding. Combining a hardware sRGB format with
+    ///       the software @code sqrt @endcode encoding applies two perceptual transfer
+    ///       functions, which defeats the purpose: the precision redistribution is applied
+    ///       twice and warps the values.
     /// @pre Can be zero-initialized if and only if @c FFX_DENOISER_SIGNAL_DIRECT_SPECULAR, @c FFX_DENOISER_SIGNAL_INDIRECT_SPECULAR, and @c FFX_DENOISER_SIGNAL_DOMINANT_LIGHT_VISIBILITY are not set in the context creation signal flags.
     struct FfxApiResource specularAlbedo;
 
     /// @brief The diffuse albedo.
     ///
     /// Channels:
-    /// * RGB: Diffuse albedo (e.g., @code BaseColor * (1 - Metalness)) @endcode - sqrt encoding assumed unless @c FFX_DENOISER_DISPATCH_NON_GAMMA_ALBEDO is provided. @code sqrt(DiffuseAlbedo) @endcode
+    /// * RGB: Diffuse albedo (e.g., @code BaseColor * (1 - Metalness) @endcode).
+    ///        The denoiser expects a software encoding chosen by the application:
+    ///        @code sqrt(DiffuseAlbedo) @endcode by default, or the raw
+    ///        @code DiffuseAlbedo @endcode (identity function) when
+    ///        @c FFX_DENOISER_DISPATCH_NON_ENCODED_ALBEDO is provided. This software
+    ///        encoding is a convention between the application and the denoiser
+    ///        and is orthogonal to the resource format: if a hardware sRGB format is
+    ///        used, the sampled value is already sRGB-decoded to linear by the hardware,
+    ///        and the software encoding above is then applied on top of that linear value.
+    /// @note The default @code sqrt @endcode encoding is a perceptual transfer function:
+    ///       it allocates more precision to darker values, matching human perception and
+    ///       reducing banding when the albedo is stored in a low-bit-depth format. For this
+    ///       reason, apply only one transfer function, not both: either use a hardware sRGB
+    ///       format together with @c FFX_DENOISER_DISPATCH_NON_ENCODED_ALBEDO (so the
+    ///       software step is the identity function), or store into a linear format and use the default
+    ///       software @code sqrt @endcode encoding. Combining a hardware sRGB format with
+    ///       the software @code sqrt @endcode encoding applies two perceptual transfer
+    ///       functions, which defeats the purpose: the precision redistribution is applied
+    ///       twice and warps the values.
     /// @pre Can be zero-initialized if and only if @c FFX_DENOISER_SIGNAL_DIRECT_DIFFUSE, @c FFX_DENOISER_SIGNAL_INDIRECT_DIFFUSE, and @c FFX_DENOISER_SIGNAL_DOMINANT_LIGHT_VISIBILITY are not set in the context creation signal flags.
     struct FfxApiResource diffuseAlbedo;
 
@@ -274,7 +309,11 @@ typedef struct ffxDispatchDescDenoiser
     /// The resolution that was used for rendering the input resources.
     struct FfxApiDimensions2D renderSize;
 
-    /// The index of the current frame.
+    /// The index of the current frame. Must be @c previousFrameIndex + 1 for normal operation.
+    ///
+    /// Any other value (jump or reset) is interpreted as a scene discontinuity and implicitly triggers
+    /// @c FFX_DENOISER_DISPATCH_RESET, discarding temporal history. For intentional discontinuities
+    /// such as camera cuts, set @c FFX_DENOISER_DISPATCH_RESET explicitly instead.
     uint32_t frameIndex;
 
     /// Dispatch flags corresponding to zero or a combination of values from @c FfxApiDispatchDenoiserFlags.
@@ -382,7 +421,7 @@ typedef struct ffxDispatchDescDenoiserDominantLight
     /// Channels:
     /// * R:
     ///   * @c input:  Dominant light visibility (ray hit distance [0,FP16_MAX] where FP16_MAX is fully exposed) to denoise
-    ///   * @c output: Denoised dominant light visibility (in [0,1] where 0 is fully occluded and 1 is fully exposed) (or input if passthrough)
+    ///   * @c output: Denoised dominant light visibility (in [0,1] where 0 is fully occluded and 1 is fully exposed) (or input ray hit distance converted to visibility if passthrough)
     struct FfxApiDenoiserSignal signal;
 
     /// Dominant light direction. (from light source to target)
@@ -391,7 +430,8 @@ typedef struct ffxDispatchDescDenoiserDominantLight
     /// Dominant light emission. (i.e. @c LightColor * LightIntensity)
     struct FfxApiFloatCoords3D emission;
 
-    /// Dominant light angular radius. (Expressed in radians)
+    /// Dominant light angular radius, i.e. the half-angle of the cone the light subtends at the shaded point. (Expressed in radians)
+    /// Controls the width of the penumbra and must match the angular radius used when sampling the light to generate the noisy visibility signal.
     float angularRadius;
 } ffxDispatchDescDenoiserDominantLight;
 
@@ -438,7 +478,7 @@ typedef struct ffxDispatchDescDenoiserIndirectSpecular
 #define FFX_API_DISPATCH_DESC_TYPE_DENOISER_SPECULAR_OCCLUSION FFX_API_MAKE_EFFECT_SUB_ID(FFX_API_EFFECT_ID_DENOISER, 0x49)
 /// Denoiser description for dispatching specular occlusion signals.
 /// @pre Required to be passed to @c ffxDispatch with a non-nullptr denoiser @c FfxContext*.
-/// @pre Required to be passed to @c ffxDispatch if and only if @c FFX_DENOISER_ENABLE_SPECULAR_OCCLUSION is set in the context creation signal flags.
+/// @pre Required to be passed to @c ffxDispatch if and only if @c FFX_DENOISER_SIGNAL_SPECULAR_OCCLUSION is set in the context creation signal flags.
 typedef struct ffxDispatchDescDenoiserSpecularOcclusion
 {
     /// Header description
@@ -527,7 +567,7 @@ typedef enum FfxApiConfigureDenoiserKey
     /// Override the bias of the temporal accumulation to be more stable but less responsive.
     /// * Format: A single @c float.
     FFX_API_CONFIGURE_DENOISER_KEY_STABILITY_BIAS                  = 2,
-    /// Override the maximum radiance value. A single float scalar.
+    /// Override the maximum radiance value.
     /// * Format: A single @c float.
     FFX_API_CONFIGURE_DENOISER_KEY_MAX_RADIANCE                    = 3,
     /// Override the standard deviation K value used for radiance clipping.
@@ -536,7 +576,7 @@ typedef enum FfxApiConfigureDenoiserKey
     /// Override the Gaussian kernel relaxation factor.
     /// * Format: A single @c float.
     FFX_API_CONFIGURE_DENOISER_KEY_GAUSSIAN_KERNEL_RELAXATION      = 5,
-    /// Override the discocclusion threshold used for depth comparisons during temporal reprojection.
+    /// Override the disocclusion threshold used for depth comparisons during temporal reprojection.
     /// * Format: A single @c float.
     FFX_API_CONFIGURE_DENOISER_KEY_DISOCCLUSION_THRESHOLD          = 6,
     /// Override the absolute linear depth bounds used for normalizing the absolute linear depth debug view.
@@ -574,9 +614,21 @@ typedef enum FfxApiDenoiserSignalFlags
 typedef enum FfxApiDispatchDenoiserFlags
 {
     /// Flag indicating that the history accumulation needs to be reset.
-    FFX_DENOISER_DISPATCH_RESET            = (1 << 0),
-    /// Flag indicating that the (diffuse and specular) albedo textures are not gamma encoded.
-    FFX_DENOISER_DISPATCH_NON_GAMMA_ALBEDO = (1 << 1),
+    FFX_DENOISER_DISPATCH_RESET              = (1 << 0),
+    /// Flag controlling the software encode/decode transfer function applied to the
+    /// (diffuse and specular) albedo textures. This is a software convention
+    /// agreed between the application and the denoiser; it is independent of any
+    /// hardware sRGB texture format.
+    ///
+    /// When set:   the application is expected to encode the albedo in software with
+    ///             the identity function; the denoiser decodes with the identity function.
+    /// When clear: the application is expected to encode the albedo in software with
+    ///             the sqrt function; the denoiser decodes with the square function.
+    FFX_DENOISER_DISPATCH_NON_ENCODED_ALBEDO = (1 << 1),
+
+    /// \deprecated Renamed to @c FFX_DENOISER_DISPATCH_NON_ENCODED_ALBEDO. Kept as an
+    /// alias for source compatibility; identical value and behavior.
+    FFX_DENOISER_DISPATCH_NON_GAMMA_ALBEDO   = FFX_DENOISER_DISPATCH_NON_ENCODED_ALBEDO,
 } FfxApiDispatchDenoiserFlags;
 
 #ifdef __cplusplus

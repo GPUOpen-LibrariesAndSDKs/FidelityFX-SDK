@@ -28,3 +28,4 @@ void releaseUiBlitGpuResources();
 D3D12_RESOURCE_STATES   ffxGetDX12StateFromResourceState(FfxApiResourceState state);
 
 FFX_API ffxReturnCode_t    ffxFrameInterpolationUiComposition(ffxCallbackDescFrameGenerationPresent* params, void* unusedUserCtx);
+

@@ -1,7 +1,7 @@
 // This file is part of the FidelityFX SDK.
 //
 // Copyright (C) 2026 Advanced Micro Devices, Inc.
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -22,13 +22,13 @@
 
 #pragma once
 
-#include <cauldron2/dx12/framework/render/rendermodule.h>
-#include <cauldron2/dx12/framework/render/rendermodules/tonemapping/tonemappingrendermodule.h>
-#include <cauldron2/dx12/framework/core/framework.h>
-#include <cauldron2/dx12/framework/core/uimanager.h>
+#include <cauldron2/framework/render/rendermodule.h>
+#include <cauldron2/framework/render/rendermodules/tonemapping/tonemappingrendermodule.h>
+#include <cauldron2/framework/core/framework.h>
+#include <cauldron2/framework/core/uimanager.h>
 
-#include <cauldron2/dx12/rendermodules/taa/taarendermodule.h>
-#include <cauldron2/dx12/rendermodules/translucency/translucencyrendermodule.h>
+#include <cauldron2/rendermodules/taa/taarendermodule.h>
+#include <cauldron2/rendermodules/translucency/translucencyrendermodule.h>
 
 #include <FidelityFX/upscalers/include/ffx_upscale.hpp>
 #include <FidelityFX/framegeneration/include/ffx_framegeneration.hpp>
@@ -54,7 +54,8 @@ class FSRRenderModule : public cauldron::RenderModule
     } UpscalerType;
 
 public:
-    FSRRenderModule() : RenderModule(L"FSRApiRenderModule") {}
+    [[nodiscard]]
+    FSRRenderModule();
     virtual ~FSRRenderModule();
 
     void Init(const json& initData);
@@ -79,6 +80,7 @@ public:
     /**
      * @brief   Returns whether or not FSR requires sample-side re-initialization.
      */
+    [[nodiscard]]
     bool NeedsReInit() const { return m_NeedReInit; }
 
     /**
@@ -126,7 +128,10 @@ public:
         }
     }
 
+    void ShowUI(bool show);
+
 private:
+    friend class FSRSettingsHandler;
     enum class FSRScalePreset : int32_t
     {
         NativeAA = 0,       // 1.0f
@@ -170,6 +175,8 @@ private:
     bool m_UiEnabled                                = true;
     bool m_IsNonNative                              = true;
     bool m_NeedReInit                               = false;
+
+    cauldron::UISection* m_pUISection = nullptr;
 
     // FFX API Context members
     std::vector<uint64_t> m_FsrVersionIds;

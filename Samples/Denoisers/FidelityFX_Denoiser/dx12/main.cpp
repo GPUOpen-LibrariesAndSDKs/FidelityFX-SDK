@@ -20,28 +20,46 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//------------------------------------------------------------------------------
+// Sample Includes
+//------------------------------------------------------------------------------
+
+// rr::Sample
 #include "sample.h"
-#include <cauldron2/dx12/framework/core/win/framework_win.h>
+
+//------------------------------------------------------------------------------
+// Cauldron Includes
+//------------------------------------------------------------------------------
+
+// cauldron::FrameworkInitParams
+// cauldron::RunFramework
+#include <cauldron2/framework/core/framework.h>
+// cauldron::FrameworkInitParamsInternal
+#include <cauldron2/framework/core/win/framework_win.h>
+
+//------------------------------------------------------------------------------
+// Sample Definitions
+//------------------------------------------------------------------------------
 
 using namespace cauldron;
 
-static FrameworkInitParamsInternal s_WindowsParams;
-
-//////////////////////////////////////////////////////////////////////////
-// WinMain
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 {
-    // Create the sample and kick it off to the framework to run
-    wchar_t             sampleName[] = L"FSR Ray Regeneration";
-    FrameworkInitParams initParams   = {};
-    initParams.Name                  = sampleName;
-    initParams.CmdLine               = lpCmdLine;
-    initParams.AdditionalParams      = &s_WindowsParams;
+    static FrameworkInitParamsInternal s_WindowsParams =
+    {
+        .InstanceHandle = hInstance,
+        .CmdShow        = nCmdShow,
+    };
 
-    // Setup the windows info
-    s_WindowsParams.InstanceHandle = hInstance;
-    s_WindowsParams.CmdShow        = nCmdShow;
+    wchar_t sampleName[] = L"FSR Ray Regeneration";
+    const FrameworkInitParams initParams =
+    {
+        .Name             = sampleName,
+        .CmdLine          = lpCmdLine,
+        .AdditionalParams = &s_WindowsParams,
+    };
 
-    Sample sampleInstance(&initParams);
+    rr::Sample sampleInstance{ &initParams };
+
     return RunFramework(&sampleInstance);
 }

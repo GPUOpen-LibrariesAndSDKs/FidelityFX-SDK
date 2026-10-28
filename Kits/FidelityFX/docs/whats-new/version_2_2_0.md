@@ -13,7 +13,7 @@ Welcome to the AMD FSR™ SDK. This revision to the SDK updates a number of AMD 
 <h3>AMD FSR™ Upscaling 4.1.0</h3>
 
 - Updated inference to improve quality in some titles.
-- Performance optimmizations to several shaders.
+- Performance optimizations to several shaders.
 
 <h3>AMD FSR™ Ray Regeneration 1.1.0</h3>
 

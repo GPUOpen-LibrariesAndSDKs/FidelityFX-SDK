@@ -30,7 +30,7 @@ extern "C" {
 
 #define FFX_UPSCALER_VERSION_MAJOR 4
 #define FFX_UPSCALER_VERSION_MINOR 1
-#define FFX_UPSCALER_VERSION_PATCH 1
+#define FFX_UPSCALER_VERSION_PATCH 2
 
 #define FFX_UPSCALER_MAKE_VERSION(major, minor, patch) (((major) << 22) | ((minor) << 12) | (patch))
 #define FFX_UPSCALER_VERSION                           FFX_UPSCALER_MAKE_VERSION(FFX_UPSCALER_VERSION_MAJOR, FFX_UPSCALER_VERSION_MINOR, FFX_UPSCALER_VERSION_PATCH)
@@ -96,7 +96,7 @@ struct ffxDispatchDescUpscale
     struct FfxApiResource      transparencyAndComposition;  ///< Optional resource containing alpha value of special objects in the scene.
     struct FfxApiResource      output;                      ///< Output color buffer for the current frame (at presentation resolution).
     struct FfxApiFloatCoords2D jitterOffset;                ///< The subpixel jitter offset applied to the camera.
-    struct FfxApiFloatCoords2D motionVectorScale;           ///< The scale factor to apply to motion vectors.
+    struct FfxApiFloatCoords2D motionVectorScale;           ///< The scale factor to convert motion vectors to pixel space. Internally: pixelSpaceMV = motionVector * motionVectorScale. Set to renderSize if motion vectors are in UV space [0,1], or to (1.0, 1.0) if motion vectors are already in pixel space. When using display-resolution motion vectors, set to displaySize.
     struct FfxApiDimensions2D  renderSize;                  ///< The resolution that was used for rendering the input resources.
     struct FfxApiDimensions2D  upscaleSize;                 ///< The resolution that the upscaler will upscale to (optional, assumed maxUpscaleSize otherwise).
     bool                       enableSharpening;            ///< Enable an additional sharpening pass.

@@ -158,7 +158,7 @@ namespace ffx
         }
     };
 
-    struct ConfigureDescGlobalDebug1 : public InitHelper<ffxConfigureDescGlobalDebug1>
+    struct FFX_DEPRECATION("Use ffx::ConfigureDescGlobalDebug instead of ffx::ConfigureDescGlobalDebug1.") ConfigureDescGlobalDebug1 : public InitHelper<ffxConfigureDescGlobalDebug1>
     {};
 
     struct ConfigureDescGlobalDebug : public InitHelper<ffxConfigureDescGlobalDebug>

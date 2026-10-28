@@ -153,3 +153,8 @@ FfxErrorCode GetResourceSizeFromDescription(FfxDevice device, const FfxCreateRes
 {
     return ffxGetResourceSizeFromDescriptionDX12(device, createResourceDescription, sizeInBytes, alignment);
 }
+
+FfxErrorCode GetBackendContextGpuMemoryUsage(FfxDevice device, size_t contextCount, uint64_t* byteCount)
+{
+    return ffxGetBackendContextGpuMemoryUsageDX12(device, contextCount, byteCount);
+}

@@ -27,10 +27,12 @@
 
 #define FFX_FRAMEGENERATION_VERSION_MAJOR 4
 #define FFX_FRAMEGENERATION_VERSION_MINOR 0
-#define FFX_FRAMEGENERATION_VERSION_PATCH 1
+#define FFX_FRAMEGENERATION_VERSION_PATCH 2
 
 #define FFX_FRAMEGENERATION_MAKE_VERSION(major, minor, patch) (((major) << 22) | ((minor) << 12) | (patch))
 #define FFX_FRAMEGENERATION_VERSION                           FFX_FRAMEGENERATION_MAKE_VERSION(FFX_FRAMEGENERATION_VERSION_MAJOR, FFX_FRAMEGENERATION_VERSION_MINOR, FFX_FRAMEGENERATION_VERSION_PATCH)
+
+#define FFX_FRAMEGENERATION_PREPARE_REPLACEMENT_SUFFIX "PrepareV2"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -126,7 +128,7 @@ struct ffxConfigureDescFrameGeneration
 #pragma FFX_PRAGMA_WARNING_DISABLE_DEPRECATIONS
 
 #define FFX_API_DISPATCH_DESC_TYPE_FRAMEGENERATION_PREPARE FFX_API_MAKE_EFFECT_SUB_ID(FFX_API_EFFECT_ID_FRAMEGENERATION, 0x04)
-struct FFX_DEPRECATION("ffxDispatchDescFrameGenerationPrepare is deprecated, use ffxDispatchDescFrameGenerationPrepareV2") ffxDispatchDescFrameGenerationPrepare
+struct FFX_DEPRECATION("ffxDispatchDescFrameGenerationPrepare is deprecated, use ffxDispatchDescFrameGeneration" FFX_FRAMEGENERATION_PREPARE_REPLACEMENT_SUFFIX) ffxDispatchDescFrameGenerationPrepare
 {
     ffxDispatchDescHeader      header;             ///< Description header for frame generation prepare dispatch.
     uint64_t                   frameID;            ///< Frame identifier used to select internal resources when async support is enabled. Must increment by exactly one (1) for each frame. Any non-exactly-one difference will reset the frame generation logic.
@@ -134,7 +136,7 @@ struct FFX_DEPRECATION("ffxDispatchDescFrameGenerationPrepare is deprecated, use
     void*                      commandList;        ///< The command list (ID3D12GraphicsCommandList for DX12, VkCommandBuffer for Vulkan) to record frame generation prepare commands.
     struct FfxApiDimensions2D  renderSize;         ///< The dimensions used to render game content, dilatedDepth, dilatedMotionVectors are expected to be of ths size.
     struct FfxApiFloatCoords2D jitterOffset;       ///< The subpixel jitter offset applied to the camera.
-    struct FfxApiFloatCoords2D motionVectorScale;  ///< The scale factor to convert motion vectors to UV space. Set to (1.0, 1.0) if motion vectors are already in pixel space, or to renderSize dimensions if motion vectors are in UV space.
+    struct FfxApiFloatCoords2D motionVectorScale;  ///< The scale factor to convert motion vectors to pixel space. Internally: pixelSpaceMV = motionVector * motionVectorScale. Set to renderSize if motion vectors are in UV space [0,1], or to (1.0, 1.0) if motion vectors are already in pixel space. When using display-resolution motion vectors, set to displaySize.
 
     float                 frameTimeDelta;           ///< Time elapsed in milliseconds since the last frame.
     bool                  unused_reset;             ///< A (currently unused) boolean value which when set to true, indicates FrameGeneration will be called in reset mode
@@ -192,7 +194,7 @@ struct ffxCreateContextDescFrameGenerationHudless
 #define FFX_API_DISPATCH_DESC_TYPE_FRAMEGENERATION_PREPARE_CAMERAINFO FFX_API_MAKE_EFFECT_SUB_ID(FFX_API_EFFECT_ID_FRAMEGENERATION, 0x0a)
 // Link this struct after ffxDispatchDescFrameGenerationPrepare. This is a required input to FSR3.1.4 and FSR3.1.5.
 // These fields are now embedded in ffxDispatchDescFrameGenerationPrepareV2.
-struct FFX_DEPRECATION("ffxDispatchDescFrameGenerationPrepareCameraInfo is deprecated, use ffxDispatchDescFrameGenerationPrepareV2 instead") ffxDispatchDescFrameGenerationPrepareCameraInfo
+struct FFX_DEPRECATION("ffxDispatchDescFrameGenerationPrepareCameraInfo is deprecated, use ffxDispatchDescFrameGeneration" FFX_FRAMEGENERATION_PREPARE_REPLACEMENT_SUFFIX " instead") ffxDispatchDescFrameGenerationPrepareCameraInfo
 {
     ffxConfigureDescHeader header;             ///< Description header for camera info configuration.
     float                  cameraPosition[3];  ///< The camera position in world space.
@@ -217,8 +219,11 @@ struct ffxQueryDescFrameGenerationGetGPUMemoryUsageV2
     struct FfxApiEffectMemoryUsage* gpuMemoryUsageFrameGeneration;  ///< Output pointer to receive GPU memory usage information for frame generation. Populated by Query() call.
 };
 
+
 #define FFX_API_DISPATCH_DESC_TYPE_FRAMEGENERATION_PREPARE_V2 FFX_API_MAKE_EFFECT_SUB_ID(FFX_API_EFFECT_ID_FRAMEGENERATION, 0x0c)
+
 struct ffxDispatchDescFrameGenerationPrepareV2
+
 {
     ffxDispatchDescHeader      header;             ///< Description header for frame generation prepare dispatch.
     uint64_t                   frameID;            ///< Frame identifier used to select internal resources when async support is enabled. Must increment by exactly one (1) for each frame. Any non-exactly-one difference will reset the frame generation logic.
@@ -226,7 +231,7 @@ struct ffxDispatchDescFrameGenerationPrepareV2
     void*                      commandList;        ///< The command list (ID3D12GraphicsCommandList for DX12, VkCommandBuffer for Vulkan) to record frame generation prepare commands.
     struct FfxApiDimensions2D  renderSize;         ///< The dimensions used to render game content. dilatedDepth and dilatedMotionVectors are expected to be of this size.
     struct FfxApiFloatCoords2D jitterOffset;       ///< The subpixel jitter offset applied to the camera.
-    struct FfxApiFloatCoords2D motionVectorScale;  ///< The scale factor to convert motion vectors to UV space. Set to (1.0, 1.0) if motion vectors are already in pixel space, or to renderSize dimensions if motion vectors are in UV space.
+    struct FfxApiFloatCoords2D motionVectorScale;  ///< The scale factor to convert motion vectors to pixel space. Internally: pixelSpaceMV = motionVector * motionVectorScale. Set to renderSize if motion vectors are in UV space [0,1], or to (1.0, 1.0) if motion vectors are already in pixel space. When using display-resolution motion vectors, set to displaySize.
 
     float                 frameTimeDelta;           ///< Time elapsed in milliseconds since the last frame.
     bool                  reset;                    ///< A boolean value which when set to true, indicates the camera has moved discontinuously and frame generation should reset its internal state.

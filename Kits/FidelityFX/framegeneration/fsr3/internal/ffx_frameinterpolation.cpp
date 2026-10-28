@@ -412,8 +412,8 @@ static void getInternalResourceDescriptions(const FfxApiDimensions2D* maxRenderS
     internalResourceDescriptions->gameMotionVectorFieldY = { FfxResourceHeapPlacementInfo::InitDefault(), { FFX_API_RESOURCE_TYPE_TEXTURE2D, FFX_API_SURFACE_FORMAT_R32_UINT, maxRenderSize->width, maxRenderSize->height, 1, 1, FFX_API_RESOURCE_FLAGS_ALIASABLE, FFX_API_RESOURCE_USAGE_UAV }, FFX_API_RESOURCE_STATE_UNORDERED_ACCESS, L"FI_GameMotionVectorFieldY", FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_GAME_MOTION_VECTOR_FIELD_Y, {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED} };
     internalResourceDescriptions->inpaintingPyramid = { FfxResourceHeapPlacementInfo::InitDefault(), { FFX_API_RESOURCE_TYPE_TEXTURE2D, FFX_API_SURFACE_FORMAT_R16G16B16A16_FLOAT, displaySize->width / 2, displaySize->height / 2, 1, 0, FFX_API_RESOURCE_FLAGS_ALIASABLE, FFX_API_RESOURCE_USAGE_UAV }, FFX_API_RESOURCE_STATE_UNORDERED_ACCESS, L"FI_InpaintingPyramid", FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_INPAINTING_PYRAMID, {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED} };
     internalResourceDescriptions->counters = { FfxResourceHeapPlacementInfo::InitDefault(), { FFX_API_RESOURCE_TYPE_BUFFER, FFX_API_SURFACE_FORMAT_UNKNOWN, 8, 4, 1, 1, FFX_API_RESOURCE_FLAGS_NONE, FFX_API_RESOURCE_USAGE_UAV }, FFX_API_RESOURCE_STATE_UNORDERED_ACCESS, L"FI_Counters", FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_COUNTERS, {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED} };
-    internalResourceDescriptions->opticalFlowMotionVectorFieldX = { FfxResourceHeapPlacementInfo::InitDefault(), { FFX_API_RESOURCE_TYPE_TEXTURE2D, FFX_API_SURFACE_FORMAT_R32_UINT, maxRenderSize->width, maxRenderSize->height, 1, 1, FFX_API_RESOURCE_FLAGS_ALIASABLE, FFX_API_RESOURCE_USAGE_UAV }, FFX_API_RESOURCE_STATE_UNORDERED_ACCESS, L"FI_OpticalFlowMotionVectorFieldX", FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_OPTICAL_FLOW_MOTION_VECTOR_FIELD_X, {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED} };
-    internalResourceDescriptions->opticalFlowMotionVectorFieldY = { FfxResourceHeapPlacementInfo::InitDefault(), { FFX_API_RESOURCE_TYPE_TEXTURE2D, FFX_API_SURFACE_FORMAT_R32_UINT, maxRenderSize->width, maxRenderSize->height, 1, 1, FFX_API_RESOURCE_FLAGS_ALIASABLE, FFX_API_RESOURCE_USAGE_UAV }, FFX_API_RESOURCE_STATE_UNORDERED_ACCESS, L"FI_OpticalFlowMotionVectorFieldY", FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_OPTICAL_FLOW_MOTION_VECTOR_FIELD_Y, {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED} };
+    internalResourceDescriptions->opticalFlowMotionVectorFieldX = { FfxResourceHeapPlacementInfo::InitDefault(), { FFX_API_RESOURCE_TYPE_TEXTURE2D, FFX_API_SURFACE_FORMAT_R32_UINT, displaySize->width / 8, displaySize->height / 8, 1, 1, FFX_API_RESOURCE_FLAGS_ALIASABLE, FFX_API_RESOURCE_USAGE_UAV }, FFX_API_RESOURCE_STATE_UNORDERED_ACCESS, L"FI_OpticalFlowMotionVectorFieldX", FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_OPTICAL_FLOW_MOTION_VECTOR_FIELD_X, {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED} };
+    internalResourceDescriptions->opticalFlowMotionVectorFieldY = { FfxResourceHeapPlacementInfo::InitDefault(), { FFX_API_RESOURCE_TYPE_TEXTURE2D, FFX_API_SURFACE_FORMAT_R32_UINT, displaySize->width / 8, displaySize->height / 8, 1, 1, FFX_API_RESOURCE_FLAGS_ALIASABLE, FFX_API_RESOURCE_USAGE_UAV }, FFX_API_RESOURCE_STATE_UNORDERED_ACCESS, L"FI_OpticalFlowMotionVectorFieldY", FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_OPTICAL_FLOW_MOTION_VECTOR_FIELD_Y, {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED} };
     internalResourceDescriptions->previousInterpolationSource = { FfxResourceHeapPlacementInfo::InitDefault(), { FFX_API_RESOURCE_TYPE_TEXTURE2D, (uint32_t)previousInterpolationSourceFormat, displaySize->width, displaySize->height, 1, 1, FFX_API_RESOURCE_FLAGS_NONE, FFX_API_RESOURCE_USAGE_UAV }, FFX_API_RESOURCE_STATE_UNORDERED_ACCESS, L"FI_PreviousInterpolationSouce", FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_PREVIOUS_INTERPOLATION_SOURCE, {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED} };
     internalResourceDescriptions->inpaintingMask = { FfxResourceHeapPlacementInfo::InitDefault(), { FFX_API_RESOURCE_TYPE_TEXTURE2D, FFX_API_SURFACE_FORMAT_R8_UNORM, displaySize->width, displaySize->height, 1, 1, FFX_API_RESOURCE_FLAGS_ALIASABLE, FFX_API_RESOURCE_USAGE_UAV }, FFX_API_RESOURCE_STATE_UNORDERED_ACCESS, L"FI_InpaintingMask", FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_INPAINTING_MASK, {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED} };
     internalResourceDescriptions->disocclusionMask = { FfxResourceHeapPlacementInfo::InitDefault(), { FFX_API_RESOURCE_TYPE_TEXTURE2D, FFX_API_SURFACE_FORMAT_R8G8_UNORM, maxRenderSize->width, maxRenderSize->height, 1, 1, FFX_API_RESOURCE_FLAGS_ALIASABLE, FFX_API_RESOURCE_USAGE_UAV }, FFX_API_RESOURCE_STATE_UNORDERED_ACCESS, L"FI_DisocclusionMask", FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_DISOCCLUSION_MASK, {FFX_RESOURCE_INIT_DATA_TYPE_UNINITIALIZED} };
@@ -491,6 +491,10 @@ static FfxErrorCode frameinterpolationCreate(FfxFrameInterpolationContext_Privat
     context->constants.interpolationRectBase[1] = 0;
     context->constants.interpolationRectSize[0] = contextDescription->displaySize.width;
     context->constants.interpolationRectSize[1] = contextDescription->displaySize.height;
+    context->constants.colorRectBase[0]    = 0;
+    context->constants.colorRectBase[1]    = 0;
+    context->constants.colorRectSize[0]    = contextDescription->displaySize.width;
+    context->constants.colorRectSize[1]    = contextDescription->displaySize.height;
 
     FfxFrameInterpolationInternalResourceDescriptions frameInterpolationInternalResourceDescs = {};
     getInternalResourceDescriptions(&contextDescription->maxRenderSize, &contextDescription->displaySize, contextDescription->previousInterpolationSourceFormat, &frameInterpolationInternalResourceDescs);
@@ -684,7 +688,6 @@ FfxErrorCode ffxFrameInterpolationContextCreate(FfxFrameInterpolationContext* co
         FFX_ERROR_INVALID_POINTER);
 
     // validate that all callbacks are set for the interface
-    FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpGetSDKVersion, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpGetDeviceCapabilities, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpCreateBackendContext, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpDestroyBackendContext, FFX_ERROR_INCOMPLETE_INTERFACE);
@@ -1018,8 +1021,6 @@ FFX_API FfxErrorCode ffxFrameInterpolationDispatch(FfxFrameInterpolationContext*
     contextPrivate->constants.displaySize[1]        = params->displaySize.height;
     contextPrivate->constants.displaySizeRcp[0]     = 1.0f / params->displaySize.width;
     contextPrivate->constants.displaySizeRcp[1]     = 1.0f / params->displaySize.height;
-    contextPrivate->constants.upscalerTargetSize[0] = params->interpolationRect.width;
-    contextPrivate->constants.upscalerTargetSize[1] = params->interpolationRect.height;
     contextPrivate->constants.Mode                  = 0;
     contextPrivate->constants.Reset                 = bReset || bDisjointFrameID;
     contextPrivate->constants.deltaTime             = params->frameTimeDelta;
@@ -1037,6 +1038,11 @@ FFX_API FfxErrorCode ffxFrameInterpolationDispatch(FfxFrameInterpolationContext*
     contextPrivate->constants.interpolationRectBase[1] = params->interpolationRect.top;
     contextPrivate->constants.interpolationRectSize[0] = params->interpolationRect.width;
     contextPrivate->constants.interpolationRectSize[1] = params->interpolationRect.height;
+
+    contextPrivate->constants.colorRectBase[0] = params->interpolationRect.left;
+    contextPrivate->constants.colorRectBase[1] = params->interpolationRect.top;
+    contextPrivate->constants.colorRectSize[0] = params->interpolationRect.width;
+    contextPrivate->constants.colorRectSize[1] = params->interpolationRect.height;
 
     // Debug bar
     static size_t dbgIdx = 0;
@@ -1211,6 +1217,21 @@ FFX_API FfxErrorCode ffxFrameInterpolationDispatch(FfxFrameInterpolationContext*
         // only execute FG data preparation passes when reset wasnt triggered
         if (bExecutePreparationPasses)
         {
+            FfxResourceInternal integerTypedResources[] = {
+            contextPrivate->uavResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_GAME_MOTION_VECTOR_FIELD_X],
+            contextPrivate->uavResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_GAME_MOTION_VECTOR_FIELD_Y],
+            contextPrivate->uavResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_OPTICAL_FLOW_MOTION_VECTOR_FIELD_X],
+            contextPrivate->uavResources[FFX_FRAMEINTERPOLATION_RESOURCE_IDENTIFIER_OPTICAL_FLOW_MOTION_VECTOR_FIELD_Y]
+            };
+            for (int i = 0; i < _countof(integerTypedResources); ++i)
+            {
+                FfxGpuJobDescription clearJob = { FFX_GPU_JOB_CLEAR_FLOAT };
+                uint32_t clearUintalue[]{ 0,0,0,0 };
+				memcpy(clearJob.clearJobDescriptor.color, clearUintalue, 4 * sizeof(uint32_t));
+                clearJob.clearJobDescriptor.target = integerTypedResources[i];
+                contextPrivate->contextDescription.backendInterface.fpScheduleGpuJob(&contextPrivate->contextDescription.backendInterface, &clearJob);
+            }
+
             // clear estimated depth resources
             {
                 FfxGpuJobDescription clearJob = {FFX_GPU_JOB_CLEAR_FLOAT};

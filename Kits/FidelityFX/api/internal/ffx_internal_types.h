@@ -114,7 +114,12 @@
 /// Maximum number of passes per effect component
 ///
 /// @ingroup Defines
-#define FFX_MAX_PASS_COUNT             (50)
+/// @note MLFI (ML frame interpolation) creates ~195 compute pipelines per effect context
+///       (up to FFX_MLFI_*_PASS_COUNT model passes + preprocess passes). The Vulkan backend
+///       hands out pipeline layouts / descriptor sets from fixed pools sized by this value, so it
+///       must be large enough to hold the largest effect's pass count. (The DX12 backend creates a
+///       root signature per pipeline and is not bounded by this value.)
+#define FFX_MAX_PASS_COUNT             (200)
 
 /// Total number of descriptors in ring buffer needed for a single effect context
 ///
@@ -887,6 +892,7 @@ typedef struct FfxPipelineDescription {
     FfxBindStage                        stage;                          ///< The stage(s) for which this pipeline is being built
     uint32_t                            indirectWorkload;               ///< Whether this pipeline has an indirect workload
     FfxApiSurfaceFormat                 backbufferFormat;               ///< For raster pipelines this contains the backbuffer format
+    bool                                forceWave32;                    ///< Forces a subgroup size of 32 (Wave32) for Vulkan pipelines.
 } FfxPipelineDescription;
 
 /// A structure containing the data required to create a barrier
@@ -1089,16 +1095,15 @@ typedef struct FfxShaderBlob {
 
     const uint8_t* data;                                ///< A pointer to the blob
     uint32_t       size;                                ///< Size in bytes.
-
-    const char* entryName;                              ///< EntryPoint to the shader
-
-    uint32_t cbvCount;                                 ///< Number of CBs.
-    uint32_t srvTextureCount;                          ///< Number of SRV Textures.
-    uint32_t uavTextureCount;                          ///< Number of UAV Textures.
-    uint32_t srvBufferCount;                           ///< Number of SRV Buffers.
-    uint32_t uavBufferCount;                           ///< Number of UAV Buffers.
-    uint32_t samplerCount;                             ///< Number of Samplers.
-    uint32_t rtAccelStructCount;                       ///< Number of RT Acceleration structures.
+    const char*    entryName;                           ///< EntryPoint to the shader
+    
+    uint32_t  cbvCount;                                 ///< Number of CBs.
+    uint32_t  srvTextureCount;                          ///< Number of SRV Textures.
+    uint32_t  uavTextureCount;                          ///< Number of UAV Textures.
+    uint32_t  srvBufferCount;                           ///< Number of SRV Buffers.
+    uint32_t  uavBufferCount;                           ///< Number of UAV Buffers.
+    uint32_t  samplerCount;                             ///< Number of Samplers.
+    uint32_t  rtAccelStructCount;                       ///< Number of RT Acceleration structures.
 
     // constant buffers
     const char**    boundConstantBufferNames;

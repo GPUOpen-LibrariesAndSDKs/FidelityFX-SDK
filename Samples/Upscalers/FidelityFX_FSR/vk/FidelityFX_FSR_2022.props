@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Add FfxDllPath and FfxLibPath to change copy source in the sample -->
+  <PropertyGroup>
+    <FfxDllPath>$(FFX_DLL_PATH)</FfxDllPath>
+    <FfxLibPath>$(FFX_LIB_PATH)</FfxLibPath>
+    <FfxLibPathLoader>$(SolutionDir)..\..\..\..\Kits\FidelityFX\signedbin\</FfxLibPathLoader>
+    <FfxLibPathFrameGen>$(SolutionDir)..\..\..\..\Kits\FidelityFX\signedbin\</FfxLibPathFrameGen>
+    <FfxLibPathUpscaler>$(SolutionDir)..\..\..\..\Kits\FidelityFX\signedbin\</FfxLibPathUpscaler>
+    <FfxDllPathLoader>$(SolutionDir)..\..\..\..\Kits\FidelityFX\signedbin\</FfxDllPathLoader>
+    <FfxDllPathFrameGen>$(SolutionDir)..\..\..\..\Kits\FidelityFX\signedbin\</FfxDllPathFrameGen>
+    <FfxDllPathUpscaler>$(SolutionDir)..\..\..\..\Kits\FidelityFX\signedbin\</FfxDllPathUpscaler>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(FfxDllPath)' == '' OR !Exists('$(FfxDllPath)')">
+    <FfxDllPath>$(SolutionDir)..\..\..\..\Kits\FidelityFX\signedbin\</FfxDllPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(FfxLibPath)' == '' OR !Exists('$(FfxDllPath)')">
+    <FfxLibPath>$(SolutionDir)..\..\..\..\Kits\FidelityFX\signedbin\</FfxLibPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="Exists('$(FfxLibPath)amd_fidelityfx_loader_vk.lib')">
+    <FfxLibPathLoader>$(FfxLibPath)</FfxLibPathLoader>
+  </PropertyGroup>
+  <PropertyGroup Condition="Exists('$(FfxLibPath)amd_fidelityfx_framegeneration_vk.lib')">
+    <FfxLibPathFrameGen>$(FfxLibPath)</FfxLibPathFrameGen>
+  </PropertyGroup>
+  <PropertyGroup Condition="Exists('$(FfxLibPath)amd_fidelityfx_upscaler_vk.lib')">
+    <FfxLibPathUpscaler>$(FfxLibPath)</FfxLibPathUpscaler>
+  </PropertyGroup>
+  <PropertyGroup Condition="Exists('$(FfxLibPath)amd_fidelityfx_loader_vk.dll')">
+    <FfxDllPathLoader>$(FfxDllPath)</FfxDllPathLoader>
+  </PropertyGroup>
+  <PropertyGroup Condition="Exists('$(FfxLibPath)amd_fidelityfx_framegeneration_vk.dll')">
+    <FfxDllPathFrameGen>$(FfxDllPath)</FfxDllPathFrameGen>
+  </PropertyGroup>
+  <PropertyGroup Condition="Exists('$(FfxLibPath)amd_fidelityfx_upscaler_vk.dll')">
+    <FfxDllPathUpscaler>$(FfxDllPath)</FfxDllPathUpscaler>
+  </PropertyGroup>
+</Project>

@@ -64,7 +64,7 @@ void ReprojectHistoryColor(const AccumulationPassCommonParams params, FFX_PARAME
 
 {
 #if FFX_HALF && FFX_FSR3UPSCALER_OPTION_REPROJECT_SAMPLERS_USE_DATA_HALF
-    const FfxFloat32x4 fReprojectedHistory = FfxFloat32x4(HistorySample16(params.fReprojectedHrUv, UpscaleSize()));
+    const FfxFloat32x4 fReprojectedHistory = FfxFloat32x4(HistorySample16(params.fReprojectedHrUv, PreviousFrameUpscaleSize()));
 #else
     const FfxFloat32x4 fReprojectedHistory = HistorySample(params.fReprojectedHrUv, PreviousFrameUpscaleSize());
 #endif

@@ -21,8 +21,8 @@
             "LightingRenderModule",
             "SkyDomeRenderModule",
             "AnimatedTexturesRenderModule",
-            "TranslucencyRenderModule",
             "GPUParticleRenderModule",
+            "TranslucencyRenderModule",
             "TAARenderModule",
             "FSRApiRenderModule",
             "ToneMappingRenderModule"

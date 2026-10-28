@@ -411,6 +411,22 @@ typedef FfxErrorCode (*FfxReleaseFiSwapchain)(FfxFrameInterpolationContext* fiCo
 /// @ingroup DX12Backend
 FFX_API FfxErrorCode ffxGetResourceSizeFromDescriptionDX12(FfxDevice device, const FfxCreateResourceDescription* createResourceDescription, uint64_t* sizeInBytes, uint64_t* alignment = nullptr);
 
+/// Query the fixed GPU memory overhead of a backend context (shader-visible descriptor heaps
+/// mirrored to VRAM), matching the accounting in CreateBackendContextDX12, for a context-less
+/// memory query.
+///
+/// @param [in] device                  The <c><i>FfxDevice</i></c>
+/// @param [in] contextCount            The number of effect contexts the backend is sized for
+/// @param [out] byteCount              The backend GPU memory usage expressed in bytes
+///
+/// @retval
+/// FFX_OK                              The operation completed successfully.
+/// @retval
+/// FFX_ERROR_INVALID_ARGUMENT          Could not query <c><i>ID3D12Device</i></c> from <c><i>FfxDevice</i></c>.
+///
+/// @ingroup DX12Backend
+FFX_API FfxErrorCode ffxGetBackendContextGpuMemoryUsageDX12(FfxDevice device, size_t contextCount, uint64_t* byteCount);
+
 /// Query The ABI version used by the swapchain
 ///
 /// @param [in] gameSwapChain           The <c><i>FfxSwapchain</i></c>

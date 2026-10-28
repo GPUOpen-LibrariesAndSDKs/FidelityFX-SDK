@@ -20,597 +20,703 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//------------------------------------------------------------------------------
+// Sample Includes
+//------------------------------------------------------------------------------
+
+// Declarations
 #include "pathtracingrendermodule.h"
+// rr::CreatePackedFrame
+// rr::DenoiserRenderModule
+#include "denoiserrendermodule.h"
+// rr::InvalidIndex
+// rr::Map
+// rr::MaterialFlag_DoubleSided
+// rr::MaterialFlag_Opaque
+// rr::PackedFrame
+// rr::PackedInstance
+// rr::PackedMaterial
+// rr::PackedSurface
+#include "shaders/PackedData.h"
+// IBV_BEGIN_SLOT
+// MAX_IBV_COUNT
+// MAX_SAMPLER_COUNT
+// MAX_TEXTURE_COUNT
+// MAX_VBV_COUNT
+// PACKED_INSTANCE_SLOT
+// PACKED_MATERIAL_SLOT
+// PACKED_SURFACE_SLOT
+// SAMPLER_BEGIN_SLOT
+// TEXTURE_BEGIN_SLOT
+// VBV_BEGIN_SLOT
+#include "shaders/PathTracingData.h"
+// rr::F32
+// rr::S32
+// rr::U32
+#include "shaders/Types.h"
 
-#include "Cauldron2/dx12/framework/core/scene.h"
-#include "Cauldron2/dx12/framework/core/components/meshcomponent.h"
-#include "Cauldron2/dx12/framework/render/pipelineobject.h"
-#include "Cauldron2/dx12/framework/render/parameterset.h"
-#include "Cauldron2/dx12/framework/render/dynamicresourcepool.h"
-#include "Cauldron2/dx12/framework/render/dynamicbufferpool.h"
-#include "Cauldron2/dx12/framework/render/profiler.h"
-#include "Cauldron2/dx12/framework/render/material.h"
-#include "Cauldron2/dx12/framework/shaders/lightingcommon.h"
+//------------------------------------------------------------------------------
+// Cauldron Includes
+//------------------------------------------------------------------------------
 
+// cauldron::Component
+#include "Cauldron2/framework/core/component.h"
+// cauldron::LightType
+#include "Cauldron2/framework/core/components/lightcomponent.h"
+// cauldron::MeshComponent
+// cauldron::MeshComponentMgr
+#include "Cauldron2/framework/core/components/meshcomponent.h"
+// cauldron::ContentBlock
+// cauldron::EntityDataBlock
+#include "Cauldron2/framework/core/contentloader.h"
+// cauldron::CauldronConfig
+// cauldron::GetConfig
+// cauldron::GetContentManager
+// cauldron::GetDynamicBufferPool
+// cauldron::GetDynamicResourcePool
+// cauldron::GetFramework
+// cauldron::GetScene
+// cauldron::GetUIManager
+// json
+#include "Cauldron2/framework/core/framework.h"
+// cauldron::IBLTexture
+// cauldron::Scene
+#include "Cauldron2/framework/core/scene.h"
+// cauldron::UISection
+// cauldron::UISectionType
+// cauldron::UISlider
+#include "Cauldron2/framework/core/uimanager.h"
+// cauldron::ASSERT_CRITICAL
+// cauldron::ASSERT_WARNING
+// cauldron::CauldronAssert
+// cauldron::CauldronError
+#include "Cauldron2/framework/misc/assert.h"
+// cauldron::Buffer
+// cauldron::BufferAddressInfo
+// cauldron::BufferDesc
+#include "Cauldron2/framework/render/buffer.h"
+// cauldron::DynamicBufferPool
+#include "Cauldron2/framework/render/dynamicbufferpool.h"
+// cauldron::DynamicResourcePool
+#include "Cauldron2/framework/render/dynamicresourcepool.h"
+// cauldron::Material
+// cauldron::MaterialBlend
+// cauldron::TextureClass
+// cauldron::TextureInfo
+#include "Cauldron2/framework/render/material.h"
+// cauldron::Mesh
+// cauldron::Surface
+#include "Cauldron2/framework/render/mesh.h"
+// cauldron::ParameterSet
+#include "Cauldron2/framework/render/parameterset.h"
+// cauldron::PipelineDesc
+// cauldron::ShaderBuildDesc
+#include "Cauldron2/framework/render/pipelinedesc.h"
+// cauldron::PipelineObject
+#include "Cauldron2/framework/render/pipelineobject.h"
+// cauldron::GPUScopedProfileCapture
+#include "Cauldron2/framework/render/profiler.h"
+// cauldron::AddressMode
+// cauldron::FilterFunc
+// cauldron::ResolutionInfo
+// cauldron::ResourceFlags
+// cauldron::ResourceFormat
+// cauldron::ResourceState
+// cauldron::ShaderBindStage
+// cauldron::ShaderModel
+// cauldron::VertexAttributeFlag_Normal
+// cauldron::VertexAttributeFlag_Position
+// cauldron::VertexAttributeFlag_Tangent
+// cauldron::VertexAttributeFlag_Texcoord0
+// cauldron::VertexAttributeFlag_Texcoord1
+// cauldron::VertexAttributeType
+// cauldron::ViewDimension
+#include "Cauldron2/framework/render/renderdefines.h"
+// cauldron::RootSignature
+#include "Cauldron2/framework/render/rootsignature.h"
+// cauldron::RootSignatureDesc
+#include "Cauldron2/framework/render/rootsignaturedesc.h"
+// cauldron::ASManager
+#include "Cauldron2/framework/render/rtresources.h"
+// cauldron::Sampler
+// cauldron::SamplerDesc
+#include "Cauldron2/framework/render/sampler.h"
+// cauldron::Texture
+// cauldron::TextureDesc
+#include "Cauldron2/framework/render/texture.h"
+// LightInformation
+// SceneLightingInformation
+#include "Cauldron2/framework/shaders/shadercommon.h"
+
+//------------------------------------------------------------------------------
+// External Includes
+//------------------------------------------------------------------------------
+
+// memset
+#include <cstring>
+// std::lock_guard
+// std::mutex
+#include <mutex>
+// std::vector
+#include <vector>
+
+//------------------------------------------------------------------------------
+// Sample Definitions
+//------------------------------------------------------------------------------
 
 using namespace cauldron;
 
-PathTracingRenderModule::~PathTracingRenderModule()
+namespace rr
 {
-}
-
-void PathTracingRenderModule::Init(const json& initData)
-{
-    CauldronAssert(ASSERT_CRITICAL, GetFramework()->GetConfig()->RT_1_1, L"Error: Pathtracing requires RT1.1");
-    CauldronAssert(ASSERT_CRITICAL, GetFramework()->GetConfig()->MinShaderModel >= ShaderModel::SM6_6, L"Error: Pathtracing requires SM6_6 or greater");
-
-    m_pDenoiserRenderModule = static_cast<DenoiserRenderModule*>(GetFramework()->GetRenderModule("DenoiserRenderModule"));
-    CauldronAssert(ASSERT_CRITICAL, m_pDenoiserRenderModule != nullptr, L"Error: DenoiserRenderModule required.");
-
-    m_ComparisonSampler.Comparison = GetConfig()->InvertedDepth ? ComparisonFunc::GreaterEqual : ComparisonFunc::LessEqual;
-    m_ComparisonSampler.Filter = FilterFunc::ComparisonMinMagLinearMipPoint;
-    m_ComparisonSampler.MaxAnisotropy = 1;
-
-    m_SpecularSampler.AddressW = AddressMode::Wrap;
-    m_SpecularSampler.Filter = FilterFunc::MinMagMipLinear;
-    m_SpecularSampler.MaxAnisotropy = 1;
-
-    m_DiffuseSampler.Filter = FilterFunc::MinMagMipPoint;
-    m_DiffuseSampler.AddressW = AddressMode::Wrap;
-    m_DiffuseSampler.MaxAnisotropy = 1;
-
-    if (!InitPipelineObjects())
+    [[nodiscard]]
+    PathTracingRenderModule::PathTracingRenderModule()
+        : RenderModule(L"PathTracingRenderModule")
     {
-        CauldronError(L"FidelityFX Denoiser Sample: Error: Could not initialize pathtracing pipeline objects.");
-        return;
     }
 
-    if (!InitResources())
+    PathTracingRenderModule::~PathTracingRenderModule() = default;
+
+    void PathTracingRenderModule::Init(const json& initData)
     {
-        CauldronError(L"FidelityFX Denoiser Sample: Error: Could not initialize pathtracing resources.");
-        return;
-    }
+        CauldronAssert(ASSERT_CRITICAL, GetFramework()->GetConfig()->RT_1_1, L"Error: Pathtracing requires RT1.1");
+        CauldronAssert(ASSERT_CRITICAL, GetFramework()->GetConfig()->MinShaderModel >= ShaderModel::SM6_6, L"Error: Pathtracing requires SM6_6 or greater");
 
-    BuildUI();
+        m_pDenoiserRenderModule = static_cast< DenoiserRenderModule* >(GetFramework()->GetRenderModule("DenoiserRenderModule"));
+        CauldronAssert(ASSERT_CRITICAL, m_pDenoiserRenderModule != nullptr, L"Error: DenoiserRenderModule required.");
 
-    // Register for content change updates
-    GetContentManager()->AddContentListener(this);
-    SetModuleReady(true);
-}
+        m_SpecularSampler.AddressW = AddressMode::Wrap;
+        m_SpecularSampler.Filter = FilterFunc::MinMagMipLinear;
+        m_SpecularSampler.MaxAnisotropy = 1;
 
-void PathTracingRenderModule::EnableModule(bool enabled)
-{
-    if (m_pDenoiserRenderModule && !enabled)
-        m_pDenoiserRenderModule->EnableModule(enabled); // Denoiser requires PT module
-
-    cauldron::RenderModule::EnableModule(enabled);
-}
-
-void PathTracingRenderModule::Execute(double deltaTime, cauldron::CommandList* pCmdList)
-{
-    if (!m_pBRDFTexture || !m_pPrefilteredEnvironmentMap || !m_pIrradianceEnvironmentMap)
-    {
-        m_pBRDFTexture               = GetScene()->GetBRDFLutTexture();
-        m_pPrefilteredEnvironmentMap = GetScene()->GetIBLTexture(IBLTexture::Prefiltered);
-        m_pIrradianceEnvironmentMap  = GetScene()->GetIBLTexture(IBLTexture::Irradiance);
-
-        // These might not yet be loaded
-        if (m_pBRDFTexture && m_pPrefilteredEnvironmentMap && m_pIrradianceEnvironmentMap)
+        if (not InitPipelineObjects())
         {
-            m_pTraceRaysDenoiserParameterSet->SetTextureSRV(m_pBRDFTexture, ViewDimension::Texture2D, 2);
-            m_pTraceRaysDenoiserParameterSet->SetTextureSRV(m_pPrefilteredEnvironmentMap, ViewDimension::TextureCube, 3);
-            m_pTraceRaysDenoiserParameterSet->SetTextureSRV(m_pIrradianceEnvironmentMap, ViewDimension::TextureCube, 4);
+            CauldronError(L"FidelityFX Denoiser Sample: Error: Could not initialize pathtracing pipeline objects.");
+            return;
         }
-        return;
-    }
 
-    GPUScopedProfileCapture sampleMarker(pCmdList, L"Pathtracing");
-
-    const ResolutionInfo& resInfo = GetFramework()->GetResolutionInfo();
-    CameraComponent* pCamera = GetScene()->GetCurrentCamera();
-
-    TraceRaysConstants constants = {};
-    memcpy(constants.clip_to_world, &pCamera->GetInverseViewProjection(), sizeof(constants.clip_to_world));
-    memcpy(constants.camera_to_world, &pCamera->GetInverseView(), sizeof(constants.camera_to_world));
-    constants.inv_render_size[0] = 1.0f / resInfo.RenderWidth;
-    constants.inv_render_size[1] = 1.0f / resInfo.RenderHeight;
-    constants.frame_index = static_cast<uint32_t>(GetFramework()->GetFrameID());
-    constants.ibl_factor = GetScene()->GetIBLFactor();
-    constants.use_dominant_light = m_pDenoiserRenderModule->UseDominantLightVisibility() ? 1 : 0;
-    constants.dominant_light_index = 0;
-    constants.checkerboard = m_pDenoiserRenderModule->IsCheckerboardingEnabled() ? 1 : 0;
-    constants.ambientOcclusionA = m_AmbientOcclusionA;
-    constants.ambientOcclusionB = m_AmbientOcclusionB;
-    constants.specularOcclusionA = m_SpecularOcclusionA;
-    constants.specularOcclusionB = m_SpecularOcclusionB;
-
-    const SceneLightingInformation& sceneLightInfo = GetScene()->GetSceneLightInfo();
-    for (uint32_t i = 0; i < static_cast<uint32_t>(sceneLightInfo.LightCount); ++i)
-    {
-        if (sceneLightInfo.LightInfo[i].Type == static_cast<uint32_t>(LightType::Directional))
+        if (not InitResources())
         {
-            constants.dominant_light_index = i;
-            break;
+            CauldronError(L"FidelityFX Denoiser Sample: Error: Could not initialize pathtracing resources.");
+            return;
         }
+
+        BuildUI();
+
+        // Register for content change updates
+        GetContentManager()->AddContentListener(this);
+        SetModuleReady(true);
     }
 
-    BufferAddressInfo constantsBufferInfo = GetDynamicBufferPool()->AllocConstantBuffer(sizeof(TraceRaysConstants), reinterpret_cast<const void*>(&constants));
-    m_pTraceRaysDenoiserParameterSet->UpdateRootConstantBuffer(&constantsBufferInfo, 0);
-
-    BufferAddressInfo sceneBufferInfo = GetDynamicBufferPool()->AllocConstantBuffer(sizeof(SceneInformation), reinterpret_cast<const void*>(&GetScene()->GetSceneInfo()));
-    m_pTraceRaysDenoiserParameterSet->UpdateRootConstantBuffer(&sceneBufferInfo, 1);
-
-    BufferAddressInfo lightingBufferInfo = GetDynamicBufferPool()->AllocConstantBuffer(sizeof(sceneLightInfo), reinterpret_cast<const void*>(&sceneLightInfo));
-    m_pTraceRaysDenoiserParameterSet->UpdateRootConstantBuffer(&lightingBufferInfo, 2);
-
-    LightingCBData lightingConstantData;
-    lightingConstantData.IBLFactor = GetScene()->GetIBLFactor();
-    lightingConstantData.SpecularIBLFactor = GetScene()->GetSpecularIBLFactor();
-    BufferAddressInfo lightingConstantDataInfo = GetDynamicBufferPool()->AllocConstantBuffer(sizeof(LightingCBData), reinterpret_cast<const void*>(&lightingConstantData));
-    m_pTraceRaysDenoiserParameterSet->UpdateRootConstantBuffer(&lightingConstantDataInfo, 3);
-
-    ShadowMapResourcePool* pShadowMapResourcePool = GetFramework()->GetShadowMapResourcePool();
-    CauldronAssert(ASSERT_CRITICAL,
-                   pShadowMapResourcePool->GetRenderTargetCount() <= MAX_SHADOW_MAP_TEXTURES_COUNT,
-                   L"NRCRenderModule can only support up to %d shadow maps. There are currently %d shadow maps",
-                   MAX_SHADOW_MAP_TEXTURES_COUNT,
-                   pShadowMapResourcePool->GetRenderTargetCount());
-    for (uint32_t i = 0; i < pShadowMapResourcePool->GetRenderTargetCount(); ++i)
+    void PathTracingRenderModule::EnableModule(bool enabled)
     {
-        m_pTraceRaysDenoiserParameterSet->SetTextureSRV(pShadowMapResourcePool->GetRenderTarget(i), ViewDimension::Texture2D, SHADOW_MAP_BEGIN_SLOT + i);
+        if (m_pDenoiserRenderModule and not enabled)
+            m_pDenoiserRenderModule->EnableModule(enabled); // Denoiser requires PT module
+
+        RenderModule::EnableModule(enabled);
     }
 
-    m_pTraceRaysDenoiserParameterSet->Bind(pCmdList, m_pTraceRaysDenoiserPipeline);
-    SetPipelineState(pCmdList, m_pTraceRaysDenoiserPipeline);
-    const uint32_t numGroupsX = (resInfo.RenderWidth + 7) / 8;
-    const uint32_t numGroupsY = (resInfo.RenderHeight + 7) / 8;
-    Dispatch(pCmdList, numGroupsX, numGroupsY, 1);
-}
-
-void PathTracingRenderModule::BuildUI()
-{
-    static const bool Enable = false;
-
-    if (Enable)
+    void PathTracingRenderModule::Execute(double deltaTime, CommandList* pCmdList)
     {
-        UISection* uiSection = GetUIManager()->RegisterUIElements("Path Tracing", UISectionType::Sample);
-
-        uiSection->RegisterUIElement<UISlider<float>>("Ambient occlusion A",  (float&)m_AmbientOcclusionA,  0.01f, 1.0f, Enable, [](float cur, float old) {});
-        uiSection->RegisterUIElement<UISlider<float>>("Ambient occlusion B",  (float&)m_AmbientOcclusionB,  0.00f, 1.0f, Enable, [](float cur, float old) {});
-        uiSection->RegisterUIElement<UISlider<float>>("Specular occlusion A", (float&)m_SpecularOcclusionA, 0.01f, 1.0f, Enable, [](float cur, float old) {});
-        uiSection->RegisterUIElement<UISlider<float>>("Specular occlusion B", (float&)m_SpecularOcclusionB, 0.00f, 1.0f, Enable, [](float cur, float old) {});
-    }
-}
-
-void PathTracingRenderModule::OnNewContentLoaded(cauldron::ContentBlock* pContentBlock)
-{
-    std::lock_guard<std::mutex> pipelineLock(m_Mutex);
- 
-    for (Material* pMat : pContentBlock->Materials)
-    {
-        PTMaterialInfo materialInfo = {};
-
-        const Vec4 albedoColor = pMat->GetAlbedoColor();
-        materialInfo.albedo_factor_x = albedoColor.getX();
-        materialInfo.albedo_factor_y = albedoColor.getY();
-        materialInfo.albedo_factor_z = albedoColor.getZ();
-        materialInfo.albedo_factor_w = albedoColor.getW();
-
-        const Vec4 emissiveColor = pMat->GetEmissiveColor();
-        materialInfo.emission_factor_x = emissiveColor.getX();
-        materialInfo.emission_factor_y = emissiveColor.getY();
-        materialInfo.emission_factor_z = emissiveColor.getZ();
-
-        const Vec4 pbrInfo = pMat->GetPBRInfo();
-        materialInfo.arm_factor_x = 1.0f;
-        materialInfo.arm_factor_y = pbrInfo.getY();
-        materialInfo.arm_factor_z = pbrInfo.getX();
-
-        materialInfo.is_opaque = pMat->GetBlendMode() == MaterialBlend::Opaque;
-        materialInfo.alpha_cutoff = pMat->GetAlphaCutOff();
-        materialInfo.is_double_sided = pMat->HasDoubleSided();
-
-        int32_t samplerIndex;
-        if (pMat->HasPBRInfo())
+        if ((not m_pBRDFTexture) or (not m_pPrefilteredEnvironmentMap))
         {
-            materialInfo.albedo_tex_id = AddTexture(pMat, TextureClass::Albedo, samplerIndex);
-            materialInfo.albedo_tex_sampler_id = samplerIndex;
+            m_pBRDFTexture               = GetScene()->GetBRDFLutTexture();
+            m_pPrefilteredEnvironmentMap = GetScene()->GetIBLTexture(IBLTexture::Prefiltered);
 
-            if (pMat->HasPBRMetalRough())
+            // These might not yet be loaded
+            if (m_pBRDFTexture and m_pPrefilteredEnvironmentMap)
             {
-                materialInfo.arm_tex_id = AddTexture(pMat, TextureClass::MetalRough, samplerIndex);
-                materialInfo.arm_tex_sampler_id = samplerIndex;
+                m_pTraceRaysDenoiserParameterSet->SetTextureSRV(m_pBRDFTexture, ViewDimension::Texture2D, 1);
+                m_pTraceRaysDenoiserParameterSet->SetTextureSRV(m_pPrefilteredEnvironmentMap, ViewDimension::TextureCube, 2);
             }
-            else if (pMat->HasPBRSpecGloss())
+            return;
+        }
+
+        GPUScopedProfileCapture sampleMarker(pCmdList, L"Pathtracing");
+
+        const ResolutionInfo& resInfo = GetFramework()->GetResolutionInfo();
+        CameraComponent*      pCamera = GetScene()->GetCurrentCamera();
+
+        const SceneLightingInformation& sceneLightInfo    = GetScene()->GetSceneLightInfo();
+        const bool                      useDominantLight  = m_pDenoiserRenderModule->UseDominantLightVisibility();
+        U32                             dominantLightIndex = 0u;
+        for (U32 i = 0u; i < static_cast< U32 >(sceneLightInfo.LightCount); ++i)
+        {
+            if (sceneLightInfo.LightInfo[i].Type == static_cast< S32 >(cauldron::LightType::Directional))
             {
-                materialInfo.arm_tex_id = AddTexture(pMat, TextureClass::SpecGloss, samplerIndex);
-                materialInfo.arm_tex_sampler_id = samplerIndex;
+                dominantLightIndex = i;
+                break;
             }
         }
 
-        materialInfo.normal_tex_id = AddTexture(pMat, TextureClass::Normal, samplerIndex);
-        materialInfo.normal_tex_sampler_id = samplerIndex;
-        materialInfo.emission_tex_id = AddTexture(pMat, TextureClass::Emissive, samplerIndex);
-        materialInfo.emission_tex_sampler_id = samplerIndex;
+        PackedFrame frame = CreatePackedFrame(resInfo,
+                                             pCamera,
+                                             GetConfig()->InvertedDepth,
+                                             static_cast< U32 >(GetFramework()->GetFrameID()),
+                                             sceneLightInfo,
+                                             useDominantLight,
+                                             dominantLightIndex);
+        frame.ambientOcclusionA  = m_AmbientOcclusionA;
+        frame.ambientOcclusionB  = m_AmbientOcclusionB;
+        frame.specularOcclusionA = m_SpecularOcclusionA;
+        frame.specularOcclusionB = m_SpecularOcclusionB;
+        frame.lighting.iblFactor = GetScene()->GetIBLFactor();
+        frame.checkerboard       = m_pDenoiserRenderModule->IsCheckerboardingEnabled() ? 1u : 0u;
 
-        m_rtInfoTables.m_cpuMaterialBuffer.push_back(materialInfo);
+        BufferAddressInfo frameBufferInfo = GetDynamicBufferPool()->AllocConstantBuffer(sizeof(frame), static_cast< const void* >(&frame));
+        m_pTraceRaysDenoiserParameterSet->UpdateRootConstantBuffer(&frameBufferInfo, 0);
+
+        m_pTraceRaysDenoiserParameterSet->Bind(pCmdList, m_pTraceRaysDenoiserPipeline);
+        SetPipelineState(pCmdList, m_pTraceRaysDenoiserPipeline);
+        const U32 threadGroupCountX = (resInfo.RenderWidth + GROUP_THREAD_COUNT_X - 1) / GROUP_THREAD_COUNT_X;
+        const U32 threadGroupCountY = (resInfo.RenderHeight + GROUP_THREAD_COUNT_Y - 1) / GROUP_THREAD_COUNT_Y;
+        Dispatch(pCmdList, threadGroupCountX, threadGroupCountY, 1);
     }
 
-    MeshComponentMgr* pMeshComponentManager = MeshComponentMgr::Get();
-
-    uint32_t nodeID = 0, surfaceID = 0;
-    for (EntityDataBlock* pEntityData : pContentBlock->EntityDataBlocks)
+    void PathTracingRenderModule::BuildUI()
     {
-        for (Component* pComponent : pEntityData->Components)
-        {
-            if (pComponent->GetManager() == pMeshComponentManager)
-            {
-                PTInstanceInfo instanceInfo{};
-                instanceInfo.surface_id_table_offset  = (uint32_t)m_rtInfoTables.m_cpuSurfaceIDsBuffer.size();
-                const Mesh*  pMesh                    = reinterpret_cast<MeshComponent*>(pComponent)->GetData().pMesh;
-                const size_t numSurfaces              = pMesh->GetNumSurfaces();
-                size_t       numOpaqueSurfaces        = 0;
+        static const bool Enable = false;
 
-                for (uint32_t i = 0; i < numSurfaces; ++i)
+        if (Enable)
+        {
+            UISection* uiSection = GetUIManager()->RegisterUIElements("Path Tracing", UISectionType::Sample);
+
+            uiSection->RegisterUIElement< UISlider< F32 > >("Ambient occlusion A",  m_AmbientOcclusionA,  0.01f, 1.0f, Enable, [](F32 cur, F32 old) {});
+            uiSection->RegisterUIElement< UISlider< F32 > >("Ambient occlusion B",  m_AmbientOcclusionB,  0.00f, 1.0f, Enable, [](F32 cur, F32 old) {});
+            uiSection->RegisterUIElement< UISlider< F32 > >("Specular occlusion A", m_SpecularOcclusionA, 0.01f, 1.0f, Enable, [](F32 cur, F32 old) {});
+            uiSection->RegisterUIElement< UISlider< F32 > >("Specular occlusion B", m_SpecularOcclusionB, 0.00f, 1.0f, Enable, [](F32 cur, F32 old) {});
+        }
+    }
+
+    void PathTracingRenderModule::OnNewContentLoaded(ContentBlock* pContentBlock)
+    {
+        std::lock_guard< std::mutex > pipelineLock(m_Mutex);
+
+        // Materials accumulate across content blocks, so remember where this block's materials
+        // begin; surface material indices are global (into m_cpuMaterialBuffer), not block-local.
+        const U32 materialOffset = static_cast< U32 >(m_rtInfoTables.m_cpuMaterialBuffer.size());
+
+        for (Material* pMat : pContentBlock->Materials)
+        {
+            // Resolve textures first; AddTexture appends to the bindless texture / sampler tables
+            // and returns InvalidIndex (as -1) when the texture is absent.
+            Map baseColorMap = { .samplerIndex = InvalidIndex, .textureIndex = InvalidIndex };
+            Map armMap       = { .samplerIndex = InvalidIndex, .textureIndex = InvalidIndex };
+            Map normalMap    = { .samplerIndex = InvalidIndex, .textureIndex = InvalidIndex };
+            Map emissionMap  = { .samplerIndex = InvalidIndex, .textureIndex = InvalidIndex };
+
+            S32 samplerIndex;
+            if (pMat->HasPBRInfo())
+            {
+                baseColorMap.textureIndex = static_cast< U32 >(AddTexture(pMat, TextureClass::Albedo, samplerIndex));
+                baseColorMap.samplerIndex = static_cast< U32 >(samplerIndex);
+
+                if (pMat->HasPBRMetalRough())
                 {
-                    const Surface*  pSurface  = pMesh->GetSurface(i);
-                    const Material* pMaterial = pSurface->GetMaterial();
+                    armMap.textureIndex = static_cast< U32 >(AddTexture(pMat, TextureClass::MetalRough, samplerIndex));
+                    armMap.samplerIndex = static_cast< U32 >(samplerIndex);
+                }
+                else if (pMat->HasPBRSpecGloss())
+                {
+                    armMap.textureIndex = static_cast< U32 >(AddTexture(pMat, TextureClass::SpecGloss, samplerIndex));
+                    armMap.samplerIndex = static_cast< U32 >(samplerIndex);
+                }
+            }
 
-                    m_rtInfoTables.m_cpuSurfaceIDsBuffer.push_back(surfaceID++);
+            normalMap.textureIndex   = static_cast< U32 >(AddTexture(pMat, TextureClass::Normal, samplerIndex));
+            normalMap.samplerIndex   = static_cast< U32 >(samplerIndex);
+            emissionMap.textureIndex = static_cast< U32 >(AddTexture(pMat, TextureClass::Emissive, samplerIndex));
+            emissionMap.samplerIndex = static_cast< U32 >(samplerIndex);
 
-                    PTSurfaceInfo surfaceInfo{};
-                    memset(&surfaceInfo, -1, sizeof(surfaceInfo));
-                    surfaceInfo.num_indices   = pSurface->GetIndexBuffer().Count;
-                    surfaceInfo.num_vertices = pSurface->GetVertexBuffer(VertexAttributeType::Position).Count;
+            const Vec4 albedoColor   = pMat->GetAlbedoColor();
+            const Vec4 emissiveColor = pMat->GetEmissiveColor();
+            const Vec4 pbrInfo       = pMat->GetPBRInfo();
 
-                    int foundIndex = -1;
-                    for (size_t i = 0; i < m_rtInfoTables.m_IndexBuffers.size(); i++)
+            U32 flags = 0u;
+            if (pMat->GetBlendMode() == MaterialBlend::Opaque)
+            {
+                flags |= MaterialFlag_Opaque;
+            }
+            if (pMat->HasDoubleSided())
+            {
+                flags |= MaterialFlag_DoubleSided;
+            }
+
+            const PackedMaterial packedMaterial =
+            {
+                .baseColorFactor                    = { { albedoColor.getX(), albedoColor.getY(), albedoColor.getZ(), albedoColor.getW() } },
+                .alphaCutoff                        = pMat->GetAlphaCutOff(),
+                .ambientOcclusionFactor             = 1.0f,
+                .roughnessFactor                    = pbrInfo.getY(),
+                .metalnessFactor                    = pbrInfo.getX(),
+                .emissionFactor                     = { { emissiveColor.getX(), emissiveColor.getY(), emissiveColor.getZ() } },
+                .flags                              = flags,
+                .ambientOcclusionRoughnessMetalness = armMap,
+                .baseColor                          = baseColorMap,
+                .emission                           = emissionMap,
+                .normal                             = normalMap,
+            };
+
+            m_rtInfoTables.m_cpuMaterialBuffer.push_back(packedMaterial);
+        }
+
+        MeshComponentMgr* pMeshComponentManager = MeshComponentMgr::Get();
+
+        U32 nodeID = 0;
+        for (EntityDataBlock* pEntityData : pContentBlock->EntityDataBlocks)
+        {
+            for (Component* pComponent : pEntityData->Components)
+            {
+                if (pComponent->GetManager() == pMeshComponentManager)
+                {
+                    const U32 surfaceOffset = static_cast< U32 >(m_rtInfoTables.m_cpuSurfaceBuffer.size());
+                    const Mesh*    pMesh         = reinterpret_cast< MeshComponent* >(pComponent)->GetData().pMesh;
+                    const size_t   surfaceCount   = pMesh->GetNumSurfaces();
+
+                    for (U32 i = 0; i < surfaceCount; ++i)
                     {
-                        if (m_rtInfoTables.m_IndexBuffers[i] == pSurface->GetIndexBuffer().pBuffer)
+                        const Surface*  pSurface  = pMesh->GetSurface(i);
+                        const Material* pMaterial = pSurface->GetMaterial();
+
+                        PackedSurface packedSurface{};
+                        // Absent vertex attributes are left InvalidIndex (0xFFFFFFFF).
+                        memset(&packedSurface, -1, sizeof(packedSurface));
+                        packedSurface.indexCount  = pSurface->GetIndexBuffer().Count;
+                        packedSurface.vertexCount = pSurface->GetVertexBuffer(VertexAttributeType::Position).Count;
+
+                        S32 foundIndex = -1;
+                        for (size_t i = 0; i < m_rtInfoTables.m_IndexBuffers.size(); i++)
                         {
-                            foundIndex = (int)i;
-                            break;
-                        }
-                    }
-
-                    surfaceInfo.index_offset = foundIndex >= 0 ? foundIndex : (int)m_rtInfoTables.m_IndexBuffers.size();
-                    if (foundIndex < 0)
-                        m_rtInfoTables.m_IndexBuffers.push_back(pSurface->GetIndexBuffer().pBuffer);
-
-                    switch (pSurface->GetIndexBuffer().IndexFormat)
-                    {
-                    case ResourceFormat::R16_UINT:
-                        surfaceInfo.index_type = SURFACE_INFO_INDEX_TYPE_U16;
-                        break;
-                    case ResourceFormat::R32_UINT:
-                        surfaceInfo.index_type = SURFACE_INFO_INDEX_TYPE_U32;
-                        break;
-                    default:
-                        CauldronError(L"Unsupported resource format for ray tracing indices");
-                    }
-
-                    uint32_t usedAttributes = VertexAttributeFlag_Position | VertexAttributeFlag_Normal | VertexAttributeFlag_Tangent |
-                                              VertexAttributeFlag_Texcoord0 | VertexAttributeFlag_Texcoord1;
-
-                    const uint32_t surfaceAttributes = pSurface->GetVertexAttributes();
-                    usedAttributes = usedAttributes & surfaceAttributes;
-
-                    for (uint32_t attribute = 0; attribute < static_cast<uint32_t>(VertexAttributeType::Count); ++attribute)
-                    {
-                        // Check if the attribute is present
-                        if (usedAttributes & (0x1 << attribute))
-                        {
-                            int foundIndex = -1;
-                            for (size_t i = 0; i < m_rtInfoTables.m_VertexBuffers.size(); i++)
+                            if (m_rtInfoTables.m_IndexBuffers[i] == pSurface->GetIndexBuffer().pBuffer)
                             {
-                                if (m_rtInfoTables.m_VertexBuffers[i] == pSurface->GetVertexBuffer(static_cast<VertexAttributeType>(attribute)).pBuffer)
+                                foundIndex = static_cast< S32 >(i);
+                                break;
+                            }
+                        }
+
+                        packedSurface.ibvIndex = static_cast< U32 >(foundIndex >= 0 ? foundIndex : static_cast< S32 >(m_rtInfoTables.m_IndexBuffers.size()));
+                        if (foundIndex < 0)
+                            m_rtInfoTables.m_IndexBuffers.push_back(pSurface->GetIndexBuffer().pBuffer);
+
+                        switch (pSurface->GetIndexBuffer().IndexFormat)
+                        {
+                        case ResourceFormat::R16_UINT:
+                            packedSurface.indexByteCount = 2u;
+                            break;
+                        case ResourceFormat::R32_UINT:
+                            packedSurface.indexByteCount = 4u;
+                            break;
+                        default:
+                            CauldronError(L"Unsupported resource format for ray tracing indices");
+                        }
+
+                        U32 usedAttributes = VertexAttributeFlag_Position | VertexAttributeFlag_Normal | VertexAttributeFlag_Tangent |
+                                                  VertexAttributeFlag_Texcoord0 | VertexAttributeFlag_Texcoord1;
+
+                        const U32 surfaceAttributes = pSurface->GetVertexAttributes();
+                        usedAttributes = usedAttributes & surfaceAttributes;
+
+                        for (U32 attribute = 0; attribute < static_cast< U32 >(VertexAttributeType::Count); ++attribute)
+                        {
+                            // Check if the attribute is present
+                            if (usedAttributes & (0x1 << attribute))
+                            {
+                                S32 foundIndex = -1;
+                                for (size_t i = 0; i < m_rtInfoTables.m_VertexBuffers.size(); i++)
                                 {
-                                    foundIndex = (int)i;
+                                    if (m_rtInfoTables.m_VertexBuffers[i] == pSurface->GetVertexBuffer(static_cast< VertexAttributeType >(attribute)).pBuffer)
+                                    {
+                                        foundIndex = static_cast< S32 >(i);
+                                        break;
+                                    }
+                                }
+                                if (foundIndex < 0)
+                                    m_rtInfoTables.m_VertexBuffers.push_back(pSurface->GetVertexBuffer(static_cast< VertexAttributeType >(attribute)).pBuffer);
+                                const U32 vbvIndex = static_cast< U32 >(foundIndex >= 0 ? foundIndex : static_cast< S32 >(m_rtInfoTables.m_VertexBuffers.size()) - 1);
+                                switch (static_cast< VertexAttributeType >(attribute))
+                                {
+                                case VertexAttributeType::Position:
+                                    packedSurface.positionVbvIndex = vbvIndex;
+                                    break;
+                                case VertexAttributeType::Normal:
+                                    packedSurface.normalVbvIndex = vbvIndex;
+                                    break;
+                                case VertexAttributeType::Tangent:
+                                    packedSurface.tangentVbvIndex = vbvIndex;
+                                    break;
+                                case VertexAttributeType::Texcoord0:
+                                    packedSurface.texcoord0VbvIndex = vbvIndex;
+                                    break;
+                                case VertexAttributeType::Texcoord1:
+                                    packedSurface.texcoord1VbvIndex = vbvIndex;
+                                    break;
+                                default:
                                     break;
                                 }
                             }
-                            if (foundIndex < 0)
-                                m_rtInfoTables.m_VertexBuffers.push_back(pSurface->GetVertexBuffer(static_cast<VertexAttributeType>(attribute)).pBuffer);
-                            switch (static_cast<VertexAttributeType>(attribute))
+                        }
+
+                        for (size_t i = 0; i < pContentBlock->Materials.size(); i++)
+                        {
+                            if (pContentBlock->Materials[i] == pMaterial)
                             {
-                            case cauldron::VertexAttributeType::Position:
-                                surfaceInfo.position_attribute_offset = foundIndex >= 0 ? foundIndex : (int)m_rtInfoTables.m_VertexBuffers.size() - 1;
-                                break;
-                            case cauldron::VertexAttributeType::Normal:
-                                surfaceInfo.normal_attribute_offset = foundIndex >= 0 ? foundIndex : (int)m_rtInfoTables.m_VertexBuffers.size() - 1;
-                                break;
-                            case cauldron::VertexAttributeType::Tangent:
-                                surfaceInfo.tangent_attribute_offset = foundIndex >= 0 ? foundIndex : (int)m_rtInfoTables.m_VertexBuffers.size() - 1;
-                                break;
-                            case cauldron::VertexAttributeType::Texcoord0:
-                                surfaceInfo.texcoord0_attribute_offset = foundIndex >= 0 ? foundIndex : (int)m_rtInfoTables.m_VertexBuffers.size() - 1;
-                                break;
-                            case cauldron::VertexAttributeType::Texcoord1:
-                                surfaceInfo.texcoord1_attribute_offset = foundIndex >= 0 ? foundIndex : (int)m_rtInfoTables.m_VertexBuffers.size() - 1;
-                                break;
-                            default:
+                                packedSurface.materialIndex = materialOffset + static_cast< U32 >(i);
                                 break;
                             }
                         }
+                        m_rtInfoTables.m_cpuSurfaceBuffer.push_back(packedSurface);
                     }
 
-                    for (size_t i = 0; i < pContentBlock->Materials.size(); i++)
+                    const PackedInstance packedInstance =
                     {
-                        if (pContentBlock->Materials[i] == pMaterial)
-                        {
-                            surfaceInfo.material_id = (uint32_t)i;
-                            break;
-                        }
-                    }
-                    m_rtInfoTables.m_cpuSurfaceBuffer.push_back(surfaceInfo);
-
-                    if (!pSurface->HasTranslucency())
-                        numOpaqueSurfaces++;
+                        .nodeIndex     = nodeID++,
+                        .meshIndex     = 0u, // unused by the path tracer
+                        .surfaceOffset = surfaceOffset,
+                        .surfaceCount  = static_cast< U32 >(surfaceCount),
+                    };
+                    m_rtInfoTables.m_cpuInstanceBuffer.push_back(packedInstance);
                 }
+            }
+        }
 
-                instanceInfo.num_surfaces        = (uint32_t)(numOpaqueSurfaces);
-                instanceInfo.num_opaque_surfaces = (uint32_t)(numSurfaces);
-                instanceInfo.node_id             = nodeID++;
-                m_rtInfoTables.m_cpuInstanceBuffer.push_back(instanceInfo);
+        if (m_rtInfoTables.m_cpuSurfaceBuffer.size() > 0)
+        {
+            // Upload
+            BufferDesc bufferMaterial = BufferDesc::Data(
+                L"PTMaterialBuffer", static_cast< U32 >(m_rtInfoTables.m_cpuMaterialBuffer.size() * sizeof(PackedMaterial)), sizeof(PackedMaterial), 0, ResourceFlags::None);
+            m_rtInfoTables.m_pMaterialBuffer = GetDynamicResourcePool()->CreateBuffer(&bufferMaterial, ResourceState::CopyDest);
+            const_cast< Buffer* >(m_rtInfoTables.m_pMaterialBuffer)
+                ->CopyData(m_rtInfoTables.m_cpuMaterialBuffer.data(), m_rtInfoTables.m_cpuMaterialBuffer.size() * sizeof(PackedMaterial));
+
+            BufferDesc bufferInstance = BufferDesc::Data(
+                L"PTInstanceBuffer", static_cast< U32 >(m_rtInfoTables.m_cpuInstanceBuffer.size() * sizeof(PackedInstance)), sizeof(PackedInstance), 0, ResourceFlags::None);
+            m_rtInfoTables.m_pInstanceBuffer = GetDynamicResourcePool()->CreateBuffer(&bufferInstance, ResourceState::CopyDest);
+            const_cast< Buffer* >(m_rtInfoTables.m_pInstanceBuffer)
+                ->CopyData(m_rtInfoTables.m_cpuInstanceBuffer.data(), m_rtInfoTables.m_cpuInstanceBuffer.size() * sizeof(PackedInstance));
+
+            BufferDesc bufferSurface = BufferDesc::Data(
+                L"PTSurfaceBuffer", static_cast< U32 >(m_rtInfoTables.m_cpuSurfaceBuffer.size() * sizeof(PackedSurface)), sizeof(PackedSurface), 0, ResourceFlags::None);
+            m_rtInfoTables.m_pSurfaceBuffer = GetDynamicResourcePool()->CreateBuffer(&bufferSurface, ResourceState::CopyDest);
+            const_cast< Buffer* >(m_rtInfoTables.m_pSurfaceBuffer)
+                ->CopyData(m_rtInfoTables.m_cpuSurfaceBuffer.data(), m_rtInfoTables.m_cpuSurfaceBuffer.size() * sizeof(PackedSurface));
+
+            m_pTraceRaysDenoiserParameterSet->SetBufferSRV(m_rtInfoTables.m_pMaterialBuffer, PACKED_MATERIAL_SLOT);
+            m_pTraceRaysDenoiserParameterSet->SetBufferSRV(m_rtInfoTables.m_pInstanceBuffer, PACKED_INSTANCE_SLOT);
+            m_pTraceRaysDenoiserParameterSet->SetBufferSRV(m_rtInfoTables.m_pSurfaceBuffer,  PACKED_SURFACE_SLOT);
+        }
+
+        {
+            // Update the parameter set with loaded texture entries
+            CauldronAssert(ASSERT_CRITICAL, m_rtInfoTables.m_Textures.size() <= MAX_TEXTURE_COUNT, L"Too many textures.");
+            for (U32 i = 0; i < m_rtInfoTables.m_Textures.size(); ++i)
+            {
+                m_pTraceRaysDenoiserParameterSet->SetTextureSRV(m_rtInfoTables.m_Textures[i].pTexture, ViewDimension::Texture2D, i + TEXTURE_BEGIN_SLOT);
+            }
+
+            // Update sampler bindings as well
+            CauldronAssert(ASSERT_CRITICAL, m_rtInfoTables.m_Samplers.size() <= MAX_SAMPLER_COUNT, L"Too many samplers.");
+            for (U32 i = 0; i < m_rtInfoTables.m_Samplers.size(); ++i)
+            {
+                m_pTraceRaysDenoiserParameterSet->SetSampler(m_rtInfoTables.m_Samplers[i], i + SAMPLER_BEGIN_SLOT);
+            }
+
+            CauldronAssert(ASSERT_CRITICAL, m_rtInfoTables.m_IndexBuffers.size() <= MAX_IBV_COUNT, L"Too many index buffers.");
+            for (U32 i = 0; i < m_rtInfoTables.m_IndexBuffers.size(); ++i)
+            {
+                m_pTraceRaysDenoiserParameterSet->SetBufferSRV(m_rtInfoTables.m_IndexBuffers[i], i + IBV_BEGIN_SLOT);
+            }
+
+            CauldronAssert(ASSERT_CRITICAL, m_rtInfoTables.m_VertexBuffers.size() <= MAX_VBV_COUNT, L"Too many vertex buffers.");
+            for (U32 i = 0; i < m_rtInfoTables.m_VertexBuffers.size(); ++i)
+            {
+                m_pTraceRaysDenoiserParameterSet->SetBufferSRV(m_rtInfoTables.m_VertexBuffers[i], i + VBV_BEGIN_SLOT);
             }
         }
     }
 
-    if (m_rtInfoTables.m_cpuSurfaceBuffer.size() > 0)
+    void PathTracingRenderModule::OnContentUnloaded(ContentBlock* pContentBlock)
     {
-        // Upload
-        BufferDesc bufferMaterial = BufferDesc::Data(
-            L"PTMaterialBuffer", uint32_t(m_rtInfoTables.m_cpuMaterialBuffer.size() * sizeof(PTMaterialInfo)), sizeof(PTMaterialInfo), 0, ResourceFlags::None);
-        m_rtInfoTables.m_pMaterialBuffer = GetDynamicResourcePool()->CreateBuffer(&bufferMaterial, ResourceState::CopyDest);
-        const_cast<Buffer*>(m_rtInfoTables.m_pMaterialBuffer)
-            ->CopyData(m_rtInfoTables.m_cpuMaterialBuffer.data(), m_rtInfoTables.m_cpuMaterialBuffer.size() * sizeof(PTMaterialInfo));
-
-        BufferDesc bufferInstance = BufferDesc::Data(
-            L"PTInstanceBuffer", uint32_t(m_rtInfoTables.m_cpuInstanceBuffer.size() * sizeof(PTInstanceInfo)), sizeof(PTInstanceInfo), 0, ResourceFlags::None);
-        m_rtInfoTables.m_pInstanceBuffer = GetDynamicResourcePool()->CreateBuffer(&bufferInstance, ResourceState::CopyDest);
-        const_cast<Buffer*>(m_rtInfoTables.m_pInstanceBuffer)
-            ->CopyData(m_rtInfoTables.m_cpuInstanceBuffer.data(), m_rtInfoTables.m_cpuInstanceBuffer.size() * sizeof(PTInstanceInfo));
-
-        BufferDesc bufferSurfaceID = BufferDesc::Data(
-            L"PTSurfaceIDBuffer", uint32_t(m_rtInfoTables.m_cpuSurfaceIDsBuffer.size() * sizeof(uint32_t)), sizeof(uint32_t), 0, ResourceFlags::None);
-        m_rtInfoTables.m_pSurfaceIDsBuffer = GetDynamicResourcePool()->CreateBuffer(&bufferSurfaceID, ResourceState::CopyDest);
-        const_cast<Buffer*>(m_rtInfoTables.m_pSurfaceIDsBuffer)
-            ->CopyData(m_rtInfoTables.m_cpuSurfaceIDsBuffer.data(), m_rtInfoTables.m_cpuSurfaceIDsBuffer.size() * sizeof(uint32_t));
-
-        BufferDesc bufferSurface = BufferDesc::Data(
-            L"PTSurfaceBuffer", uint32_t(m_rtInfoTables.m_cpuSurfaceBuffer.size() * sizeof(PTSurfaceInfo)), sizeof(PTSurfaceInfo), 0, ResourceFlags::None);
-        m_rtInfoTables.m_pSurfaceBuffer = GetDynamicResourcePool()->CreateBuffer(&bufferSurface, ResourceState::CopyDest);
-        const_cast<Buffer*>(m_rtInfoTables.m_pSurfaceBuffer)
-            ->CopyData(m_rtInfoTables.m_cpuSurfaceBuffer.data(), m_rtInfoTables.m_cpuSurfaceBuffer.size() * sizeof(PTSurfaceInfo));
-
-        m_pTraceRaysDenoiserParameterSet->SetBufferSRV(m_rtInfoTables.m_pMaterialBuffer, RAYTRACING_INFO_BEGIN_SLOT);
-        m_pTraceRaysDenoiserParameterSet->SetBufferSRV(m_rtInfoTables.m_pInstanceBuffer, RAYTRACING_INFO_BEGIN_SLOT + 1);
-        m_pTraceRaysDenoiserParameterSet->SetBufferSRV(m_rtInfoTables.m_pSurfaceIDsBuffer, RAYTRACING_INFO_BEGIN_SLOT + 2);
-        m_pTraceRaysDenoiserParameterSet->SetBufferSRV(m_rtInfoTables.m_pSurfaceBuffer, RAYTRACING_INFO_BEGIN_SLOT + 3);
+        for (const PackedMaterial& packedMaterial : m_rtInfoTables.m_cpuMaterialBuffer)
+        {
+            if (packedMaterial.baseColor.textureIndex != InvalidIndex)
+            {
+                RemoveTexture(static_cast< S32 >(packedMaterial.baseColor.textureIndex));
+            }
+            if (packedMaterial.ambientOcclusionRoughnessMetalness.textureIndex != InvalidIndex)
+            {
+                RemoveTexture(static_cast< S32 >(packedMaterial.ambientOcclusionRoughnessMetalness.textureIndex));
+            }
+            if (packedMaterial.emission.textureIndex != InvalidIndex)
+            {
+                RemoveTexture(static_cast< S32 >(packedMaterial.emission.textureIndex));
+            }
+            if (packedMaterial.normal.textureIndex != InvalidIndex)
+            {
+                RemoveTexture(static_cast< S32 >(packedMaterial.normal.textureIndex));
+            }
+        }
     }
 
+    bool PathTracingRenderModule::InitPipelineObjects()
     {
-        // Update the parameter set with loaded texture entries
-        CauldronAssert(ASSERT_CRITICAL, m_rtInfoTables.m_Textures.size() <= MAX_TEXTURES_COUNT, L"Too many textures.");
-        for (uint32_t i = 0; i < m_rtInfoTables.m_Textures.size(); ++i)
+        auto AddTraceRaysRootSignatureSrvs = [this](RootSignatureDesc& rootSignatureDesc)
         {
-            m_pTraceRaysDenoiserParameterSet->SetTextureSRV(m_rtInfoTables.m_Textures[i].pTexture, ViewDimension::Texture2D, i + TEXTURE_BEGIN_SLOT);
+                rootSignatureDesc.AddConstantBufferView(0, ShaderBindStage::Compute, 1); // g_frame (PackedFrame)
+                rootSignatureDesc.AddRTAccelerationStructureSet(0, ShaderBindStage::Compute, 1); // g_tlas (t0)
+                rootSignatureDesc.AddTextureSRVSet(1, ShaderBindStage::Compute, 1); // g_brdf
+                rootSignatureDesc.AddTextureSRVSet(2, ShaderBindStage::Compute, 1); // g_prefilteredCube
+                rootSignatureDesc.AddBufferSRVSet(PACKED_INSTANCE_SLOT, ShaderBindStage::Compute, 1);
+                rootSignatureDesc.AddBufferSRVSet(PACKED_MATERIAL_SLOT, ShaderBindStage::Compute, 1);
+                rootSignatureDesc.AddBufferSRVSet(PACKED_SURFACE_SLOT,  ShaderBindStage::Compute, 1);
+                rootSignatureDesc.AddBufferSRVSet(IBV_BEGIN_SLOT,  ShaderBindStage::Compute, MAX_IBV_COUNT);
+                rootSignatureDesc.AddBufferSRVSet(VBV_BEGIN_SLOT, ShaderBindStage::Compute, MAX_VBV_COUNT);
+                rootSignatureDesc.AddTextureSRVSet(TEXTURE_BEGIN_SLOT, ShaderBindStage::Compute, MAX_TEXTURE_COUNT);
+                rootSignatureDesc.AddStaticSamplers(0, ShaderBindStage::Compute, 1, &m_SpecularSampler);  // g_brdfSampler (s0)
+                rootSignatureDesc.AddStaticSamplers(1, ShaderBindStage::Compute, 1, &m_SpecularSampler);  // g_prefilteredCubeSampler (s1)
+                rootSignatureDesc.AddSamplerSet(SAMPLER_BEGIN_SLOT, ShaderBindStage::Compute, MAX_SAMPLER_COUNT);
+            };
+
+        {
+            RootSignatureDesc rootSignatureDesc;
+            AddTraceRaysRootSignatureSrvs(rootSignatureDesc);
+
+            rootSignatureDesc.AddTextureUAVSet( 0, ShaderBindStage::Compute, 1);
+            rootSignatureDesc.AddTextureUAVSet( 1, ShaderBindStage::Compute, 1);
+            rootSignatureDesc.AddTextureUAVSet( 2, ShaderBindStage::Compute, 1);
+            rootSignatureDesc.AddTextureUAVSet( 3, ShaderBindStage::Compute, 1);
+            rootSignatureDesc.AddTextureUAVSet( 4, ShaderBindStage::Compute, 1);
+            rootSignatureDesc.AddTextureUAVSet( 5, ShaderBindStage::Compute, 1);
+            rootSignatureDesc.AddTextureUAVSet( 6, ShaderBindStage::Compute, 1);
+            rootSignatureDesc.AddTextureUAVSet( 7, ShaderBindStage::Compute, 1);
+            rootSignatureDesc.AddTextureUAVSet( 8, ShaderBindStage::Compute, 1);
+            rootSignatureDesc.AddTextureUAVSet( 9, ShaderBindStage::Compute, 1);
+            rootSignatureDesc.AddTextureUAVSet(10, ShaderBindStage::Compute, 1);
+
+            m_pTraceRaysDenoiserRootSignature = RootSignature::CreateRootSignature(L"TraceRaysDenoiser_RootSignature", rootSignatureDesc);
+            if (not m_pTraceRaysDenoiserRootSignature)
+                return false;
+
+            PipelineDesc pipelineDesc;
+            pipelineDesc.SetRootSignature(m_pTraceRaysDenoiserRootSignature);
+            ShaderBuildDesc shaderDesc = ShaderBuildDesc::Compute(L"PathTracing.cs.hlsl", L"Main", ShaderModel::SM6_6, nullptr);
+            shaderDesc.AdditionalParams = L"-HV 2021"; // rr headers use templates/namespaces/float32_t (overrides the framework's -HV 2018)
+            pipelineDesc.AddShaderDesc(shaderDesc);
+            m_pTraceRaysDenoiserPipeline = PipelineObject::CreatePipelineObject(L"TraceRaysDenoiser_Pipeline", pipelineDesc);
+            if (not m_pTraceRaysDenoiserPipeline)
+                return false;
+
+            m_pTraceRaysDenoiserParameterSet = ParameterSet::CreateParameterSet(m_pTraceRaysDenoiserRootSignature);
+            m_pTraceRaysDenoiserParameterSet->SetRootConstantBufferResource(GetDynamicBufferPool()->GetResource(), sizeof(PackedFrame), 0);
+            m_pTraceRaysDenoiserParameterSet->SetAccelerationStructure(GetScene()->GetASManager()->GetTLAS(), 0);
         }
 
-        // Update sampler bindings as well
-        CauldronAssert(ASSERT_CRITICAL, m_rtInfoTables.m_Samplers.size() <= MAX_SAMPLERS_COUNT, L"Too many samplers.");
-        for (uint32_t i = 0; i < m_rtInfoTables.m_Samplers.size(); ++i)
-        {
-            m_pTraceRaysDenoiserParameterSet->SetSampler(m_rtInfoTables.m_Samplers[i], i + SAMPLER_BEGIN_SLOT);
-        }
-
-        CauldronAssert(ASSERT_CRITICAL, m_rtInfoTables.m_IndexBuffers.size() <= MAX_BUFFER_COUNT, L"Too many index buffers.");
-        for (uint32_t i = 0; i < m_rtInfoTables.m_IndexBuffers.size(); ++i)
-        {
-            m_pTraceRaysDenoiserParameterSet->SetBufferSRV(m_rtInfoTables.m_IndexBuffers[i], i + INDEX_BUFFER_BEGIN_SLOT);
-        }
-
-        CauldronAssert(ASSERT_CRITICAL, m_rtInfoTables.m_VertexBuffers.size() <= MAX_BUFFER_COUNT, L"Too many vertex buffers.");
-        for (uint32_t i = 0; i < m_rtInfoTables.m_VertexBuffers.size(); ++i)
-        {
-            m_pTraceRaysDenoiserParameterSet->SetBufferSRV(m_rtInfoTables.m_VertexBuffers[i], i + VERTEX_BUFFER_BEGIN_SLOT);
-        }
+        return true;
     }
-}
 
-void PathTracingRenderModule::OnContentUnloaded(cauldron::ContentBlock* pContentBlock)
-{
-    for (const PTMaterialInfo& materialInfo : m_rtInfoTables.m_cpuMaterialBuffer)
+    bool PathTracingRenderModule::InitResources()
     {
-        if (materialInfo.albedo_tex_id > 0)
-            RemoveTexture(materialInfo.albedo_tex_id);
-        if (materialInfo.arm_tex_id > 0)
-            RemoveTexture(materialInfo.arm_tex_id);
-        if (materialInfo.emission_tex_id > 0)
-            RemoveTexture(materialInfo.emission_tex_id);
-        if (materialInfo.normal_tex_id > 0)
-            RemoveTexture(materialInfo.normal_tex_id);
-    }
-}
-
-bool PathTracingRenderModule::InitPipelineObjects()
-{
-    auto AddTraceRaysRootSignatureSrvs = [this](RootSignatureDesc& rootSignatureDesc) {
-            rootSignatureDesc.AddConstantBufferView(0, ShaderBindStage::Compute, 1);
-            rootSignatureDesc.AddConstantBufferView(1, ShaderBindStage::Compute, 1);
-            rootSignatureDesc.AddConstantBufferView(2, ShaderBindStage::Compute, 1);
-            rootSignatureDesc.AddConstantBufferView(3, ShaderBindStage::Compute, 1);
-            rootSignatureDesc.AddRTAccelerationStructureSet(0, ShaderBindStage::Compute, 1);
-            rootSignatureDesc.AddTextureSRVSet(1, ShaderBindStage::Compute, 1);
-            rootSignatureDesc.AddTextureSRVSet(2, ShaderBindStage::Compute, 1);
-            rootSignatureDesc.AddTextureSRVSet(3, ShaderBindStage::Compute, 1);
-            rootSignatureDesc.AddTextureSRVSet(4, ShaderBindStage::Compute, 1);
-            rootSignatureDesc.AddBufferSRVSet(RAYTRACING_INFO_BEGIN_SLOT, ShaderBindStage::Compute, 1);
-            rootSignatureDesc.AddBufferSRVSet(RAYTRACING_INFO_BEGIN_SLOT + 1, ShaderBindStage::Compute, 1);
-            rootSignatureDesc.AddBufferSRVSet(RAYTRACING_INFO_BEGIN_SLOT + 2, ShaderBindStage::Compute, 1);
-            rootSignatureDesc.AddBufferSRVSet(RAYTRACING_INFO_BEGIN_SLOT + 3, ShaderBindStage::Compute, 1);
-            rootSignatureDesc.AddBufferSRVSet(INDEX_BUFFER_BEGIN_SLOT, ShaderBindStage::Compute, MAX_BUFFER_COUNT);
-            rootSignatureDesc.AddBufferSRVSet(VERTEX_BUFFER_BEGIN_SLOT, ShaderBindStage::Compute, MAX_BUFFER_COUNT);
-            rootSignatureDesc.AddTextureSRVSet(SHADOW_MAP_BEGIN_SLOT, ShaderBindStage::Compute, MAX_SHADOW_MAP_TEXTURES_COUNT);
-            rootSignatureDesc.AddTextureSRVSet(TEXTURE_BEGIN_SLOT, ShaderBindStage::Compute, MAX_TEXTURES_COUNT);
-            rootSignatureDesc.AddStaticSamplers(0, ShaderBindStage::Compute, 1, &m_SpecularSampler);
-            rootSignatureDesc.AddStaticSamplers(1, ShaderBindStage::Compute, 1, &m_DiffuseSampler);
-            rootSignatureDesc.AddStaticSamplers(2, ShaderBindStage::Compute, 1, &m_SpecularSampler);
-            rootSignatureDesc.AddStaticSamplers(3, ShaderBindStage::Compute, 1, &m_ComparisonSampler);
-            rootSignatureDesc.AddSamplerSet(SAMPLER_BEGIN_SLOT, ShaderBindStage::Compute, MAX_SAMPLERS_COUNT);
+        U32 renderWidth  = GetFramework()->GetResolutionInfo().RenderWidth;
+        U32 renderHeight = GetFramework()->GetResolutionInfo().RenderHeight;
+        auto renderSizeFn = [](TextureDesc& desc, U32 displayWidth, U32 displayHeight, U32 renderingWidth, U32 renderingHeight)
+        {
+            desc.Width  = renderingWidth;
+            desc.Height = renderingHeight;
         };
 
-    {
-        RootSignatureDesc rootSignatureDesc;
-        AddTraceRaysRootSignatureSrvs(rootSignatureDesc);
+        m_pColorTarget       = GetFramework()->GetColorTargetForCallback(GetName());
+        m_pDirectDiffuseOutput           = GetFramework()->GetRenderTexture(L"DenoiserDirectDiffuseTarget");
+        m_pDirectSpecularOutput          = GetFramework()->GetRenderTexture(L"DenoiserDirectSpecularTarget");
+        m_pIndirectDiffuseOutput         = GetFramework()->GetRenderTexture(L"DenoiserIndirectDiffuseTarget");
+        m_pIndirectSpecularOutput        = GetFramework()->GetRenderTexture(L"DenoiserIndirectSpecularTarget");
+        m_pDominantLightVisibilityOutput = GetFramework()->GetRenderTexture(L"DenoiserDominantLightVisibilityTarget");
+        m_pAmbientOcclusionOutput        = GetFramework()->GetRenderTexture(L"DenoiserAmbientOcclusionTarget");
+        m_pSpecularOcclusionOutput       = GetFramework()->GetRenderTexture(L"DenoiserSpecularOcclusionTarget");
 
-        rootSignatureDesc.AddTextureUAVSet( 0, ShaderBindStage::Compute, 1);
-        rootSignatureDesc.AddTextureUAVSet( 1, ShaderBindStage::Compute, 1);
-        rootSignatureDesc.AddTextureUAVSet( 2, ShaderBindStage::Compute, 1);
-        rootSignatureDesc.AddTextureUAVSet( 3, ShaderBindStage::Compute, 1);
-        rootSignatureDesc.AddTextureUAVSet( 4, ShaderBindStage::Compute, 1);
-        rootSignatureDesc.AddTextureUAVSet( 5, ShaderBindStage::Compute, 1);
-        rootSignatureDesc.AddTextureUAVSet( 6, ShaderBindStage::Compute, 1);
-        rootSignatureDesc.AddTextureUAVSet( 7, ShaderBindStage::Compute, 1);
-        rootSignatureDesc.AddTextureUAVSet( 8, ShaderBindStage::Compute, 1);
-        rootSignatureDesc.AddTextureUAVSet( 9, ShaderBindStage::Compute, 1);
-        rootSignatureDesc.AddTextureUAVSet(10, ShaderBindStage::Compute, 1);
+        m_pDiffuseAlbedo                 = GetFramework()->GetRenderTexture(L"DenoiserDiffuseAlbedoTarget");
+        m_pSpecularAlbedo                = GetFramework()->GetRenderTexture(L"DenoiserSpecularAlbedoTarget");
+        m_pNormals                       = GetFramework()->GetRenderTexture(L"DenoiserNormalsTarget");
+        m_pSkipSignal                    = GetFramework()->GetRenderTexture(L"DenoiserSkipSignalTarget");
 
-        m_pTraceRaysDenoiserRootSignature = RootSignature::CreateRootSignature(L"TraceRaysDenoiser_RootSignature", rootSignatureDesc);
-        if (!m_pTraceRaysDenoiserRootSignature)
-            return false;
+        m_pTraceRaysDenoiserParameterSet->SetTextureUAV(m_pDirectSpecularOutput,          ViewDimension::Texture2D,  0);
+        m_pTraceRaysDenoiserParameterSet->SetTextureUAV(m_pDirectDiffuseOutput,           ViewDimension::Texture2D,  1);
+        m_pTraceRaysDenoiserParameterSet->SetTextureUAV(m_pIndirectSpecularOutput,        ViewDimension::Texture2D,  2);
+        m_pTraceRaysDenoiserParameterSet->SetTextureUAV(m_pIndirectDiffuseOutput,         ViewDimension::Texture2D,  3);
+        m_pTraceRaysDenoiserParameterSet->SetTextureUAV(m_pDominantLightVisibilityOutput, ViewDimension::Texture2D,  4);
+        m_pTraceRaysDenoiserParameterSet->SetTextureUAV(m_pAmbientOcclusionOutput,        ViewDimension::Texture2D,  5);
+        m_pTraceRaysDenoiserParameterSet->SetTextureUAV(m_pSpecularOcclusionOutput,       ViewDimension::Texture2D,  6);
+        m_pTraceRaysDenoiserParameterSet->SetTextureUAV(m_pSkipSignal,                    ViewDimension::Texture2D,  7);
+        m_pTraceRaysDenoiserParameterSet->SetTextureUAV(m_pDiffuseAlbedo,                 ViewDimension::Texture2D,  8);
+        m_pTraceRaysDenoiserParameterSet->SetTextureUAV(m_pSpecularAlbedo,                ViewDimension::Texture2D,  9);
+        m_pTraceRaysDenoiserParameterSet->SetTextureUAV(m_pNormals,                       ViewDimension::Texture2D, 10);
 
-        PipelineDesc pipelineDesc;
-        pipelineDesc.SetRootSignature(m_pTraceRaysDenoiserRootSignature);
-        ShaderBuildDesc shaderDesc = ShaderBuildDesc::Compute(L"trace_rays_denoiser.hlsl", L"main", ShaderModel::SM6_6, nullptr);
-        pipelineDesc.AddShaderDesc(shaderDesc);
-        m_pTraceRaysDenoiserPipeline = PipelineObject::CreatePipelineObject(L"TraceRaysDenoiser_Pipeline", pipelineDesc);
-        if (!m_pTraceRaysDenoiserPipeline)
-            return false;
-
-        m_pTraceRaysDenoiserParameterSet = ParameterSet::CreateParameterSet(m_pTraceRaysDenoiserRootSignature);
-        m_pTraceRaysDenoiserParameterSet->SetRootConstantBufferResource(GetDynamicBufferPool()->GetResource(), sizeof(TraceRaysConstants), 0);
-        m_pTraceRaysDenoiserParameterSet->SetRootConstantBufferResource(GetDynamicBufferPool()->GetResource(), sizeof(SceneInformation), 1);
-        m_pTraceRaysDenoiserParameterSet->SetRootConstantBufferResource(GetDynamicBufferPool()->GetResource(), sizeof(SceneLightingInformation), 2);
-        m_pTraceRaysDenoiserParameterSet->SetRootConstantBufferResource(GetDynamicBufferPool()->GetResource(), sizeof(LightingCBData), 3);
-        m_pTraceRaysDenoiserParameterSet->SetAccelerationStructure(GetScene()->GetASManager()->GetTLAS(), 0);
-
-        ShadowMapResourcePool* pShadowMapResourcePool = GetFramework()->GetShadowMapResourcePool();
-        for (uint32_t i = 0; i < pShadowMapResourcePool->GetRenderTargetCount(); ++i)
-        {
-            m_pTraceRaysDenoiserParameterSet->SetTextureSRV(pShadowMapResourcePool->GetRenderTarget(i), ViewDimension::Texture2D, SHADOW_MAP_BEGIN_SLOT + i);
-        }
+        return true;
     }
 
-    return true;
-}
-
-bool PathTracingRenderModule::InitResources()
-{
-    uint32_t renderWidth  = GetFramework()->GetResolutionInfo().RenderWidth;
-    uint32_t renderHeight = GetFramework()->GetResolutionInfo().RenderHeight;
-    auto renderSizeFn = [](TextureDesc& desc, uint32_t displayWidth, uint32_t displayHeight, uint32_t renderingWidth, uint32_t renderingHeight) {
-        desc.Width  = renderingWidth;
-        desc.Height = renderingHeight;
-    };
-
-    m_pColorTarget                   = GetFramework()->GetColorTargetForCallback(GetName());
-    m_pDepthTarget                   = GetFramework()->GetRenderTexture(L"DepthTarget");
-    m_pDirectDiffuseOutput           = GetFramework()->GetRenderTexture(L"DenoiserDirectDiffuseTarget");
-    m_pDirectSpecularOutput          = GetFramework()->GetRenderTexture(L"DenoiserDirectSpecularTarget");
-    m_pIndirectDiffuseOutput         = GetFramework()->GetRenderTexture(L"DenoiserIndirectDiffuseTarget");
-    m_pIndirectSpecularOutput        = GetFramework()->GetRenderTexture(L"DenoiserIndirectSpecularTarget");
-    m_pDominantLightVisibilityOutput = GetFramework()->GetRenderTexture(L"DenoiserDominantLightVisibilityTarget");
-    m_pAmbientOcclusionOutput        = GetFramework()->GetRenderTexture(L"DenoiserAmbientOcclusionTarget");
-    m_pSpecularOcclusionOutput       = GetFramework()->GetRenderTexture(L"DenoiserSpecularOcclusionTarget");
-
-    m_pDiffuseAlbedo                 = GetFramework()->GetRenderTexture(L"DenoiserDiffuseAlbedoTarget");
-    m_pSpecularAlbedo                = GetFramework()->GetRenderTexture(L"DenoiserSpecularAlbedoTarget");
-    m_pNormals                       = GetFramework()->GetRenderTexture(L"DenoiserNormalsTarget");
-    m_pSkipSignal                    = GetFramework()->GetRenderTexture(L"DenoiserSkipSignalTarget");
-
-    m_pTraceRaysDenoiserParameterSet->SetTextureSRV(m_pDepthTarget,                   ViewDimension::Texture2D,  1);
-
-    m_pTraceRaysDenoiserParameterSet->SetTextureUAV(m_pDirectSpecularOutput,          ViewDimension::Texture2D,  0);
-    m_pTraceRaysDenoiserParameterSet->SetTextureUAV(m_pDirectDiffuseOutput,           ViewDimension::Texture2D,  1);
-    m_pTraceRaysDenoiserParameterSet->SetTextureUAV(m_pIndirectSpecularOutput,        ViewDimension::Texture2D,  2);
-    m_pTraceRaysDenoiserParameterSet->SetTextureUAV(m_pIndirectDiffuseOutput,         ViewDimension::Texture2D,  3);
-    m_pTraceRaysDenoiserParameterSet->SetTextureUAV(m_pDominantLightVisibilityOutput, ViewDimension::Texture2D,  4);
-    m_pTraceRaysDenoiserParameterSet->SetTextureUAV(m_pAmbientOcclusionOutput,        ViewDimension::Texture2D,  5);
-    m_pTraceRaysDenoiserParameterSet->SetTextureUAV(m_pSpecularOcclusionOutput,       ViewDimension::Texture2D,  6);
-    m_pTraceRaysDenoiserParameterSet->SetTextureUAV(m_pDiffuseAlbedo,                 ViewDimension::Texture2D,  7);
-    m_pTraceRaysDenoiserParameterSet->SetTextureUAV(m_pSpecularAlbedo,                ViewDimension::Texture2D,  8);
-    m_pTraceRaysDenoiserParameterSet->SetTextureUAV(m_pNormals,                       ViewDimension::Texture2D,  9);
-    m_pTraceRaysDenoiserParameterSet->SetTextureUAV(m_pSkipSignal,                    ViewDimension::Texture2D, 10);
-
-    return true;
-}
-
-// Add texture index info and return the index to the texture in the texture array
-int32_t PathTracingRenderModule::AddTexture(const Material* pMaterial, const TextureClass textureClass, int32_t& textureSamplerIndex)
-{
-    const cauldron::TextureInfo* pTextureInfo = pMaterial->GetTextureInfo(textureClass);
-    if (pTextureInfo != nullptr)
+    // Add texture index info and return the index to the texture in the texture array
+    S32 PathTracingRenderModule::AddTexture(const Material* pMaterial, const TextureClass textureClass, S32& textureSamplerIndex)
     {
-        // Check if the texture's sampler is already one we have, and if not add it
-        for (textureSamplerIndex = 0; textureSamplerIndex < m_rtInfoTables.m_Samplers.size(); ++textureSamplerIndex)
+        const TextureInfo* pTextureInfo = pMaterial->GetTextureInfo(textureClass);
+        if (pTextureInfo != nullptr)
         {
-            if (m_rtInfoTables.m_Samplers[textureSamplerIndex]->GetDesc() == pTextureInfo->TexSamplerDesc)
-                break;  // found
-        }
-
-        // If we didn't find the sampler, add it
-        if (textureSamplerIndex == m_rtInfoTables.m_Samplers.size())
-        {
-            Sampler* pSampler = Sampler::CreateSampler(L"PTSampler", pTextureInfo->TexSamplerDesc);
-            CauldronAssert(ASSERT_WARNING, pSampler, L"Could not create sampler for loaded content %s", pTextureInfo->pTexture->GetDesc().Name.c_str());
-            m_rtInfoTables.m_Samplers.push_back(pSampler);
-        }
-
-        // Find a slot for the texture
-        int32_t firstFreeIndex = -1;
-        for (int32_t i = 0; i < m_rtInfoTables.m_Textures.size(); ++i)
-        {
-            RTInfoTables::BoundTexture& boundTexture = m_rtInfoTables.m_Textures[i];
-
-            // If this texture is already mapped, bump it's reference count
-            if (pTextureInfo->pTexture == boundTexture.pTexture)
+            // Check if the texture's sampler is already one we have, and if not add it
+            for (textureSamplerIndex = 0; textureSamplerIndex < m_rtInfoTables.m_Samplers.size(); ++textureSamplerIndex)
             {
-                boundTexture.count += 1;
-                return i;
+                if (m_rtInfoTables.m_Samplers[textureSamplerIndex]->GetDesc() == pTextureInfo->TexSamplerDesc)
+                    break;  // found
             }
 
-            // Try to re-use an existing entry that was released
-            else if (firstFreeIndex < 0 && boundTexture.count == 0)
+            // If we didn't find the sampler, add it
+            if (textureSamplerIndex == m_rtInfoTables.m_Samplers.size())
             {
-                firstFreeIndex = i;
+                Sampler* pSampler = Sampler::CreateSampler(L"PTSampler", pTextureInfo->TexSamplerDesc);
+                CauldronAssert(ASSERT_WARNING, pSampler, L"Could not create sampler for loaded content %s", pTextureInfo->pTexture->GetDesc().Name.c_str());
+                m_rtInfoTables.m_Samplers.push_back(pSampler);
+            }
+
+            // Find a slot for the texture
+            S32 firstFreeIndex = -1;
+            for (S32 i = 0; i < m_rtInfoTables.m_Textures.size(); ++i)
+            {
+                RTInfoTables::BoundTexture& boundTexture = m_rtInfoTables.m_Textures[i];
+
+                // If this texture is already mapped, bump it's reference count
+                if (pTextureInfo->pTexture == boundTexture.pTexture)
+                {
+                    boundTexture.count += 1;
+                    return i;
+                }
+
+                // Try to re-use an existing entry that was released
+                else if ((firstFreeIndex < 0) and (boundTexture.count == 0))
+                {
+                    firstFreeIndex = i;
+                }
+            }
+
+            // Texture wasn't found
+            RTInfoTables::BoundTexture b = {pTextureInfo->pTexture, 1};
+            if (firstFreeIndex < 0)
+            {
+                m_rtInfoTables.m_Textures.push_back(b);
+                return static_cast< S32 >(m_rtInfoTables.m_Textures.size()) - 1;
+            }
+            else
+            {
+                m_rtInfoTables.m_Textures[firstFreeIndex] = b;
+                return firstFreeIndex;
             }
         }
-
-        // Texture wasn't found
-        RTInfoTables::BoundTexture b = {pTextureInfo->pTexture, 1};
-        if (firstFreeIndex < 0)
-        {
-            m_rtInfoTables.m_Textures.push_back(b);
-            return static_cast<int32_t>(m_rtInfoTables.m_Textures.size()) - 1;
-        }
-        else
-        {
-            m_rtInfoTables.m_Textures[firstFreeIndex] = b;
-            return firstFreeIndex;
-        }
+        return -1;
     }
-    return -1;
-}
 
-void PathTracingRenderModule::RemoveTexture(int32_t index)
-{
-    if (index >= 0)
+    void PathTracingRenderModule::RemoveTexture(S32 index)
     {
-        m_rtInfoTables.m_Textures[index].count -= 1;
-        if (m_rtInfoTables.m_Textures[index].count == 0)
+        if (index >= 0)
         {
-            m_rtInfoTables.m_Textures[index].pTexture = nullptr;
+            m_rtInfoTables.m_Textures[index].count -= 1;
+            if (m_rtInfoTables.m_Textures[index].count == 0)
+            {
+                m_rtInfoTables.m_Textures[index].pTexture = nullptr;
+            }
         }
     }
-}
+} // namespace rr

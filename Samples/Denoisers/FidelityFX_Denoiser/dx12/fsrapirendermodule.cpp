@@ -1,7 +1,7 @@
 // This file is part of the FidelityFX SDK.
 //
 // Copyright (C) 2026 Advanced Micro Devices, Inc.
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -21,35 +21,40 @@
 // THE SOFTWARE.
 
 #include "fsrapirendermodule.h"
-#include <cauldron2/dx12/framework/render/rendermodules/ui/uirendermodule.h>
-#include <cauldron2/dx12/framework/render/rasterview.h>
-#include <cauldron2/dx12/framework/render/dynamicresourcepool.h>
-#include <cauldron2/dx12/framework/render/dx12/dynamicbufferpool_dx12.h>
-#include <cauldron2/dx12/framework/render/dx12/parameterset_dx12.h>
-#include <cauldron2/dx12/framework/render/dx12/pipelineobject_dx12.h>
-#include <cauldron2/dx12/framework/render/dx12/rootsignaturedesc_dx12.h>
-#include <cauldron2/dx12/framework/render/dx12/commandlist_dx12.h>
-#include <cauldron2/dx12/framework/render/dx12/device_dx12.h>
-#include <cauldron2/dx12/framework/render/dx12/swapchain_dx12.h>
-#include <cauldron2/dx12/framework/render/dx12/resourceviewallocator_dx12.h>
-#include <cauldron2/dx12/framework/core/backend_interface.h>
-#include <cauldron2/dx12/framework/core/scene.h>
-#include <cauldron2/dx12/framework/misc/assert.h>
-#include <cauldron2/dx12/framework/render/profiler.h>
-#include <cauldron2/dx12/rendermodules/translucency/translucencyrendermodule.h>
+#include <cauldron2/framework/render/rendermodules/ui/uirendermodule.h>
+#include <cauldron2/framework/render/rasterview.h>
+#include <cauldron2/framework/render/dynamicresourcepool.h>
+#include <cauldron2/framework/render/dx12/dynamicbufferpool_dx12.h>
+#include <cauldron2/framework/render/dx12/parameterset_dx12.h>
+#include <cauldron2/framework/render/dx12/pipelineobject_dx12.h>
+#include <cauldron2/framework/render/dx12/rootsignaturedesc_dx12.h>
+#include <cauldron2/framework/render/dx12/commandlist_dx12.h>
+#include <cauldron2/framework/render/dx12/device_dx12.h>
+#include <cauldron2/framework/render/dx12/swapchain_dx12.h>
+#include <cauldron2/framework/render/dx12/resourceviewallocator_dx12.h>
+#include <cauldron2/framework/core/backend_interface.h>
+#include <cauldron2/framework/core/scene.h>
+#include <cauldron2/framework/misc/assert.h>
+#include <cauldron2/framework/render/profiler.h>
+#include <cauldron2/rendermodules/translucency/translucencyrendermodule.h>
 
-#include <cauldron2/dx12/framework/core/framework.h>
-#include <cauldron2/dx12/framework/core/win/framework_win.h>
-#include <cauldron2/dx12/framework/render/dx12/device_dx12.h>
-#include <cauldron2/dx12/framework/render/dx12/commandlist_dx12.h>
+#include <cauldron2/framework/core/framework.h>
+#include <cauldron2/framework/core/win/framework_win.h>
+#include <cauldron2/framework/render/dx12/device_dx12.h>
+#include <cauldron2/framework/render/dx12/commandlist_dx12.h>
 
 #include <FidelityFX/api/include/dx12/ffx_api_dx12.hpp>
 #include <FidelityFX/framegeneration/include/dx12/ffx_api_framegeneration_dx12.hpp>
 
 #include <functional>
 
-using namespace std;
 using namespace cauldron;
+
+[[nodiscard]]
+FSRRenderModule::FSRRenderModule()
+    : RenderModule(L"FSRApiRenderModule")
+{
+}
 
 void FSRRenderModule::Init(const json& initData)
 {
@@ -109,17 +114,17 @@ void FSRRenderModule::Init(const json& initData)
             });
         CauldronAssert(ASSERT_CRITICAL, m_pTempTexture, L"Couldn't create intermediate texture.");
     }
-   
+
     // Set our render resolution function as that to use during resize to get render width/height from display width/height
     m_pUpdateFunc = [this](uint32_t displayWidth, uint32_t displayHeight) { return this->UpdateResolution(displayWidth, displayHeight); };
 
     // Start disabled as this will be enabled externally
-    cauldron::RenderModule::SetModuleEnabled(false);
+    RenderModule::SetModuleEnabled(false);
 
     {
         // Register upscale method picker picker
-        UISection* uiSection = GetUIManager()->RegisterUIElements("FSR Upscaling", UISectionType::Sample);
-        InitUI(uiSection);
+        m_pUISection = GetUIManager()->RegisterUIElements("FSR Upscaling", UISectionType::Sample);
+        InitUI(m_pUISection);
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -129,6 +134,14 @@ void FSRRenderModule::Init(const json& initData)
     SetModuleReady(true);
 
     SwitchUpscaler(Upscaler_FSRAPI);
+}
+
+void FSRRenderModule::ShowUI(bool show)
+{
+    if (m_pUISection)
+    {
+        m_pUISection->Show(show);
+    }
 }
 
 FSRRenderModule::~FSRRenderModule()
@@ -202,7 +215,7 @@ void FSRRenderModule::EnableModule(bool enabled)
             CameraComponent::SetJitterCallbackFunc(jitterCallback);
         }
 
-        ClearReInit(); 
+        ClearReInit();
         SetModuleReady(true);
     }
     m_Enabled = enabled;
@@ -350,7 +363,7 @@ void FSRRenderModule::UpdateFSRContext(bool enabled)
                     retCode_t = ffxQuery(nullptr, &upscalerGetGPUMemoryUsageV2.header);
                     CauldronAssert(ASSERT_WARNING, retCode_t == FFX_API_RETURN_OK,
                         L"ffxQuery(nullptr,UpscaleGetGPUMemoryUsageV2, %S) returned %d", m_FsrVersionNames[m_FsrVersionIndex], retCode_t);
-                    CAUDRON_LOG_INFO(L"Upscaler version %S Query GPUMemoryUsageV2 VRAM totalUsageInBytes %f MB aliasableUsageInBytes %f MB", m_FsrVersionNames[m_FsrVersionIndex], gpuMemoryUsageUpscaler.totalUsageInBytes / 1048576.f, gpuMemoryUsageUpscaler.aliasableUsageInBytes / 1048576.f);
+                    Log::WriteDetailed(LOGLEVEL_INFO, WFILE, __LINE__, L"Upscaler version %S Query GPUMemoryUsageV2 VRAM totalUsageInBytes %f MB aliasableUsageInBytes %f MB", m_FsrVersionNames[m_FsrVersionIndex], gpuMemoryUsageUpscaler.totalUsageInBytes / 1048576.f, gpuMemoryUsageUpscaler.aliasableUsageInBytes / 1048576.f);
                     retCode = ffx::CreateContext(m_UpscalingContext, nullptr, createFsr, createFsrVersion, backendDesc, versionOverride);
                 }
                 else
@@ -358,7 +371,7 @@ void FSRRenderModule::UpdateFSRContext(bool enabled)
                     retCode = ffx::Query(upscalerGetGPUMemoryUsageV2);
                     CauldronAssert(ASSERT_WARNING, retCode == ffx::ReturnCode::Ok,
                         L"ffxQuery(nullptr,UpscaleGetGPUMemoryUsageV2) returned %d", (uint32_t)retCode);
-                    CAUDRON_LOG_INFO(L"Default Upscaler Query GPUMemoryUsageV2 totalUsageInBytes %f MB aliasableUsageInBytes %f MB", gpuMemoryUsageUpscaler.totalUsageInBytes / 1048576.f, gpuMemoryUsageUpscaler.aliasableUsageInBytes / 1048576.f);
+                    Log::WriteDetailed(LOGLEVEL_INFO, WFILE, __LINE__, L"Default Upscaler Query GPUMemoryUsageV2 totalUsageInBytes %f MB aliasableUsageInBytes %f MB", gpuMemoryUsageUpscaler.totalUsageInBytes / 1048576.f, gpuMemoryUsageUpscaler.aliasableUsageInBytes / 1048576.f);
                     retCode = ffx::CreateContext(m_UpscalingContext, nullptr, createFsr, createFsrVersion, backendDesc);
                 }
 
@@ -376,7 +389,7 @@ void FSRRenderModule::UpdateFSRContext(bool enabled)
             m_currentUpscaleContextVersionId = getVersion.versionId;
             m_currentUpscaleContextVersionName = getVersion.versionName;
 
-            CAUDRON_LOG_INFO(L"Upscaler Context versionid 0x%016llx, %S", m_currentUpscaleContextVersionId, m_currentUpscaleContextVersionName);
+            Log::WriteDetailed(LOGLEVEL_INFO, WFILE, __LINE__, L"Upscaler Context versionid 0x%016llx, %S", m_currentUpscaleContextVersionId, m_currentUpscaleContextVersionName);
 
             for (uint32_t i = 0; i < m_FsrVersionIds.size(); i++)
             {
@@ -448,7 +461,7 @@ void FSRRenderModule::Execute(double deltaTime, CommandList* pCmdList)
     GPUResource* pSwapchainBackbuffer = GetFramework()->GetSwapChain()->GetBackBufferRT()->GetCurrentResource();
     FfxApiResource backbuffer = SDKWrapper::ffxGetResourceApi(pSwapchainBackbuffer, FFX_API_RESOURCE_STATE_PRESENT);
 
-    // copy input source to temp so that the input and output texture of the upscalers is different 
+    // copy input source to temp so that the input and output texture of the upscalers is different
     {
         std::vector<Barrier> barriers;
         barriers.push_back(Barrier::Transition(

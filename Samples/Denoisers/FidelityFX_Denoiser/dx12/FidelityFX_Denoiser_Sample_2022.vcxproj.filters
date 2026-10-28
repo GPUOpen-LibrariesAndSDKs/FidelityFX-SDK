@@ -15,43 +15,76 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="debugoverlayrendermodule.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="denoiserrendermodule.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="sample.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="pathtracingrendermodule.cpp">
+    <ClCompile Include="denoisersettingshandler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="fsrapirendermodule.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="debugoverlayrendermodule.cpp">
+    <ClCompile Include="fsrsettingshandler.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="pathtracingrendermodule.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sample.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sampleautomation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="debugoverlayrendermodule.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
     <ClInclude Include="denoiserrendermodule.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="sample.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="resources\resource.h">
-      <Filter>Resource Files</Filter>
-    </ClInclude>
-    <ClInclude Include="pathtracingrendermodule.h">
+    <ClInclude Include="denoisersettingshandler.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="fsrapirendermodule.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="debugoverlayrendermodule.h">
+    <ClInclude Include="fsrsettingshandler.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="pathtracingrendermodule.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="resources\resource.h">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sample.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sampleautomation.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="shaders\DebugOverlayData.h">
+      <Filter>Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="shaders\DenoisingData.h">
+      <Filter>Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="shaders\PackedData.h">
+      <Filter>Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="shaders\PathTracingData.h">
+      <Filter>Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="shaders\Types.h">
+      <Filter>Shaders</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -59,40 +92,58 @@
     <None Include="config\denoiserconfig.json">
       <Filter>Config</Filter>
     </None>
-    <None Include="shaders\common.hlsl">
+    <None Include="shaders\Basis.hlsli">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="shaders\geometry.hlsl">
+    <None Include="shaders\Bindings.hlsli">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="shaders\importance_sampling.hlsl">
+    <None Include="shaders\Color.hlsli">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="shaders\material.hlsl">
+    <None Include="shaders\DebugOverlay.cs.hlsl">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="shaders\denoiser_compose.hlsl">
+    <None Include="shaders\DenoisingCompose.cs.hlsl">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="shaders\denoiser_prepass.hlsl">
+    <None Include="shaders\DenoisingPrepare.cs.hlsl">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="shaders\trace_rays_denoiser.hlsl">
+    <None Include="shaders\Dispatch.hlsli">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="shaders\random.hlsl">
+    <None Include="shaders\Geometry.hlsli">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="shaders\raytracing_common.hlsl">
+    <None Include="shaders\Lighting.hlsli">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="shaders\types.hlsl">
+    <None Include="shaders\Material.hlsli">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="shaders\shared.h">
+    <None Include="shaders\Numeric.hlsli">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="shaders\debug_overlay.hlsl">
+    <None Include="shaders\PathTracing.cs.hlsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\PathTracing.hlsli">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\Random.hlsli">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\Sampling.hlsli">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\Shadow.hlsli">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\Transformation.hlsli">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\UnitVector.hlsli">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>

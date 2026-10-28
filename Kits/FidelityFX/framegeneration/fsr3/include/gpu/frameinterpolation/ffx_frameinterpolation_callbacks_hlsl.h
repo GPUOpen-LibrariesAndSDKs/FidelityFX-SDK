@@ -51,7 +51,7 @@
         FfxFloat32      cameraNear;
         FfxFloat32      cameraFar;
 
-        FfxInt32x2      upscalerTargetSize;
+        FfxInt32x2      colorRectSize;
         FfxInt32        Mode;
         FfxInt32        reset;
 
@@ -81,6 +81,9 @@
 
         FfxFloat32x2    fJitter;
         FfxFloat32x2    fMotionVectorScale;
+
+        FfxInt32x2      colorRectBase;
+        FfxInt32x2      _pad2;
     }
 
     const FfxFloat32x2 Jitter()
@@ -111,6 +114,16 @@
     const FfxInt32x2 DisplaySize()
     {
         return displaySize;
+    }
+
+    const FfxInt32x2 ColorRectBase()
+    {
+        return colorRectBase;
+    }
+
+    const FfxInt32x2 ColorRectSize()
+    {
+        return colorRectSize;
     }
 
     const FfxBoolean Reset()

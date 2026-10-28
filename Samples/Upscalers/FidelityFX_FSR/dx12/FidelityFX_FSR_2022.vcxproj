@@ -59,10 +59,10 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_WINDOWS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WINDOWS;_DX12;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\Kits\Cauldron2\dx12\vcpkg_installed\x64-windows\x64-windows\include;$(ProjectDir)..\..\..\..\Kits\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\Kits\Cauldron2\dx12\vcpkg_installed\x64-windows\x64-windows\include;$(ProjectDir)..\..\..\..\Kits\;$(ProjectDir)..;$(ProjectDir)..\internal;$(ProjectDir)..\dx12;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <Optimization>Disabled</Optimization>
@@ -85,10 +85,10 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_WINDOWS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WINDOWS;_DX12;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\Kits\Cauldron2\dx12\vcpkg_installed\x64-windows\x64-windows\include;$(ProjectDir)..\..\..\..\Kits\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\..\Kits\Cauldron2\dx12\vcpkg_installed\x64-windows\x64-windows\include;$(ProjectDir)..\..\..\..\Kits\;$(ProjectDir)..;$(ProjectDir)..\internal;$(ProjectDir)..\dx12;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <TreatWarningAsError>true</TreatWarningAsError>
       <DisableSpecificWarnings>4201;4324;4408;4505</DisableSpecificWarnings>
@@ -105,14 +105,16 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="fsrapirendermodule.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="sample.cpp" />
+    <ClCompile Include="..\internal\fsrapirendermodule.cpp" />
+    <ClCompile Include="..\internal\fsrsettingshandler.cpp" />
+    <ClCompile Include="..\internal\main.cpp" />
+    <ClCompile Include="..\internal\sample.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="fsrapirendermodule.h" />
+    <ClInclude Include="..\internal\fsrapirendermodule.h" />
+    <ClInclude Include="..\internal\fsrsettingshandler.h" />
+    <ClInclude Include="..\internal\sample.h" />
     <ClInclude Include="resources\resource.h" />
-    <ClInclude Include="sample.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="resources\cauldron.rc" />

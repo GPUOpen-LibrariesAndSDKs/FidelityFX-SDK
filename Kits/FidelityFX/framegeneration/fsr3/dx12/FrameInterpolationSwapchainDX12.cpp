@@ -1,7 +1,7 @@
 // This file is part of the FidelityFX SDK.
 //
 // Copyright (C) 2026 Advanced Micro Devices, Inc.
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -274,7 +274,7 @@ FfxErrorCode FfxAbiFrameGenSwapChainCall(IDXGISwapChain4* swapChain, Args... arg
 
         SafeRelease(frameInterpolationSwapchain);
     }
-    
+
     return errorCode;
 }
 
@@ -335,6 +335,23 @@ FfxErrorCode FfxAbiFrameGenSwapChainCall(ReturnType& result, IDXGISwapChain4* sw
         SafeRelease(frameInterpolationSwapchain);
     }
     return errorCode;
+}
+
+template<typename PresentCallbackType>
+ffxReturnCode_t ffxFrameInterpolationUiCompositionWrapper(PresentCallbackType* params, void* unusedUserCtx)
+{
+    // This always calls the *current* version of the code so must use the *current* type
+    ffxCallbackDescFrameGenerationPresent            desc;
+    ffxCallbackDescFrameGenerationPresentPremulAlpha premulAlpha;
+    InitPresentCallback(desc, premulAlpha, params->device, params->commandList, params->isInterpolatedFrame, params->outputSwapChainBuffer, params->currentBackBuffer, params->currentUI, params->usePremulAlpha, params->frameID);
+
+    return ffxFrameInterpolationUiComposition(&desc, unusedUserCtx);
+}
+
+template<>
+ffxReturnCode_t ffxFrameInterpolationUiCompositionWrapper<ffxCallbackDescFrameGenerationPresent>(ffxCallbackDescFrameGenerationPresent* params, void* unusedUserCtx)
+{
+    return ffxFrameInterpolationUiComposition(params, unusedUserCtx);
 }
 
 FfxResourceSDK1 ffxGetNamedResourceDX12(const ID3D12Resource* dx12Resource,
@@ -601,11 +618,11 @@ void setSwapChainBufferResourceInfo(IDXGISwapChain4* swapChain, bool isInterpola
 
         /*
         usage example:
-        
+
         FfxFrameInterpolationSwapChainResourceInfo info{};
         UINT size = sizeof(info);
         if (SUCCEEDED(swapchainBackbuffer->GetPrivateData(IID_IFfxFrameInterpolationSwapChainResourceInfo, &size, &info))) {
-            
+
         } else {
             // buffer was not presented using proxy swapchain
         }
@@ -621,51 +638,48 @@ HRESULT compositeSwapChainFrame(PresentType* presenter, PacingData* pacingEntry,
 
     const typename PacingData::FrameInfo& frameInfo = pacingEntry->frames[frameID];
 
-    if(frameID != FrameType::Real)
-        presenter->presentQueue->Wait(presenter->interpolationFence, frameInfo.interpolationCompletedFenceValue);
-
-    if (pacingEntry->drawDebugPacingLines)
     {
+        if(frameID != FrameType::Real)
+            presenter->presentQueue->Wait(presenter->interpolationFence, frameInfo.interpolationCompletedFenceValue);
+
         auto gpuCommands = presenter->commandPool.get(presenter->presentQueue, L"compositeSwapChainFrame");
+        FfxCommandList cmdList = ffxGetCommandListDX12(gpuCommands->reset());
 
         uint32_t        currBackbufferIndex = presenter->swapChain->GetCurrentBackBufferIndex();
         ID3D12Resource* swapchainBackbuffer = nullptr;
         presenter->swapChain->GetBuffer(currBackbufferIndex, IID_PPV_ARGS(&swapchainBackbuffer));
 
-        // This always calls the *current* version of the code so must use the *current* type
-        ffxCallbackDescFrameGenerationPresent desc;
-        ffxCallbackDescFrameGenerationPresentPremulAlpha premulAlpha;
-        InitPresentCallback(desc, premulAlpha, presenter->device, ffxGetCommandListDX12(gpuCommands->reset()), frameID != FrameType::Real, ffxGetNamedResourceDX12(swapchainBackbuffer, ffxGetResourceDescriptionDX12(swapchainBackbuffer), nullptr, FFX_API_RESOURCE_STATE_PRESENT), frameInfo.resource, pacingEntry->uiSurface, pacingEntry->usePremulAlphaComposite, pacingEntry->currentFrameID);
+        if (pacingEntry->drawDebugPacingLines)
+        {
+            // This always calls the *current* version of the code so must use the *current* type
+            ffxCallbackDescFrameGenerationPresent desc;
+            ffxCallbackDescFrameGenerationPresentPremulAlpha premulAlpha;
+            InitPresentCallback(desc, premulAlpha, presenter->device, cmdList, frameID != FrameType::Real, ffxGetNamedResourceDX12(swapchainBackbuffer, ffxGetResourceDescriptionDX12(swapchainBackbuffer), nullptr, FFX_API_RESOURCE_STATE_PRESENT), frameInfo.resource, pacingEntry->uiSurface, pacingEntry->usePremulAlphaComposite, pacingEntry->currentFrameID);
 
-        ffxFrameInterpolationDebugPacing(&desc);
+            ffxFrameInterpolationDebugPacing(&desc);
+        }
+
+        FFX_ASSERT(pacingEntry->presentCallback != nullptr);
+
+        PresentCallbackType desc;
+        ffxCallbackDescFrameGenerationPresentPremulAlpha premulAlpha;
+        InitPresentCallback(desc, premulAlpha, presenter->device, cmdList, frameID != FrameType::Real, ffxGetNamedResourceDX12(swapchainBackbuffer, ffxGetResourceDescriptionDX12(swapchainBackbuffer), nullptr, FFX_API_RESOURCE_STATE_PRESENT), frameInfo.resource, pacingEntry->uiSurface, pacingEntry->usePremulAlphaComposite, pacingEntry->currentFrameID);
+
+        pacingEntry->presentCallback(reinterpret_cast<ffxCallbackDescFrameGenerationPresent*> (&desc), pacingEntry->presentCallbackContext);
 
         gpuCommands->execute(true);
 
         SafeRelease(swapchainBackbuffer);
+
+        presenter->presentQueue->Signal(presenter->compositionFenceGPU, frameInfo.presentIndex);
+        presenter->compositionFenceCPU->Signal(frameInfo.presentIndex);
     }
+    return S_OK;
+}
 
-    FFX_ASSERT(pacingEntry->presentCallback != nullptr);
-
-    auto gpuCommands = presenter->commandPool.get(presenter->presentQueue, L"compositeSwapChainFrame");
-
-    uint32_t        currBackbufferIndex = presenter->swapChain->GetCurrentBackBufferIndex();
-    ID3D12Resource* swapchainBackbuffer = nullptr;
-    presenter->swapChain->GetBuffer(currBackbufferIndex, IID_PPV_ARGS(&swapchainBackbuffer));
-
-    // This may call into code within the game SDK which may be older so must use the template type
-    PresentCallbackType desc;
-    ffxCallbackDescFrameGenerationPresentPremulAlpha premulAlpha;
-    InitPresentCallback(desc, premulAlpha, presenter->device, ffxGetCommandListDX12(gpuCommands->reset()), frameID != FrameType::Real, ffxGetNamedResourceDX12(swapchainBackbuffer, ffxGetResourceDescriptionDX12(swapchainBackbuffer), nullptr, FFX_API_RESOURCE_STATE_PRESENT), frameInfo.resource, pacingEntry->uiSurface, pacingEntry->usePremulAlphaComposite, pacingEntry->currentFrameID);
-
-    pacingEntry->presentCallback(reinterpret_cast<ffxCallbackDescFrameGenerationPresent*> (&desc), pacingEntry->presentCallbackContext);
-
-    gpuCommands->execute(true);
-
-    SafeRelease(swapchainBackbuffer);
-
-    presenter->presentQueue->Signal(presenter->compositionFenceGPU, frameInfo.presentIndex);
-    presenter->compositionFenceCPU->Signal(frameInfo.presentIndex);
-
+template<typename PresentType, typename PacingData, typename PresentCallbackType>
+HRESULT compositeSwapChainFrameCompute(PresentType* presenter, PacingData* pacingEntry, uint32_t frameID)
+{
     return S_OK;
 }
 
@@ -703,7 +717,6 @@ void presentToSwapChain(PresentType* presenter, PacingData* pacingEntry, FrameTy
 
     // tick frames sent for presentation
     presenter->presentQueue->Signal(presenter->presentFence, frameInfo.presentIndex);
-
 }
 
 template<typename PresentType, typename PacingData, typename PresentCallbackType>
@@ -713,7 +726,7 @@ DWORD WINAPI presenterThread(LPVOID param)
 
     if (presenter)
     {
-        UINT64 numFramesSentForPresentation = 0;
+        UINT64  numFramesSentForPresentation = 0;
         int64_t qpcFrequency                 = 0;
 
         LARGE_INTEGER freq;
@@ -741,7 +754,6 @@ DWORD WINAPI presenterThread(LPVOID param)
 
                 if (entry.numFramesToPresent > 0)
                 {
-                    // we might have dropped entries so have to update here, oterwise we might deadlock
                     presenter->presentQueue->Signal(presenter->presentFence, entry.numFramesSentForPresentationBase);
                     presenter->presentQueue->Wait(presenter->interpolationFence, entry.interpolationCompletedFenceValue);
 
@@ -752,13 +764,11 @@ DWORD WINAPI presenterThread(LPVOID param)
                         {
                             compositeSwapChainFrame<PresentType, PacingData, PresentCallbackType>(presenter, &entry, frameType);
 
-                            // signal replacement buffer availability
                             if (frameInfo.presentIndex == entry.replacementBufferFenceSignal)
                             {
                                 presenter->presentQueue->Signal(presenter->replacementBufferFence, entry.replacementBufferFenceSignal);
                             }
 
-                            
                             MMRESULT result = timeGetDevCaps(&timerCaps, sizeof(timerCaps));
                             if (result != MMSYSERR_NOERROR || !presenter->allowHybridSpin)
                             {
@@ -769,7 +779,6 @@ DWORD WINAPI presenterThread(LPVOID param)
                                 timerCaps.wPeriodMin = FFX_MAXIMUM(1, timerCaps.wPeriodMin);
                             }
 
-                            // pacing without composition
                             waitForFenceValue(presenter->compositionFenceGPU, frameInfo.presentIndex);
                             uint64_t targetQpc = presenter->previousPresentQpc + frameInfo.presentQpcDelta;
                             waitForPerformanceCount(targetQpc, qpcFrequency, timerCaps.wPeriodMin, presenter->hybridSpinTime);
@@ -788,6 +797,7 @@ DWORD WINAPI presenterThread(LPVOID param)
             }
         }
 
+        // ensure present queue has signaled the final value to avoid race condition
         waitForFenceValue(presenter->presentFence, numFramesSentForPresentation);
     }
 
@@ -814,7 +824,7 @@ DWORD WINAPI interpolationThread(LPVOID param)
             int64_t previousQpc = 0;
             int64_t previousDelta = 0;
             int64_t qpcFrequency;
-            QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER*>(&qpcFrequency)); 
+            QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER*>(&qpcFrequency));
 
             while (!presenter->shutdown)
             {
@@ -828,36 +838,32 @@ DWORD WINAPI interpolationThread(LPVOID param)
                     presenter->scheduledInterpolations.invalidate();
 
                     LeaveCriticalSection(&presenter->criticalSectionScheduledFrame);
-                    
+
                     int64_t preWaitQPC = 0;
                     QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&preWaitQPC));
                     int64_t previousPresentQPC = presenter->previousPresentQpc;
                     int64_t targetDelta = (previousPresentQPC + previousDelta) - preWaitQPC;
-                    
-                    //Risk of late wake if overthreading. If allowed, use WaitForSingleObject to wait for interpolationFence if the target is more than 2ms later.
-                    if (previousPresentQPC && (targetDelta * 1000000) / qpcFrequency > 2000)  
+
+                    if (previousPresentQPC && (targetDelta * 1000000) / qpcFrequency > 2000)
                     {
                         waitForFenceValue(
-                            presenter->interpolationFence, 
-                            entry.frames[FrameType::Interpolated_1].interpolationCompletedFenceValue, 
+                            presenter->interpolationFence,
+                            entry.frames[FrameType::Interpolated_1].interpolationCompletedFenceValue,
                             INFINITE,
                             nullptr,
                             presenter->allowWaitForSingleObjectOnFence
                         );
-                        
                     }
                     else
                     {
-                        // spin to wait for interpolationFence if the target is less than 2ms.
                         waitForFenceValue(
-                            presenter->interpolationFence, 
-                            entry.frames[FrameType::Interpolated_1].interpolationCompletedFenceValue, 
+                            presenter->interpolationFence,
+                            entry.frames[FrameType::Interpolated_1].interpolationCompletedFenceValue,
                             INFINITE,
                             nullptr,
                             false
                         );
                     }
-                    
                     SetEvent(presenter->interpolationEvent);
 
                     int64_t currentQpc = 0;
@@ -866,7 +872,6 @@ DWORD WINAPI interpolationThread(LPVOID param)
                     const double deltaQpc = double(currentQpc - previousQpc) * (previousQpc > 0);
                     previousQpc           = currentQpc;
 
-                    // reset pacing averaging if delta > 10 fps,
                     const float fTimeoutInSeconds       = 0.1f;
                     double      deltaQpcResetThreashold = double(qpcFrequency * fTimeoutInSeconds);
                     if ((deltaQpc > deltaQpcResetThreashold) || presenter->resetTimer)
@@ -878,15 +883,13 @@ DWORD WINAPI interpolationThread(LPVOID param)
                         frameTime.update(deltaQpc);
                     }
 
-                    // set presentation time: reduce based on variance and subract safety margin so we don't lock on a framerate lower than necessary
                     int64_t qpcSafetyMargin         = int64_t(qpcFrequency * presenter->safetyMarginInSec);
                     const int64_t conservativeAvg   = int64_t(frameTime.getAverage() * 0.5 - frameTime.getVariance() * presenter->varianceFactor);
                     const int64_t deltaToUse        = conservativeAvg > qpcSafetyMargin ? (conservativeAvg - qpcSafetyMargin) : 0;
                     entry.frames[FrameType::Interpolated_1].presentQpcDelta = deltaToUse;
                     entry.frames[FrameType::Real].presentQpcDelta           = deltaToUse;
-                    previousDelta                                                       = deltaToUse;
-                    
-                    // schedule presents
+                    previousDelta                                           = deltaToUse;
+
                     EnterCriticalSection(&presenter->criticalSectionScheduledFrame);
                     presenter->scheduledPresents = entry;
                     LeaveCriticalSection(&presenter->criticalSectionScheduledFrame);
@@ -895,7 +898,11 @@ DWORD WINAPI interpolationThread(LPVOID param)
             }
 
             // signal event to allow thread to finish
-            SetEvent(presenter->pacerEvent);
+            bool signaledPacerEvent = false;
+            if (!signaledPacerEvent)
+            {
+                SetEvent(presenter->pacerEvent);
+            }
             WaitForSingleObject(presenterThreadHandle, INFINITE);
             SafeCloseHandle(presenterThreadHandle);
         }
@@ -967,7 +974,7 @@ bool ReleaseReplaceableObjectHandle<FrameinterpolationPresentInfoExt>(Frameinter
         // prepare present CPU thread for shutdown
         presenter->shutdownWaitableSignalThread = true;
         // signal event to allow thread to finish
-        SetEvent(presenter->frameDoneEventHandle);  
+        SetEvent(presenter->frameDoneEventHandle);
         // wait for thread function to finish
         WaitForSingleObject(presenter->waitableThreadHandle, INFINITE);
         // close thread
@@ -1031,7 +1038,6 @@ bool TFrameInterpolationSwapChainDX12<ParentType, PresentType, ConfigType, Prese
         {
             auto bufferDesc = buffer->GetDesc();
             D3D12_CLEAR_VALUE clearValue{ bufferDesc.Format, 0.f, 0.f, 0.f, 1.f };
-
             D3D12_HEAP_PROPERTIES heapProperties{};
             D3D12_HEAP_FLAGS      heapFlags;
             buffer->GetHeapProperties(&heapProperties, &heapFlags);
@@ -1045,7 +1051,7 @@ bool TFrameInterpolationSwapChainDX12<ParentType, PresentType, ConfigType, Prese
             {
                 if (replacementSwapBuffers[i].resource == nullptr)
                 {
-                    
+
                     // create game render output resource
                     if (FAILED(device->CreateCommittedResource(&heapProperties,
                                                                 heapFlags,
@@ -1093,23 +1099,6 @@ bool TFrameInterpolationSwapChainDX12<ParentType, PresentType, ConfigType, Prese
     }
 
     return SUCCEEDED(hr);
-}
-
-template<typename PresentCallbackType>
-ffxReturnCode_t ffxFrameInterpolationUiCompositionWrapper(PresentCallbackType* params, void* unusedUserCtx)
-{
-    // This always calls the *current* version of the code so must use the *current* type
-    ffxCallbackDescFrameGenerationPresent desc;
-    ffxCallbackDescFrameGenerationPresentPremulAlpha premulAlpha;
-    InitPresentCallback(desc, premulAlpha, params->device, params->commandList, params->isInterpolatedFrame, params->outputSwapChainBuffer, params->currentBackBuffer, params->currentUI, params->usePremulAlpha, params->frameID);
-
-    return ffxFrameInterpolationUiComposition(&desc, unusedUserCtx);
-}
-
-template<>
-ffxReturnCode_t ffxFrameInterpolationUiCompositionWrapper<ffxCallbackDescFrameGenerationPresent>(ffxCallbackDescFrameGenerationPresent* params, void* unusedUserCtx)
-{
-    return ffxFrameInterpolationUiComposition(params, unusedUserCtx);
 }
 
 template<typename ParentType, typename PresentType, typename ConfigType, typename PresentCallbackType, size_t NumBuffers>
@@ -1219,7 +1208,6 @@ HRESULT TFrameInterpolationSwapChainDX12<ParentType, PresentType, ConfigType, Pr
         // Default to dispatch interpolation workloads on the game queue
         presentInfo.interpolationQueue = presentInfo.gameQueue;
     }
-
     return hr;
 }
 
@@ -1241,7 +1229,7 @@ UINT TFrameInterpolationSwapChainDX12<ParentType, PresentType, ConfigType, Prese
     UINT flags = nonAdjustedFlags;
 
     // The DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT flag changes the D3D runtime behavior for fences
-    // We will make our own waitable object for the app to wait on, but we need to keep the flag 
+    // We will make our own waitable object for the app to wait on, but we need to keep the flag
     flags |= DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
 
     if (tearingSupported)
@@ -1278,7 +1266,7 @@ HRESULT TFrameInterpolationSwapChainDX12<ParentType, PresentType, ConfigType, Pr
     if (presentInfo.device)
     {
         destroyReplacementResources();
-        
+
         EnterCriticalSection(&criticalSection);
         killPresenterThread();
         releaseUiBlitGpuResources();
@@ -1297,7 +1285,7 @@ HRESULT TFrameInterpolationSwapChainDX12<ParentType, PresentType, ConfigType, Pr
                 waitForFenceValue(presentInfo.interpolationFence, interpolationFenceValue, INFINITE, presentInfo.waitCallback);
             }
         }
-        
+
         SafeRelease(presentInfo.asyncComputeQueue);
         SafeRelease(presentInfo.presentQueue);
 
@@ -1337,39 +1325,42 @@ HRESULT TFrameInterpolationSwapChainDX12<ParentType, PresentType, ConfigType, Pr
 template<typename ParentType, typename PresentType, typename ConfigType, typename PresentCallbackType, size_t NumBuffers>
 bool TFrameInterpolationSwapChainDX12<ParentType, PresentType, ConfigType, PresentCallbackType, NumBuffers>::killPresenterThread()
 {
-    if (interpolationThreadHandle != NULL)
-    {
-        // prepare present CPU thread for shutdown
-        presentInfo.shutdown = true;
+    bool removeInterpolationThread = false;
 
-        // signal event to allow thread to finish
-        SetEvent(presentInfo.presentEvent);
-        WaitForSingleObject(interpolationThreadHandle, INFINITE);
-        SafeCloseHandle(interpolationThreadHandle);
+    if (!removeInterpolationThread) {
+        if (interpolationThreadHandle != NULL) {
+            // prepare present CPU thread for shutdown
+            presentInfo.shutdown = true;
+
+            // signal event to allow thread to finish
+            SetEvent(presentInfo.presentEvent);
+            WaitForSingleObject(interpolationThreadHandle, INFINITE);
+            SafeCloseHandle(interpolationThreadHandle);
+        }
     }
-
     return interpolationThreadHandle == nullptr;
 }
 
 template<typename ParentType, typename PresentType, typename ConfigType, typename PresentCallbackType, size_t NumBuffers>
 bool TFrameInterpolationSwapChainDX12<ParentType, PresentType, ConfigType, PresentCallbackType, NumBuffers>::spawnPresenterThread()
 {
-    if (interpolationThreadHandle == NULL)
-    {
-        presentInfo.shutdown      = false;
-        interpolationThreadHandle = CreateThread(nullptr, 0, &interpolationThread<PresentType, typename PresentType::PacingData, PresentCallbackType>, reinterpret_cast<void*>(&presentInfo), 0, nullptr);
-        
-        FFX_ASSERT(interpolationThreadHandle != NULL);
+    bool removeInterpolationThread = false;
 
-        if (interpolationThreadHandle != 0)
-        {
-            SetThreadPriority(interpolationThreadHandle, THREAD_PRIORITY_HIGHEST);
-            SetThreadDescription(interpolationThreadHandle, L"AMD FSR Interpolation Thread");
+    if (!removeInterpolationThread) {
+        if (interpolationThreadHandle == NULL) {
+            presentInfo.shutdown      = false;
+            interpolationThreadHandle = CreateThread(nullptr, 0, &interpolationThread<PresentType, typename PresentType::PacingData, PresentCallbackType>, reinterpret_cast<void*>(&presentInfo), 0, nullptr);
+
+            FFX_ASSERT(interpolationThreadHandle != NULL);
+
+            if (interpolationThreadHandle != 0) {
+                SetThreadPriority(interpolationThreadHandle, THREAD_PRIORITY_HIGHEST);
+                SetThreadDescription(interpolationThreadHandle, L"AMD FSR Interpolation Thread");
+            }
+
+            SetEvent(presentInfo.interpolationEvent);
         }
-
-        SetEvent(presentInfo.interpolationEvent);
     }
-
     return interpolationThreadHandle != NULL;
 }
 
@@ -1466,21 +1457,21 @@ void TFrameInterpolationSwapChainDX12<ParentType, PresentType, ConfigType, Prese
         temp.drawDebugPacingLines = nextFrameGenerationConfig.drawDebugPacingLines;
         config = &temp;
     }
-        
+
     FfxApiPresentCallbackFunc inputPresentCallback = (nullptr != config->presentCallback) ? config->presentCallback : GetPresentCallbackFunc<PresentCallbackType>(presentCallback);
     void*                  inputPresentCallbackCtx = (nullptr != config->presentCallback) ? config->presentCallbackContext : nullptr;
     ID3D12CommandQueue*    inputInterpolationQueue = config->allowAsyncWorkloads ? presentInfo.asyncComputeQueue : presentInfo.gameQueue;
 
     // if this is called externally just copy the new config to the internal copy to avoid potentially stalling on criticalSection
     if (!applyChangesNow)
-    {  
+    {
         nextFrameGenerationConfig = *config;
 
         // in case of actual reconfiguration: apply the changes immediately
-        if ( presentInfo.interpolationQueue != inputInterpolationQueue 
-           || interpolationEnabled != config->frameGenerationEnabled 
+        if ( presentInfo.interpolationQueue != inputInterpolationQueue
+           || interpolationEnabled != config->frameGenerationEnabled
            || presentCallback != inputPresentCallback
-           || presentCallbackContext != inputPresentCallbackCtx 
+           || presentCallbackContext != inputPresentCallbackCtx
            || frameGenerationCallback != config->frameGenerationCallback
            || frameGenerationCallbackContext != config->frameGenerationCallbackContext
            || drawDebugPacingLines != config->drawDebugPacingLines)
@@ -1569,7 +1560,7 @@ bool TFrameInterpolationSwapChainDX12<ParentType, PresentType, ConfigType, Prese
         }
 
         SafeRelease(realBackBuffer0);
-        
+
         for (size_t i = 0; i < _countof(interpolationOutputs); i++)
         {
             uint64_t resourceSize = GetResourceGpuMemorySize(interpolationOutputs[i].resource);
@@ -1582,7 +1573,7 @@ bool TFrameInterpolationSwapChainDX12<ParentType, PresentType, ConfigType, Prese
             uint64_t resourceSize = GetResourceGpuMemorySize(uiReplacementBuffer.resource);
             totalUsageInBytes -= resourceSize;
         }
-        
+
         uiReplacementBuffer.destroy();
     }
 
@@ -1599,12 +1590,12 @@ bool TFrameInterpolationSwapChainDX12<ParentType, PresentType, ConfigType, Prese
     {
         presentInfo.gameFence->Signal(gameFenceValue);
     }
-    
+
     if (presentInfo.interpolationFence)
     {
         presentInfo.interpolationFence->Signal(interpolationFenceValue);
     }
-    
+
     if (presentInfo.presentFence)
     {
         presentInfo.presentFence->Signal(framesSentForPresentation);
@@ -1891,7 +1882,7 @@ void TFrameInterpolationSwapChainDX12<ParentType, PresentType, ConfigType, Prese
 {
     FFX_ASSERT(pInterpolatedFrame);
     FFX_ASSERT(pRealFrame);
-    
+
     const UINT             currentBackBufferIndex   = GetCurrentBackBufferIndex();
     ID3D12Resource*        pCurrentBackBuffer       = replacementSwapBuffers[currentBackBufferIndex].resource;
     FfxApiResourceDescription gameFrameDesc            = ffxGetResourceDescriptionDX12(pCurrentBackBuffer);
@@ -1903,12 +1894,23 @@ void TFrameInterpolationSwapChainDX12<ParentType, PresentType, ConfigType, Prese
     if (interpolationOutputs[interpolationBufferIndex].availabilityFenceValue != 0)
         presentInfo.interpolationQueue->Wait(presentInfo.compositionFenceGPU, interpolationOutputs[interpolationBufferIndex].availabilityFenceValue);
 
+    // When the interpolation thread is removed, UI composition for the interpolated frame is dispatched on
+    // presentInfo.interpolationQueue *after* dispatchInterpolationCommands() returns (see runInterpolationThreadLogic()/
+    // compositeSwapChainFrameCompute()), so signaling presentInfo.interpolationFence here would be premature - it is
+    // instead signaled once that composition work has been recorded. In every other configuration (including this one
+    // with FFX_INTERNAL_REMOVE_INTERP_THREAD disabled, or the runtime env-var override forcing the old thread back on)
+    // the fence must be signaled immediately, exactly like HEAD.
+    bool deferInterpolationFenceSignal = false;
+
     auto pRegisteredCommandList = registeredInterpolationCommandLists[currentBackBufferIndex];
     if (pRegisteredCommandList != nullptr)
     {
         pRegisteredCommandList->execute(true);
 
-        presentInfo.interpolationQueue->Signal(presentInfo.interpolationFence, ++interpolationFenceValue);
+        if (!deferInterpolationFenceSignal)
+        {
+            presentInfo.interpolationQueue->Signal(presentInfo.interpolationFence, ++interpolationFenceValue);
+        }
 
         *pInterpolatedFrame = interpolationOutput();
         frameInterpolationResetCondition = false;
@@ -1935,7 +1937,10 @@ void TFrameInterpolationSwapChainDX12<ParentType, PresentType, ConfigType, Prese
         {
             interpolationCommandList->execute(true);
 
-            presentInfo.interpolationQueue->Signal(presentInfo.interpolationFence, ++interpolationFenceValue);
+            if (!deferInterpolationFenceSignal)
+            {
+                presentInfo.interpolationQueue->Signal(presentInfo.interpolationFence, ++interpolationFenceValue);
+            }
         }
         else
         {
@@ -2015,10 +2020,22 @@ void TFrameInterpolationSwapChainDX12<ParentType, PresentType, ConfigType, Prese
 
     presentInfo.resetTimer              = frameInterpolationResetCondition;
     presentInfo.scheduledInterpolations = entry;
+
     LeaveCriticalSection(&presentInfo.criticalSectionScheduledFrame);
 
+    bool removeInterpolationThread = false;
+
     // Set event to kick off async CPU present thread
-    SetEvent(presentInfo.presentEvent);
+
+    if (removeInterpolationThread && interpolatedFrame.resource != nullptr)
+    {
+        // if we have an interpolated frame, signal interpolationFence now that Compute composition is done, too.
+        presentInfo.interpolationQueue->Signal(presentInfo.interpolationFence, interpolationFenceValue);
+    }
+
+    if (!removeInterpolationThread) {
+        SetEvent(presentInfo.presentEvent);
+    }
 
     // hold the replacement object back until previous frame or interpolated is presented
     nextPresentWaitValue = entry.numFramesSentForPresentationBase;
@@ -2149,7 +2166,6 @@ void TFrameInterpolationSwapChainDX12<ParentType, PresentType, ConfigType, Prese
 template<typename ParentType, typename PresentType, typename ConfigType, typename PresentCallbackType, size_t NumBuffers>
 HRESULT STDMETHODCALLTYPE TFrameInterpolationSwapChainDX12<ParentType, PresentType, ConfigType, PresentCallbackType, NumBuffers>::Present(UINT SyncInterval, UINT Flags)
 {
-
     const UINT64 previousFramesSentForPresentation = framesSentForPresentation;
 
     if (Flags & DXGI_PRESENT_TEST)
@@ -2185,7 +2201,9 @@ HRESULT STDMETHODCALLTYPE TFrameInterpolationSwapChainDX12<ParentType, PresentTy
     previousFrameWasInterpolated = runInterpolation;
     if (runInterpolation)
     {
-        WaitForSingleObject(presentInfo.interpolationEvent, INFINITE);
+        {
+            WaitForSingleObject(presentInfo.interpolationEvent, INFINITE);
+        }
 
         presentInterpolated(SyncInterval, Flags);
 
@@ -2316,7 +2334,7 @@ HRESULT STDMETHODCALLTYPE TFrameInterpolationSwapChainDX12<ParentType, PresentTy
             hr = S_OK;
         }
     }
-    
+
     return hr;
 }
 
@@ -2587,7 +2605,7 @@ ID3D12GraphicsCommandList* TFrameInterpolationSwapChainDX12<ParentType, PresentT
             SafeRelease(currentBackBuffer);
         }
     }
-    
+
     LeaveCriticalSection(&criticalSection);
 
     return dx12CommandList;

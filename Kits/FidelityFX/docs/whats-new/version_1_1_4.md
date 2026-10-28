@@ -14,7 +14,7 @@ None.
 
 <h3>AMD FidelityFX™ Super Resolution 3.1.4 (FSR 3.1.4)</h3>
 Reduces upscaler disocclusion ghosting by setting default fMinDisocclusionAccumulation to -0.333 from FSR 3.1.3 equivalent default of 0.333. <br/>
-In small fraction of games, fMinDisocclusionAccumulation of -0.333 results in more white pixel flickering in swaying grass vs 0.333.
+In a small fraction of games, fMinDisocclusionAccumulation of -0.333 results in more white pixel flickering in swaying grass vs 0.333.
 
 <br/>
 

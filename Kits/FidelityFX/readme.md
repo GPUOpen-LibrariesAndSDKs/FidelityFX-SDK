@@ -1,4 +1,4 @@
-﻿<h1>Welcome to the AMD FSR™ SDK 2.3.0 - "Redstone"</h1>
+﻿<h1>Welcome to the AMD FSR™ SDK 2.4.0 - "Redstone"</h1>
 
 ![alt text](docs/media/AMD_FSR_SDK_Lockup_RGB_Wht.png)
 
@@ -13,14 +13,16 @@ The AMD FSR™ SDK includes:
 | [AMD FSR™ Upscaling (ML-Upscaler)](docs/techniques/super-resolution-ml.md) 4.1.1 | [AMD FSR™ Upscaling 4](https://gpuopen.com/fidelityfx-superresolution-4/) | Offers a machine learning-based solution for producing high resolution frames from lower resolution inputs. |
 | [AMD FidelityFX™ Super Resolution Frame Generation](docs/techniques/frame-interpolation.md) 3.1.6 | [AMD FidelityFX™ Super Resolution Frame Generation 3](https://gpuopen.com/fidelityfx-superresolution-3/) | Offers generation of interpolated frames from multiple real input frames, and multiple sources of motion vector data. |
 | [AMD FidelityFX™ Super Resolution Frame Generation Swapchain](docs/techniques/frame-interpolation-swap-chain.md) 3.1.7 | [AMD FidelityFX™ Super Resolution Frame Generation Swapchain 3](https://gpuopen.com/fidelityfx-superresolution-3/) | A replacement DXGI Swapchain implementation for DX12 which allows for additional frames to be presented along with real game frames, with relevant frame pacing. |
-| [AMD FSR™ Frame Generation (ML)](docs/techniques/frame-interpolation.md) 4.0.1 | [AMD FSR™ Frame Generation 4](https://gpuopen.com/fidelityfx-superresolution-3/) | Offers generation of interpolated frames from multiple real input frames, and multiple sources of motion vector data. |
-| [AMD FSR™ Ray Regeneration (ML-Denoiser)](docs/techniques/denoising.md) 1.2.0 | [AMD FSR™ Ray Regeneration](https://gpuopen.com/amd-fsr-rayregeneration/) | Offers a machine learning-based solution for denoising. |
+| [AMD FSR™ Frame Generation (Swapchain)](docs/techniques/frame-interpolation-swap-chain.md) 4.0.0 | [AMD FSR™ Frame Generation 4](https://gpuopen.com/amd-fsr-framegeneration/) | A replacement DXGI Swapchain implementation for DX12 which allows for additional frames to be presented along with real game frames, with relevant frame pacing. |
+| [AMD FSR™ Frame Generation (ML)](docs/techniques/frame-interpolation.md) 4.0.2 | [AMD FSR™ Frame Generation 4](https://gpuopen.com/amd-fsr-framegeneration/) | Offers generation of interpolated frames from multiple real input frames, and multiple sources of motion vector data. |
+| [AMD FSR™ Ray Regeneration](docs/techniques/denoising.md) 1.2.1 | [AMD FSR™ Ray Regeneration](https://gpuopen.com/amd-fsr-rayregeneration/) | Offers a machine learning-based solution for denoising. |
 | [AMD FSR™ Radiance Caching (Technical Preview)](docs/techniques/radiance-cache.md) 0.9.0 | [AMD FSR™ Radiance Caching (Preview)](https://gpuopen.com/amd-fsr-radiancecaching/) | Offers a machine learning-based solution for path tracing result caching. |
 
 <h2>Further information</h2>
 
 - [What's new in AMD FSR™ SDK](docs/whats-new/index.md)
-  - [AMD FSR™ SDK 2.3.0](docs/whats-new/index.md)
+  - [AMD FSR™ SDK 2.4.0](docs/whats-new/index.md)
+  - [AMD FSR™ SDK 2.3.0](docs/whats-new/version_2_3_0.md)
   - [AMD FSR™ SDK 2.2.0](docs/whats-new/version_2_2_0.md)
   - [AMD FSR™ SDK 2.1.0](docs/whats-new/version_2_1_0.md)
   - [AMD FSR™ SDK 2.0.0](docs/whats-new/version_2_0_0.md)
@@ -35,7 +37,7 @@ The AMD FSR™ SDK includes:
 | AMD FSR™ SDK Effect | API / Configuration | Problem Description |
 | --- | --- | --- |
 | All AMD FSR™ SDK Effects | All APIs / All Configs | Windows path length restrictions may cause compile issues. It is recommended to place the SDK close to the root of a drive or use subst or a mklink to shorten the path. |
-| All AMD FSR™ SDK Effects | Vulkan / All Configs | Vulkan is currently not supported in AMD FSR™ SDK 2.3 |
+| AMD FSR™ Ray Regeneration and Radiance Cache Effects | Vulkan® / All Configs | Vulkan® is currently not supported for Ray Regeneration and Radiance Cache |
 
 <h2>Open source</h2>
 

@@ -37,8 +37,8 @@ void computeOpticalFlowFieldMvs(FfxUInt32x2 dtID, FfxFloat32x2 fOpticalFlowVecto
     FfxFloat32 prevLuma = 0.001f + RawRGBToLuminance(prevBackbufferCol);
     FfxFloat32 currLuma = 0.001f + RawRGBToLuminance(curBackbufferCol);
 
-    FfxFloat32 fVelocity = length(fOpticalFlowVector * InterpolationRectSize());
-    FfxUInt32  uHighPriorityFactor = FfxUInt32(fVelocity > 1.0f) * FfxUInt32(ffxSaturate(fVelocity / length(InterpolationRectSize() * 0.05f)) * PRIORITY_HIGH_MAX);
+    FfxFloat32 fVelocity = length(fOpticalFlowVector * ColorRectSize());
+    FfxUInt32  uHighPriorityFactor = FfxUInt32(fVelocity > 1.0f) * FfxUInt32(ffxSaturate(fVelocity / length(ColorRectSize() * 0.05f)) * PRIORITY_HIGH_MAX);
 
     if(uHighPriorityFactor > 0) {
         FfxUInt32 uLowPriorityFactor = FfxUInt32(ffxRound(ffxPow(MinDividedByMax(prevLuma, currLuma), 1.0f / 1.0f) * PRIORITY_LOW_MAX))
@@ -79,7 +79,7 @@ void computeOpticalFlowVectorField(FfxInt32x2 iPxPos)
             FfxFloat32   fConfidenceFactor = ffxMax(FFX_FRAMEINTERPOLATION_EPSILON, LoadOpticalFlowConfidence(samplePos));
 
 
-            FfxFloat32 len        = length(vs * InterpolationRectSize());
+            FfxFloat32 len        = length(vs * ColorRectSize());
             FfxFloat32 len_factor = ffxMax(0.0f, 512.0f - len) * FfxFloat32(len > 1.0f);
             FfxFloat32 w = len_factor;
 
@@ -101,7 +101,7 @@ void computeOpticalFlowVectorField(FfxInt32x2 iPxPos)
             FfxFloat32x2 vs = LoadOpticalFlow(samplePos);
 
             FfxFloat32 fConfidenceFactor = ffxMax(FFX_FRAMEINTERPOLATION_EPSILON, LoadOpticalFlowConfidence(samplePos));
-            FfxFloat32 len               = length(vs * InterpolationRectSize());
+            FfxFloat32 len               = length(vs * ColorRectSize());
             FfxFloat32 len_factor        = ffxMax(0.0f, 512.0f - len) * FfxFloat32(len > 1.0f);
 
 

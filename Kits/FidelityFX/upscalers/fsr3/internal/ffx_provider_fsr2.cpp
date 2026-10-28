@@ -137,6 +137,16 @@ ffxReturnCode_t ffxProvider_FSR2::Configure(ffxContext* context, const ffxConfig
     InternalFsr2Context* internal_context = reinterpret_cast<InternalFsr2Context*>(*context);
     switch (header->type)
     {
+        case FFX_API_CONFIGURE_DESC_TYPE_GLOBALDEBUG:
+        {
+            auto desc = reinterpret_cast<const ffxConfigureDescGlobalDebug*>(header);
+            TRY2(ffxFsr2SetGlobalDebugMessage( reinterpret_cast<ffxMessageCallback>(desc->fpMessage), desc->debugLevel));
+            internal_context->fpMessage = desc->fpMessage;
+            internal_context->debugLevel = desc->debugLevel;
+        }
+        break;
+        #pragma FFX_PRAGMA_WARNING_PUSH
+        #pragma FFX_PRAGMA_WARNING_DISABLE_DEPRECATIONS
         case FFX_API_CONFIGURE_DESC_TYPE_GLOBALDEBUG1:
         {
             auto desc = reinterpret_cast<const ffxConfigureDescGlobalDebug1*>(header);
@@ -145,6 +155,7 @@ ffxReturnCode_t ffxProvider_FSR2::Configure(ffxContext* context, const ffxConfig
             internal_context->debugLevel = desc->debugLevel;
         }
         break;
+        #pragma FFX_PRAGMA_WARNING_POP
     }
     return FFX_API_RETURN_OK;
 }

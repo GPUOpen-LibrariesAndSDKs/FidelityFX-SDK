@@ -1,4 +1,4 @@
-﻿<!-- @page page_whats-new_index AMD FidelityFX™ SDK: What's new in AMD FidelityFX™ SDK 1.1.1 -->
+﻿<!-- @page page_whats-new_index AMD FidelityFX™ SDK: What's new in AMD FidelityFX™ SDK 1.1.2 -->
 
 <h1>What's new in the AMD FidelityFX™ SDK 1.1.2?</h1>
 

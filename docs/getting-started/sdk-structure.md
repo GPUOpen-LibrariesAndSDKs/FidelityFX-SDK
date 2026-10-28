@@ -33,7 +33,7 @@ The AMD FSR™ SDK features a collection of sample applications in the **Samples
 
 The AMD FSR™ SDK samples are dependent upon our backing Cauldron Framework and various common render modules. 
 
-The **./Kits/Cauldron2** location is where out Cauldron framework can be found as well as a number of render modules for commonly used rendering features (**rendermodules**).
+The **./Kits/Cauldron2** location is where our Cauldron framework can be found as well as a number of render modules for commonly used rendering features (**rendermodules**).
 
 The architecture of the AMD FSR™ SDK implies a set of dependencies between the components. The image below shows which components depend on which other components, and which you might ultimately depend upon in your application.
 
@@ -46,4 +46,4 @@ Media delivery for the AMD FSR™ SDK is handled via remote download into the Me
 
 Simply run the ```UpdateMedia.bat``` file in the root directory to fetch the latest version of the AMD FSR™ SDK content.
 
-When fetching content for updated code packages from github, please first run ```ClearMediaCache.bat``` to ensure fetching of the latest content.
+When fetching content for updated code packages from GitHub, please first run ```ClearMediaCache.bat``` to ensure fetching of the latest content.

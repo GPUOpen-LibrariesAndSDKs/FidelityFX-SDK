@@ -77,14 +77,6 @@ enum FfxApiMsgType
 
 typedef void (*ffxApiMessage)(uint32_t type, const wchar_t* message);
 
-#define FFX_API_CONFIGURE_DESC_TYPE_GLOBALDEBUG1 0x0000001u
-struct ffxConfigureDescGlobalDebug1
-{
-    ffxConfigureDescHeader header;
-    ffxApiMessage          fpMessage;
-    uint32_t               debugLevel;
-};
-
 #define FFX_API_CONFIGURE_DESC_TYPE_GLOBALDEBUG 7u
 struct ffxConfigureDescGlobalDebug
 {
@@ -99,7 +91,7 @@ struct ffxQueryDescGetVersions
 {
     ffxQueryDescHeader header;
     uint64_t createDescType;    ///< Create description for the effect whose versions should be enumerated.
-    void* device;               ///< For DX12: pointer to ID3D12Device.
+    void* device;               ///< For DX12: pointer to ID3D12Device. For VK, pointer to VkDeviceContext.
     uint64_t *outputCount;      ///< Input capacity of id and name arrays. Output number of returned versions. If initially zero, output is number of available versions.
     uint64_t *versionIds;       ///< Output array of version ids to be used as version overrides. If null, only names and count are returned.
     const char** versionNames;  ///< Output array of version names for display. If null, only ids and count are returned. If both this and versionIds are null, only count is returned.
@@ -169,18 +161,18 @@ typedef ffxReturnCode_t (*PfnFfxDispatch)(ffxContext* context, const ffxDispatch
 #define FFX_API_EFFECT_ID_UPSCALE                       	0x00010000u
 #define FFX_API_EFFECT_ID_FRAMEGENERATION               	0x00020000u
 #define FFX_API_EFFECT_ID_FRAMEGENERATIONSWAPCHAIN      	0x00030000u
-// Need to keep this ID around for the deprecated VK frame gen swapchain
+// Need to keep this ID around for the deprecated VK frame gen swapchain 
 #define FFX_API_EFFECT_ID_FRAMEGENERATIONSWAPCHAIN_VK       0x00040000u
-// Need to keep this ID around for the deprecated VK frame gen swapchain
 #define FFX_API_EFFECT_ID_DENOISER                      	0x00050000u
 #define FFX_API_EFFECT_ID_RADIANCECACHE                   	0x00060000u
+#define FFX_API_EFFECT_COUNT                                6u
 
 #define FFX_API_MAKE_EFFECT_SUB_ID(effectId, subversion) ((effectId & FFX_API_EFFECT_MASK) | (subversion & ~FFX_API_EFFECT_MASK))
 
 // FFX_APID_BACKEND_IDs
 #define FFX_API_BACKEND_ID_DX12               0x00000000u
-#define FFX_API_BACKEND_ID_XBOX               0x01000000u
-#define FFX_API_BACKEND_ID_VK                 0x02000000u // For new effects going forward, please use this backend ID for vulkan specifics
+#define FFX_API_BACKEND_ID_VK                 0x01000000u  // For new effects going forward, please use this backend ID for vulkan specifics
+#define FFX_API_BACKEND_ID_XBOX               0x02000000u  
 
 #define FFX_API_MAKE_BACKEND_SUB_ID(backendId, subversion) ((backendId & FFX_API_BACKEND_MASK) | (subversion & ~FFX_API_BACKEND_MASK))
 
@@ -207,6 +199,14 @@ typedef ffxReturnCode_t (*PfnFfxDispatch)(ffxContext* context, const ffxDispatch
 #endif
 
 #define FFX_DEPRECATION(message) [[deprecated(message)]]
+
+#define FFX_API_CONFIGURE_DESC_TYPE_GLOBALDEBUG1 0x0000001u
+struct FFX_DEPRECATION("Use ffxConfigureDescGlobalDebug instead of ffxConfigureDescGlobalDebug1.") ffxConfigureDescGlobalDebug1
+{
+    ffxConfigureDescHeader header;
+    ffxApiMessage          fpMessage;
+    uint32_t               debugLevel;
+};
 
 #if defined(__cplusplus)
 }

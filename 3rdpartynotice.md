@@ -1,11 +1,12 @@
-<h1>Third Party Licensing for AMD FSR™ SDK 2.3.0 - "Redstone"</h1>
+<h1>Third Party Licensing for AMD FSR™ SDK 2.4.0 - "Redstone"</h1>
 
 <h2>The FSR™ SDK includes the use of the following third party components:</h2>
 
 | Nam of 3rd Party Component | Version (if applicable) | License | Comments |
 | --- | --- | --- | --- |
 | vcpkg | 2026.05.25 | https://github.com/Microsoft/vcpkg/blob/master/LICENSE.txt | Used to pull in a number of components to build samples |
-| DX12 Agility SDK | 1.616.1 | https://www.nuget.org/packages/Microsoft.Direct3D.D3D12/1.616.1/License | Pulled in via vcpkg |
+| DirectX® 12 Agility SDK | 1.616.1 | https://www.nuget.org/packages/Microsoft.Direct3D.D3D12/1.616.1/License | Pulled in via vcpkg |
+| Vulkan® | 1.2 | https://vulkan.lunarg.com/ | Pulled in via vcpkg |
 | dxheaders | 1.616.0 | https://github.com/microsoft/DirectX-Headers/blob/main/LICENSE | Pulled in via vcpkg |
 | dxc shader compiler | 1.8.2505(.28) | https://github.com/microsoft/DirectXShaderCompiler/blob/main/LICENSE.TXT | Pulled in via vcpkg |
 | imgui | 1.87 | https://www.dearimgui.com/licenses/ (MIT) | - |

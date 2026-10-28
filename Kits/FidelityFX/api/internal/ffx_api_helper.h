@@ -34,6 +34,8 @@
 #include "../../framegeneration/include/ffx_framegeneration.h"
 #if defined(FFX_BACKEND_DX12)
 #include "../../framegeneration/include/dx12/ffx_api_framegeneration_dx12.h"
+#elif defined(FFX_BACKEND_VK)
+#include "../../framegeneration/include/vk/ffx_api_framegeneration_vk.h"
 #elif defined(FFX_BACKEND_XBOX)
 #include "../../framegeneration/include/xbox/ffx_api_framegeneration_xbox.h"
 #else

@@ -52,7 +52,7 @@ FFX_FORWARD_DECLARE(FfxInterface);
 /// FidelityFX SDK minor version.
 ///
 /// @ingroup FfxInterface
-#define FFX_SDK_VERSION_MINOR (3)
+#define FFX_SDK_VERSION_MINOR (4)
 
 /// FidelityFX SDK patch version.
 ///
@@ -71,17 +71,6 @@ FFX_FORWARD_DECLARE(FfxInterface);
 ///
 /// @ingroup FfxInterface
 typedef uint32_t FfxPass;
-
-/// Get the SDK version of the backend context.
-///
-/// @param [in]  backendInterface                    A pointer to the backend interface.
-///
-/// @returns
-/// The SDK version a backend was built with.
-///
-/// @ingroup FfxInterface
-typedef FfxVersionNumber(*FfxGetSDKVersionFunc)(
-    FfxInterface* backendInterface);
 
 /// Get effect VRAM usage.
 ///
@@ -567,7 +556,6 @@ typedef FfxABIVersion(*FfxGetSwapchainABIFunc)(FfxSwapchain swapchain);
 typedef struct FfxInterface {
 
     // FidelityFX SDK 1.0 callback handles
-    FfxGetSDKVersionFunc               fpGetSDKVersion;               ///< A callback function to query the SDK version.
     FfxGetEffectGpuMemoryUsageFunc     fpGetEffectGpuMemoryUsage;     ///< A callback function to query effect Gpu memory usage
     FfxCreateBackendContextFunc        fpCreateBackendContext;        ///< A callback function to create and initialize the backend context.
     FfxGetDeviceCapabilitiesFunc       fpGetDeviceCapabilities;       ///< A callback function to query device capabilites.

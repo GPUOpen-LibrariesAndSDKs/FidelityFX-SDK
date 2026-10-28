@@ -7,21 +7,23 @@
 To build the samples in the AMD FSR™ SDK:
 
  1. Download and install the following software developer tool minimum versions:
-    - [Visual Studio 2022](https://visualstudio.microsoft.com/downloads/) (Install ```vcpkg package manager``` as part of the install process)
+    - [Visual Studio® 2022](https://visualstudio.microsoft.com/downloads/) (Install ```vcpkg package manager``` as part of the install process)
     - [Windows 10 SDK 10.0.18362.0](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk)
 
  2. Open the Visual Studio solution:
 
     ```bash
-    > <installation path>\Samples\FidelityFX_<effect>\dx12\FidelityFX_<effect>_2022.sln
+    > <installation path>\Samples\FidelityFX_<effect>\<api>\FidelityFX_<effect>_2022.sln
     ```
+
+    `<api>` is `dx12` or `vk`, for the sample projects that provide that backend.
 
  3. First time vcpkg installation
 
-   - If vcpkg has not previously been initialized in Visual Studio, please do so with the following:
-     - From the menu, select ``Tools`` and then ``Visual Studio Command Prompt`` to bring up the terminal.
-     - Type ``vcpkg integrate install`` and hit ``enter`` key.
-     - Close and re-open the solution.
+    - If vcpkg has not previously been initialized in Visual Studio, please do so with the following:
+      - From the menu, select ``Tools`` and then ``Visual Studio Command Prompt`` to bring up the terminal.
+      - Type ``vcpkg integrate install`` and hit ``enter`` key.
+      - Close and re-open the solution.
   
 <h2>Building and running in Visual Studio</h2>
 
@@ -33,11 +35,11 @@ The Visual Studio solution file (.sln) will contain all projects needed to build
 
 To run a project from Visual Studio:
 
- 1. If not already highlighted, select the project in the solution explorer that matches the sample solution name (minus the visual studio version postfix - e.g FidelityFX_FSR for FidelityFX_FSR_2022).
+ 1. If not already highlighted, select the project in the solution explorer that matches the sample solution name (minus the Visual Studio® version postfix - e.g. FidelityFX_FSR for FidelityFX_FSR_2022).
 
  2. Right-click the project and select `Set as Start-up project`.
 
- 3. Right-click the project and select `Properties`
+ 3. Right-click the project and select `Properties`.
 
  4. Under `Configuration Properties`, click on the `Debugging` entry.
 

@@ -9,14 +9,14 @@ The AMD FSR™ SDK samples are configured to load scenes from pre-downloaded con
 <h2>Configuration files</h2>
 
 The AMD FSR™ SDK samples (and Cauldron Framework in general) operate via runtime setup driven by various JSON configuration files.
-*The AMD FSR™ Radiance Caching Preview is run from a self contained application framework and not Cauldron-based.
+*The AMD FSR™ Radiance Caching (Preview) is run from a self-contained application framework and not Cauldron-based.*
 
 There is a hierarchy to how the configuration files are loaded:
 
-  1. The `cauldronconfig.json` file is loaded first to setup default framework values.
-  2. The sample's config file is then parsed and relevant default config values are overriden.
+  1. The `cauldronconfig.json` file is loaded first to set up default framework values.
+  2. The sample's config file is then parsed and relevant default config values are overridden.
   3. When parsing the render modules to initialize, each render module can also provide its own configuration file for needed defaults (such as needed resource creation, specific render module options, etc.)
-  4. The render module defaults may also be overriden from the sample config file
+  4. The render module defaults may also be overridden from the sample config file
   
   Configuration flow can best be summed up by the following image:
   
@@ -28,7 +28,7 @@ The following is a list of configuration groups and options that can be overload
 
   **Validation**
   
-  Takes booleans to enable of disable CPU/GPU-based validation layers. GPU validation has serious performance implications, so use judiciously. All values default to false.
+  Takes booleans to enable or disable CPU/GPU-based validation layers. GPU validation has serious performance implications, so use judiciously. All values default to false.
 
   ```yaml
   "Validation": {
@@ -39,7 +39,7 @@ The following is a list of configuration groups and options that can be overload
   
   **FeatureSupport**
   
-  Feature toggles take a boolean value to enforce the need of certain feature sets, and a string of the form "SMx_y" is used to delineate the required minimum shader model support required. Setting an unsupported feature entry to true, or setting the "ShaderModel" entry to an unsupported value on your current device, with both assert in the sample and execution will halt. Defaults shown below.
+  Feature toggles take a boolean value to enforce the need of certain feature sets, and a string of the form "SMx_y" is used to delineate the required minimum shader model support required. Setting an unsupported feature entry to true, or setting the "ShaderModel" entry to an unsupported value on your current device, will both assert in the sample and execution will halt. Defaults shown below.
   
   ```yaml
   "FeatureSupport": {
@@ -102,7 +102,7 @@ The following is a list of configuration groups and options that can be overload
   
   `DevelopmentMode` will automatically enable debug shaders, CPU validation, and DirectX memory leak detection (when in DX12 configurations).
   
-  The RenderDoc and PIX capture options will also enabled an in-application UI for taking captures.
+  The RenderDoc and PIX capture options will also enable an in-application UI for taking captures.
   
   ```yaml
   "DebugOptions": {
@@ -117,7 +117,7 @@ The following is a list of configuration groups and options that can be overload
 
   Render resources is a list of resources to be created, or resource aliases to be created at framework initialization time. They are typically defined by render modules that have implicit resource needs.  They are defined by providing the resource name as an object which contains a Format, and other optional flags (e.g. `"RenderResolution": true` will create the resource at render resolution instead of display resolution if upscaling is present).
   
-  Resource aliases add additional names that can be used to query resources from the [`DynamicResourcePool`](../../Kits/Cauldron2/dx12/framework/render/dynamicresourcepool.cpp) at run time.
+  Resource aliases add additional names that can be used to query resources from the [`DynamicResourcePool`](../../Kits/Cauldron2/framework/render/dynamicresourcepool.cpp) at run time.
   
   Example:
 
@@ -146,7 +146,7 @@ The following is a list of configuration groups and options that can be overload
   
   **RenderModuleOverrides**
   
-  Used to override data for render module initialization. Define an entry for each render module you wish to override. Example: Overriding [`SkyDomeRenderModule`](../../Kits/Cauldron2/dx12/rendermodules/skydome/skydomerendermodule.h)'s procedural generation setting:
+  Used to override data for render module initialization. Define an entry for each render module you wish to override. Example: Overriding [`SkyDomeRenderModule`](../../Kits/Cauldron2/rendermodules/skydome/skydomerendermodule.h)'s procedural generation setting:
   
   ```yaml
   "RenderModuleOverrides": {
@@ -164,7 +164,7 @@ The following is a list of configuration groups and options that can be overload
   
   `Scenes`: This is a list of glTF files to queue for loading at runtime. Can contain one or more file paths.
   
-  `Camera`: This is the name of the default camera entity to set as active camera. If the camera can not be found, a default camera is supplied.
+  `Camera`: This is the name of the default camera entity to set as active camera. If the camera cannot be found, a default camera is supplied.
   
   `SceneExposure`: This is the value to use for exposure (fixed) when running the sample.
   
@@ -217,14 +217,14 @@ The following is a list of configuration groups and options that can be overload
   
   **Miscellaneous Options**
   
-  There are a number of options that are not affiliated to a group.</br></br>
-	`FontSize`: Integer point value to render fonts at. Takes DPI scaling at the OS level into account.</br></br>
-	`AGSEnabled`: Enables/disables use of [AGS](https://gpuopen.com/amd-gpu-services-ags-library/) on AMD GPUs.</br></br>
-	`StablePowerState`: Setting this to true will attempt to set a stable power state on the device (requires Windows Developer Mode to be enabled). Note that the stable power state selected is not necessarily the highest stable performance state possible and could deviate from that significantly.</br></br>
-	`InvertedDepth`: Enables/disables the use of inverted infinite depth. Defaults to true.</br></br>
-	`MotionVectorGeneration`: Name of the render module responsible for generation of motion vector information. A value of "" means no motion vector generation.</br></br>
-	`OverrideSceneSamplers`: When true, will override glTF specified texture samplers (point/linear) with anisotropic samplers. Defaults to true.</br></br>
-	`BuildRayTracingAccelerationStructure`: When true, will enable the building and update of ray tracing bounding volume hierarchies (BVHs) when loading/updating geometry. Defaults to false.</br></br>
+  There are a number of options that are not affiliated to a group.<br><br>
+	`FontSize`: Integer point value to render fonts at. Takes DPI scaling at the OS level into account.<br><br>
+	`AGSEnabled`: Enables/disables use of [AGS](https://gpuopen.com/amd-gpu-services-ags-library/) on AMD GPUs.<br><br>
+	`StablePowerState`: Setting this to true will attempt to set a stable power state on the device (requires Windows Developer Mode to be enabled). Note that the stable power state selected is not necessarily the highest stable performance state possible and could deviate from that significantly.<br><br>
+	`InvertedDepth`: Enables/disables the use of inverted infinite depth. Defaults to true.<br><br>
+	`MotionVectorGeneration`: Name of the render module responsible for generation of motion vector information. A value of "" means no motion vector generation.<br><br>
+	`OverrideSceneSamplers`: When true, will override glTF specified texture samplers (point/linear) with anisotropic samplers. Defaults to true.<br><br>
+	`BuildRayTracingAccelerationStructure`: When true, will enable the building and update of ray tracing bounding volume hierarchies (BVHs) when loading/updating geometry. Defaults to false.<br><br>
   
   ```yaml
   "FontSize": 13,
@@ -254,11 +254,11 @@ The following are the currently supported command line overrides:
 
   **-cpulimiter** \[TARGETFRAMERATE\]
   
-  Forces CPU frame rate limitation through the system sleep cycle. Parameter is expected to be an integer value. This can be useful to gather more acurate timings of sample effects by forcing the GPU into a constant workload configuration.
+  Forces CPU frame rate limitation through the system sleep cycle. Parameter is expected to be an integer value. This can be useful to gather more accurate timings of sample effects by forcing the GPU into a constant workload configuration.
   
   **-gpulimiter** \[TARGETFRAMERATE\]
   
-  Forces GPU frame rate limitation through GPU workload tasks. Parameter is expected to be an integer value. This can be useful to gathering more accurate timings of sample effects by forcing the GPU into a constant workload configuration.
+  Forces GPU frame rate limitation through GPU workload tasks. Parameter is expected to be an integer value. This can be useful for gathering more accurate timings of sample effects by forcing the GPU into a constant workload configuration.
   
   **-inverteddepth** \[1 or 0\]
   
@@ -274,9 +274,9 @@ The following are the currently supported command line overrides:
   
   **-loadcontent** \[SCENE PATH\] \<OPTIONAL SCENE PATH\>
   
-  Overrides the scene to load at startup. By default, each sample will be configured to load a pre-configured scene. This option overrides the scene to load to permit end users to test their own content against the effects. Simply export your content in any glTF 2.0 compliant exporter and pass in on run.
+  Overrides the scene to load at startup. By default, each sample will be configured to load a pre-configured scene. This option overrides the scene to load to permit end users to test their own content against the effects. Simply export your content in any glTF 2.0 compliant exporter and pass it in on run.
   
-  Users can load as many scenes as they desire (with a minimum of 1)
+  Users can load as many scenes as they desire (with a minimum of 1).
   
   **-diffuseibl** \[PATH\]
   
@@ -332,7 +332,7 @@ The following are the currently supported command line overrides:
 	  
   **-displaymode** \[DISPLAYMODE\]
   
-    Overides the default display mode to use. Accepted display modes are:
+    Overrides the default display mode to use. Accepted display modes are:
     - "DISPLAYMODE_LDR"			    Low dynamic range
 	  - "DISPLAYMODE_2084_HDR10"	(PQ) HDR10
 	  - "DISPLAYMODE_SCRGB_HDR10"	High-precision HDR10
@@ -375,7 +375,7 @@ Depending on which of Cauldron's render modules are active in a sample, the foll
   
   ![Particle UI](media/particle-ui.jpg)
   
-  - Particle animation: Enables/sisables GPU particle animation.
+  - Particle animation: Enables/disables GPU particle animation.
   
   **Post Processing**
   
@@ -432,5 +432,5 @@ Cauldron defines the following set of controls when navigating a sample.
 | **F3**             | Toggles the message log UI on/off. (Defaults to on in debug and off in release)                                                                                                                                |
 | **M**             | Toggles magnifying glass.                                                                                                                                |
 | **L**             | Toggles magnifying glass lock when enabled.                                                                                                                                |
-| **ESC**             | Shutsdown and quits sample.                                                                                                                                |
+| **ESC**             | Shuts down and quits sample.                                                                                                                                |
 | **Alt-Enter**       | Toggles fullscreen mode.                                                                                                                                |

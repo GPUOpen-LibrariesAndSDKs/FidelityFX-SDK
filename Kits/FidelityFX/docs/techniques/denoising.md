@@ -1,6 +1,6 @@
-﻿<!-- @page page_techniques_denoising AMD FSR™ Ray Regeneration 1.2.0 Denoiser -->
+﻿<!-- @page page_techniques_denoising AMD FSR™ Ray Regeneration 1.2.1 Denoiser -->
 
-# AMD FSR™ Ray Regeneration 1.2.0
+# AMD FSR™ Ray Regeneration 1.2.1
 
 <p align="center">
   <img src="media/denoiser/fsr-ray-regeneration-sample.png" 
@@ -48,22 +48,23 @@ It improves visual quality by reducing noise in rendered frames while preserving
     - [3.1.1. Denoising direct diffuse, direct specular, indirect diffuse and indirect specular signals](#311-denoising-direct-diffuse-direct-specular-indirect-diffuse-and-indirect-specular-signals)
     - [3.1.2. Denoising indirect diffuse and indirect specular signals](#312-denoising-indirect-diffuse-and-indirect-specular-signals)
     - [3.1.3. Denoising indirect specular signal](#313-denoising-indirect-specular-signal)
+    - [3.1.4. Denoising dominant light visibility signal](#314-denoising-dominant-light-visibility-signal)
   - [3.2. Memory requirements](#32-memory-requirements)
-    - [3.2.1. Denoising 5 signals](#321-denoising-5-signals)
-    - [3.2.2. Denoising 4 signals](#322-denoising-4-signals)
-    - [3.2.3. Denoising 3 signals](#323-denoising-3-signals)
-    - [3.2.4. Denoising 2 signals](#324-denoising-2-signals)
-    - [3.2.5. Denoising 1 signal](#325-denoising-1-signal)
-    - [3.2.6. `ffxQueryDescDenoiserGetGPUMemoryUsage`](#326-ffxquerydescdenoisergetgpumemoryusage)
+    - [3.2.1. Denoising direct diffuse, direct specular, indirect diffuse and indirect specular signals](#321-denoising-direct-diffuse-direct-specular-indirect-diffuse-and-indirect-specular-signals)
+    - [3.2.2. Denoising indirect diffuse and indirect specular signals](#322-denoising-indirect-diffuse-and-indirect-specular-signals)
+    - [3.2.3. Denoising indirect specular signal](#323-denoising-indirect-specular-signal)
+    - [3.2.4. Denoising ambient occlusion or dominant light visibility or specular occlusion signal](#324-denoising-ambient-occlusion-or-dominant-light-visibility-or-specular-occlusion-signal)
+    - [3.2.5. `ffxQueryDescDenoiserGetGPUMemoryUsage`](#325-ffxquerydescdenoisergetgpumemoryusage)
 - [4. Debugging](#4-debugging)
   - [4.1. Debug view](#41-debug-view)
     - [4.1.1. `ffxDispatchDescDenoiserDebugView`](#411-ffxdispatchdescdenoiserdebugview)
 - [5. Best practices](#5-best-practices)
   - [5.1. Generating noisy signals](#51-generating-noisy-signals)
-    - [5.1.1. Stochastic sampling](#511-stochastic-sampling)
-    - [5.1.2. Noise](#512-noise)
-    - [5.1.3. Usage of radiance caching](#513-usage-of-radiance-caching)
-    - [5.1.4. Tweakable denoiser settings](#514-tweakable-denoiser-settings)
+    - [5.1.1. Radiance inputs and albedo modulation](#511-radiance-inputs-and-albedo-modulation)
+    - [5.1.2. Stochastic sampling](#512-stochastic-sampling)
+    - [5.1.3. Noise](#513-noise)
+    - [5.1.4. Usage of radiance caching](#514-usage-of-radiance-caching)
+    - [5.1.5. Tweakable denoiser settings](#515-tweakable-denoiser-settings)
   - [5.2. Providing motion vectors](#52-providing-motion-vectors)
     - [5.2.1. Space](#521-space)
     - [5.2.2. Coverage](#522-coverage)
@@ -99,19 +100,23 @@ With significant advancements in upscaling technology, incorporating upscaling i
 Additionally, the temporal anti-aliasing provided by upscalers such as AMD FSR™ 4 adds an extra layer of smoothing when used alongside AMD FSR™ Ray Regeneration.
 For optimal visual results, AMD FSR™ Ray Regeneration should be paired with AMD FSR™ 4.
 
+> [!NOTE]
+> AMD FSR™ Ray Regeneration is a standalone denoiser and does **not** perform temporal anti-aliasing or jitter resolution.
+> If your application uses camera jitter (e.g. for TAA or upscaler integration), jitter resolution must be handled by a separate upscaler such as AMD FSR™ Upscaling, applied after denoising.
+
 ### 1.2. Signals
 
 To maximize compatibility and efficiency when denoising your game's specific workloads, AMD FSR™ Ray Regeneration provides multiple input/output signals:
 
 | Signal flags                                                                                   | Input/output signals:                                   |
 |------------------------------------------------------------------------------------------------|---------------------------------------------------------|
-| [`FFX_DENOISER_SIGNAL_AMBIENT_OCCLUSION`](../../denoisers/include/ffx_denoiser.h#L559)         | Ambient occlusion (in `[0, 1]`/`[0, 1]`)                |
-| [`FFX_DENOISER_SIGNAL_DIRECT_DIFFUSE`](../../denoisers/include/ffx_denoiser.h#L561)            | Direct diffuse                                          |
-| [`FFX_DENOISER_SIGNAL_DIRECT_SPECULAR`](../../denoisers/include/ffx_denoiser.h#L563)           | Direct specular                                         |
-| [`FFX_DENOISER_SIGNAL_DOMINANT_LIGHT_VISIBILITY`](../../denoisers/include/ffx_denoiser.h#L565) | Dominant light visibility (in `[0, FP16_MAX]`/`[0, 1]`) |
-| [`FFX_DENOISER_SIGNAL_INDIRECT_DIFFUSE`](../../denoisers/include/ffx_denoiser.h#L567)          | Indirect diffuse                                        |
-| [`FFX_DENOISER_SIGNAL_INDIRECT_SPECULAR`](../../denoisers/include/ffx_denoiser.h#L569)         | Indirect specular                                       |
-| [`FFX_DENOISER_SIGNAL_SPECULAR_OCCLUSION`](../../denoisers/include/ffx_denoiser.h#L571)        | Specular occlusion (in `[0, 1]`/`[0, 1]`)               |
+| [`FFX_DENOISER_SIGNAL_AMBIENT_OCCLUSION`](../../denoisers/include/ffx_denoiser.h#L599)         | Ambient occlusion (in `[0, 1]`/`[0, 1]`)                |
+| [`FFX_DENOISER_SIGNAL_DIRECT_DIFFUSE`](../../denoisers/include/ffx_denoiser.h#L601)            | Direct diffuse                                          |
+| [`FFX_DENOISER_SIGNAL_DIRECT_SPECULAR`](../../denoisers/include/ffx_denoiser.h#L603)           | Direct specular                                         |
+| [`FFX_DENOISER_SIGNAL_DOMINANT_LIGHT_VISIBILITY`](../../denoisers/include/ffx_denoiser.h#L605) | Dominant light visibility (in `[0, FP16_MAX]`/`[0, 1]`) |
+| [`FFX_DENOISER_SIGNAL_INDIRECT_DIFFUSE`](../../denoisers/include/ffx_denoiser.h#L607)          | Indirect diffuse                                        |
+| [`FFX_DENOISER_SIGNAL_INDIRECT_SPECULAR`](../../denoisers/include/ffx_denoiser.h#L609)         | Indirect specular                                       |
+| [`FFX_DENOISER_SIGNAL_SPECULAR_OCCLUSION`](../../denoisers/include/ffx_denoiser.h#L611)        | Specular occlusion (in `[0, 1]`/`[0, 1]`)               |
 
 The selected signals are specified via the [`signalFlags`](../../denoisers/include/ffx_denoiser.h#L96) member of the [`ffxCreateContextDescDenoiser`](../../denoisers/include/ffx_denoiser.h#L82) context creation description.
 
@@ -131,7 +136,7 @@ Once familiar with the API, follow these steps to prepare your project for AMD F
 ### 2.2. Setting up logging
 
 By default, all messages ([`FFX_API_CONFIGURE_GLOBALDEBUG_LEVEL_VERBOSE`](../../api/include/ffx_api.h#L69)) are output as debug strings.
-Logging can be explicitly setup before (or after) context creation for the denoiser effect by passing a [`ffxConfigureDescGlobalDebug`](../../api/include/ffx_api.h#L89) configure description to [`ffxConfigure`](../../api/include/ffx_api.h#L154).
+Logging can be explicitly set up before (or after) context creation for the denoiser effect by passing a [`ffxConfigureDescGlobalDebug`](../../api/include/ffx_api.h#L81) configure description to [`ffxConfigure`](../../api/include/ffx_api.h#L146).
 
 ```cpp
 // Example: configuring the logging callback for the denoiser effect.
@@ -171,7 +176,7 @@ assert(result == ffx::ReturnCode::Ok);
 
 ### 2.3. Querying support
 
-Before context creation, you can query supported versions by passing a [`ffxQueryDescGetVersions`](../../api/include/ffx_api.h#L98) query description to [`ffxQuery`](../../api/include/ffx_api.h#L151).
+Before context creation, you can query supported versions by passing a [`ffxQueryDescGetVersions`](../../api/include/ffx_api.h#L90) query description to [`ffxQuery`](../../api/include/ffx_api.h#L152).
 If the query returns no contexts, support for AMD FSR™ Ray Regeneration is not available.
 
 ```cpp
@@ -197,10 +202,10 @@ m_DenoiserAvailable = not versionIds.empty();
 
 ### 2.4. Creating the context
 
-To start using AMD FSR™ Ray Regeneration, you need to create a denoiser context by passing a [`ffxCreateContextDescDenoiser`](../../denoisers/include/ffx_denoiser.h#L82) context creation description along with a backend description to [`ffxCreateContext`](../../api/include/ffx_api.h#L142).
+To start using AMD FSR™ Ray Regeneration, you need to create a denoiser context by passing a [`ffxCreateContextDescDenoiser`](../../denoisers/include/ffx_denoiser.h#L82) context creation description along with a backend description to [`ffxCreateContext`](../../api/include/ffx_api.h#L134).
 The parameters you provide determine the internal resource allocations and pipeline state compilations.
 Creating contexts in time-critical paths is not recommended due to their initialization cost.
-If the hardware does not support AMD FSR™ Ray Regeneration, [`ffxCreateContext`](../../api/include/ffx_api.h#L142) will return an error and the context pointer will remain unset.
+If the hardware does not support AMD FSR™ Ray Regeneration, [`ffxCreateContext`](../../api/include/ffx_api.h#L134) will return an error and the context pointer will remain unset.
 
 ```cpp
 // Example: creating a denoiser context with the desired signal flags.
@@ -272,19 +277,19 @@ assert(result == ffx::ReturnCode::Ok);
 | Parameter | Description |
 |---|---|
 | [`version`](../../denoisers/include/ffx_denoiser.h#L90) | The version of the API the application was built against. Must be set to `FFX_DENOISER_VERSION`. |
-| [`maxRenderSize`](../../denoisers/include/ffx_denoiser.h#L93) | Maximum size that rendering will be performed at. Determines internal resource allocation sizes. |
-| [`signalFlags`](../../denoisers/include/ffx_denoiser.h#L96) | Signal flags corresponding to a combination of values from [`FfxApiDenoiserSignalFlags`](../../denoisers/include/ffx_denoiser.h#L555). Specifies which signals will be denoised. |
-| [`checkerboardSignalFlags`](../../denoisers/include/ffx_denoiser.h#L101) | Signal flags corresponding to a combination of values from [`FfxApiDenoiserSignalFlags`](../../denoisers/include/ffx_denoiser.h#L555) for signals that use checkerboard reconstruction. Must be a subset of `signalFlags`. |
-| [`flags`](../../denoisers/include/ffx_denoiser.h#L104) | Zero or a combination of values from [`FfxApiCreateContextDenoiserFlags`](../../denoisers/include/ffx_denoiser.h#L514). |
+| [`maxRenderSize`](../../denoisers/include/ffx_denoiser.h#L93) | Maximum size that rendering will be performed at. |
+| [`signalFlags`](../../denoisers/include/ffx_denoiser.h#L96) | Signal flags corresponding to a combination of values from [`FfxApiDenoiserSignalFlags`](../../denoisers/include/ffx_denoiser.h#L595). |
+| [`checkerboardSignalFlags`](../../denoisers/include/ffx_denoiser.h#L101) | Signal flags corresponding to a combination of values from [`FfxApiDenoiserSignalFlags`](../../denoisers/include/ffx_denoiser.h#L595) for signals that use checkerboard reconstruction. Must be a subset of `signalFlags`. |
+| [`flags`](../../denoisers/include/ffx_denoiser.h#L104) | Create flags corresponding to zero or a combination of values from [`FfxApiCreateContextDenoiserFlags`](../../denoisers/include/ffx_denoiser.h#L554). |
 
-#### 2.4.2. [`FfxApiCreateContextDenoiserFlags`](../../denoisers/include/ffx_denoiser.h#L514)
+#### 2.4.2. [`FfxApiCreateContextDenoiserFlags`](../../denoisers/include/ffx_denoiser.h#L554)
 
 | Flag | Description |
 |---|---|
-| [`FFX_DENOISER_ENABLE_DEBUGGING`](../../denoisers/include/ffx_denoiser.h#L517) | Enables debug features. Memory usage may increase. Required to dispatch [`ffxDispatchDescDenoiserDebugView`](../../denoisers/include/ffx_denoiser.h#L291). |
-| [`FFX_DENOISER_ENABLE_VALIDATION`](../../denoisers/include/ffx_denoiser.h#L519) | Enables exhaustive input validation. Performance may decrease. |
+| [`FFX_DENOISER_ENABLE_DEBUGGING`](../../denoisers/include/ffx_denoiser.h#L557) | Flag indicating that debug features may be enabled. Memory usage may increase. |
+| [`FFX_DENOISER_ENABLE_VALIDATION`](../../denoisers/include/ffx_denoiser.h#L559) | Flag indicating that exhaustive validation should be enabled. Performance may decrease. |
 
-For use cases that require a specific version, you can override the implicit default version by passing a [`ffxOverrideVersion`](../../api/include/ffx_api.h#L109) description to [`ffxCreateContext`](../../api/include/ffx_api.h#L142) too.
+For use cases that require a specific version, you can override the implicit default version by passing a [`ffxOverrideVersion`](../../api/include/ffx_api.h#L101) description to [`ffxCreateContext`](../../api/include/ffx_api.h#L134) too.
 
 ```cpp
 // Example: creating a denoiser context pinned to a specific version.
@@ -296,34 +301,48 @@ ffx::ReturnCode result = ffx::CreateContext(m_pDenoiserContext, nullptr, createD
 assert(result == ffx::ReturnCode::Ok);
 ```
 
-> [!IMPORTANT] 
-> At least one of [`FFX_DENOISER_SIGNAL_DIRECT_DIFFUSE`](../../denoisers/include/ffx_denoiser.h#L561), [`FFX_DENOISER_SIGNAL_DIRECT_SPECULAR`](../../denoisers/include/ffx_denoiser.h#L563), [`FFX_DENOISER_SIGNAL_DOMINANT_LIGHT_VISIBILITY`](../../denoisers/include/ffx_denoiser.h#L565), [`FFX_DENOISER_SIGNAL_INDIRECT_DIFFUSE`](../../denoisers/include/ffx_denoiser.h#L567) and [`FFX_DENOISER_SIGNAL_INDIRECT_SPECULAR`](../../denoisers/include/ffx_denoiser.h#L569) signal flags need to be set.
-
 > [!TIP]
 > Denoising an ambient occlusion signal works best if an indirect diffuse signal is provided as well.
 
 > [!TIP]
 > Denoising a specular occlusion signal works best if an indirect specular signal is provided as well.
 
+> [!TIP]
+> A single application can create and drive several denoiser contexts, each denoising its own subset of signals.
+> This is useful when the denoised results are consumed at different points in the frame: each context is created with its own `signalFlags` and dispatched independently, so a signal that is needed early (for example, the dominant light visibility used during lighting) can be denoised and consumed before the remaining signals are denoised later in the frame.
+> The signal sets of different contexts do not need to be disjoint: for example, two separate ambient occlusion signals can each be denoised by their own dedicated context.
+> Contexts are completely isolated from one another state-wise, each maintaining its own temporal history and accumulation, so they neither share nor interfere with each other's state.
+> The AMD FSR™ Ray Regeneration sample demonstrates the mechanics of driving a second, dedicated dominant light visibility context, but dispatches both contexts back-to-back; a real integration would instead dispatch each context at the point in the frame where its result is needed.
+
 ### 2.5. Dispatching
 
-Denoising is performed on the GPU by passing the below dispatch descriptions to [`ffxDispatch`](../../api/include/ffx_api.h#L165).
+Denoising is performed on the GPU by passing the below dispatch descriptions to [`ffxDispatch`](../../api/include/ffx_api.h#L157).
 Dispatch descriptions can be passed if and only if the corresponding dispatch conditions are met by the context.
 Furthermore, the majority of dispatch descriptions are non-optional and must be passed if and only if the corresponding dispatch conditions are met by the context.
 
 | Dispatch Description                                                                      | Dispatch Condition                                                                                         | Optional
 |-------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------|---------
 | [`ffxDispatchDescDenoiser`](../../denoisers/include/ffx_denoiser.h#L167)                  | /                                                                                                          | No
-| [`ffxDispatchDescDenoiserAmbientOcclusion`](../../denoisers/include/ffx_denoiser.h#L319)  | [`FFX_DENOISER_SIGNAL_AMBIENT_OCCLUSION`](../../denoisers/include/ffx_denoiser.h#L559) must be set         | No
-| [`ffxDispatchDescDenoiserDebugView`](../../denoisers/include/ffx_denoiser.h#L291)         | [`FFX_DENOISER_ENABLE_DEBUGGING`](../../denoisers/include/ffx_denoiser.h#L517) must be set                 | Yes
-| [`ffxDispatchDescDenoiserDirectDiffuse`](../../denoisers/include/ffx_denoiser.h#L336)     | [`FFX_DENOISER_SIGNAL_DIRECT_DIFFUSE`](../../denoisers/include/ffx_denoiser.h#L561) must be set            | No
-| [`ffxDispatchDescDenoiserDirectSpecular`](../../denoisers/include/ffx_denoiser.h#L356)    | [`FFX_DENOISER_SIGNAL_DIRECT_SPECULAR`](../../denoisers/include/ffx_denoiser.h#L563) must be set           | No
-| [`ffxDispatchDescDenoiserDominantLight`](../../denoisers/include/ffx_denoiser.h#L376)     | [`FFX_DENOISER_SIGNAL_DOMINANT_LIGHT_VISIBILITY`](../../denoisers/include/ffx_denoiser.h#L565) must be set | No
-| [`ffxDispatchDescDenoiserIndirectDiffuse`](../../denoisers/include/ffx_denoiser.h#L401)   | [`FFX_DENOISER_SIGNAL_INDIRECT_DIFFUSE`](../../denoisers/include/ffx_denoiser.h#L567) must be set          | No
-| [`ffxDispatchDescDenoiserIndirectSpecular`](../../denoisers/include/ffx_denoiser.h#L421)  | [`FFX_DENOISER_SIGNAL_INDIRECT_SPECULAR`](../../denoisers/include/ffx_denoiser.h#L569) must be set         | No
-| [`ffxDispatchDescDenoiserSpecularOcclusion`](../../denoisers/include/ffx_denoiser.h#L441) | [`FFX_DENOISER_SIGNAL_SPECULAR_OCCLUSION`](../../denoisers/include/ffx_denoiser.h#L571) must be set        | No
+| [`ffxDispatchDescDenoiserAmbientOcclusion`](../../denoisers/include/ffx_denoiser.h#L358)  | [`FFX_DENOISER_SIGNAL_AMBIENT_OCCLUSION`](../../denoisers/include/ffx_denoiser.h#L599) must be set         | No
+| [`ffxDispatchDescDenoiserDebugView`](../../denoisers/include/ffx_denoiser.h#L330)         | [`FFX_DENOISER_ENABLE_DEBUGGING`](../../denoisers/include/ffx_denoiser.h#L557) must be set                 | Yes
+| [`ffxDispatchDescDenoiserDirectDiffuse`](../../denoisers/include/ffx_denoiser.h#L375)     | [`FFX_DENOISER_SIGNAL_DIRECT_DIFFUSE`](../../denoisers/include/ffx_denoiser.h#L601) must be set            | No
+| [`ffxDispatchDescDenoiserDirectSpecular`](../../denoisers/include/ffx_denoiser.h#L395)    | [`FFX_DENOISER_SIGNAL_DIRECT_SPECULAR`](../../denoisers/include/ffx_denoiser.h#L603) must be set           | No
+| [`ffxDispatchDescDenoiserDominantLight`](../../denoisers/include/ffx_denoiser.h#L415)     | [`FFX_DENOISER_SIGNAL_DOMINANT_LIGHT_VISIBILITY`](../../denoisers/include/ffx_denoiser.h#L605) must be set | No
+| [`ffxDispatchDescDenoiserIndirectDiffuse`](../../denoisers/include/ffx_denoiser.h#L442)   | [`FFX_DENOISER_SIGNAL_INDIRECT_DIFFUSE`](../../denoisers/include/ffx_denoiser.h#L607) must be set          | No
+| [`ffxDispatchDescDenoiserIndirectSpecular`](../../denoisers/include/ffx_denoiser.h#L462)  | [`FFX_DENOISER_SIGNAL_INDIRECT_SPECULAR`](../../denoisers/include/ffx_denoiser.h#L609) must be set         | No
+| [`ffxDispatchDescDenoiserSpecularOcclusion`](../../denoisers/include/ffx_denoiser.h#L482) | [`FFX_DENOISER_SIGNAL_SPECULAR_OCCLUSION`](../../denoisers/include/ffx_denoiser.h#L611) must be set        | No
 
-AMD FSR™ Ray Regeneration uses a linked-list pattern to pass multiple dispatch descriptions to a single [`ffxDispatch`](../../api/include/ffx_api.h#L165) call.
+<p align="center">
+  <img src="media/denoiser/fsr-ray-regeneration-dispatch.png"
+       alt="Inputs and outputs of an AMD FSR™ Ray Regeneration dispatch"
+       style="width:100%; height:auto; max-width:100%;">
+</p>
+<p align="center">
+  <b>Figure 2</b>: <i>Inputs and outputs of an example AMD FSR™ Ray Regeneration dispatch for denoising direct diffuse, direct specular, indirect diffuse and indirect specular signals.
+  The common input resources of ffxDispatchDescDenoiser are shown above, and the noisy input and denoised output signal resource of each dispatch description on either side.</i>
+</p>
+
+AMD FSR™ Ray Regeneration uses a linked-list pattern to pass multiple dispatch descriptions to a single [`ffxDispatch`](../../api/include/ffx_api.h#L157) call.
 Each description header contains a `pNext` pointer that chains the next description in sequence.
 The [`ffxDispatchDescDenoiser`](../../denoisers/include/ffx_denoiser.h#L167) description is always the head of the chain; all signal and debug-view descriptions are linked after it.
 
@@ -475,93 +494,111 @@ AMD FSR™ Ray Regeneration will unpack them and reconstruct the inactive pixels
 
 | Parameter | Description |
 |---|---|
-| [`commandList`](../../denoisers/include/ffx_denoiser.h#L177) | A pointer to the command list for recording.
-| [`linearDepth`](../../denoisers/include/ffx_denoiser.h#L183) | Resource containing signed linear depth values for the current frame.<br><br>Channels:<br>`R`: signed linear depth (`CurrentLinearDepth`)<br><br>Preferred format: `R32_FLOAT` |
-| [`motionVectors`](../../denoisers/include/ffx_denoiser.h#L190) | Resource containing motion vectors for the current frame.<br><br>Channels:<br>`RG`: 2D motion vectors (`PreviousUV - CurrentUV`)<br>`B`: signed linear depth delta (`PreviousLinearDepth - CurrentLinearDepth`)<br><br>Preferred format: `RGBA16_FLOAT` |
-| [`normals`](../../denoisers/include/ffx_denoiser.h#L198) | Resource containing normals, roughness, and material type for the current frame.<br><br>Channels:<br>`RG`: octahedrally encoded normals<br>`B`: linear roughness<br>`A`: material type (see docs for more info)<br><br>Preferred format: `RGB10A2_UNORM` |
-| [`specularAlbedo`](../../denoisers/include/ffx_denoiser.h#L205) | Resource containing specular albedo for the current frame.<br>If [`FFX_DENOISER_DISPATCH_NON_GAMMA_ALBEDO`](../../denoisers/include/ffx_denoiser.h#L576) is not added to [`flags`](../../denoisers/include/ffx_denoiser.h#L281), all channels are expected to use `sqrt` encoding.<br><br>Channels:<br>`RGB`: specular albedo (`sqrt(SpecularAlbedo)`)<br><br>Can be zero-initialized if and only if `FFX_DENOISER_SIGNAL_DIRECT_SPECULAR`, `FFX_DENOISER_SIGNAL_INDIRECT_SPECULAR`, and `FFX_DENOISER_SIGNAL_DOMINANT_LIGHT_VISIBILITY` are not set in the context creation signal flags.<br><br>Preferred format: `RGBA8_UNORM` |
-| [`diffuseAlbedo`](../../denoisers/include/ffx_denoiser.h#L212) | Resource containing diffuse albedo for the current frame.<br>If [`FFX_DENOISER_DISPATCH_NON_GAMMA_ALBEDO`](../../denoisers/include/ffx_denoiser.h#L576) is not added to [`flags`](../../denoisers/include/ffx_denoiser.h#L281), all channels are expected to use `sqrt` encoding.<br><br>Channels:<br>`RGB`: diffuse albedo (e.g., `BaseColor * (1 - Metalness)`) (`sqrt(DiffuseAlbedo)`)<br><br>Can be zero-initialized if and only if `FFX_DENOISER_SIGNAL_DIRECT_DIFFUSE`, `FFX_DENOISER_SIGNAL_INDIRECT_DIFFUSE`, and `FFX_DENOISER_SIGNAL_DOMINANT_LIGHT_VISIBILITY` are not set in the context creation signal flags.<br><br>Preferred format: `RGBA8_UNORM` |
-| [`motionVectorScale`](../../denoisers/include/ffx_denoiser.h#L222) | Scale factor for transforming motion vectors into UV/depth space.<br><br>Channels:<br>`RG`: scale factor for transforming 2D motion vectors into UV space.<br>&nbsp;&nbsp;&nbsp;&nbsp;For motion vectors computed as `PreviousUV - CurrentUV`, use `{ .x = +1.0f, .y = +1.0f }`.<br>&nbsp;&nbsp;&nbsp;&nbsp;For motion vectors computed as `PreviousNDC - CurrentNDC`, use `{ .x = +0.5f, .y = -0.5f }`.<br>`B`: scale factor for transforming signed linear depth delta.<br>&nbsp;&nbsp;&nbsp;&nbsp;For depth deltas computed as `PreviousLinearDepth - CurrentLinearDepth`, use `{ .z = +1.0f }`. |
-| [`jitterOffsets`](../../denoisers/include/ffx_denoiser.h#L225) | Subpixel jitter offsets applied to the camera projection, expressed in screen pixels. |
-| [`cameraPositionDelta`](../../denoisers/include/ffx_denoiser.h#L228) | Camera movement since last frame (`PreviousPosition - CurrentPosition`), expressed in world space. |
-| [`view`](../../denoisers/include/ffx_denoiser.h#L251) | World-to-view transformation matrix for the current frame.<br><br>Matrix convention:<br>`Storage`: row-major (rows stored contiguously in memory)<br>`Multiplication`: row vectors (`v' = vM`)<br><br>Compatibility:<br>- Column-major with column vectors (e.g., OpenGL, Cauldron): direct copy (`memcpy`), no transpose needed<br>- Column-major with row vectors: requires transpose<br>- Row-major with row vectors (e.g., DirectXMath): direct copy (`memcpy`)<br>- Row-major with column vectors: requires transpose |
-| [`projection`](../../denoisers/include/ffx_denoiser.h#L268) | Unjittered view-to-projection transformation matrix for the current frame.<br><br>Matrix convention:<br>`Storage`: row-major (rows stored contiguously in memory)<br>`Multiplication`: row vectors (`v' = vM`)<br><br>Compatibility:<br>- Column-major with column vectors (e.g., OpenGL, Cauldron): direct copy (`memcpy`), no transpose needed<br>- Column-major with row vectors: requires transpose<br>- Row-major with row vectors (e.g., DirectXMath): direct copy (`memcpy`)<br>- Row-major with column vectors: requires transpose |
-| [`linearDepthBounds`](../../denoisers/include/ffx_denoiser.h#L272) | Absolute linear depth bounds considered for denoising.<br><br>Passthrough is enabled for signal texels where the corresponding absolute linear depth values are outside `[linearDepthBounds.min, linearDepthBounds.max]`. |
-| [`renderSize`](../../denoisers/include/ffx_denoiser.h#L275) | Resolution used for rendering the current frame input resources. |
-| [`frameIndex`](../../denoisers/include/ffx_denoiser.h#L278) | Index of the current frame. |
-| [`flags`](../../denoisers/include/ffx_denoiser.h#L281) | Zero or a combination of values from [`FfxApiDispatchDenoiserFlags`](../../denoisers/include/ffx_denoiser.h#L574). |
+| [`commandList`](../../denoisers/include/ffx_denoiser.h#L177) | A pointer to the command list.<br><br>DX12: pointer to `ID3D12GraphicsCommandList`. |
+| [`linearDepth`](../../denoisers/include/ffx_denoiser.h#L183) | The signed linear depth.<br><br>Channels:<br>R: Signed linear depth values for the current frame. `CurrentLinearDepth` |
+| [`motionVectors`](../../denoisers/include/ffx_denoiser.h#L190) | The motion vectors.<br><br>Channels:<br>RG: 2D motion vectors. `PreviousUV - CurrentUV`<br>B: Signed linear depth delta. `PreviousLinearDepth - CurrentLinearDepth` |
+| [`normals`](../../denoisers/include/ffx_denoiser.h#L198) | The normals, roughness and material type.<br><br>Channels:<br>RG: Octahedrally encoded normals<br>B: Linear Roughness<br>A: Material Type - See docs for more info. |
+| [`specularAlbedo`](../../denoisers/include/ffx_denoiser.h#L222) | The specular albedo.<br><br>Channels:<br>RGB: Specular albedo. The denoiser expects a software encoding chosen by the application: `sqrt(SpecularAlbedo)` by default, or the raw `SpecularAlbedo` (identity function) when `FFX_DENOISER_DISPATCH_NON_ENCODED_ALBEDO` is provided. This software encoding is a convention between the application and the denoiser and is orthogonal to the resource format: if a hardware sRGB format is used, the sampled value is already sRGB-decoded to linear by the hardware, and the software encoding above is then applied on top of that linear value.<br><br>The default `sqrt` encoding is a perceptual transfer function: it allocates more precision to darker values, matching human perception and reducing banding when the albedo is stored in a low-bit-depth format. For this reason, apply only one transfer function, not both: either use a hardware sRGB format together with `FFX_DENOISER_DISPATCH_NON_ENCODED_ALBEDO` (so the software step is the identity function), or store into a linear format and use the default software `sqrt` encoding. Combining a hardware sRGB format with the software `sqrt` encoding applies two perceptual transfer functions, which defeats the purpose: the precision redistribution is applied twice and warps the values.<br><br>Can be zero-initialized if and only if `FFX_DENOISER_SIGNAL_DIRECT_SPECULAR`, `FFX_DENOISER_SIGNAL_INDIRECT_SPECULAR`, and `FFX_DENOISER_SIGNAL_DOMINANT_LIGHT_VISIBILITY` are not set in the context creation signal flags. |
+| [`diffuseAlbedo`](../../denoisers/include/ffx_denoiser.h#L247) | The diffuse albedo.<br><br>Channels:<br>RGB: Diffuse albedo (e.g., `BaseColor * (1 - Metalness)`). The denoiser expects a software encoding chosen by the application: `sqrt(DiffuseAlbedo)` by default, or the raw `DiffuseAlbedo` (identity function) when `FFX_DENOISER_DISPATCH_NON_ENCODED_ALBEDO` is provided. This software encoding is a convention between the application and the denoiser and is orthogonal to the resource format: if a hardware sRGB format is used, the sampled value is already sRGB-decoded to linear by the hardware, and the software encoding above is then applied on top of that linear value.<br><br>The default `sqrt` encoding is a perceptual transfer function: it allocates more precision to darker values, matching human perception and reducing banding when the albedo is stored in a low-bit-depth format. For this reason, apply only one transfer function, not both: either use a hardware sRGB format together with `FFX_DENOISER_DISPATCH_NON_ENCODED_ALBEDO` (so the software step is the identity function), or store into a linear format and use the default software `sqrt` encoding. Combining a hardware sRGB format with the software `sqrt` encoding applies two perceptual transfer functions, which defeats the purpose: the precision redistribution is applied twice and warps the values.<br><br>Can be zero-initialized if and only if `FFX_DENOISER_SIGNAL_DIRECT_DIFFUSE`, `FFX_DENOISER_SIGNAL_INDIRECT_DIFFUSE`, and `FFX_DENOISER_SIGNAL_DOMINANT_LIGHT_VISIBILITY` are not set in the context creation signal flags. |
+| [`motionVectorScale`](../../denoisers/include/ffx_denoiser.h#L257) | The motion vector scale factor.<br><br>Channels:<br>RG: The scale factor for transforming the 2D motion vectors into UV space<br>&nbsp;&nbsp;&nbsp;&nbsp;For 2D motion vectors computed as `PreviousUV - CurrentUV`, use `{ .x = +1.0f, .y = +1.0f }`.<br>&nbsp;&nbsp;&nbsp;&nbsp;For 2D motion vectors computed as `PreviousNDC - CurrentNDC`, use `{ .x = +0.5f, .y = -0.5f }`.<br>B: The scale factor for transforming the signed linear depth delta<br>&nbsp;&nbsp;&nbsp;&nbsp;For linear depth deltas computed as `PreviousLinearDepth - CurrentLinearDepth`, use `{ .z = +1.0f }`. |
+| [`jitterOffsets`](../../denoisers/include/ffx_denoiser.h#L260) | The subpixel jitter offset applied to the camera projection. (Expressed in screen pixels) |
+| [`cameraPositionDelta`](../../denoisers/include/ffx_denoiser.h#L263) | The position delta of the camera since last frame. `PreviousPosition - CurrentPosition` (Expressed in world space) |
+| [`view`](../../denoisers/include/ffx_denoiser.h#L286) | The world-to-view transformation matrix for the current frame.<br><br>Matrix convention:<br>Storage: row-major (rows stored contiguously in memory)<br>Multiplication: row vectors `v' = vM`<br><br>Compatibility:<br>Column-major with column vectors (e.g., OpenGL®, Cauldron): direct copy (`memcpy`) - no transpose needed<br>Column-major with row vectors: requires transpose<br>Row-major with row vectors (e.g., DirectXMath): direct copy (`memcpy`)<br>Row-major with column vectors: requires transpose<br><br>Memory Layout Example (translation by (Tx, Ty, Tz)):<br><code>[m00 m01 m02 m03]&nbsp;&nbsp;&nbsp;[1&nbsp;&nbsp;0&nbsp;&nbsp;0&nbsp;&nbsp;0]</code><br><code>[m10 m11 m12 m13] = [0&nbsp;&nbsp;1&nbsp;&nbsp;0&nbsp;&nbsp;0]</code><br><code>[m20 m21 m22 m23]&nbsp;&nbsp;&nbsp;[0&nbsp;&nbsp;0&nbsp;&nbsp;1&nbsp;&nbsp;0]</code><br><code>[m30 m31 m32 m33]&nbsp;&nbsp;&nbsp;[Tx Ty Tz 1]</code> |
+| [`projection`](../../denoisers/include/ffx_denoiser.h#L303) | The (unjittered) view-to-projection transformation matrix for the current frame.<br><br>Matrix convention:<br>Storage: row-major (rows stored contiguously in memory)<br>Multiplication: row vectors `v' = vM`<br><br>Compatibility:<br>Column-major with column vectors (e.g., OpenGL®, Cauldron): direct copy (`memcpy`) - no transpose needed<br>Column-major with row vectors: requires transpose<br>Row-major with row vectors (e.g., DirectXMath): direct copy (`memcpy`)<br>Row-major with column vectors: requires transpose |
+| [`linearDepthBounds`](../../denoisers/include/ffx_denoiser.h#L307) | The absolute linear depth bounds considered for denoising.<br><br>Passthrough is enabled for signal texels where the corresponding absolute linear depth values are outside `[linearDepthBounds.min,linearDepthBounds.max]`. |
+| [`renderSize`](../../denoisers/include/ffx_denoiser.h#L310) | The resolution that was used for rendering the input resources. |
+| [`frameIndex`](../../denoisers/include/ffx_denoiser.h#L317) | The index of the current frame. Must be `previousFrameIndex + 1` for normal operation.<br><br>Any other value (jump or reset) is interpreted as a scene discontinuity and implicitly triggers [`FFX_DENOISER_DISPATCH_RESET`](../../denoisers/include/ffx_denoiser.h#L617), discarding temporal history. For intentional discontinuities such as camera cuts, set [`FFX_DENOISER_DISPATCH_RESET`](../../denoisers/include/ffx_denoiser.h#L617) explicitly instead. |
+| [`flags`](../../denoisers/include/ffx_denoiser.h#L320) | Dispatch flags corresponding to zero or a combination of values from [`FfxApiDispatchDenoiserFlags`](../../denoisers/include/ffx_denoiser.h#L614). |
 
 Depth values and depth deltas are computed using signed linear depth.
-* Signed means the depth value is dependent of whether the camera is facing forward or backward in view space.
+* Signed means the depth value is dependent on whether the camera is facing forward or backward in view space.
 * Linear means the depth is expressed in view space (z component), rather than NDC space.
 
-#### 2.5.3. [`FfxApiDispatchDenoiserFlags`](../../denoisers/include/ffx_denoiser.h#L574)
+#### 2.5.3. [`FfxApiDispatchDenoiserFlags`](../../denoisers/include/ffx_denoiser.h#L614)
 
 | Flag | Description |
 |---|---|
-| [`FFX_DENOISER_DISPATCH_RESET`](../../denoisers/include/ffx_denoiser.h#L577) | Resets the history accumulation. Use when the camera cuts or the scene changes discontinuously. |
-| [`FFX_DENOISER_DISPATCH_NON_GAMMA_ALBEDO`](../../denoisers/include/ffx_denoiser.h#L579) | Indicates that the [`specularAlbedo`](../../denoisers/include/ffx_denoiser.h#L205) and [`diffuseAlbedo`](../../denoisers/include/ffx_denoiser.h#L212) resources are in linear space rather than `sqrt`-encoded. |
+| [`FFX_DENOISER_DISPATCH_RESET`](../../denoisers/include/ffx_denoiser.h#L617) | Flag indicating that the history accumulation needs to be reset. |
+| [`FFX_DENOISER_DISPATCH_NON_ENCODED_ALBEDO`](../../denoisers/include/ffx_denoiser.h#L627) | Flag controlling the software encode/decode transfer function applied to the (diffuse and specular) albedo textures. This is a software convention agreed between the application and the denoiser; it is independent of any hardware sRGB texture format.<br><br>When set: the application is expected to encode the albedo in software with the identity function; the denoiser decodes with the identity function.<br>When clear: the application is expected to encode the albedo in software with the sqrt function; the denoiser decodes with the square function. |
 
 #### 2.5.4. [`FfxApiDenoiserSignal`](../../denoisers/include/ffx_denoiser.h#L134)
 
-Each per-signal dispatch description holds a [`signal`](../../denoisers/include/ffx_denoiser.h#L160) member of type [`FfxApiDenoiserSignal`](../../denoisers/include/ffx_denoiser.h#L134), which carries the input resource, the output resource, and the checkerboard origin for that signal.
+Each per-signal dispatch description holds a [`signal`](../../denoisers/include/ffx_denoiser.h#L368) member of type [`FfxApiDenoiserSignal`](../../denoisers/include/ffx_denoiser.h#L134), which carries the input resource, the output resource, and the checkerboard origin for that signal.
 
 | Parameter | Description |
 |---|---|
-| [`input`](../../denoisers/include/ffx_denoiser.h#L137) | Input resource containing the noisy signal to denoise. |
-| [`output`](../../denoisers/include/ffx_denoiser.h#L140) | Output resource that will receive the denoised signal. May alias `input` if in-place denoising is desired. |
-| [`checkerboardOrigin`](../../denoisers/include/ffx_denoiser.h#L160) | The X-coordinate of the first traced pixel at Y=0 in the checkerboard pattern. `0` means pixel `(0,0)` was traced; `1` means pixel `(1,0)` was traced. Typically set to `frameIndex & 1`.<br><br>Must be zero-initialized if this signal is not set in [`checkerboardSignalFlags`](../../denoisers/include/ffx_denoiser.h#L101). Only meaningful if this signal is set in [`checkerboardSignalFlags`](../../denoisers/include/ffx_denoiser.h#L101). |
+| [`input`](../../denoisers/include/ffx_denoiser.h#L137) | Input signal to be denoised. |
+| [`output`](../../denoisers/include/ffx_denoiser.h#L140) | Resulting denoised signal. |
+| [`checkerboardOrigin`](../../denoisers/include/ffx_denoiser.h#L160) | The X-coordinate of the first traced pixel at Y=0 in a checkerboard pattern.<br><br>In a checkerboard pattern, only half the pixels are traced per frame, alternating as follows:<br><br><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;x=0&nbsp;&nbsp;x=1&nbsp;&nbsp;x=2&nbsp;&nbsp;x=3</code><br><code>y=0:&nbsp;&nbsp;0&nbsp;&nbsp;&nbsp;&nbsp;1&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;&nbsp;&nbsp;&nbsp;1</code><br><code>y=1:&nbsp;&nbsp;1&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;&nbsp;&nbsp;&nbsp;1&nbsp;&nbsp;&nbsp;&nbsp;0</code><br><code>y=2:&nbsp;&nbsp;0&nbsp;&nbsp;&nbsp;&nbsp;1&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;&nbsp;&nbsp;&nbsp;1</code><br><br>`0`: pixel (0, 0) was traced.<br>`1`: pixel (1, 0) was traced.<br><br>`checkerboardOrigin = frameIndex & 1`<br><br>Must be zero-initialized if this signal is not set in [`checkerboardSignalFlags`](../../denoisers/include/ffx_denoiser.h#L101).<br>Only meaningful if this signal is set in [`checkerboardSignalFlags`](../../denoisers/include/ffx_denoiser.h#L101). |
 
-#### 2.5.5. [`ffxDispatchDescDenoiserAmbientOcclusion`](../../denoisers/include/ffx_denoiser.h#L319)
-
-| Parameter | Description |
-|-----------|-------------|
-| [`signal`](../../denoisers/include/ffx_denoiser.h#L329) | Ambient occlusion signal to denoise.<br><br>Channels:<br>`R`:<br>&nbsp;&nbsp;&nbsp;&nbsp;`input`: ambient occlusion in `[0,1]`, where `0` is fully occluded and `1` is fully exposed.<br>&nbsp;&nbsp;&nbsp;&nbsp;`output`: denoised ambient occlusion in `[0,1]` (or input if passthrough).<br><br>Preferred format: `R8_UNORM` |
-
-#### 2.5.6. [`ffxDispatchDescDenoiserDirectDiffuse`](../../denoisers/include/ffx_denoiser.h#L336)
+#### 2.5.5. [`ffxDispatchDescDenoiserAmbientOcclusion`](../../denoisers/include/ffx_denoiser.h#L358)
 
 | Parameter | Description |
 |-----------|-------------|
-| [`signal`](../../denoisers/include/ffx_denoiser.h#L349) | Direct diffuse radiance signal to denoise.<br><br>Channels:<br>`RGB`:<br>&nbsp;&nbsp;&nbsp;&nbsp;`input`: direct diffuse radiance to denoise.<br>&nbsp;&nbsp;&nbsp;&nbsp;`output`: denoised direct diffuse radiance (or input if passthrough).<br>`A`:<br>&nbsp;&nbsp;&nbsp;&nbsp;`input`: undefined non-negative value (must be valid if the signal is active; otherwise negative).<br>&nbsp;&nbsp;&nbsp;&nbsp;`output`: preserved (or input if passthrough).<br><br>Preferred format: `RGBA16_FLOAT` |
+| [`signal`](../../denoisers/include/ffx_denoiser.h#L368) | Channels:<br>R:<br>&nbsp;&nbsp;&nbsp;&nbsp;`input`: Ambient occlusion (in [0,1] where 0 is fully occluded and 1 is fully exposed) to denoise<br>&nbsp;&nbsp;&nbsp;&nbsp;`output`: Denoised ambient occlusion (in [0,1] where 0 is fully occluded and 1 is fully exposed) (or input if passthrough) |
 
-#### 2.5.7. [`ffxDispatchDescDenoiserDirectSpecular`](../../denoisers/include/ffx_denoiser.h#L356)
-
-| Parameter | Description |
-|-----------|-------------|
-| [`signal`](../../denoisers/include/ffx_denoiser.h#L369) | Direct specular radiance signal to denoise.<br><br>Channels:<br>`RGB`:<br>&nbsp;&nbsp;&nbsp;&nbsp;`input`: direct specular radiance to denoise.<br>&nbsp;&nbsp;&nbsp;&nbsp;`output`: denoised direct specular radiance (or input if passthrough).<br>`A`:<br>&nbsp;&nbsp;&nbsp;&nbsp;`input`: undefined non-negative value (must be valid if the signal is active; otherwise negative).<br>&nbsp;&nbsp;&nbsp;&nbsp;`output`: preserved (or input if passthrough).<br><br>Preferred format: `RGBA16_FLOAT` |
-
-#### 2.5.8. [`ffxDispatchDescDenoiserDominantLight`](../../denoisers/include/ffx_denoiser.h#L376)
+#### 2.5.6. [`ffxDispatchDescDenoiserDirectDiffuse`](../../denoisers/include/ffx_denoiser.h#L375)
 
 | Parameter | Description |
 |-----------|-------------|
-| [`signal`](../../denoisers/include/ffx_denoiser.h#L386) | Dominant light visibility signal to denoise.<br><br>Channels:<br>`R`:<br>&nbsp;&nbsp;&nbsp;&nbsp;`input`: dominant light visibility as ray hit distance in `[0, FP16_MAX]`, where `FP16_MAX` is fully exposed.<br>&nbsp;&nbsp;&nbsp;&nbsp;`output`: denoised dominant light visibility in `[0,1]` (or input if passthrough).<br><br>Preferred format: `R16_FLOAT` (input) / `R8_UNORM` (output) |
-| [`direction`](../../denoisers/include/ffx_denoiser.h#L389) | Dominant light direction, expressed from light source to target. |
-| [`emission`](../../denoisers/include/ffx_denoiser.h#L392) | Dominant light emission (`LightColor * LightIntensity`). |
-| [`angularRadius`](../../denoisers/include/ffx_denoiser.h#L395) | Dominant light angular radius, expressed in radians. |
+| [`signal`](../../denoisers/include/ffx_denoiser.h#L388) | Channels:<br>RGB:<br>&nbsp;&nbsp;&nbsp;&nbsp;`input`: Direct diffuse radiance to denoise<br>&nbsp;&nbsp;&nbsp;&nbsp;`output`: Denoised direct diffuse radiance (or input if passthrough)<br>A:<br>&nbsp;&nbsp;&nbsp;&nbsp;`input`: Undefined<br>&nbsp;&nbsp;&nbsp;&nbsp;`output`: Preserved (or input if passthrough) |
 
-#### 2.5.9. [`ffxDispatchDescDenoiserIndirectDiffuse`](../../denoisers/include/ffx_denoiser.h#L401)
+#### 2.5.7. [`ffxDispatchDescDenoiserDirectSpecular`](../../denoisers/include/ffx_denoiser.h#L395)
 
 | Parameter | Description |
 |-----------|-------------|
-| [`signal`](../../denoisers/include/ffx_denoiser.h#L415) | Indirect diffuse radiance signal to denoise.<br><br>Channels:<br>`RGB`:<br>&nbsp;&nbsp;&nbsp;&nbsp;`input`: indirect diffuse radiance to denoise.<br>&nbsp;&nbsp;&nbsp;&nbsp;`output`: denoised indirect diffuse radiance (or input if passthrough).<br>`A`:<br>&nbsp;&nbsp;&nbsp;&nbsp;`input`: indirect diffuse ray hit distance (must be valid if the signal is active; otherwise negative).<br>&nbsp;&nbsp;&nbsp;&nbsp;`output`: preserved (or input if passthrough).<br><br>Preferred format: `RGBA16_FLOAT` |
+| [`signal`](../../denoisers/include/ffx_denoiser.h#L408) | Channels:<br>RGB:<br>&nbsp;&nbsp;&nbsp;&nbsp;`input`: Direct specular radiance to denoise<br>&nbsp;&nbsp;&nbsp;&nbsp;`output`: Denoised direct specular radiance (or input if passthrough)<br>A:<br>&nbsp;&nbsp;&nbsp;&nbsp;`input`: Undefined<br>&nbsp;&nbsp;&nbsp;&nbsp;`output`: Preserved (or input if passthrough) |
 
-#### 2.5.10. [`ffxDispatchDescDenoiserIndirectSpecular`](../../denoisers/include/ffx_denoiser.h#L421)
-
-| Parameter | Description |
-|-----------|-------------|
-| [`signal`](../../denoisers/include/ffx_denoiser.h#L435) | Indirect specular radiance signal to denoise.<br><br>Channels:<br>`RGB`:<br>&nbsp;&nbsp;&nbsp;&nbsp;`input`: indirect specular radiance to denoise.<br>&nbsp;&nbsp;&nbsp;&nbsp;`output`: denoised indirect specular radiance (or input if passthrough).<br>`A`:<br>&nbsp;&nbsp;&nbsp;&nbsp;`input`: indirect specular ray hit distance (must be valid if the signal is active; otherwise negative).<br>&nbsp;&nbsp;&nbsp;&nbsp;`output`: preserved (or input if passthrough).<br><br>Preferred format: `RGBA16_FLOAT` |
-
-#### 2.5.11. [`ffxDispatchDescDenoiserSpecularOcclusion`](../../denoisers/include/ffx_denoiser.h#L441)
+#### 2.5.8. [`ffxDispatchDescDenoiserDominantLight`](../../denoisers/include/ffx_denoiser.h#L415)
 
 | Parameter | Description |
 |-----------|-------------|
-| [`signal`](../../denoisers/include/ffx_denoiser.h#L452) | Specular occlusion signal to denoise.<br><br>Channels:<br>`R`:<br>&nbsp;&nbsp;&nbsp;&nbsp;`input`: specular occlusion in `[0,1]`, where `0` is fully occluded and `1` is fully exposed.<br>&nbsp;&nbsp;&nbsp;&nbsp;`output`: denoised specular occlusion in `[0,1]` (or input if passthrough).<br><br>Preferred format: `R8_UNORM` |
+| [`signal`](../../denoisers/include/ffx_denoiser.h#L425) | Channels:<br>R:<br>&nbsp;&nbsp;&nbsp;&nbsp;`input`: Dominant light visibility (ray hit distance [0,FP16_MAX] where FP16_MAX is fully exposed) to denoise<br>&nbsp;&nbsp;&nbsp;&nbsp;`output`: Denoised dominant light visibility (in [0,1] where 0 is fully occluded and 1 is fully exposed) (or input ray hit distance converted to visibility if passthrough) |
+| [`direction`](../../denoisers/include/ffx_denoiser.h#L428) | Dominant light direction. (from light source to target) |
+| [`emission`](../../denoisers/include/ffx_denoiser.h#L431) | Dominant light emission. (i.e. `LightColor * LightIntensity`) |
+| [`angularRadius`](../../denoisers/include/ffx_denoiser.h#L435) | Dominant light angular radius, i.e. the half-angle of the cone the light subtends at the shaded point. (Expressed in radians)<br><br>Controls the width of the penumbra and must match the angular radius used when sampling the light to generate the noisy visibility signal. |
+
+> [!IMPORTANT]
+> The `angularRadius` passed to the denoiser must match the angular radius the application uses to sample the dominant light. The noisy visibility signal is generated by tracing a ray toward a direction sampled within a cone of half-angle `angularRadius` around the light direction; passing a different value produces an inconsistent penumbra.
+
+```hlsl
+// Example: sampling the dominant light within its angular cone to generate the noisy
+// visibility signal. The same angularRadius is passed to ffxDispatchDescDenoiserDominantLight.
+const float  cosHalfAngle = cos(angularRadius);
+const float3 sampleDir    = UniformSampleCone(rngState, lightDirection, cosHalfAngle);
+
+// Trace the hit-distance ray toward the sampled direction.
+// The result is the noisy visibility encoded as ray hit distance in [0, FP16_MAX],
+// where FP16_MAX denotes an unshadowed (fully exposed) sample.
+Ray ray;
+ray.origin    = surfacePosition + surfaceNormal * rayEpsilon;
+ray.direction = sampleDir;
+const float hitDistance = TraceHitDistanceRay(rtas, ray);
+```
+
+#### 2.5.9. [`ffxDispatchDescDenoiserIndirectDiffuse`](../../denoisers/include/ffx_denoiser.h#L442)
+
+| Parameter | Description |
+|-----------|-------------|
+| [`signal`](../../denoisers/include/ffx_denoiser.h#L455) | Channels:<br>RGB:<br>&nbsp;&nbsp;&nbsp;&nbsp;`input`: Indirect diffuse radiance to denoise<br>&nbsp;&nbsp;&nbsp;&nbsp;`output`: Denoised indirect diffuse radiance (or input if passthrough)<br>A:<br>&nbsp;&nbsp;&nbsp;&nbsp;`input`: Indirect diffuse ray hit distance<br>&nbsp;&nbsp;&nbsp;&nbsp;`output`: Preserved (or input if passthrough) |
+
+#### 2.5.10. [`ffxDispatchDescDenoiserIndirectSpecular`](../../denoisers/include/ffx_denoiser.h#L462)
+
+| Parameter | Description |
+|-----------|-------------|
+| [`signal`](../../denoisers/include/ffx_denoiser.h#L475) | Channels:<br>RGB:<br>&nbsp;&nbsp;&nbsp;&nbsp;`input`: Indirect specular radiance to denoise<br>&nbsp;&nbsp;&nbsp;&nbsp;`output`: Denoised indirect specular radiance (or input if passthrough)<br>A:<br>&nbsp;&nbsp;&nbsp;&nbsp;`input`: Indirect specular ray hit distance<br>&nbsp;&nbsp;&nbsp;&nbsp;`output`: Preserved (or input if passthrough) |
+
+#### 2.5.11. [`ffxDispatchDescDenoiserSpecularOcclusion`](../../denoisers/include/ffx_denoiser.h#L482)
+
+| Parameter | Description |
+|-----------|-------------|
+| [`signal`](../../denoisers/include/ffx_denoiser.h#L492) | Channels:<br>R:<br>&nbsp;&nbsp;&nbsp;&nbsp;`input`: Specular occlusion (in [0,1], where 0 is fully occluded and 1 is fully exposed) to denoise<br>&nbsp;&nbsp;&nbsp;&nbsp;`output`: Denoised specular occlusion (in [0,1], where 0 is fully occluded and 1 is fully exposed) (or input if passthrough) |
 
 ### 2.6. Configuring settings
 
 To achieve the best results with AMD FSR™ Ray Regeneration, some settings may need to be adjusted.
 The default values are already set to sensible presets and are not simply zeros.
-A recommended best practice when modifying settings is to first query the current defaults by passing a [`ffxQueryDescDenoiserGetDefaultKeyValue`](../../denoisers/include/ffx_denoiser.h#L462) to [`ffxQuery`](../../api/include/ffx_api.h#L160).
+A recommended best practice when modifying settings is to first query the current defaults by passing a [`ffxQueryDescDenoiserGetDefaultKeyValue`](../../denoisers/include/ffx_denoiser.h#L502) to [`ffxQuery`](../../api/include/ffx_api.h#L152).
 This ensures that you start from a valid baseline.
 
 Example code for querying the default value of the stability bias setting:
@@ -579,9 +616,9 @@ ffx::ReturnCode result = ffx::Query(m_pDenoiserContext, queryDesc);
 assert(result == ffx::ReturnCode::Ok);
 ```
 
-New denoiser settings can be committed at any time **before** calling [`ffxDispatch`](../../api/include/ffx_api.h#L165) and do **not** need to be updated every frame.
+New denoiser settings can be committed at any time **before** calling [`ffxDispatch`](../../api/include/ffx_api.h#L157) and do **not** need to be updated every frame.
 
-To apply the settings, pass a [`ffxConfigureDescDenoiserKeyValue`](../../denoisers/include/ffx_denoiser.h#L114) to [`ffxConfigure`](../../api/include/ffx_api.h#L154).
+To apply the settings, pass a [`ffxConfigureDescDenoiserKeyValue`](../../denoisers/include/ffx_denoiser.h#L114) to [`ffxConfigure`](../../api/include/ffx_api.h#L146).
 
 Example code for configuring the stability bias setting with a custom value:
 
@@ -602,37 +639,37 @@ assert(result == ffx::ReturnCode::Ok);
 
 | Parameter | Description |
 |---|---|
-| [`key`](../../denoisers/include/ffx_denoiser.h#L121) | Configuration key corresponding to an entry of [`FfxApiConfigureDenoiserKey`](../../denoisers/include/ffx_denoiser.h#L522). |
-| [`count`](../../denoisers/include/ffx_denoiser.h#L124) | Number of elements to configure. For scalar settings this is `1`. |
-| [`data`](../../denoisers/include/ffx_denoiser.h#L127) | Pointer to an array of `count` configuration values. The element type is determined by the chosen `key`. |
+| [`key`](../../denoisers/include/ffx_denoiser.h#L121) | Configuration key corresponding to an entry of [`FfxApiConfigureDenoiserKey`](../../denoisers/include/ffx_denoiser.h#L562). |
+| [`count`](../../denoisers/include/ffx_denoiser.h#L124) | The number of elements to configure. |
+| [`data`](../../denoisers/include/ffx_denoiser.h#L127) | Pointer to an array with the configuration values for the elements to configure. |
 
-#### 2.6.2. [`ffxQueryDescDenoiserGetDefaultKeyValue`](../../denoisers/include/ffx_denoiser.h#L462)
+#### 2.6.2. [`ffxQueryDescDenoiserGetDefaultKeyValue`](../../denoisers/include/ffx_denoiser.h#L502)
 
 | Parameter | Description |
 |---|---|
-| [`key`](../../denoisers/include/ffx_denoiser.h#L469) | Configuration key corresponding to an entry of [`FfxApiConfigureDenoiserKey`](../../denoisers/include/ffx_denoiser.h#L522). |
-| [`count`](../../denoisers/include/ffx_denoiser.h#L472) | Number of elements to query. For scalar settings this is `1`. |
-| [`data`](../../denoisers/include/ffx_denoiser.h#L475) | Pointer to an array of `count` elements that will receive the default values. The element type is determined by the chosen `key`. |
+| [`key`](../../denoisers/include/ffx_denoiser.h#L509) | Configuration key corresponding to an entry of [`FfxApiConfigureDenoiserKey`](../../denoisers/include/ffx_denoiser.h#L562). |
+| [`count`](../../denoisers/include/ffx_denoiser.h#L512) | The number of elements to query. |
+| [`data`](../../denoisers/include/ffx_denoiser.h#L515) | Pointer to an array for storing the queried elements. |
 
-#### 2.6.3. [`FfxApiConfigureDenoiserKey`](../../denoisers/include/ffx_denoiser.h#L522)
+#### 2.6.3. [`FfxApiConfigureDenoiserKey`](../../denoisers/include/ffx_denoiser.h#L562)
 
 | Key | Description |
 |---|---|
-| [`FFX_API_CONFIGURE_DENOISER_KEY_CROSS_BILATERAL_NORMAL_STRENGTH`](../../denoisers/include/ffx_denoiser.h#L526) | Override the strength of the cross bilateral normal term. Format: a single `float` scalar. |
-| [`FFX_API_CONFIGURE_DENOISER_KEY_STABILITY_BIAS`](../../denoisers/include/ffx_denoiser.h#L529) | Override the bias of the temporal accumulation to be more stable but less responsive. Format: a single `float` scalar. |
-| [`FFX_API_CONFIGURE_DENOISER_KEY_MAX_RADIANCE`](../../denoisers/include/ffx_denoiser.h#L532) | Override the maximum radiance value. Format: a single `float` scalar. |
-| [`FFX_API_CONFIGURE_DENOISER_KEY_RADIANCE_CLIP_STD_K`](../../denoisers/include/ffx_denoiser.h#L535) | Override the standard deviation K value used for radiance clipping. Format: a single `float` scalar. |
-| [`FFX_API_CONFIGURE_DENOISER_KEY_GAUSSIAN_KERNEL_RELAXATION`](../../denoisers/include/ffx_denoiser.h#L538) | Override the Gaussian kernel relaxation factor. Format: a single `float` scalar. |
-| [`FFX_API_CONFIGURE_DENOISER_KEY_DISOCCLUSION_THRESHOLD`](../../denoisers/include/ffx_denoiser.h#L541) | Override the disocclusion threshold used for depth comparisons during temporal reprojection. Format: a single `float` scalar. |
-| [`FFX_API_CONFIGURE_DENOISER_KEY_DEBUG_VIEW_LINEAR_DEPTH_BOUNDS`](../../denoisers/include/ffx_denoiser.h#L544) | Override the absolute linear depth bounds used for normalizing the absolute linear depth debug view. Format: a single `FfxApiFloatBounds`. |
+| [`FFX_API_CONFIGURE_DENOISER_KEY_CROSS_BILATERAL_NORMAL_STRENGTH`](../../denoisers/include/ffx_denoiser.h#L566) | Override the strength of the cross bilateral normal term.<br><br>Format: A single `float`. |
+| [`FFX_API_CONFIGURE_DENOISER_KEY_STABILITY_BIAS`](../../denoisers/include/ffx_denoiser.h#L569) | Override the bias of the temporal accumulation to be more stable but less responsive.<br><br>Format: A single `float`. |
+| [`FFX_API_CONFIGURE_DENOISER_KEY_MAX_RADIANCE`](../../denoisers/include/ffx_denoiser.h#L572) | Override the maximum radiance value.<br><br>Format: A single `float`. |
+| [`FFX_API_CONFIGURE_DENOISER_KEY_RADIANCE_CLIP_STD_K`](../../denoisers/include/ffx_denoiser.h#L575) | Override the standard deviation K value used for radiance clipping.<br><br>Format: A single `float`. |
+| [`FFX_API_CONFIGURE_DENOISER_KEY_GAUSSIAN_KERNEL_RELAXATION`](../../denoisers/include/ffx_denoiser.h#L578) | Override the Gaussian kernel relaxation factor.<br><br>Format: A single `float`. |
+| [`FFX_API_CONFIGURE_DENOISER_KEY_DISOCCLUSION_THRESHOLD`](../../denoisers/include/ffx_denoiser.h#L581) | Override the disocclusion threshold used for depth comparisons during temporal reprojection.<br><br>Format: A single `float`. |
+| [`FFX_API_CONFIGURE_DENOISER_KEY_DEBUG_VIEW_LINEAR_DEPTH_BOUNDS`](../../denoisers/include/ffx_denoiser.h#L584) | Override the absolute linear depth bounds used for normalizing the absolute linear depth debug view.<br><br>Format: A single `FfxApiFloatBounds`. |
 
 ### 2.7. Cleaning up
 
 The application is responsible for cleaning up any created denoiser context.
-This is done by calling [`ffxDestroyContext`](../../api/include/ffx_api.h#L148) with the context to be destroyed.
+This is done by calling [`ffxDestroyContext`](../../api/include/ffx_api.h#L140) with the context to be destroyed.
 
 > [!CAUTION]
-> Ensure the GPU has finished any work that might reference resources used by the context before calling [`ffxDestroyContext`](../../api/include/ffx_api.h#L148).
+> Ensure the GPU has finished any work that might reference resources used by the context before calling [`ffxDestroyContext`](../../api/include/ffx_api.h#L140).
 > Failing to do so can lead to undefined behavior.
 
 ## 3. Performance
@@ -647,25 +684,33 @@ The tables below summarize the timings of AMD FSR™ Ray Regeneration under vari
 
 | Target Render Resolution | Average [ms]      |
 |-------------------------:|------------------:|
-| 960x540                  | 1.10              |
-| 1920x1080                | 4.26              |
-| 2560x1440                | 8.10              |
+| 960x540                  | 0.99              |
+| 1920x1080                | 3.74              |
+| 2560x1440                | 7.15              |
 
 #### 3.1.2. Denoising indirect diffuse and indirect specular signals
 
 | Target Render Resolution | Average [ms]      |
 |-------------------------:|------------------:|
-| 960x540                  | 0.87              |
-| 1920x1080                | 3.37              |
-| 2560x1440                | 6.52              |
+| 960x540                  | 0.81              |
+| 1920x1080                | 3.08              |
+| 2560x1440                | 6.01              |
 
 #### 3.1.3. Denoising indirect specular signal
 
 | Target Render Resolution | Average [ms]      |
 |-------------------------:|------------------:|
 | 960x540                  | 0.71              |
-| 1920x1080                | 2.63              |
-| 2560x1440                | 5.34              |
+| 1920x1080                | 2.57              |
+| 2560x1440                | 5.27              |
+
+#### 3.1.4. Denoising dominant light visibility signal
+
+| Target Render Resolution | Average [ms]      |
+|-------------------------:|------------------:|
+| 960x540                  | 0.13              |
+| 1920x1080                | 0.36              |
+| 2560x1440                | 0.57              |
 
 Performance figures are accurate at the time of writing for an AMD Radeon™ RX 9070 XT and are subject to change.
 
@@ -676,68 +721,57 @@ When using the API, this memory is allocated during context creation via the ser
 This memory is used to store intermediate surfaces computed by the algorithm, as well as surfaces that persist across multiple frames of the application.
 
 The tables below summarize the memory usage of AMD FSR™ Ray Regeneration under various operating conditions.
-Here, direct diffuse, direct specular, indirect diffuse, and indirect specular are considered separate signals.
-Ambient occlusion, dominant light visibility, and specular occlusion are considered one signal.
-Therefore, up to a total of 5 signals can be denoised.
 
 > [!NOTE]
 > Only the persistent memory needs to be included in the total frame memory budget.
-> The aliasable working set can be repurposed before and after the [`ffxDispatch`](../../api/include/ffx_api.h#L165) call.
+> The aliasable working set can be repurposed before and after the [`ffxDispatch`](../../api/include/ffx_api.h#L157) call.
 
-#### 3.2.1. Denoising 5 signals
-
-| Render Resolution | Total Working Set [MB] | Persistent Working Set [MB] | Aliasable Working Set [MB] |
-| -----------------:|-----------------------:|----------------------------:|---------------------------:|
-|   960x540         |  111                   |   56                        |   55                       |
-| 1920x1080         |  394                   |  195                        |  199                       |
-| 2560x1440         |  677                   |  349                        |  328                       |
-
-#### 3.2.2. Denoising 4 signals
+#### 3.2.1. Denoising direct diffuse, direct specular, indirect diffuse and indirect specular signals
 
 | Render Resolution | Total Working Set [MB] | Persistent Working Set [MB] | Aliasable Working Set [MB] |
 | -----------------:|-----------------------:|----------------------------:|---------------------------:|
-|   960x540         |  102                   |   47                        |   55                       |
-| 1920x1080         |  362                   |  163                        |  199                       |
-| 2560x1440         |  619                   |  291                        |  328                       |
+|   960x540         |  117                   |   62                        |   55                       |
+| 1920x1080         |  377                   |  178                        |  199                       |
+| 2560x1440         |  634                   |  306                        |  328                       |
 
-#### 3.2.3. Denoising 3 signals
-
-| Render Resolution | Total Working Set [MB] | Persistent Working Set [MB] | Aliasable Working Set [MB] |
-| -----------------:|-----------------------:|----------------------------:|---------------------------:|
-|   960x540         |   94                   |   39                        |   55                       |
-| 1920x1080         |  330                   |  131                        |  199                       |
-| 2560x1440         |  562                   |  234                        |  328                       |
-
-#### 3.2.4. Denoising 2 signals
+#### 3.2.2. Denoising indirect diffuse and indirect specular signals
 
 | Render Resolution | Total Working Set [MB] | Persistent Working Set [MB] | Aliasable Working Set [MB] |
 | -----------------:|-----------------------:|----------------------------:|---------------------------:|
-|   960x540         |   85                   |   30                        |   55                       |
-| 1920x1080         |  298                   |   99                        |  199                       |
-| 2560x1440         |  504                   |  176                        |  328                       |
+|   960x540         |   99                   |   44                        |   55                       |
+| 1920x1080         |  313                   |  114                        |  199                       |
+| 2560x1440         |  519                   |  191                        |  328                       |
 
-#### 3.2.5. Denoising 1 signal
+#### 3.2.3. Denoising indirect specular signal
 
 | Render Resolution | Total Working Set [MB] | Persistent Working Set [MB] | Aliasable Working Set [MB] |
 | -----------------:|-----------------------:|----------------------------:|---------------------------:|
-|   960x540         |   76                   |   22                        |   54                       |
-| 1920x1080         |  267                   |   68                        |  199                       |
-| 2560x1440         |  447                   |  119                        |  328                       |
+|   960x540         |   90                   |   35                        |   55                       |
+| 1920x1080         |  282                   |   83                        |  199                       |
+| 2560x1440         |  462                   |  134                        |  328                       |
+
+#### 3.2.4. Denoising ambient occlusion or dominant light visibility or specular occlusion signal
+
+| Render Resolution | Total Working Set [MB] | Persistent Working Set [MB] | Aliasable Working Set [MB] |
+| -----------------:|-----------------------:|----------------------------:|---------------------------:|
+|   960x540         |   32                   |   27                        |    5                       |
+| 1920x1080         |   72                   |   55                        |   17                       |
+| 2560x1440         |  118                   |   88                        |   30                       |
 
 Memory figures are accurate at the time of writing for an AMD Radeon™ RX 9070 XT and are subject to change.
 
-#### 3.2.6. [`ffxQueryDescDenoiserGetGPUMemoryUsage`](../../denoisers/include/ffx_denoiser.h#L481)
+#### 3.2.5. [`ffxQueryDescDenoiserGetGPUMemoryUsage`](../../denoisers/include/ffx_denoiser.h#L522)
 
 | Parameter | Description |
 |---|---|
-| [`device`](../../denoisers/include/ffx_denoiser.h#L489) | A pointer to the device. For DX12: pointer to `ID3D12Device`. |
-| [`maxRenderSize`](../../denoisers/include/ffx_denoiser.h#L492) | Maximum size that rendering will be performed at. Must match the value used (or intended) for context creation. |
-| [`signalFlags`](../../denoisers/include/ffx_denoiser.h#L495) | Signal flags corresponding to a combination of values from [`FfxApiDenoiserSignalFlags`](../../denoisers/include/ffx_denoiser.h#L555). Must match the value used (or intended) for context creation. |
-| [`checkerboardSignalFlags`](../../denoisers/include/ffx_denoiser.h#L500) | Signal flags for checkerboard reconstruction. Must match the value used (or intended) for context creation. |
-| [`flags`](../../denoisers/include/ffx_denoiser.h#L503) | Create flags. Must match the value used (or intended) for context creation. |
-| [`gpuMemoryUsage`](../../denoisers/include/ffx_denoiser.h#L506) | Pointer to a `FfxApiEffectMemoryUsage` structure that will receive the GPU memory usage figures. |
+| [`device`](../../denoisers/include/ffx_denoiser.h#L530) | A pointer to the device. For DX12: pointer to `ID3D12Device`. |
+| [`maxRenderSize`](../../denoisers/include/ffx_denoiser.h#L533) | Maximum size that rendering will be performed at. |
+| [`signalFlags`](../../denoisers/include/ffx_denoiser.h#L536) | Signal flags corresponding to a combination of values from [`FfxApiDenoiserSignalFlags`](../../denoisers/include/ffx_denoiser.h#L595). |
+| [`checkerboardSignalFlags`](../../denoisers/include/ffx_denoiser.h#L541) | Signal flags corresponding to a combination of values from [`FfxApiDenoiserSignalFlags`](../../denoisers/include/ffx_denoiser.h#L595) for signals that use checkerboard reconstruction.<br><br>Must be a subset of `signalFlags`. |
+| [`flags`](../../denoisers/include/ffx_denoiser.h#L544) | Create flags corresponding to zero or a combination of values from [`FfxApiCreateContextDenoiserFlags`](../../denoisers/include/ffx_denoiser.h#L554). |
+| [`gpuMemoryUsage`](../../denoisers/include/ffx_denoiser.h#L547) | A pointer to a `FfxApiEffectMemoryUsage` structure that will hold the GPU memory usage. |
 
-The expected memory usage can be queried before context creation by passing a [`ffxQueryDescDenoiserGetGPUMemoryUsage`](../../denoisers/include/ffx_denoiser.h#L481) to [`ffxQuery`](../../api/include/ffx_api.h#L160):
+The expected memory usage can be queried before context creation by passing a [`ffxQueryDescDenoiserGetGPUMemoryUsage`](../../denoisers/include/ffx_denoiser.h#L522) to [`ffxQuery`](../../api/include/ffx_api.h#L152):
 
 ```cpp
 // Example: querying the expected GPU memory usage before context creation.
@@ -758,7 +792,7 @@ LOG(L"Denoiser GPU Memory Usage totalUsageInBytes %.3f MB aliasableUsageInBytes 
     memoryUsage.aliasableUsageInBytes / 1048576.f);
 ```
 
-The actual memory usage can be queried after context creation by passing a [`ffxQueryDescDenoiserGetGPUMemoryUsage`](../../denoisers/include/ffx_denoiser.h#L481) to [`ffxQuery`](../../api/include/ffx_api.h#L160):
+The actual memory usage can be queried after context creation by passing a [`ffxQueryDescDenoiserGetGPUMemoryUsage`](../../denoisers/include/ffx_denoiser.h#L522) to [`ffxQuery`](../../api/include/ffx_api.h#L152):
 
 ```cpp
 // Example: querying the actual GPU memory usage after context creation.
@@ -783,7 +817,7 @@ LOG(L"Denoiser GPU Memory Usage totalUsageInBytes %.3f MB aliasableUsageInBytes 
 
 ### 4.1. Debug view
 
-When the AMD FSR™ Ray Regeneration context is created with [`FFX_DENOISER_ENABLE_DEBUGGING`](../../denoisers/include/ffx_denoiser.h#L517), integrations can pass an optional [`ffxDispatchDescDenoiserDebugView`](../../denoisers/include/ffx_denoiser.h#L291) dispatch description to [`ffxDispatch`](../../api/include/ffx_api.h#L165) to output relevant debug information into an app-provided render target.
+When the AMD FSR™ Ray Regeneration context is created with [`FFX_DENOISER_ENABLE_DEBUGGING`](../../denoisers/include/ffx_denoiser.h#L557), integrations can pass an optional [`ffxDispatchDescDenoiserDebugView`](../../denoisers/include/ffx_denoiser.h#L330) dispatch description to [`ffxDispatch`](../../api/include/ffx_api.h#L157) to output relevant debug information into an app-provided render target.
 
 <p align="center">
   <img src="media/denoiser/fsr-ray-regeneration-debug-view.png" 
@@ -791,31 +825,31 @@ When the AMD FSR™ Ray Regeneration context is created with [`FFX_DENOISER_ENAB
        style="width:100%; height:auto; max-width:100%;">
 </p>
 <p align="center">
-  <b>Figure 2</b>: <i>AMD FSR™ Ray Regeneration debug view in overview mode.</i>
+  <b>Figure 3</b>: <i>AMD FSR™ Ray Regeneration debug view in overview mode.</i>
 </p>
 
 | Data                     | Description |
 | ------------------------ | ----------- |
 | `Motion Vectors`         | Pixel screen motion, the XY-components of the [`motionVectors`](../../denoisers/include/ffx_denoiser.h#L190) input. |
 | `Motion Vectors Z`       | Pixel z motion (i.e. signed linear depth delta), the Z-component of the [`motionVectors`](../../denoisers/include/ffx_denoiser.h#L190) input.<br>Blue for negative deltas, Red for positive deltas. |
-| `Linear Depth`           | Absolute value of the [`linearDepth`](../../denoisers/include/ffx_denoiser.h#L183) input.<br>Clamped to the bounds corresponding to [`FFX_API_CONFIGURE_DENOISER_KEY_DEBUG_VIEW_LINEAR_DEPTH_BOUNDS`](../../denoisers/include/ffx_denoiser.h#L544). |
+| `Linear Depth`           | Absolute value of the [`linearDepth`](../../denoisers/include/ffx_denoiser.h#L183) input.<br>Clamped to the bounds corresponding to [`FFX_API_CONFIGURE_DENOISER_KEY_DEBUG_VIEW_LINEAR_DEPTH_BOUNDS`](../../denoisers/include/ffx_denoiser.h#L584). |
 | `Normals`                | Decoded normals of the [`normals`](../../denoisers/include/ffx_denoiser.h#L198) input. |
 | `Reprojected Confidence` | Indicates the per pixel confidence of a history sample.<br>Black means the sample will not contribute in the accumulation. |
 | `Reprojected UV`         | UV that will be used to sample history information. |
 | `View Centered Pos`      | Reconstructed position centered around the camera.<br>This information is useful to validate that input camera parameters are correct. |
-| `Virtual Hit Pos`        | Reconstructed virtual hit position used for low-roughness specular samples.<br>This information is useful to validate that input camera parameters and specular ray length are correct. |
+| `Unused`                 | Unused viewport, displayed as a black texture. |
 | `NN Input0`              | First input channel to the neural network. |
 | `NN Input1`              | Second input channel to the neural network. |
 | `NN Input2`              | Third input channel to the neural network. |
 | `Composed Luma`          | Luminance of the composited input signals. |
 
-Passing a [`ffxDispatchDescDenoiserDebugView`](../../denoisers/include/ffx_denoiser.h#L291) dispatch description to [`ffxDispatch`](../../api/include/ffx_api.h#L165) automatically enables the debug pass internally.
+Passing a [`ffxDispatchDescDenoiserDebugView`](../../denoisers/include/ffx_denoiser.h#L330) dispatch description to [`ffxDispatch`](../../api/include/ffx_api.h#L157) automatically enables the debug pass internally.
 Output information is written to an app-provided render target and it is therefore up to the app itself to implement how to composite the output information to the screen.
 AMD FSR™ Ray Regeneration expects the output target to be in a 4-component format as all four data components are used.
-In the output target the `RGB` channels contains the color information to display and the `A` channel indicates which pixels have been written to.
-The [`mode`](../../denoisers/include/ffx_denoiser.h#L308) parameter toggles between an overview mode or fullscreen mode of a single data viewport. 
-The [`viewportIndex`](../../denoisers/include/ffx_denoiser.h#L312) controls which viewport to display if [`FFX_API_DENOISER_DEBUG_VIEW_MODE_FULLSCREEN_VIEWPORT`](../../denoisers/include/ffx_denoiser.h#L552) is selected as the active mode.
-The [`viewportIndex`](../../denoisers/include/ffx_denoiser.h#L312) is clamped between 0 and `FFX_API_DENOISER_DEBUG_VIEW_MAX_VIEWPORTS - 1`.
+In the output target the `RGB` channels contain the color information to display and the `A` channel indicates which pixels have been written to.
+The [`mode`](../../denoisers/include/ffx_denoiser.h#L347) parameter toggles between an overview mode or fullscreen mode of a single data viewport. 
+The [`viewportIndex`](../../denoisers/include/ffx_denoiser.h#L351) controls which viewport to display if [`FFX_API_DENOISER_DEBUG_VIEW_MODE_FULLSCREEN_VIEWPORT`](../../denoisers/include/ffx_denoiser.h#L592) is selected as the active mode.
+The [`viewportIndex`](../../denoisers/include/ffx_denoiser.h#L351) is clamped between 0 and `FFX_API_DENOISER_DEBUG_VIEW_MAX_VIEWPORTS - 1`.
 
 ```cpp
 // Example: populating the debug view dispatch description.
@@ -827,24 +861,53 @@ dispatchDenoiserDebugView.mode          = m_DebugViewMode;
 dispatchDenoiserDebugView.viewportIndex = (uint32_t)m_DebugViewport;
 ```
 
-#### 4.1.1. [`ffxDispatchDescDenoiserDebugView`](../../denoisers/include/ffx_denoiser.h#L291)
+#### 4.1.1. [`ffxDispatchDescDenoiserDebugView`](../../denoisers/include/ffx_denoiser.h#L330)
 
 | Parameter                                                      | Description |
 | -------------------------------------------------------------- | ----------- |
-| [`output`](../../denoisers/include/ffx_denoiser.h#L302)        | Target output resource to write debug visualization data into. |
-| [`outputSize`](../../denoisers/include/ffx_denoiser.h#L305)    | The resolution of the output resource. |
-| [`mode`](../../denoisers/include/ffx_denoiser.h#L308)          | An entry of [`FfxApiDenoiserDebugViewMode`](../../denoisers/include/ffx_denoiser.h#L547) that selects the mode used for visualization.<br><br>[`FFX_API_DENOISER_DEBUG_VIEW_MODE_OVERVIEW`](../../denoisers/include/ffx_denoiser.h#L550)<br>[`FFX_API_DENOISER_DEBUG_VIEW_MODE_FULLSCREEN_VIEWPORT`](../../denoisers/include/ffx_denoiser.h#L552) |
-| [`viewportIndex`](../../denoisers/include/ffx_denoiser.h#L312) | When [`mode`](../../denoisers/include/ffx_denoiser.h#L308) is set to [`FFX_API_DENOISER_DEBUG_VIEW_MODE_FULLSCREEN_VIEWPORT`](../../denoisers/include/ffx_denoiser.h#L552), use this index to indicate which debug viewport to fullscreen.<br>The value is clamped between `0` and `FFX_API_DENOISER_DEBUG_VIEW_MAX_VIEWPORTS - 1` |
+| [`output`](../../denoisers/include/ffx_denoiser.h#L341)        | The target output resource for debug visualization.<br><br>Channels:<br>RGB: Color information to display.<br>A: Indicates which pixels have been written to. |
+| [`outputSize`](../../denoisers/include/ffx_denoiser.h#L344)    | The resolution of the debug visualization. |
+| [`mode`](../../denoisers/include/ffx_denoiser.h#L347)          | The debug view mode corresponding to an entry of [`FfxApiDenoiserDebugViewMode`](../../denoisers/include/ffx_denoiser.h#L587). |
+| [`viewportIndex`](../../denoisers/include/ffx_denoiser.h#L351) | The index of the viewport to visualize when [`FFX_API_DENOISER_DEBUG_VIEW_MODE_FULLSCREEN_VIEWPORT`](../../denoisers/include/ffx_denoiser.h#L592) mode is active.<br>Clamped between 0 and `FFX_API_DENOISER_DEBUG_VIEW_MAX_VIEWPORTS - 1`. |
 
 ## 5. Best practices
 
 ### 5.1. Generating noisy signals
 
 AMD FSR™ Ray Regeneration expects one or more low-sample radiance and/or occlusion input signals for denoising, depending on the selected signals at context creation.
-High-quality inputs are essential to achieve the best results, as the algorithm is not designed to "correct" artefacts present in the input data.
+High-quality inputs are essential to achieve the best results, as the algorithm is not designed to "correct" artifacts present in the input data.
 Below are some guidelines for generating high-quality noisy inputs.
 
-#### 5.1.1. Stochastic sampling
+#### 5.1.1. Radiance inputs and albedo modulation
+
+AMD FSR™ Ray Regeneration expects the first-bounce albedo modulation to be **absent** from the radiance signals.
+The first-bounce albedo is instead passed separately via the [`diffuseAlbedo`](../../denoisers/include/ffx_denoiser.h#L247) and [`specularAlbedo`](../../denoisers/include/ffx_denoiser.h#L222) members of [`ffxDispatchDescDenoiser`](../../denoisers/include/ffx_denoiser.h#L167).
+After denoising, the application is responsible for multiplying the denoised output by the first-bounce albedo before compositing.
+
+The expected albedo modulation state per signal is:
+
+| Signal | First-bounce albedo | Subsequent-bounce albedo |
+|---|---|---|
+| Direct diffuse | Not applied — passed separately via `diffuseAlbedo` | N/A |
+| Direct specular | Not applied — passed separately via `specularAlbedo` | N/A |
+| Indirect diffuse | Not applied — passed separately via `diffuseAlbedo` | Applied |
+| Indirect specular | Not applied — passed separately via `specularAlbedo` | Applied |
+
+In practice this means your ray tracer should output the first-bounce lighting contribution directly, without multiplying by the surface albedo.
+Subsequent bounces accumulate full radiance (albedo included) as usual.
+After the denoiser dispatch, multiply the denoised output by the albedo to produce the final composited result.
+
+```hlsl
+// Example: re-modulating the denoised output in the composition pass.
+const float3 diffuseAlbedo  = Square(g_DiffuseAlbedo[pixel]);   // decode sqrt-encoded albedo
+const float3 specularAlbedo = Square(g_SpecularAlbedo[pixel]);
+
+const float3 diffuse  = (directDiffuse  + indirectDiffuse)  * diffuseAlbedo;
+const float3 specular = (directSpecular + indirectSpecular) * specularAlbedo;
+g_Output[pixel] = float4(diffuse + specular, 0.0f);
+```
+
+#### 5.1.2. Stochastic sampling
 
 In most physically-based path tracers, stochastic sampling is used to simulate realistic lighting behaviors such as shadows, reflections, and indirect lighting.
 Stochastic sampling introduces randomness into ray directions so that, over many samples, the result converges to a noise-free signal.
@@ -873,10 +936,10 @@ Understanding and managing the quality of this noise is critical for achieving o
   </tr>
 </table>
 <p align="center">
-  <b>Figure 3</b>: <i>left: Noisy ray-traced input to AMD FSR™ Ray Regeneration. right: Corresponding denoised output from AMD FSR™ Ray Regeneration.</i>
+  <b>Figure 4</b>: <i>left: Noisy ray-traced input to AMD FSR™ Ray Regeneration. right: Corresponding denoised output from AMD FSR™ Ray Regeneration.</i>
 </p>
 
-#### 5.1.2. Noise
+#### 5.1.3. Noise
 
 We recommend using white noise and high-quality hash functions with minimal correlations when driving stochastic sampling.
 Examples of suitable hash functions include [`xxhash32`](https://xxhash.com/) and [`lowbias32`](https://nullprogram.com/blog/2018/07/31/).
@@ -891,7 +954,7 @@ Noise reduction techniques such as ReSTIR can help reduce noise in the input sig
 However, these techniques often introduce cross-sample dependencies that AMD FSR™ Ray Regeneration is not designed to handle.
 In such cases, it is important to disrupt correlation patterns using strategies like permutation sampling or randomization of temporal reuse.
 
-#### 5.1.3. Usage of radiance caching
+#### 5.1.4. Usage of radiance caching
 
 Tracing paths recursively quickly becomes too expensive for real-time rendering.
 To manage this cost, many real-time path tracers apply radiance caching after only a few recursive bounces.
@@ -909,10 +972,10 @@ Watch out for low-frequency noise or temporal inconsistencies, as these issues c
 
 See [AMD GI-1.0](https://gpuopen.com/download/GPUOpen2022_GI1_0.pdf) for examples and guidance on radiance caching.
 
-#### 5.1.4. Tweakable denoiser settings
+#### 5.1.5. Tweakable denoiser settings
 
 Even with high-quality inputs and the recommended best practices applied, some artifacts may still remain.
-AMD FSR™ Ray Regeneration exposes a number of tweakable settings, defined in [`FfxApiConfigureDenoiserKey`](../../denoisers/include/ffx_denoiser.h#L522), that allow fine-grained control over denoiser behavior.
+AMD FSR™ Ray Regeneration exposes a number of tweakable settings, defined in [`FfxApiConfigureDenoiserKey`](../../denoisers/include/ffx_denoiser.h#L562), that allow fine-grained control over denoiser behavior.
 These parameters can help balance stability, sharpness, and noise reduction to best suit your application.
 
 It is recommended to start from the default settings queried from the API and then adjust selectively according to what works best for your application.
@@ -934,10 +997,10 @@ AMD FSR™ Ray Regeneration accepts motion vectors in a 2.5D format:
        style="width:80%; height:auto; max-width:100%;">
 </p>
 <p align="center">
-  <b>Figure 4</b>: <i>A 2D motion vector from a pixel in the current frame to the corresponding pixel in the previous frame.</i>
+  <b>Figure 5</b>: <i>A 2D motion vector from a pixel in the current frame to the corresponding pixel in the previous frame.</i>
 </p>
 
-If your application computes motion vectors in a space other than UV space (for example, NDC space), you can use the [`motionVectorScale`](../../denoisers/include/ffx_denoiser.h#L222) member of the [`ffxDispatchDescDenoiser`](../../denoisers/include/ffx_denoiser.h#L167) dispatch description to scale them appropriately for AMD FSR™ Ray Regeneration.
+If your application computes motion vectors in a space other than UV space (for example, NDC space), you can use the [`motionVectorScale`](../../denoisers/include/ffx_denoiser.h#L257) member of the [`ffxDispatchDescDenoiser`](../../denoisers/include/ffx_denoiser.h#L167) dispatch description to scale them appropriately for AMD FSR™ Ray Regeneration.
 
 Example HLSL and C++ code illustrating NDC-space motion vector scaling:
 
@@ -984,8 +1047,10 @@ float2 NormalToOctahedronUv(float3 N)
 {
     N.xy /= abs(N.x) + abs(N.y) + abs(N.z);
     float2 k = sign(N.xy);
-    float s = saturate(-N.z);
-    N.xy = lerp(N.xy, (1.0 - abs(N.yx)) * k, s);
+    if (N.z < 0.0)
+    {
+        N.xy = (1.0 - abs(N.yx)) * k;
+    }
     return N.xy * 0.5 + 0.5;
 }
 ```
@@ -1000,7 +1065,7 @@ float3 OctahedronUvToNormal(float2 UV)
     float3 N = float3(UV, 1.0f - abs(UV.x) - abs(UV.y));
     float t = saturate(-N.z);
     float2 s = sign(N.xy);
-    N.xy += s * t;
+    N.xy -= s * t;
     return normalize(N);
 }
 ```
@@ -1050,7 +1115,7 @@ At runtime, this LUT is sampled to look up approximate BRDF characteristics, com
        style="width:50%; height:auto; max-width:100%;">
 </p>
 <p align="center">
-  <b>Figure 5</b>: <i>A typical GGX BRDF look-up table.</i>
+  <b>Figure 6</b>: <i>A typical GGX BRDF look-up table.</i>
 </p>
 
 The following HLSL code snippet illustrates how to sample the BRDF LUT and use the resulting scale and bias to generate specular albedo:
@@ -1126,11 +1191,12 @@ float3 specularAlbedo = ApproximateBRDF(F0, alpha, NoV);
 
 | Version                                                                 | Date              |
 |-------------------------------------------------------------------------|-------------------|
-| [**1.2.0**](../whats-new/index.md#amd-fsr-ray-regeneration-120)         | 2026-06-24        |
+| [**1.2.1**](../whats-new/index.md#amd-fsr-ray-regeneration-121)         | 2026-10-28        |
+| [**1.2.0**](../whats-new/version_2_3_0.md#amd-fsr-ray-regeneration-120) | 2026-06-24        |
 | [**1.1.0**](../whats-new/version_2_2_0.md#amd-fsr-ray-regeneration-110) | 2026-03-18        |
 | [**1.0.0**](../whats-new/version_2_1_0.md#amd-fsr-ray-regeneration-100) | 2025-12-10        |
 
-For more details, refer to the [changelog](../whats-new/index.md#amd-fsr-ray-regeneration-120).
+For more details, refer to the [changelog](../whats-new/index.md#amd-fsr-ray-regeneration-121).
 
 ## 8. See also
 

@@ -93,7 +93,6 @@ static const UINT32 s_pixColor = PIX_COLOR(255, 36, 36);
 #endif // #if defined(ENABLE_PIX_CAPTURES)
 
 // DX12 prototypes for functions in the backend interface
-FfxVersionNumber GetSDKVersionDX12(FfxInterface* backendInterface);
 FfxErrorCode GetEffectGpuMemoryUsageDX12(FfxInterface* backendInterface, FfxUInt32 effectContextId, FfxApiEffectMemoryUsage* outVramUsage);
 FfxErrorCode CreateBackendContextDX12(FfxInterface* backendInterface, FfxEffect effect, FfxEffectBindlessConfig* bindlessConfig, FfxUInt32* effectContextId);
 FfxErrorCode GetDeviceCapabilitiesDX12(FfxInterface* backendInterface, FfxDeviceCapabilities* deviceCapabilities);
@@ -284,7 +283,6 @@ FfxErrorCode ffxGetInterfaceDX12(
         scratchBufferSize >= ffxGetScratchMemorySizeDX12(maxContexts),
         FFX_ERROR_INSUFFICIENT_MEMORY);
 
-    backendInterface->fpGetSDKVersion = GetSDKVersionDX12;
     backendInterface->fpGetEffectGpuMemoryUsage = GetEffectGpuMemoryUsageDX12;
     backendInterface->fpCreateBackendContext = CreateBackendContextDX12;
     backendInterface->fpGetDeviceCapabilities = GetDeviceCapabilitiesDX12;
@@ -1182,11 +1180,6 @@ void flushBarriers(BackendContext_DX12* backendContext, ID3D12GraphicsCommandLis
 //////////////////////////////////////////////////////////////////////////
 // DX12 back end implementation
 
-FfxUInt32 GetSDKVersionDX12(FfxInterface*)
-{
-    return FFX_SDK_MAKE_VERSION(FFX_SDK_VERSION_MAJOR, FFX_SDK_VERSION_MINOR, FFX_SDK_VERSION_PATCH);
-}
-
 uint64_t GetResourceGpuMemorySizeDX12(ID3D12Resource* resource)
 {
     uint64_t size = 0;
@@ -1302,6 +1295,33 @@ FfxErrorCode ffxGetResourceSizeFromDescriptionDX12(FfxDevice device, const FfxCr
     return FFX_ERROR_INVALID_ARGUMENT;
 }
 
+FfxErrorCode ffxGetBackendContextGpuMemoryUsageDX12(FfxDevice device, size_t contextCount, uint64_t* byteCount)
+{
+    FFX_ASSERT(NULL != device);
+    FFX_ASSERT(NULL != byteCount);
+
+    *byteCount = 0;
+
+    ID3D12Device* pDevice = nullptr;
+    if (SUCCEEDED(reinterpret_cast< IUnknown* >(device)->QueryInterface(IID_PPV_ARGS(&pDevice))))
+    {
+        // Shader-visible descriptor heaps are mirrored to VRAM. Mirror the descHeapUavGpu and
+        // descRingBuffer sizing in CreateBackendContextDX12 so a context-less query matches the
+        // per-effect-context watermark. Keep in sync with that descriptor-heap sizing.
+        const uint32_t cbvSrvUavIncrement = pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        pDevice->Release();
+
+        uint64_t numDescriptors = 0;
+        numDescriptors += FFX_MAX_RESOURCE_COUNT * contextCount;                                              // descHeapUavGpu
+        numDescriptors += FFX_RING_BUFFER_DESCRIPTOR_COUNT * contextCount + FFX_MAX_STATIC_DESCRIPTOR_COUNT;  // descRingBuffer
+
+        *byteCount = numDescriptors * cbvSrvUavIncrement;
+        return FFX_OK;
+    }
+
+    return FFX_ERROR_INVALID_ARGUMENT;
+}
+
 // initialize the DX12 backend
 FfxErrorCode CreateBackendContextDX12(FfxInterface* backendInterface, FfxEffect effect, FfxEffectBindlessConfig* bindlessConfig, FfxUInt32* effectContextId)
 {
@@ -1345,6 +1365,7 @@ FfxErrorCode CreateBackendContextDX12(FfxInterface* backendInterface, FfxEffect 
         backendContext->pEffectContexts = reinterpret_cast<BackendContext_DX12::EffectContext*>(pMem);
 
         // CPUVisible
+        // NOTE: keep descHeapUavGpu/descRingBuffer sizing in sync with ffxGetBackendContextGpuMemoryUsageDX12.
         D3D12_DESCRIPTOR_HEAP_DESC descHeap;
         descHeap.NumDescriptors = FFX_MAX_RESOURCE_COUNT * backendContext->maxEffectContexts;
         descHeap.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
@@ -1452,7 +1473,19 @@ FfxErrorCode CreateBackendContextDX12(FfxInterface* backendInterface, FfxEffect 
                 effectContext.bindlessBufferUavHeapSize   = 0;
                 effectContext.bindlessBufferHeapStart     = 0;
                 effectContext.bindlessBufferHeapEnd       = 0;
-            }   
+            }
+
+            if (i == 0)
+            {
+                // Descriptor heaps with D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE are mirrored to VRAM
+                // Therefore they are influencing our VRAM usage
+                // since they are only needed once for all contexts they are attributed to context 0
+                const uint32_t cbvSrvUavIncrement = dx12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+                uint64_t heapOverhead = 0;
+                heapOverhead += backendContext->descHeapUavGpu->GetDesc().NumDescriptors * cbvSrvUavIncrement;
+                heapOverhead += backendContext->descRingBuffer->GetDesc().NumDescriptors * cbvSrvUavIncrement;
+                effectContext.vramUsage.totalUsageInBytes += heapOverhead;
+            }
 
             break;
         }
@@ -2787,10 +2820,10 @@ FfxErrorCode CreateHeapDX12(FfxInterface* backendInterface, const FfxCreateHeapD
 	outHeap->size = createHeapDescription->size;
     outHeap->aliasable = aliasable;
 
-    effectContext.vramUsage.totalUsageInBytes -= outHeap->size;
+    effectContext.vramUsage.totalUsageInBytes += outHeap->size;
     if (aliasable)
     {
-        effectContext.vramUsage.aliasableUsageInBytes -= outHeap->size;
+        effectContext.vramUsage.aliasableUsageInBytes += outHeap->size;
     }
 
     return FFX_OK;

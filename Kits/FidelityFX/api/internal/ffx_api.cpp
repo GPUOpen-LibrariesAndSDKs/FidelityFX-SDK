@@ -52,13 +52,11 @@ FFX_API_ENTRY ffxReturnCode_t ffxCreateContext(ffxContext* context, ffxCreateCon
     ffxProvider* provider = GetProvider(desc->type, GetVersionOverride(desc), GetDevice(desc), extProviderSlot);
     VERIFY(provider != nullptr, FFX_API_RETURN_NO_PROVIDER);
 
-#if FFX_BACKEND_DX12
     if (extProviderSlot && &*extProviderSlot == provider)
     {
         // external provider was selected, need to move to heap allocation.
         provider = alloc.construct<ffxProviderExternal>(std::move(*extProviderSlot));
     }
-#endif
 
     auto retCode = provider->CreateContext(context, desc, alloc);
     if (retCode != FFX_API_RETURN_OK && provider->GetRefCount() == 0)
@@ -72,6 +70,7 @@ FFX_API_ENTRY ffxReturnCode_t ffxCreateContext(ffxContext* context, ffxCreateCon
 FFX_API_ENTRY ffxReturnCode_t ffxDestroyContext(ffxContext* context, const ffxAllocationCallbacks* memCb)
 {
     VERIFY(context != nullptr, FFX_API_RETURN_ERROR_PARAMETER);
+    VERIFY(*context != nullptr, FFX_API_RETURN_OK);
 
     Allocator alloc{memCb};
     ffxProvider* provider = GetAssociatedProvider(*context);
@@ -95,15 +94,19 @@ FFX_API_ENTRY ffxReturnCode_t ffxConfigure(ffxContext* context, const ffxConfigu
                                    desc->debugLevel);
         return FFX_API_RETURN_OK;
     }
+    #pragma FFX_PRAGMA_WARNING_PUSH
+    #pragma FFX_PRAGMA_WARNING_DISABLE_DEPRECATIONS
     else if (auto desc1 = ffx::DynamicCast< ffxConfigureDescGlobalDebug1 >(header))
     {
         ffxSetPrintMessageCallback(reinterpret_cast< ffxMessageCallback >(desc1->fpMessage),
                                    desc1->debugLevel);
         return FFX_API_RETURN_OK;
     }
+    #pragma FFX_PRAGMA_WARNING_POP
     else
     {
         VERIFY(context != nullptr, FFX_API_RETURN_ERROR_PARAMETER);
+        VERIFY(*context != nullptr, FFX_API_RETURN_ERROR_PARAMETER);
 
         return GetAssociatedProvider(*context)->Configure(context, header);
     }
@@ -119,6 +122,15 @@ FFX_API_ENTRY ffxReturnCode_t ffxQuery(ffxContext* context, ffxQueryDescHeader* 
     {
         if (auto desc = ffx::DynamicCast<ffxQueryDescGetVersions>(header))
         {
+            const uint32_t effectIndex = ((desc->createDescType & FFX_API_EFFECT_MASK) >> 16u) - 1u;
+            if (effectIndex >= FFX_API_EFFECT_COUNT)
+            {
+                if (desc->outputCount)
+                    *desc->outputCount = 0;
+                FFX_PRINT_MESSAGE(FFX_API_MESSAGE_TYPE_ERROR, L"ffxQueryDescGetVersions::createDescType contains an invalid effect ID.");
+                return FFX_API_RETURN_ERROR_PARAMETER;
+            }
+
             // if output count is zero or no other pointer passed, count providers only
             if (desc->outputCount && (*desc->outputCount == 0 || (!desc->versionIds && !desc->versionNames)))
             {
@@ -161,6 +173,8 @@ FFX_API_ENTRY ffxReturnCode_t ffxQuery(ffxContext* context, ffxQueryDescHeader* 
     }
     else
     {
+        VERIFY(*context != nullptr, FFX_API_RETURN_ERROR_PARAMETER);
+
         auto provider = GetAssociatedProvider(*context);
         if (provider)
         {
@@ -179,6 +193,7 @@ FFX_API_ENTRY ffxReturnCode_t ffxDispatch(ffxContext* context, const ffxDispatch
 {
     VERIFY(desc != nullptr, FFX_API_RETURN_ERROR_PARAMETER);
     VERIFY(context != nullptr, FFX_API_RETURN_ERROR_PARAMETER);
+    VERIFY(*context != nullptr, FFX_API_RETURN_ERROR_PARAMETER);
 
     return GetAssociatedProvider(*context)->Dispatch(context, desc);
 }

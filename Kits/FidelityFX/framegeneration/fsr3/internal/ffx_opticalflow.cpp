@@ -993,7 +993,6 @@ FfxErrorCode ffxOpticalflowContextCreate(FfxOpticalflowContext* context, FfxOpti
     FFX_RETURN_ON_ERROR(context, FFX_ERROR_INVALID_POINTER);
     FFX_RETURN_ON_ERROR(contextDescription, FFX_ERROR_INVALID_POINTER);
 
-    FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpGetSDKVersion, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpGetDeviceCapabilities, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpCreateBackendContext, FFX_ERROR_INCOMPLETE_INTERFACE);
     FFX_RETURN_ON_ERROR(contextDescription->backendInterface.fpDestroyBackendContext, FFX_ERROR_INCOMPLETE_INTERFACE);

@@ -53,7 +53,7 @@ InterpolationSourceColor SampleTextureBilinear(FfxBoolean isCurrent, FfxFloat32x
         const FfxInt32x2 iOffset = bilinearInfo.iOffsets[iSampleIndex];
         const FfxInt32x2 iSamplePos = bilinearInfo.iBasePos + iOffset;
 
-        if (IsInRect(iSamplePos, InterpolationRectBase(), InterpolationRectSize()))
+        if (IsInRect(iSamplePos, ColorRectBase(), ColorRectSize()))
         {
             FfxFloat32 fWeight = bilinearInfo.fWeights[iSampleIndex];
 
@@ -82,22 +82,23 @@ void updateInPaintingWeight(inout FfxFloat32 fInPaintingWeight, FfxFloat32 fFact
 
 void computeInterpolatedColor(FfxUInt32x2 iPxPos, out FfxFloat32x3 fInterpolatedColor, inout FfxFloat32 fInPaintingWeight)
 {
-    const FfxFloat32x2 fUvInInterpolationRect = (FfxFloat32x2(iPxPos - InterpolationRectBase()) + 0.5f) / InterpolationRectSize();
+    const FfxFloat32x2 fUvInUpscalerOutputSpace = (FfxFloat32x2(iPxPos - ColorRectBase()) + 0.5f) / ColorRectSize();
     const FfxFloat32x2 fUvInScreenSpace       = (FfxFloat32x2(iPxPos) + 0.5f) / DisplaySize();
-    const FfxFloat32x2 fLrUvInInterpolationRect = fUvInInterpolationRect * (FfxFloat32x2(RenderSize()) / GetMaxRenderSize());
+    const FfxFloat32x2 fLrUvInUpscalerOutputSpace = fUvInUpscalerOutputSpace * (FfxFloat32x2(RenderSize()) / GetMaxRenderSize());
 
-    const FfxFloat32x2 fUvLetterBoxScale = FfxFloat32x2(InterpolationRectSize()) / DisplaySize();
+    const FfxFloat32x2 fUvLetterBoxScale = FfxFloat32x2(ColorRectSize()) / DisplaySize();
 
+    // Result in wrong pixel coordinate get motion vector. 
     // game MV are top left aligned, the function scales them to render res UV
     VectorFieldEntry gameMv;
-    LoadInpaintedGameFieldMv(fUvInInterpolationRect, gameMv);
+    LoadInpaintedGameFieldMv(fUvInUpscalerOutputSpace, gameMv);
 
     // OF is done on the back buffers which already have black bars
     VectorFieldEntry ofMv;
     SampleOpticalFlowMotionVectorField(fUvInScreenSpace, ofMv);
 
     // Binarize disucclusion factor
-    FfxFloat32x2 fDisocclusionFactor = FfxFloat32x2(FFX_EQUAL(ffxSaturate(SampleDisocclusionMask(fLrUvInInterpolationRect).xy), FfxFloat32x2(1.0, 1.0)));
+    FfxFloat32x2 fDisocclusionFactor = FfxFloat32x2(FFX_EQUAL(ffxSaturate(SampleDisocclusionMask(fLrUvInUpscalerOutputSpace).xy), FfxFloat32x2(1.0, 1.0)));
 
     InterpolationSourceColor fPrevColorGame = SampleTextureBilinear(false, fUvInScreenSpace, +gameMv.fMotionVector * fUvLetterBoxScale, DisplaySize()); // Get in previous frame buffer, the color of interpolated pixel
     InterpolationSourceColor fCurrColorGame = SampleTextureBilinear(true, fUvInScreenSpace, -gameMv.fMotionVector * fUvLetterBoxScale, DisplaySize()); // Get color in current framebuffer, of color of interpolated pixel
@@ -171,9 +172,14 @@ void computeFrameinterpolation(FfxInt32x2 iPxPos)
     FfxFloat32x3 fColor            = FfxFloat32x3(0, 0, 0);
     FfxFloat32   fInPaintingWeight = 0.0f;
 
-    if (IsInRect(iPxPos, InterpolationRectBase(), InterpolationRectSize()) == false || FrameIndexSinceLastReset() == 0)
+    if (IsInRect(iPxPos, InterpolationRectBase(), InterpolationRectSize()) == false)
     {
-        // if we just reset or we are out of the interpolation rect, copy the current back buffer and don't interpolate
+        // outside this rect copy from current backbuffer
+        fColor = LoadCurrentBackbuffer(iPxPos);
+    }
+    else if (FrameIndexSinceLastReset() == 0)
+    {
+        // if we just reset copy the current back buffer and don't interpolate
         fColor = LoadCurrentBackbuffer(iPxPos);
     }
     else

@@ -346,6 +346,7 @@ typedef struct FfxFrameInterpolationDispatchDescription {
     FfxApiResource                         reconstructedPrevDepth;             ///< The reconstructed depth buffer data
 
     FfxApiResource                         distortionField;                    ///< A resource containing distortion offset data used when distortion post effects are enabled.
+
 } FfxFrameInterpolationDispatchDescription;
 
 FFX_API FfxErrorCode ffxFrameInterpolationDispatch(FfxFrameInterpolationContext* context, const FfxFrameInterpolationDispatchDescription* params);

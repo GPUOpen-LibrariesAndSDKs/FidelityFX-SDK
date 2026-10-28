@@ -50,7 +50,7 @@ typedef struct FrameInterpolationConstants
     float   cameraNear;
     float   cameraFar;
     
-    int32_t upscalerTargetSize[2];  // how is that different from display size?
+    int32_t colorRectSize[2];
     int     Mode;
     int     Reset;
 
@@ -80,6 +80,9 @@ typedef struct FrameInterpolationConstants
 
     float   jitter[2];
     float   motionVectorScale[2];
+
+    int32_t colorRectBase[2];
+    int32_t _pad2[2];
 } FrameInterpolationConstants;
 
 typedef struct InpaintingPyramidConstants {

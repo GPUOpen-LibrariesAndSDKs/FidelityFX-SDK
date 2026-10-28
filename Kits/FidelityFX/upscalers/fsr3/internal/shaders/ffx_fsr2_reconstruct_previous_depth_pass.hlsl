@@ -35,7 +35,7 @@
 #include "fsr2/ffx_fsr2_callbacks_hlsl.h"
 #include "fsr2/ffx_fsr2_common.h"
 #include "fsr2/ffx_fsr2_sample.h"
-#include "fsr2/ffx_fsr2_reconstruct_dilated_velocity_and_previous_depth.h"
+#include "fsr2/ffx_fsr2_reconstruct_previous_depth.h"
 
 #ifndef FFX_FSR2_THREAD_GROUP_WIDTH
 #define FFX_FSR2_THREAD_GROUP_WIDTH 8

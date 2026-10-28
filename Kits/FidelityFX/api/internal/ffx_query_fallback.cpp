@@ -160,6 +160,17 @@ ffxReturnCode_t ffxQueryFallback(ffxContext* context, ffxQueryDescHeader* header
                     desc->gpuMemoryUsageFrameGenerationSwapchain->aliasableUsageInBytes = 0u;
                     retCode = FFX_API_RETURN_PROVIDER_NO_SUPPORT_NEW_DESCTYPE;                }
             }
+#elif defined(FFX_BACKEND_VK)
+            else if (header->type == FFX_API_QUERY_DESC_TYPE_FRAMEGENERATIONSWAPCHAIN_GPU_MEMORY_USAGE_VK_V2)
+            {
+                auto desc = reinterpret_cast<ffxQueryFrameGenerationSwapChainGetGPUMemoryUsageVKV2*>(header);
+                if (desc->gpuMemoryUsageFrameGenerationSwapchain != nullptr)
+                {
+                    desc->gpuMemoryUsageFrameGenerationSwapchain->totalUsageInBytes = 0u;
+                    desc->gpuMemoryUsageFrameGenerationSwapchain->aliasableUsageInBytes = 0u;
+                    retCode = FFX_API_RETURN_PROVIDER_NO_SUPPORT_NEW_DESCTYPE;
+                }
+            }
 #elif defined(FFX_BACKEND_XBOX)
             else if (header->type == FFX_API_QUERY_DESC_TYPE_FRAMEGENERATIONSWAPCHAIN_GPU_MEMORY_USAGE_XBOX_V2)
             {

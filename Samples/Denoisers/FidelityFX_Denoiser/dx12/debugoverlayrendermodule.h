@@ -22,10 +22,26 @@
 
 #pragma once
 
+//------------------------------------------------------------------------------
+// Sample Includes
+//------------------------------------------------------------------------------
+
+// rr::DenoiserRenderModule
 #include "denoiserrendermodule.h"
 
-#include <cauldron2/dx12/framework/render/rendermodule.h>
-#include <cauldron2/dx12/framework/core/framework.h>
+//------------------------------------------------------------------------------
+// Cauldron Includes
+//------------------------------------------------------------------------------
+
+// json
+#include "Cauldron2/framework/core/framework.h"
+// cauldron::CommandList
+// cauldron::RenderModule
+#include "Cauldron2/framework/render/rendermodule.h"
+
+//------------------------------------------------------------------------------
+// Cauldron Forward Declarations
+//------------------------------------------------------------------------------
 
 namespace cauldron
 {
@@ -35,25 +51,51 @@ namespace cauldron
     class PipelineObject;
 }  // namespace cauldron
 
-class DebugOverlayRenderModule final : public cauldron::RenderModule
+//------------------------------------------------------------------------------
+// Sample Declarations
+//------------------------------------------------------------------------------
+
+namespace rr
 {
-public:
-    DebugOverlayRenderModule()
-        : RenderModule(L"DebugOverlayRenderModule")
+    //--------------------------------------------------------------------------
+    // DebugOverlayRenderModule
+    //--------------------------------------------------------------------------
+    
+    class DebugOverlayRenderModule final : public cauldron::RenderModule
     {
-    }
-    ~DebugOverlayRenderModule() override;
 
-    void Init(const json& initData);
-    void Execute(double deltaTime, cauldron::CommandList* pCmdList) override;
+    public:
 
-private:
-    const cauldron::Texture* m_pColorTarget = nullptr;
+        //----------------------------------------------------------------------
+        // Member Methods: Constructors and Destructors
+        //----------------------------------------------------------------------
+        
+        [[nodiscard]]
+        DebugOverlayRenderModule();
 
-    cauldron::RootSignature* m_pDebugOverlayRootSignature = nullptr;
-    cauldron::PipelineObject* m_pDebugOverlayPipeline = nullptr;
-    cauldron::ParameterSet* m_pDebugOverlayParameterSet = nullptr;
+        ~DebugOverlayRenderModule() override;
 
-    const cauldron::Texture* m_pDenoiserDebugView = nullptr;
-    DenoiserRenderModule* m_pDenoiserRenderModule = nullptr;
-};
+        //----------------------------------------------------------------------
+        // Member Methods
+        //----------------------------------------------------------------------
+        
+        void Init(const json& initData);
+
+        void Execute(double deltaTime, cauldron::CommandList* pCmdList) override;
+
+    private:
+
+        //----------------------------------------------------------------------
+        // Member Variables
+        //----------------------------------------------------------------------
+        
+        const cauldron::Texture* m_pColorTarget = {};
+
+        cauldron::RootSignature* m_pDebugOverlayRootSignature = {};
+        cauldron::PipelineObject* m_pDebugOverlayPipeline = {};
+        cauldron::ParameterSet* m_pDebugOverlayParameterSet = {};
+
+        const cauldron::Texture* m_pDenoiserDebugView = {};
+        DenoiserRenderModule* m_pDenoiserRenderModule = {};
+    };
+} // namespace rr

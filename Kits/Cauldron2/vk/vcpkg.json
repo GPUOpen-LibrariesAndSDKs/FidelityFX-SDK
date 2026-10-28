@@ -1,0 +1,11 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "builtin-baseline": "c01dc6ea7353758f2ed70df0bc29c97dfc650b3a",
+  "dependencies": [
+    {
+      "name": "directx-dxc",
+      "host": true
+    },
+    "vulkan"
+  ]
+}

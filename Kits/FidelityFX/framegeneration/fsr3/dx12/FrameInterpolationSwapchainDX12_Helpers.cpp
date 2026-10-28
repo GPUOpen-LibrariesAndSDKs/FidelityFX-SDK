@@ -189,6 +189,37 @@ bool isExclusiveFullscreen(IDXGISwapChain* swapChain)
     return bIsExclusiveFullscreen;
 }
 
+bool getSwapChainWindowRect(IDXGISwapChain* swapChain, RECT* windowRect)
+{
+    DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
+    return swapChain != nullptr && windowRect != nullptr &&
+           SUCCEEDED(swapChain->GetDesc(&swapChainDesc)) &&
+           GetWindowRect(swapChainDesc.OutputWindow, windowRect) == TRUE;
+}
+
+bool isBorderlessFullscreen(IDXGISwapChain* swapChain)
+{
+    DXGI_SWAP_CHAIN_DESC swapChainDesc{};
+    RECT clientRect{};
+    POINT clientOrigin{};
+    IDXGIOutput6* output = getMostRelevantOutputFromSwapChain(swapChain);
+
+    bool borderlessFullscreen = false;
+    if (output && SUCCEEDED(swapChain->GetDesc(&swapChainDesc)) && GetClientRect(swapChainDesc.OutputWindow, &clientRect) &&
+        ClientToScreen(swapChainDesc.OutputWindow, &clientOrigin))
+    {
+        DXGI_OUTPUT_DESC outputDesc{};
+        if (SUCCEEDED(output->GetDesc(&outputDesc)))
+        {
+            OffsetRect(&clientRect, clientOrigin.x, clientOrigin.y);
+            borderlessFullscreen = EqualRect(&clientRect, &outputDesc.DesktopCoordinates) == TRUE;
+        }
+    }
+
+    SafeRelease(output);
+    return borderlessFullscreen;
+}
+
 IDXGIOutput6* getMostRelevantOutputFromSwapChain(IDXGISwapChain* swapChain)
 {
     IDXGIOutput6* pOutput6 = nullptr;

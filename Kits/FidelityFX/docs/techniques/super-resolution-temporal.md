@@ -4,12 +4,12 @@
 
 ![Screenshot](media/super-resolution-temporal/fsr2-sample_resized.jpg "A screenshot showcasing the final output of the effect")
 
-AMD FidelityFX™ Super Resolution 2 (FSR2) is an open source, high-quality solution for producing high resolution frames from lower resolution inputs.
+AMD FidelityFX™ Super Resolution 2 (AMD FSR 2) is an open source, high-quality solution for producing high resolution frames from lower resolution inputs.
 
 <h2>Table of contents</h2>
 
 - [Introduction](#introduction)
-    - [Shading language requirements](#shading-language-requirements)
+- [Shading language requirements](#shading-language-requirements)
 - [Integration guidelines](#integration-guidelines)
     - [Scaling modes](#scaling-modes)
     - [Performance](#performance)
@@ -20,10 +20,11 @@ AMD FidelityFX™ Super Resolution 2 (FSR2) is an open source, high-quality solu
     - [Reactive mask](#reactive-mask)
     - [Automatically generating reactivity](#automatically-generating-reactivity)
     - [Transparency and composition mask](#transparency-and-composition-mask)
+    - [Exposure](#exposure)
     - [Placement in the frame](#placement-in-the-frame)
     - [Temporal antialiasing](#temporal-antialiasing)
     - [Camera jitter](#camera-jitter)
-	- [Camera jump cuts](#camera-jump-cuts)
+    - [Camera jump cuts](#camera-jump-cuts)
     - [Mipmap biasing](#mipmap-biasing)
     - [Frame Time Delta Input](#frame-time-delta-input)
     - [HDR support](#hdr-support)
@@ -36,13 +37,13 @@ AMD FidelityFX™ Super Resolution 2 (FSR2) is an open source, high-quality solu
 
 <h2>Introduction</h2>
 
-**FSR Super Resolution 2** (or **FSR2** for short) is a cutting-edge upscaling technique developed from the ground up to produce high resolution frames from lower resolution inputs.
+**AMD FidelityFX™ Super Resolution 2** (or **AMD FSR 2** for short) is a cutting-edge upscaling technique developed from the ground up to produce high resolution frames from lower resolution inputs.
 
 ![invert](media/super-resolution-temporal/overview.svg "A diagram showing the input resources to the temporal super resolution algorithm.")
 
-FSR2 uses temporal feedback to reconstruct high-resolution images while maintaining and even improving image quality compared to native rendering.
+AMD FSR 2 uses temporal feedback to reconstruct high-resolution images while maintaining and even improving image quality compared to native rendering.
 
-FSR2 can enable "practical performance" for costly render operations, such as hardware ray tracing.
+AMD FSR 2 can enable "practical performance" for costly render operations, such as hardware ray tracing.
 
 <h2>Shading language requirements</h2>
 
@@ -55,7 +56,7 @@ FSR2 can enable "practical performance" for costly render operations, such as ha
 <h2>Integration guidelines</h2>
 
 <h3>Scaling modes</h3>
-For the convenience of end users, the FSR2 API provides a number of preset scaling ratios which are named.
+For the convenience of end users, the AMD FSR™ API provides a number of preset scaling ratios which are named.
 
 | Quality           | Per-dimension scaling factor |    
 |-------------------|------------------------------|
@@ -64,12 +65,12 @@ For the convenience of end users, the FSR2 API provides a number of preset scali
 | Performance       | 2.0x                         |
 | Ultra performance | 3.0x                         |
 
-We strongly recommend that applications adopt consistent naming and scaling ratios in their user interface. This is to ensure that user experience is consistent for your application's users which may have experience of other applications using FSR2. 
+We strongly recommend that applications adopt consistent naming and scaling ratios in their user interface. This is to ensure that user experience is consistent for your application's users who may have experience of other applications using AMD FSR 2. 
 
 <h3>Performance</h3>
-Depending on your target hardware and operating configuration FSR2 will operate at different performance levels.
+Depending on your target hardware and operating configuration AMD FSR 2 will operate at different performance levels.
 
-The table below summarizes the measured performance of FSR2 on a variety of hardware in DX12.
+The table below summarizes the measured performance of AMD FSR 2 on a variety of hardware in DX12.
 
 | Target resolution | Quality          | RX 7900 XTX| RX 6950 XT | RX 6900 XT | RX 6800 XT | RX 6800 | RX 6700 XT | RX 6650 XT | RX 5700 XT | RX Vega 56 | RX 590 |
 |-------------------|------------------|------------|------------|------------|------------|---------|------------|------------|------------|------------|--------|
@@ -86,12 +87,12 @@ The table below summarizes the measured performance of FSR2 on a variety of hard
 |                   | Performance (2x) | 0.2ms      | 0.2ms      | 0.2ms      | 0.3ms      | 0.3ms   | 0.5ms      | 0.5ms      | 0.5ms      | 0.8ms      | 1.1ms  |
 |                   | Ultra perf. (3x) | 0.1ms      | 0.2ms      | 0.2ms      | 0.2ms      | 0.3ms   | 0.4ms      | 0.4ms      | 0.4ms      | 0.7ms      | 0.9ms  |
 
-Figures are rounded to the nearest 0.1ms and are without additional [`sharpness`](../../upscalers/include/ffx_upscale.h#L98) and are subject to change.
+Figures are rounded to the nearest 0.1ms and are without additional [`sharpness`](../../upscalers/include/ffx_upscale.h#L103) and are subject to change.
 
 <h3>Memory requirements</h3>
-Using FSR2 requires some additional GPU local memory to be allocated for consumption by the GPU. When using the FSR2 API, this memory is allocated when the FSR2 context is created, and is done so via the series of callbacks which comprise the backend interface. This memory is used to store intermediate surfaces which are computed by the FSR2 algorithm as well as surfaces which are persistent across many frames of the application. The table below includes the amount of memory used by FSR2 under various operating conditions. 
+Using AMD FSR 2 requires some additional GPU local memory to be allocated for consumption by the GPU. When using the AMD FSR™ API, this memory is allocated when the AMD FSR 2 context is created, and is done so via the series of callbacks which comprise the backend interface. This memory is used to store intermediate surfaces which are computed by the AMD FSR 2 algorithm as well as surfaces which are persistent across many frames of the application. The table below includes the amount of memory used by AMD FSR 2 under various operating conditions. 
 
-| Resolution | Quality                | Working set (MB) 
+| Resolution | Quality                | Working set (MB) |
 | -----------|------------------------|------------------|
 | 3840x2160  | Quality (1.5x)         | 438MB            |
 |            | Balanced (1.7x)        | 396MB            |
@@ -108,101 +109,101 @@ Using FSR2 requires some additional GPU local memory to be allocated for consump
 
 Figures are approximations, rounded up to nearest MB using an RX 9070XT GPU in DX12, and are subject to change.
 
-An application can get amount of GPU local memory required by FSR Super Resolution after context creation by calling [`ffxQuery`](../../api/include/ffx_api.h#L150) with the valid context and [`ffxQueryDescUpscaleGetGPUMemoryUsage`](../../upscalers/include/ffx_upscale.h#L181).
+An application can get the amount of GPU local memory required by AMD FSR 2 after context creation by calling [`ffxQuery`](../../api/include/ffx_api.h#L152) with the valid context and [`ffxQueryDescUpscaleGetGPUMemoryUsage`](../../upscalers/include/ffx_upscale.h#L186).
 
-An application can get GPU local memory required by default FSR Super Resolution version before context creation by calling [`ffxQuery`](../../api/include/ffx_api.h#L150) with `NULL` context and filling out [`ffxQueryDescUpscaleGetGPUMemoryUsageV2`](../../upscalers/include/ffx_upscale.h#L188). To get the memory requirement info for a different upscaler version, additionally link [`ffxOverrideVersion`](../../api/include/ffx_api.h#L99). 
+An application can get the GPU local memory required by the default AMD FSR 2 version before context creation by calling [`ffxQuery`](../../api/include/ffx_api.h#L152) with `NULL` context and filling out [`ffxQueryDescUpscaleGetGPUMemoryUsageV2`](../../upscalers/include/ffx_upscale.h#L193). To get the memory requirement info for a different upscaler version, additionally link [`ffxOverrideVersion`](../../api/include/ffx_api.h#L101). 
 
-See code examples how to call [Query](../getting-started/ffx-api.md#Query).
+See code examples of how to call [Query](../getting-started/ffx-api.md#query).
 
 <h3>Input resources</h3>
-FSR2 is a temporal algorithm, and therefore requires access to data from both the current and previous frame. The following table enumerates all external inputs required by FSR2.
+AMD FSR 2 is a temporal algorithm, and therefore requires access to data from both the current and previous frame. The following table enumerates all external inputs required by AMD FSR 2.
 
-The resolution column indicates if the data should be at 'rendered' resolution or 'presentation' resolution. 'Rendered' resolution indicates that the resource should match the resolution at which the application is performing its rendering. Conversely, 'presentation' indicates that the resolution of the target should match that which is to be presented to the user. All resources are from the current rendered frame, for DirectX(R)12 applications all input resources should be transitioned to [`D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE`](https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_resource_states) before calling [`ffxDispatchDescUpscale`](../../upscalers/include/ffx_upscale.h#L82).
+The resolution column indicates if the data should be at 'rendered' resolution or 'presentation' resolution. 'Rendered' resolution indicates that the resource should match the resolution at which the application is performing its rendering. Conversely, 'presentation' indicates that the resolution of the target should match that which is to be presented to the user. All resources are from the current rendered frame. DirectX® 12 applications should transition every input resource to `D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE` before calling [`ffxDispatchDescUpscale`](../../upscalers/include/ffx_upscale.h#L87). Vulkan® applications should transition those images to `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL`.
 
 | Name            | Resolution                   |  Format                            | Type      | Notes                                          |  
 | ----------------|------------------------------|------------------------------------|-----------|------------------------------------------------|
-| Color buffer    | Render                       | `APPLICATION SPECIFIED`            | Texture   | The render resolution color buffer for the current frame provided by the application. If the contents of the color buffer are in high dynamic range (HDR), then the [`FFX_UPSCALE_ENABLE_HIGH_DYNAMIC_RANGE`](../../upscalers/include/ffx_upscale.h#L42) flag should be set in  the [`flags`](../../upscalers/include/ffx_upscale.h#L75) field of the [`ffxCreateContextDescUpscale`](../../upscalers/include/ffx_upscale.h#L72) structure. |
-| Depth buffer    | Render                       | `APPLICATION SPECIFIED (1x FLOAT)` | Texture   | The render resolution depth buffer for the current frame provided by the application. The data should be provided as a single floating point value, the precision of which is under the application's control. The configuration of the depth should be communicated to FSR Super Resolution via the [`flags`](../../upscalers/include/ffx_upscale.h#L75) field of the [`ffxCreateContextDescUpscale`](../../upscalers/include/ffx_upscale.h#L72) structure. You should set the [`FFX_UPSCALE_ENABLE_DEPTH_INVERTED`](../../upscalers/include/ffx_upscale.h#L45) flag if your depth buffer is inverted (that is [1..0] range), and you should set the [`FFX_UPSCALE_ENABLE_DEPTH_INFINITE`](../../upscalers/include/ffx_upscale.h#L46) flag if your depth buffer has an infinite far plane. If the application provides the depth buffer in `D32S8` format, then FSR Super Resolution will ignore the stencil component of the buffer, and create an `R32_FLOAT` resource to address the depth buffer. On GCN and RDNA hardware, depth buffers are stored separately from stencil buffers. |
-| Motion vectors  | Render or presentation       | `APPLICATION SPECIFIED (2x FLOAT)` | Texture   | The 2D motion vectors for the current frame provided by the application in **[<-width, -height> ... <width, height>]** range. If your application renders motion vectors with a different range, you may use the [`motionVectorScale`](../../upscalers/include/ffx_upscale.h#L94) field of the [`ffxDispatchDescUpscale`](../../upscalers/include/ffx_upscale.h#L82) structure to adjust them to match the expected range for FSR Super Resolution. Internally, FSR Super Resolution uses 16-bit quantities to represent motion vectors in many cases, which means that while motion vectors with greater precision can be provided, FSR Super Resolution will not benefit from the increased precision. The resolution of the motion vector buffer should be equal to the render resolution, unless the [`FFX_UPSCALE_ENABLE_DISPLAY_RESOLUTION_MOTION_VECTORS`](../../upscalers/include/ffx_upscale.h#L43) flag is set in the [`flags`](../../upscalers/include/ffx_upscale.h#L75) field of the [`ffxCreateContextDescUpscale`](../../upscalers/include/ffx_upscale.h#L72) structure, in which case it should be equal to the presentation resolution. |
-| T&C mask        | Render                       | `R8_UNORM`                         | Texture   | Some areas if the rendered image may not have motion vectors matching the change in shading, especially for highly reflective surfaces, or objects with texture animation. In those cases using the T&C mask is a softer alternative compared to the reactive mask, as it only affects locks and color clamping, while the reactive mask reduces the influence of the history. |
-| Reactive mask   | Render                       | `R8_UNORM`                         | Texture   | As some areas of a rendered image do not leave a footprint in the depth buffer or include motion vectors, FSR Super Resolution provides support for a reactive mask texture which can be used to indicate to FSR Super Resolution where such areas are. Good examples of these are particles, or alpha-blended objects which do not write depth or motion vectors. If this resource is not set, then FSR Super Resolution's shading change detection logic will handle these cases as best it can, but for optimal results, this resource should be set. For more information on the reactive mask please refer to the [Reactive mask](#reactive-mask) section.  |
-| Exposure        | 1x1                          | `R32_FLOAT`                        | Texture   | A 1x1 texture containing the exposure value computed for the current frame. This resource is optional, and may be omitted if the [`FFX_UPSCALE_ENABLE_AUTO_EXPOSURE`](../../upscalers/include/ffx_upscale.h#L47) flag is set in the [`flags`](../../upscalers/include/ffx_upscale.h#L75) field of the [`ffxCreateContextDescUpscale`](../../upscalers/include/ffx_upscale.h#L72) structure.  |
+| Color buffer    | Render                       | `APPLICATION SPECIFIED`            | Texture   | The render resolution color buffer for the current frame provided by the application. If the contents of the color buffer are in high dynamic range (HDR), then the [`FFX_UPSCALE_ENABLE_HIGH_DYNAMIC_RANGE`](../../upscalers/include/ffx_upscale.h#L49) flag should be set in  the [`flags`](../../upscalers/include/ffx_upscale.h#L80) field of the [`ffxCreateContextDescUpscale`](../../upscalers/include/ffx_upscale.h#L77) structure. |
+| Depth buffer    | Render                       | `APPLICATION SPECIFIED (1x FLOAT)` | Texture   | The render resolution depth buffer for the current frame provided by the application. The data should be provided as a single floating point value, the precision of which is under the application's control. The configuration of the depth should be communicated to AMD FSR 2 via the [`flags`](../../upscalers/include/ffx_upscale.h#L80) field of the [`ffxCreateContextDescUpscale`](../../upscalers/include/ffx_upscale.h#L77) structure. You should set the [`FFX_UPSCALE_ENABLE_DEPTH_INVERTED`](../../upscalers/include/ffx_upscale.h#L52) flag if your depth buffer is inverted (that is [1..0] range), and you should set the [`FFX_UPSCALE_ENABLE_DEPTH_INFINITE`](../../upscalers/include/ffx_upscale.h#L53) flag if your depth buffer has an infinite far plane. If the application provides the depth buffer in `D32S8` format (`VK_FORMAT_D32_SFLOAT_S8_UINT` on Vulkan), then AMD FSR 2 will ignore the stencil component of the buffer, and create an `R32_FLOAT` resource to address the depth buffer. On GCN and AMD RDNA™ architecture hardware, depth buffers are stored separately from stencil buffers. |
+| Motion vectors  | Render or presentation       | `APPLICATION SPECIFIED (2x FLOAT)` | Texture   | The 2D motion vectors for the current frame provided by the application in **[<-width, -height> ... <width, height>]** range. If your application renders motion vectors with a different range, you may use the [`motionVectorScale`](../../upscalers/include/ffx_upscale.h#L99) field of the [`ffxDispatchDescUpscale`](../../upscalers/include/ffx_upscale.h#L87) structure to adjust them to match the expected range for AMD FSR 2. Internally, AMD FSR 2 uses 16-bit quantities to represent motion vectors in many cases, which means that while motion vectors with greater precision can be provided, AMD FSR 2 will not benefit from the increased precision. The resolution of the motion vector buffer should be equal to the render resolution, unless the [`FFX_UPSCALE_ENABLE_DISPLAY_RESOLUTION_MOTION_VECTORS`](../../upscalers/include/ffx_upscale.h#L50) flag is set in the [`flags`](../../upscalers/include/ffx_upscale.h#L80) field of the [`ffxCreateContextDescUpscale`](../../upscalers/include/ffx_upscale.h#L77) structure, in which case it should be equal to the presentation resolution. |
+| T&C mask        | Render                       | `R8_UNORM`                         | Texture   | Some areas of the rendered image may not have motion vectors matching the change in shading, especially for highly reflective surfaces, or objects with texture animation. In those cases using the T&C mask is a softer alternative compared to the reactive mask, as it only affects locks and color clamping, while the reactive mask reduces the influence of the history. |
+| Reactive mask   | Render                       | `R8_UNORM`                         | Texture   | As some areas of a rendered image do not leave a footprint in the depth buffer or include motion vectors, AMD FSR 2 provides support for a reactive mask texture which can be used to indicate to AMD FSR 2 where such areas are. Good examples of these are particles, or alpha-blended objects which do not write depth or motion vectors. If this resource is not set, then AMD FSR 2's shading change detection logic will handle these cases as best it can, but for optimal results, this resource should be set. For more information on the reactive mask please refer to the [Reactive mask](#reactive-mask) section.  |
+| Exposure        | 1x1                          | `R32_FLOAT`                        | Texture   | A 1x1 texture containing the exposure value computed for the current frame. This resource is optional, and may be omitted if the [`FFX_UPSCALE_ENABLE_AUTO_EXPOSURE`](../../upscalers/include/ffx_upscale.h#L54) flag is set in the [`flags`](../../upscalers/include/ffx_upscale.h#L80) field of the [`ffxCreateContextDescUpscale`](../../upscalers/include/ffx_upscale.h#L77) structure.  |
 
 All inputs that are provided at Render Resolution, except for motion vectors, should be rendered with jitter. Motion vectors should not have jitter applied, unless the `FFX_UPSCALE_ENABLE_MOTION_VECTORS_JITTER_CANCELLATION` flag is present.
 
 <h3>Depth buffer configurations</h3>
 
-It is strongly recommended that an inverted, infinite depth buffer is used with FSR Super Resolution. However, alternative depth buffer configurations are supported. An application should inform the AMD FidelityFX™ Upscale API of its depth buffer configuration by setting the appropriate flags during the creation of the [`ffxCreateContextDescUpscale`](../../upscalers/include/ffx_upscale.h#L72). The table below contains the appropriate flags.
+It is strongly recommended that an inverted, infinite depth buffer is used with AMD FSR 2. However, alternative depth buffer configurations are supported. An application should inform the AMD FSR™ API of its depth buffer configuration by setting the appropriate flags during the creation of the [`ffxCreateContextDescUpscale`](../../upscalers/include/ffx_upscale.h#L77). The table below contains the appropriate flags.
 
-| FSR Super Resolution flag                         | Note                                                                                       |
+| AMD FSR 2 flag                         | Note                                                                                       |
 |----------------------------------|--------------------------------------------------------------------------------------------|
-| [`FFX_UPSCALE_ENABLE_DEPTH_INVERTED`](../../upscalers/include/ffx_upscale.h#L45) | A bit indicating that the input depth buffer data provided is inverted [max..0].           |
-| [`FFX_UPSCALE_ENABLE_DEPTH_INFINITE`](../../upscalers/include/ffx_upscale.h#L46) | A bit indicating that the input depth buffer data provided is using an infinite far plane. |
+| [`FFX_UPSCALE_ENABLE_DEPTH_INVERTED`](../../upscalers/include/ffx_upscale.h#L52) | A bit indicating that the input depth buffer data provided is inverted [max..0].           |
+| [`FFX_UPSCALE_ENABLE_DEPTH_INFINITE`](../../upscalers/include/ffx_upscale.h#L53) | A bit indicating that the input depth buffer data provided is using an infinite far plane. |
 
 
 <h3>Providing motion vectors</h3>
 
 <h4>Space</h4>
 
-A key part of a temporal algorithm (be it antialiasing or upscaling) is the provision of motion vectors. FSR Super Resolution accepts motion vectors in 2D which encode the motion from a pixel in the current frame to the position of that same pixel in the previous frame. FSR Super Resolution expects that motion vectors are provided by the application in [**<-width, -height>**..**<width, height>**] range; this matches screenspace. For example, a motion vector for a pixel in the upper-left corner of the screen with a value of **<width, height>** would represent a motion that traversed the full width and height of the input surfaces, originating from the bottom-right corner.
+A key part of a temporal algorithm (be it antialiasing or upscaling) is the provision of motion vectors. AMD FSR 2 accepts motion vectors in 2D which encode the motion from a pixel in the current frame to the position of that same pixel in the previous frame. AMD FSR 2 expects that motion vectors are provided by the application in [**<-width, -height>**..**<width, height>**] range; this matches screenspace. For example, a motion vector for a pixel in the upper-left corner of the screen with a value of **<width, height>** would represent a motion that traversed the full width and height of the input surfaces, originating from the bottom-right corner.
 
 ![invert](media/super-resolution-temporal/motion-vectors.svg "A diagram showing a 2D motion vector.")
 
-If your application computes motion vectors in another space - for example normalized device coordinate space - then you may use the [`motionVectorScale`](../../upscalers/include/ffx_upscale.h#L94) field of the [`ffxDispatchDescUpscale`](../../upscalers/include/ffx_upscale.h#L82) structure to instruct FSR Super Resolution to adjust them to match the expected range for FSR Super Resolution. The code examples below illustrate how motion vectors may be scaled to screen space. The example HLSL and C++ code below illustrates how NDC-space motion vectors can be scaled using the FSR Super Resolution host API.
+If your application computes motion vectors in another space - for example normalized device coordinate space - then you may use the [`motionVectorScale`](../../upscalers/include/ffx_upscale.h#L99) field of the [`ffxDispatchDescUpscale`](../../upscalers/include/ffx_upscale.h#L87) structure to instruct AMD FSR 2 to adjust them to match the expected range for AMD FSR 2. The code examples below illustrate how motion vectors may be scaled to screen space. The example HLSL and C++ code below illustrates how NDC-space motion vectors can be scaled using the AMD FSR 2 host API.
 
 ```HLSL
 // GPU: Example of application NDC motion vector computation
 float2 motionVector = (previousPosition.xy / previousPosition.w) - (currentPosition.xy / currentPosition.w);
 
-// CPU: Matching FSR Super Resolution 2.0 motionVectorScale configuration
+// CPU: Matching AMD FSR 2 motionVectorScale configuration
 dispatchParameters.motionVectorScale.x = (float)renderWidth;
 dispatchParameters.motionVectorScale.y = (float)renderHeight;
 ```
 
 <h4>Precision & resolution </h4>
 
-Internally, FSR Super Resolution uses 16-bit quantities to represent motion vectors in many cases, which means that while motion vectors with greater precision can be provided, FSR Super Resolution will not currently benefit from the increased precision. The resolution of the motion vector buffer should be equal to the render resolution, unless the [`FFX_UPSCALE_ENABLE_DISPLAY_RESOLUTION_MOTION_VECTORS`](../../upscalers/include/ffx_upscale.h#L43) flag is set in the [`flags`](../../upscalers/include/ffx_upscale.h#L75) field of the [`ffxCreateContextDescUpscale`](../../upscalers/include/ffx_upscale.h#L72) structure when creating the [`ffxContext`](../../api/include/ffx_api.h#L132), in which case it should be equal to the presentation resolution.
+Internally, AMD FSR 2 uses 16-bit quantities to represent motion vectors in many cases, which means that while motion vectors with greater precision can be provided, AMD FSR 2 will not currently benefit from the increased precision. The resolution of the motion vector buffer should be equal to the render resolution, unless the [`FFX_UPSCALE_ENABLE_DISPLAY_RESOLUTION_MOTION_VECTORS`](../../upscalers/include/ffx_upscale.h#L50) flag is set in the [`flags`](../../upscalers/include/ffx_upscale.h#L80) field of the [`ffxCreateContextDescUpscale`](../../upscalers/include/ffx_upscale.h#L77) structure when creating the [`ffxContext`](../../api/include/ffx_api.h#L45), in which case it should be equal to the presentation resolution.
 
 <h4>Coverage</h4>
 
-FSR Super Resolution will perform better quality upscaling when more objects provide their motion vectors. It is therefore advised that all opaque, alpha-tested and alpha-blended objects should write their motion vectors for all covered pixels. If vertex shader effects are applied - such as scrolling UVs - these calculations should also be factored into the calculation of motion for the best results. For alpha-blended objects it is also strongly advised that the alpha value of each covered pixel is stored to the corresponding pixel in the [reactive mask](#reactive-mask). This will allow FSR Super Resolution to perform better handling of alpha-blended objects during upscaling. The reactive mask is especially important for alpha-blended objects where writing motion vectors might be prohibitive, such as particles.
+AMD FSR 2 will perform better quality upscaling when more objects provide their motion vectors. It is therefore advised that all opaque, alpha-tested and alpha-blended objects should write their motion vectors for all covered pixels. If vertex shader effects are applied - such as scrolling UVs - these calculations should also be factored into the calculation of motion for the best results. For alpha-blended objects it is also strongly advised that the alpha value of each covered pixel is stored to the corresponding pixel in the [reactive mask](#reactive-mask). This will allow AMD FSR 2 to perform better handling of alpha-blended objects during upscaling. The reactive mask is especially important for alpha-blended objects where writing motion vectors might be prohibitive, such as particles.
 
 <h3>Reactive mask</h3>
 
-In the context of FSR Super Resolution, the term "reactivity" means how much influence the samples rendered for the current frame have over the production of the final upscaled image. Typically, samples rendered for the current frame contribute a relatively modest amount to the result computed by FSR Super Resolution; however, there are exceptions. To produce the best results for fast moving, alpha-blended objects, FSR Super Resolution requires the [reactive mask](#reactive-mask) stage to become more reactive for such pixels. As there is no good way to determine from either color, depth or motion vectors which pixels have been rendered using alpha blending, FSR Super Resolution performs best when applications explicitly mark such areas.
+In the context of AMD FSR 2, the term "reactivity" means how much influence the samples rendered for the current frame have over the production of the final upscaled image. Typically, samples rendered for the current frame contribute a relatively modest amount to the result computed by AMD FSR 2; however, there are exceptions. To produce the best results for fast moving, alpha-blended objects, AMD FSR 2 requires the [reactive mask](#reactive-mask) stage to become more reactive for such pixels. As there is no good way to determine from either color, depth or motion vectors which pixels have been rendered using alpha blending, AMD FSR 2 performs best when applications explicitly mark such areas.
 
-Therefore, it is strongly encouraged that applications provide a reactive mask to FSR Super Resolution. The reactive mask guides FSR Super Resolution on where it should reduce its reliance on historical information when compositing the current pixel, and instead allow the current frame's samples to contribute more to the final result. The reactive mask allows the application to provide a value from [0.0..1.0] where 0.0 indicates that the pixel is not at all reactive (and should use the default FSR Super Resolution composition strategy), and a value of 1.0 indicates the pixel should be fully reactive. This is a floating point range and can be tailored to different situations.
+Therefore, it is strongly encouraged that applications provide a reactive mask to AMD FSR 2. The reactive mask guides AMD FSR 2 on where it should reduce its reliance on historical information when compositing the current pixel, and instead allow the current frame's samples to contribute more to the final result. The reactive mask allows the application to provide a value from [0.0..1.0] where 0.0 indicates that the pixel is not at all reactive (and should use the default AMD FSR 2 composition strategy), and a value of 1.0 indicates the pixel should be fully reactive. This is a floating point range and can be tailored to different situations.
 
 While there are other applications for the reactive mask, the primary application for the reactive mask is producing better results of upscaling images which include alpha-blended objects. A good proxy for reactiveness is actually the alpha value used when compositing an alpha-blended object into the scene, therefore, applications should write `alpha` to the reactive mask. It should be noted that it is unlikely that a reactive value of close to 1 will ever produce good results. Therefore, we recommend clamping the maximum reactive value to around 0.9.
 
-If a [Reactive mask](#reactive-mask) is not provided to FSR Super Resolution (by setting the [`reactive`](../../upscalers/include/ffx_upscale.h#L90) field of [`ffxDispatchDescUpscale`](../../upscalers/include/ffx_upscale.h#L82) to `NULL`) then an internally generated 1x1 texture with a cleared reactive value will be used.
+If a [Reactive mask](#reactive-mask) is not provided to AMD FSR 2 (by setting the [`reactive`](../../upscalers/include/ffx_upscale.h#L95) field of [`ffxDispatchDescUpscale`](../../upscalers/include/ffx_upscale.h#L87) to `NULL`) then an internally generated 1x1 texture with a cleared reactive value will be used.
 
 <h3>Automatically generating reactivity</h3>
 
-To help applications generate the [Reactive mask](#reactive-mask) and the [Transparency & composition mask](#transparency-and-composition-mask), FSR Super Resolution provides an optional helper API. Under the hood, the API launches a compute shader which computes these values for each pixel using a luminance-based heuristic.
+To help applications generate the [Reactive mask](#reactive-mask) and the [Transparency & composition mask](#transparency-and-composition-mask), AMD FSR 2 provides an optional helper API. Under the hood, the API launches a compute shader which computes these values for each pixel using a luminance-based heuristic.
 
-Applications wishing to do this can call the [`ffxDispatchDescUpscaleGenerateReactiveMask`](../../upscalers/include/ffx_upscale.h#L149) function and should pass two versions of the color buffer, one containing opaque only geometry, and the other containing both opaque and alpha-blended objects.
+Applications wishing to do this can call the [`ffxDispatchDescUpscaleGenerateReactiveMask`](../../upscalers/include/ffx_upscale.h#L153) function and should pass two versions of the color buffer, one containing opaque only geometry, and the other containing both opaque and alpha-blended objects.
 
 <h3>Transparency and composition mask</h3>
 
-In addition to the [Reactive mask](#reactive-mask), FSR Super Resolution provides for the application to denote areas of other specialist rendering which should be accounted for during the upscaling process. Examples of such special rendering include areas of raytraced reflections or animated textures.
+In addition to the [Reactive mask](#reactive-mask), AMD FSR 2 provides for the application to denote areas of other specialist rendering which should be accounted for during the upscaling process. Examples of such special rendering include areas of raytraced reflections or animated textures.
 
 While the [Reactive mask](#reactive-mask) adjusts the accumulation balance, the [Transparency & composition mask](#transparency-and-composition-mask) adjusts the pixel history protection mechanisms. The mask also removes the effect of the luminance instability factor. A pixel with a value of 0 in the [Transparency & composition mask](#transparency-and-composition-mask) does not perform any additional modification to the lock for that pixel. Conversely, a value of 1 denotes that the lock for that pixel should be completely removed.
 
-If a [Transparency & composition mask](#transparency-and-composition-mask) is not provided to FSR Super Resolution (by setting the [`transparencyAndComposition`](../../upscalers/include/ffx_upscale.h#L91) field of [`ffxDispatchDescUpscale`](../../upscalers/include/ffx_upscale.h#L82) to `NULL`) then an internally generated 1x1 texture with a cleared transparency and composition value will be used.
+If a [Transparency & composition mask](#transparency-and-composition-mask) is not provided to AMD FSR 2 (by setting the [`transparencyAndComposition`](../../upscalers/include/ffx_upscale.h#L96) field of [`ffxDispatchDescUpscale`](../../upscalers/include/ffx_upscale.h#L87) to `NULL`) then an internally generated 1x1 texture with a cleared transparency and composition value will be used.
 
 <h3>Exposure</h3>
 
-FSR Super Resolution provides two values which control the exposure used when performing upscaling. They are as follows:
+AMD FSR 2 provides two values which control the exposure used when performing upscaling. They are as follows:
 
 1. **Pre-exposure** a value by which we divide the input signal to get back to the original signal produced by the game before any packing into lower precision render targets.
 2. **Exposure** a value which is multiplied against the result of the pre-exposed color value.
 
-The exposure value should match that which the application uses during any subsequent tonemapping passes performed by the application. This means FSR Super Resolution will operate consistently with what is likely to be visible in the final tonemapped image.
+The exposure value should match that which the application uses during any subsequent tonemapping passes performed by the application. This means AMD FSR 2 will operate consistently with what is likely to be visible in the final tonemapped image.
 
-> In various stages of the FSR Super Resolution algorithm described in this document, FSR Super Resolution will compute its own exposure value for internal use. It is worth noting that all outputs from FSR Super Resolution will have this internal tonemapping reversed before the final output is written. Meaning that FSR Super Resolution returns results in the same domain as the original input signal.
+> In various stages of the AMD FSR 2 algorithm described in this document, AMD FSR 2 will compute its own exposure value for internal use. It is worth noting that all outputs from AMD FSR 2 will have this internal tonemapping reversed before the final output is written. Meaning that AMD FSR 2 returns results in the same domain as the original input signal.
 
-Poorly selected exposure values can have a drastic impact on the final quality of FSR Super Resolution's upscaling. Therefore, it is recommended that [`FFX_UPSCALE_ENABLE_AUTO_EXPOSURE`](../../upscalers/include/ffx_upscale.h#L47) is used by the application, unless there is a particular reason not to. When [`FFX_UPSCALE_ENABLE_AUTO_EXPOSURE`](../../upscalers/include/ffx_upscale.h#L47) is set in the [`flags`](../../upscalers/include/ffx_upscale.h#L75) field of the [`ffxCreateContextDescUpscale`](../../upscalers/include/ffx_upscale.h#L72) structure, the exposure calculation shown in the HLSL code below is used to compute the exposure value, which matches the exposure response of ISO 100 film stock.
+Poorly selected exposure values can have a drastic impact on the final quality of AMD FSR 2's upscaling. Therefore, it is recommended that [`FFX_UPSCALE_ENABLE_AUTO_EXPOSURE`](../../upscalers/include/ffx_upscale.h#L54) is used by the application, unless there is a particular reason not to. When [`FFX_UPSCALE_ENABLE_AUTO_EXPOSURE`](../../upscalers/include/ffx_upscale.h#L54) is set in the [`flags`](../../upscalers/include/ffx_upscale.h#L80) field of the [`ffxCreateContextDescUpscale`](../../upscalers/include/ffx_upscale.h#L77) structure, the exposure calculation shown in the HLSL code below is used to compute the exposure value, which matches the exposure response of ISO 100 film stock.
 
 ```HLSL
 float ComputeAutoExposureFromAverageLog(float averageLogLuminance)
@@ -219,11 +220,11 @@ float ComputeAutoExposureFromAverageLog(float averageLogLuminance)
 
 <h3>Placement in the frame</h3>
 
-The primary goal of FSR Super Resolution is to improve application rendering performance by using a temporal upscaling algorithm relying on a number of inputs. Therefore, its placement in the pipeline is key to ensuring the right balance between the highest quality visual quality and great performance.
+The primary goal of AMD FSR 2 is to improve application rendering performance by using a temporal upscaling algorithm relying on a number of inputs. Therefore, its placement in the pipeline is key to ensuring the right balance between the highest visual quality and great performance.
 
 ![alt text](media/super-resolution-temporal/pipeline-placement.svg "A diagram showing the placement of temporal AMD FidelityFX™ Super Resolution in the wider rendering pipeline.")
 
-With any image upscaling approach is it important to understand how to place other image-space algorithms with respect to the upscaling algorithm. Placing these other image-space effects before the upscaling has the advantage that they run at a lower resolution, which of course confers a performance advantage onto the application. However, it may not be appropriate for some classes of image-space techniques. For example, many applications may introduce noise or grain into the final image, perhaps to simulate a physical camera. Doing so before an upscaler might cause the upscaler to amplify the noise, causing undesirable artifacts in the resulting upscaled image. The following table divides common real-time image-space techniques into two columns. 'Post processing A' contains all the techniques which typically would run before FSR Super Resolution's upscaling, meaning they would all run at render resolution. Conversely, the 'Post processing B' column contains all the techniques which are recommend to run after FSR Super Resolution, meaning they would run at the larger, presentation resolution.
+With any image upscaling approach it is important to understand how to place other image-space algorithms with respect to the upscaling algorithm. Placing these other image-space effects before the upscaling has the advantage that they run at a lower resolution, which of course confers a performance advantage onto the application. However, it may not be appropriate for some classes of image-space techniques. For example, many applications may introduce noise or grain into the final image, perhaps to simulate a physical camera. Doing so before an upscaler might cause the upscaler to amplify the noise, causing undesirable artifacts in the resulting upscaled image. The following table divides common real-time image-space techniques into two columns. 'Post processing A' contains all the techniques which typically would run before AMD FSR 2's upscaling, meaning they would all run at render resolution. Conversely, the 'Post processing B' column contains all the techniques which are recommended to run after AMD FSR 2, meaning they would run at the larger, presentation resolution.
 
 | Post processing A              | Post processing B    |
 |--------------------------------|----------------------|
@@ -239,17 +240,17 @@ Please note that the recommendations here are for guidance purposes only and dep
 
 <h3>Temporal Antialiasing</h3>
 
-Temporal antialiasing (TAA) is a technique which uses the output of previous frames to construct a higher quality output from the current frame. As FSR Super Resolution has a similar goal - albeit with the additional goal of also increasing the resolution of the rendered image - there is no longer any need to include a separate TAA pass in your application.
+Temporal antialiasing (TAA) is a technique which uses the output of previous frames to construct a higher quality output from the current frame. As AMD FSR 2 has a similar goal - albeit with the additional goal of also increasing the resolution of the rendered image - there is no longer any need to include a separate TAA pass in your application.
 
 <h3>Camera jitter</h3>
 
-FSR Super Resolution relies on the application to apply sub-pixel jittering while rendering - this is typically included in the projection matrix of the camera. To make the application of camera jitter simple, the AMD FidelityFX™ Upscale API provides a small set of utility functions which compute the sub-pixel jitter offset for a particular frame within a sequence of separate jitter offsets.
+AMD FSR 2 relies on the application to apply sub-pixel jittering while rendering - this is typically included in the projection matrix of the camera. To make the application of camera jitter simple, the AMD FSR™ API provides a small set of utility functions which compute the sub-pixel jitter offset for a particular frame within a sequence of separate jitter offsets.
 
-Internally, these function implement a Halton[2,3] sequence [[Halton](#references)]. The goal of the Halton sequence is to provide spatially separated points, which cover the available space.
+Internally, these functions implement a Halton[2,3] sequence [[Halton](#references)]. The goal of the Halton sequence is to provide spatially separated points, which cover the available space.
 
 ![alt text](media/super-resolution-temporal/jitter-space.svg "A diagram showing how to map sub-pixel jitter offsets to projection offsets.")
 
-It is important to understand that the values returned from the [`ffxQueryDescUpscaleGetJitterOffset`](../../upscalers/include/ffx_upscale.h#L138) are in unit pixel space, and in order to composite this correctly into a projection matrix we must convert them into projection offsets. The diagram above shows a single pixel in unit pixel space, and in projection space. The code listing below shows how to correctly composite the sub-pixel jitter offset value into a projection matrix.
+It is important to understand that the values returned from the [`ffxQueryDescUpscaleGetJitterOffset`](../../upscalers/include/ffx_upscale.h#L143) are in unit pixel space, and in order to composite this correctly into a projection matrix we must convert them into projection offsets. The diagram above shows a single pixel in unit pixel space, and in projection space. The code listing below shows how to correctly composite the sub-pixel jitter offset value into a projection matrix.
 
 ``` CPP
 ffx::ReturnCode                     retCode;
@@ -274,9 +275,9 @@ const Matrix4 jitterTranslationMatrix = translateMatrix(Matrix3::identity, Vecto
 const Matrix4 jitteredProjectionMatrix = jitterTranslationMatrix * projectionMatrix;
 ```
 
-Jitter should be applied to *all* rendering. This includes opaque, alpha transparent, and raytraced objects. For rasterized objects, the sub-pixel jittering values calculated by the [`ffxQueryDescUpscaleGetJitterOffset`](../../upscalers/include/ffx_upscale.h#L138) function can be applied to the camera projection matrix which is ultimately used to perform transformations during vertex shading. For raytraced rendering, the sub-pixel jitter should be applied to the ray's origin - often the camera's position.
+Jitter should be applied to *all* rendering. This includes opaque, alpha transparent, and raytraced objects. For rasterized objects, the sub-pixel jittering values calculated by the [`ffxQueryDescUpscaleGetJitterOffset`](../../upscalers/include/ffx_upscale.h#L143) function can be applied to the camera projection matrix which is ultimately used to perform transformations during vertex shading. For raytraced rendering, the sub-pixel jitter should be applied to the ray's origin - often the camera's position.
 
-Whether you elect to use the recommended [`ffxQueryDescUpscaleGetJitterOffset`](../../upscalers/include/ffx_upscale.h#L138) query or your own sequence generator, you must set the [`jitterOffset`](../../upscalers/include/ffx_upscale.h#L93) field of the [`ffxDispatchDescUpscale`](../../upscalers/include/ffx_upscale.h#L82) structure to inform FSR Super Resolution of the jitter offset that has been applied in order to render each frame. Moreover, if not using the recommended [`ffxQueryDescUpscaleGetJitterOffset`](../../upscalers/include/ffx_upscale.h#L138) query, care should be taken that your jitter sequence never generates a null vector; that is value of 0 in both the X and Y dimensions.
+Whether you elect to use the recommended [`ffxQueryDescUpscaleGetJitterOffset`](../../upscalers/include/ffx_upscale.h#L143) query or your own sequence generator, you must set the [`jitterOffset`](../../upscalers/include/ffx_upscale.h#L98) field of the [`ffxDispatchDescUpscale`](../../upscalers/include/ffx_upscale.h#L87) structure to inform AMD FSR 2 of the jitter offset that has been applied in order to render each frame. Moreover, if not using the recommended [`ffxQueryDescUpscaleGetJitterOffset`](../../upscalers/include/ffx_upscale.h#L143) query, care should be taken that your jitter sequence never generates a null vector; that is, a value of 0 in both the X and Y dimensions.
 
 The table below shows the jitter sequence length for each of the default quality modes.
 
@@ -290,9 +291,9 @@ The table below shows the jitter sequence length for each of the default quality
 
 <h3>Camera jump cuts</h3>
 
-Most applications with real-time rendering have a large degree of temporal consistency between any two consecutive frames. However, there are cases where a change to a camera's transformation might cause an abrupt change in what is rendered. In such cases, FSR Super Resolution is unlikely to be able to reuse any data it has accumulated from previous frames, and should clear this data such to exclude it from consideration in the compositing process. In order to indicate to FSR Super Resolution that a jump cut has occurred with the camera you should set the [`reset`](../../upscalers/include/ffx_upscale.h#L101) field of the [`ffxDispatchDescUpscale`](../../upscalers/include/ffx_upscale.h#L82) structure to `true` for the first frame of the discontinuous camera transformation.
+Most applications with real-time rendering have a large degree of temporal consistency between any two consecutive frames. However, there are cases where a change to a camera's transformation might cause an abrupt change in what is rendered. In such cases, AMD FSR 2 is unlikely to be able to reuse any data it has accumulated from previous frames, and should clear this data so as to exclude it from consideration in the compositing process. In order to indicate to AMD FSR 2 that a jump cut has occurred with the camera you should set the [`reset`](../../upscalers/include/ffx_upscale.h#L106) field of the [`ffxDispatchDescUpscale`](../../upscalers/include/ffx_upscale.h#L87) structure to `true` for the first frame of the discontinuous camera transformation.
 
-Rendering performance may be slightly less than typical frame-to-frame operation when using the reset flag, as FSR Super Resolution will clear some additional internal resources.
+Rendering performance may be slightly less than typical frame-to-frame operation when using the reset flag, as AMD FSR 2 will clear some additional internal resources.
 
 <h3>Mipmap biasing</h3>
 
@@ -315,26 +316,26 @@ The following table illustrates the mipmap biasing factor which results from eva
 
 <h3>Frame Time Delta Input</h3>
 
-The AMD FidelityFX™ Upscale API requires [`frameTimeDelta`](../../upscalers/include/ffx_upscale.h#L99) be provided by the application through the [`ffxDispatchDescUpscale`](../../upscalers/include/ffx_upscale.h#L82) structure. This value is in __milliseconds__: if running at 60fps, the value passed should be around __16.6f__.
+The AMD FSR™ API requires [`frameTimeDelta`](../../upscalers/include/ffx_upscale.h#L104) be provided by the application through the [`ffxDispatchDescUpscale`](../../upscalers/include/ffx_upscale.h#L87) structure. This value is in __milliseconds__: if running at 60fps, the value passed should be around __16.6f__.
 
-The value is used within the temporal component of the FSR Super Resolution 2 auto-exposure feature. This allows for tuning of the history accumulation for quality purposes.
+The value is used within the temporal component of the AMD FSR 2 auto-exposure feature. This allows for tuning of the history accumulation for quality purposes.
 
 <h3>HDR support</h3>
 
-High dynamic range images are supported in FSR Super Resolution. To enable this, you should set the [`FFX_UPSCALE_ENABLE_HIGH_DYNAMIC_RANGE`](../../upscalers/include/ffx_upscale.h#L42) bit in the [`flags`](../../upscalers/include/ffx_upscale.h#L75) field of the [`ffxCreateContextDescUpscale`](../../upscalers/include/ffx_upscale.h#L72) structure. Images should be provided to FSR Super Resolution in linear color space.
+High dynamic range images are supported in AMD FSR 2. To enable this, you should set the [`FFX_UPSCALE_ENABLE_HIGH_DYNAMIC_RANGE`](../../upscalers/include/ffx_upscale.h#L49) bit in the [`flags`](../../upscalers/include/ffx_upscale.h#L80) field of the [`ffxCreateContextDescUpscale`](../../upscalers/include/ffx_upscale.h#L77) structure. Images should be provided to AMD FSR 2 in linear color space.
 
-> Support for additional color spaces might be provided in a future revision of FSR Super Resolution.
+> Support for additional color spaces might be provided in a future revision of AMD FSR 2.
 
 <h3>64-wide wavefronts</h3>
 
-Modern GPUs execute collections of threads - called wavefronts - together in a SIMT fashion. The precise number of threads which constitute a single wavefront is a hardware-specific quantity. Some hardware, such as AMD's GCN and RDNA-based GPUs support collecting 64 threads together into a single wavefront. Depending on the precise characteristics of an algorithm's execution, it may be more or less advantageous to prefer a specific wavefront width. With the introduction of Shader Model 6.6, Microsoft added the ability to specific the width of a wavefront via HLSL. For hardware, such as RDNA which supports both 32 and 64 wide wavefront widths, this is a very useful tool for optimization purposes, as it provides a clean and portable way to ask the driver software stack to execute a wavefront with a specific width.
+Modern GPUs execute collections of threads - called wavefronts - together in a SIMT fashion. The precise number of threads which constitute a single wavefront is a hardware-specific quantity. Some hardware, such as AMD GCN and AMD RDNA™ architecture-based GPUs support collecting 64 threads together into a single wavefront. Depending on the precise characteristics of an algorithm's execution, it may be more or less advantageous to prefer a specific wavefront width. With the introduction of Shader Model 6.6, Microsoft added the ability to specify the width of a wavefront via HLSL. For hardware, such as AMD RDNA™ architecture which supports both 32 and 64 wide wavefront widths, this is a very useful tool for optimization purposes, as it provides a clean and portable way to ask the driver software stack to execute a wavefront with a specific width.
 
-For DirectX(R)12 based applications which are running on RDNA and RDNA2-based GPUs and using the Microsoft Agility SDK, the FSR Super Resolution host API will select a 64-wide wavefront width.
+For DirectX® 12 based applications which are running on RDNA and RDNA2-based GPUs and using the Microsoft Agility SDK, the AMD FSR 2 host API will select a 64-wide wavefront width.
 
 <h3>Debug Checker</h3>
-Enable debug checker to validate application supplied inputs at dispatch upscale. This feature can be enabled in any build configuration of the runtime (IE. release binaries from PrebuiltSignedDll folder or debug build). It is recommended this is enabled only in development builds of game.
+Enable debug checker to validate application supplied inputs at dispatch upscale. This feature can be enabled in any build configuration of the runtime (IE. release binaries from PrebuiltSignedDll folder or debug build). It is recommended this is enabled only in development builds of the game.
 
-Passing the [`FFX_UPSCALE_ENABLE_DEBUG_CHECKING`](../../upscalers/include/ffx_upscale.h#L49) flag within the flags member of [`ffxCreateContextDescUpscale`](../../upscalers/include/ffx_upscale.h#L72) will output textual warning messages from upscaler to debugger TTY by default. Application can set the callback function for runtime to pass the messages to the underlying application. Application can assign `fpMessage` from [`ffxCreateContextDescUpscale`](../../upscalers/include/ffx_upscale.h#L72) to suitable function. `fpMessage` is of type `ffxApiMessage` which is a function pointer for passing string messages of various types.
+Passing the [`FFX_UPSCALE_ENABLE_DEBUG_CHECKING`](../../upscalers/include/ffx_upscale.h#L56) flag within the flags member of [`ffxCreateContextDescUpscale`](../../upscalers/include/ffx_upscale.h#L77) will output textual warning messages from upscaler to debugger TTY by default. Application can set the callback function for runtime to pass the messages to the underlying application. Application can assign `fpMessage` from [`ffxCreateContextDescUpscale`](../../upscalers/include/ffx_upscale.h#L77) to suitable function. `fpMessage` is of type `ffxApiMessage` which is a function pointer for passing string messages of various types.
 
 An example of the kind of output that can occur when the checker observes possible issues is below:
 
@@ -342,9 +343,10 @@ An example of the kind of output that can occur when the checker observes possib
 FSR_API_DEBUG_WARNING: FFX_FSR_ENABLE_DEPTH_INFINITE and FFX_FSR_ENABLE_DEPTH_INVERTED present, cameraFar value is very low which may result in depth separation artifacting
 FSR_API_DEBUG_WARNING: frameTimeDelta is less than 1.0f - this value should be milliseconds (~16.6f for 60fps)
 ```
+
 <h2>Limitations</h2>
 
-FSR Super Resolution requires a GPU with typed UAV load and R16G16B16A16_UNORM support.
+AMD FSR 2 requires a GPU with typed UAV load and R16G16B16A16_UNORM support.
 
 <h2>Version history</h2>
 
@@ -368,11 +370,11 @@ Refer to changelog for more detail on versions.
 [**Akeley-06**] Kurt Akeley and Jonathan Su, **"Minimum Triangle Separation for Correct Z-Buffer Occlusion"**, 
 [http://www.cs.cmu.edu/afs/cs/academic/class/15869-f11/www/readings/akeley06_triseparation.pdf](https://www.cs.cmu.edu/afs/cs/academic/class/15869-f11/www/readings/akeley06_triseparation.pdf)
 
-[**Lanczos**] Lanczos resampling, **"Lanczos resampling"**, [https://en.wikipedia.org/wiki/Lanczos_resampling](https://en.wikipedia.org/wiki/Lanczos_resampling)
+[**Lanczos**] Lanczos resampling, **"Lanczos resampling"**, (See Lanczos Resampling on Wikipedia)
 
-[**Halton**] Halton sequence, **"Halton sequence"**, [https://en.wikipedia.org/wiki/Halton_sequence](https://en.wikipedia.org/wiki/Halton_sequence)
+[**Halton**] Halton sequence, **"Halton sequence"**, (See Halton Sequence on Wikipedia)
 
-[**YCoCg**] YCoCg Color Space, [https://en.wikipedia.org/wiki/YCoCg](https://en.wikipedia.org/wiki/YCoCg)
+[**YCoCg**] YCoCg Color Space, (See YCoCg on Wikipedia)
 
 <h2>See also</h2>
 
