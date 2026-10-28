@@ -26,7 +26,12 @@
 extern "C" {
 #endif  // #if defined(__cplusplus)
 
-#define FFX_API_ENTRY __declspec(dllexport)
+#ifdef _MSC_VER
+#define DLLEXPORT __declspec(dllexport)
+#else	//If Use Non MSVC Environment.
+#define DLLEXPORT __attribute__((visibility("default")))
+#endif
+#define FFX_API_ENTRY DLLEXPORT
 
 #include <stdint.h>
 
