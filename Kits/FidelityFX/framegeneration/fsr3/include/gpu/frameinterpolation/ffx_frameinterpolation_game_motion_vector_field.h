@@ -34,6 +34,9 @@ FfxUInt32 getPriorityFactorFromViewSpaceDepth(FfxFloat32 fViewSpaceDepthInMeters
 
 void computeGameFieldMvs(FfxInt32x2 iPxPos)
 {
+    if (!IsOnScreen(iPxPos, RenderSize()))
+        return;
+
     const FfxFloat32x2 fUvInScreenSpace            = (FfxFloat32x2(iPxPos) + 0.5f) / RenderSize();
 
     const FfxFloat32x2 fDistortionFieldUv          = SampleDistortionField(fUvInScreenSpace);
